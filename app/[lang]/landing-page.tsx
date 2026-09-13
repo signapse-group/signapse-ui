@@ -29,10 +29,7 @@ import {
 import { LandingDemoForm } from "./landing-demo-form"
 import styles from "./landing-page.module.css"
 import { LandingContextFigure } from "./landing-context-figure"
-import {
-  LandingProductCapture,
-  type LandingProductCaptureLabels,
-} from "./landing-product-capture"
+import { LandingProductCapture } from "./landing-product-capture"
 import { LandingLocaleLinks } from "./landing-locale-links"
 import { LandingNavigationDisclosure } from "./landing-navigation-disclosure"
 import { Logo } from "@/components/logo"
@@ -77,7 +74,7 @@ export function LandingPage({
       <main id="main-content" tabIndex={-1}>
         <HeroSection access={access} dictionary={dictionary} locale={locale} />
         <CapabilityStrip dictionary={dictionary} />
-        <ProductStory dictionary={dictionary} locale={locale} />
+        <ProductStory dictionary={dictionary} />
         <AudienceSection dictionary={dictionary} />
         <AnalysisFlow dictionary={dictionary} />
         <ShowcaseSection dictionary={dictionary} locale={locale} />
@@ -479,41 +476,24 @@ function AnalysisFlow({ dictionary }: { dictionary: Dictionary }) {
   )
 }
 
-type ProductChapter = {
+type ProductCapability = {
   id: LandingProductFeature
   title: string
   outcome: string
   body: string
-  detail?: string
-  media?: LandingProductCaptureLabels
+  linkLabel: string
   icon: ElementType
 }
 
-function ProductStory({
-  dictionary,
-  locale,
-}: {
-  dictionary: Dictionary
-  locale: AppLocale
-}) {
+function ProductStory({ dictionary }: { dictionary: Dictionary }) {
   const t = dictionary.landing.product
-  const chapters: ProductChapter[] = [
+  const capabilities: ProductCapability[] = [
     {
       id: "knowledge-graph",
       title: t.knowledgeGraphTitle,
       outcome: t.knowledgeGraphOutcome,
       body: t.knowledgeGraphBody,
-      media: {
-        alt: t.knowledgeGraphMediaAlt,
-        label: t.knowledgeGraphMediaTitle,
-        caption: t.knowledgeGraphMediaCaption,
-        error: t.media.error,
-        annotations: [
-          t.knowledgeGraphAnnotationEvent,
-          t.knowledgeGraphAnnotationAsset,
-          t.knowledgeGraphAnnotationSource,
-        ],
-      },
+      linkLabel: t.knowledgeGraphLinkLabel,
       icon: NetworkIcon,
     },
     {
@@ -521,13 +501,7 @@ function ProductStory({
       title: t.liveChartsTitle,
       outcome: t.liveChartsOutcome,
       body: t.liveChartsBody,
-      detail: t.liveChartsDetail,
-      media: {
-        alt: t.liveChartsMediaAlt,
-        label: t.liveChartsMediaTitle,
-        caption: t.liveChartsMediaCaption,
-        error: t.media.error,
-      },
+      linkLabel: t.liveChartsLinkLabel,
       icon: LineChartIcon,
     },
     {
@@ -535,6 +509,7 @@ function ProductStory({
       title: t.aiAssistantTitle,
       outcome: t.aiAssistantOutcome,
       body: t.aiAssistantBody,
+      linkLabel: t.aiAssistantLinkLabel,
       icon: BrainCircuitIcon,
     },
     {
@@ -542,7 +517,7 @@ function ProductStory({
       title: t.telegramTitle,
       outcome: t.telegramOutcome,
       body: t.telegramBody,
-      detail: t.telegramSetup,
+      linkLabel: t.telegramLinkLabel,
       icon: CalendarClockIcon,
     },
     {
@@ -550,6 +525,7 @@ function ProductStory({
       title: t.strategyTitle,
       outcome: t.strategyOutcome,
       body: t.strategyBody,
+      linkLabel: t.strategyLinkLabel,
       icon: Code2Icon,
     },
   ]
@@ -563,26 +539,24 @@ function ProductStory({
       className={`${styles.lightSurface} border-b border-border/80 bg-background`}
     >
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-12 px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
-        <div className="flex max-w-3xl flex-col gap-5">
+        <div className="flex max-w-5xl flex-col gap-5">
           <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
             {t.eyebrow}
           </p>
           <h2
             id="landing-product-heading"
-            className="text-3xl leading-tight font-semibold tracking-[-0.02em] sm:text-4xl"
+            className="max-w-4xl text-4xl leading-[1.02] font-semibold tracking-[-0.045em] sm:text-5xl lg:text-6xl"
           >
             {t.heading}
           </h2>
-          <p className="leading-7 text-muted-foreground">{t.body}</p>
+          <p className="max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">
+            {t.body}
+          </p>
         </div>
 
-        <div className="flex flex-col border-y border-border">
-          {chapters.map((chapter) => (
-            <FeatureChapter
-              chapter={chapter}
-              key={chapter.id}
-              locale={locale}
-            />
+        <div className="grid auto-rows-fr gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+          {capabilities.map((capability) => (
+            <CapabilityCard capability={capability} key={capability.id} />
           ))}
         </div>
       </div>
@@ -590,61 +564,42 @@ function ProductStory({
   )
 }
 
-function FeatureChapter({
-  chapter,
-  locale,
-}: {
-  chapter: ProductChapter
-  locale: AppLocale
-}) {
-  const Icon = chapter.icon
-  const capture =
-    chapter.id === "knowledge-graph" || chapter.id === "live-charts"
-      ? getApprovedLandingProductCapture(locale, chapter.id)
-      : null
-  const hasMedia = Boolean(capture && chapter.media)
-  const isKnowledgeGraph = chapter.id === "knowledge-graph"
+function CapabilityCard({ capability }: { capability: ProductCapability }) {
+  const Icon = capability.icon
 
   return (
     <article
-      id={chapter.id}
-      data-product-chapter
-      data-media-state={hasMedia ? "approved" : "text-first"}
-      className={
-        isKnowledgeGraph && hasMedia
-          ? "grid min-w-0 gap-8 border-b border-border py-10 last:border-b-0 min-[1200px]:grid-cols-[minmax(18rem,0.65fr)_minmax(0,1.35fr)] min-[1200px]:items-start min-[1200px]:gap-14 min-[1200px]:py-14"
-          : hasMedia
-            ? "grid min-w-0 gap-8 border-b border-border py-10 last:border-b-0 min-[1200px]:grid-cols-2 min-[1200px]:gap-14 min-[1200px]:py-14"
-            : "flex min-w-0 flex-col gap-5 border-b border-border py-10 last:border-b-0 min-[1200px]:max-w-3xl min-[1200px]:py-14"
-      }
+      id={capability.id}
+      data-product-card
+      aria-labelledby={`${capability.id}-title`}
+      className="flex h-full min-w-0 flex-col rounded-3xl border border-border bg-muted/40 p-6 transition-[border-color,box-shadow] duration-200 hover:border-muted-foreground/60 hover:shadow-sm motion-reduce:transition-none xl:min-h-[23rem]"
     >
-      <div className="order-0 flex min-w-0 flex-col justify-center gap-5">
-        <div className="flex items-center gap-3">
-          <span
-            aria-hidden="true"
-            className="flex size-10 items-center justify-center border border-border bg-muted/30"
-          >
-            <Icon className="text-muted-foreground" />
-          </span>
-          <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
-            {chapter.title}
-          </p>
-        </div>
-        <h3 className="max-w-2xl text-2xl leading-tight font-semibold tracking-[-0.02em] sm:text-3xl">
-          {chapter.outcome}
+      <span
+        aria-hidden="true"
+        className="flex size-11 items-center justify-center rounded-xl border border-border bg-background text-chart-1"
+      >
+        <Icon className="size-5" />
+      </span>
+
+      <div className="mt-12 flex min-w-0 flex-col gap-3">
+        <p className="text-[0.7rem] font-semibold tracking-[0.16em] text-chart-1 uppercase">
+          {capability.title}
+        </p>
+        <h3
+          id={`${capability.id}-title`}
+          className="text-xl leading-[1.08] font-semibold tracking-[-0.025em]"
+        >
+          {capability.outcome}
         </h3>
-        <p className="leading-7 text-muted-foreground">{chapter.body}</p>
-        {chapter.detail ? (
-          <p className="border-l-2 border-border pl-4 text-sm leading-6 text-foreground">
-            {chapter.detail}
-          </p>
-        ) : null}
+        <p className="text-sm leading-6 text-muted-foreground">
+          {capability.body}
+        </p>
       </div>
-      {capture && chapter.media ? (
-        <div className="order-0 min-w-0">
-          <LandingProductCapture capture={capture} labels={chapter.media} />
-        </div>
-      ) : null}
+
+      <p className="mt-auto flex items-center gap-1.5 pt-6 text-xs font-semibold text-chart-1">
+        {capability.linkLabel}
+        <ArrowRightIcon aria-hidden="true" className="size-3" />
+      </p>
     </article>
   )
 }
@@ -715,7 +670,11 @@ function ShowcaseSection({
 }) {
   const t = dictionary.landing.showcase
   const product = dictionary.landing.product
-  const capture = getApprovedLandingProductCapture(locale, "knowledge-graph")
+  const graphCapture = getApprovedLandingProductCapture(
+    locale,
+    "knowledge-graph"
+  )
+  const chartCapture = getApprovedLandingProductCapture(locale, "live-charts")
 
   return (
     <section
@@ -738,22 +697,35 @@ function ShowcaseSection({
           <p className="leading-7 text-muted-foreground">{t.body}</p>
         </div>
         <div className="grid min-w-0 gap-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(20rem,0.9fr)]">
-          {capture ? (
-            <LandingProductCapture
-              capture={capture}
-              labels={{
-                alt: product.knowledgeGraphMediaAlt,
-                label: product.knowledgeGraphMediaTitle,
-                caption: product.knowledgeGraphMediaCaption,
-                error: product.media.error,
-                annotations: [
-                  product.knowledgeGraphAnnotationEvent,
-                  product.knowledgeGraphAnnotationAsset,
-                  product.knowledgeGraphAnnotationSource,
-                ],
-              }}
-            />
-          ) : null}
+          <div className="flex min-w-0 flex-col gap-6">
+            {graphCapture ? (
+              <LandingProductCapture
+                capture={graphCapture}
+                labels={{
+                  alt: product.knowledgeGraphMediaAlt,
+                  label: product.knowledgeGraphMediaTitle,
+                  caption: product.knowledgeGraphMediaCaption,
+                  error: product.media.error,
+                  annotations: [
+                    product.knowledgeGraphAnnotationEvent,
+                    product.knowledgeGraphAnnotationAsset,
+                    product.knowledgeGraphAnnotationSource,
+                  ],
+                }}
+              />
+            ) : null}
+            {chartCapture ? (
+              <LandingProductCapture
+                capture={chartCapture}
+                labels={{
+                  alt: product.liveChartsMediaAlt,
+                  label: product.liveChartsMediaTitle,
+                  caption: product.liveChartsMediaCaption,
+                  error: product.media.error,
+                }}
+              />
+            ) : null}
+          </div>
           <div className="flex min-w-0 flex-col gap-6">
             <article className="flex flex-col gap-4 border border-border bg-muted/30 p-6">
               <div className="flex items-center gap-3">

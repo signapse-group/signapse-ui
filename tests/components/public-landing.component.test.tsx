@@ -64,10 +64,10 @@ describe("localized landing composition", () => {
         : "Read the context, not just the candles"
     )
 
-    expect((html.match(/data-product-chapter/g) ?? []).length).toBe(5)
-    expect((html.match(/data-media-state="approved"/g) ?? []).length).toBe(5)
-    expect((html.match(/data-media-state="text-first"/g) ?? []).length).toBe(3)
-    expect((html.match(/data-landing-media-slot/g) ?? []).length).toBe(3)
+    expect((html.match(/data-product-card/g) ?? []).length).toBe(5)
+    expect((html.match(/data-media-state="approved"/g) ?? []).length).toBe(2)
+    expect(html).not.toContain('data-media-state="text-first"')
+    expect((html.match(/data-landing-media-slot/g) ?? []).length).toBe(2)
     expect(html).toContain(
       locale === "vi"
         ? "Nắm trọn bức tranh thị trường."
@@ -77,6 +77,12 @@ describe("localized landing composition", () => {
       locale === "vi"
         ? "Thấy rõ điều gì đang làm giá chuyển động."
         : "See what is moving prices."
+    )
+    expect(html).toContain(
+      locale === "vi" ? "Hiểu bối cảnh nhanh hơn" : "Understand context faster"
+    )
+    expect(html).toContain(
+      locale === "vi" ? "Xây dựng chiến lược" : "Build a strategy"
     )
     expect(html).toContain(
       locale === "vi" ? "Theo dõi thị trường" : "Monitor the market"

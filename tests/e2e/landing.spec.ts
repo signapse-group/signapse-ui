@@ -32,21 +32,15 @@ test.describe("P0 public landing", () => {
           )
       ).resolves.toEqual(sectionOrder)
 
-      await expect(page.locator("[data-product-chapter]")).toHaveCount(5)
-      await expect(
-        page.locator('[data-product-chapter][data-media-state="approved"]')
-      ).toHaveCount(2)
-      await expect(
-        page.locator('[data-product-chapter][data-media-state="text-first"]')
-      ).toHaveCount(3)
-      await expect(page.locator("[data-landing-media-slot]")).toHaveCount(3)
-      await expect(page.locator("[data-landing-media-slot] img")).toHaveCount(3)
+      await expect(page.locator("[data-product-card]")).toHaveCount(5)
+      await expect(page.locator("[data-landing-media-slot]")).toHaveCount(2)
+      await expect(page.locator("[data-landing-media-slot] img")).toHaveCount(2)
       await expect(
         page.locator("[data-landing-media-slot] button")
       ).toHaveCount(0)
-      await expect(page.locator("[data-product-chapter] h3")).toHaveCount(5)
+      await expect(page.locator("[data-product-card] h3")).toHaveCount(5)
       await expect(
-        page.locator("[data-product-chapter] h3").first()
+        page.locator("[data-product-card] h3").first()
       ).toContainText(
         locale === "vi"
           ? "Nắm trọn bức tranh thị trường."
@@ -225,7 +219,7 @@ test.describe("P0 public landing", () => {
     await page.goto("/en")
 
     const images = page.locator("[data-landing-media-slot] img")
-    await expect(images).toHaveCount(3)
+    await expect(images).toHaveCount(2)
     const imageStyles = await images.evaluateAll((elements) =>
       elements.map((element) => {
         const style = getComputedStyle(element)
@@ -256,49 +250,49 @@ test.describe("P0 public landing", () => {
     )
   })
 
-  test("uses the approved graph and chart proof geometry across breakpoints", async ({
+  test("reflows the five capability cards without horizontal overflow", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 1440, height: 900 })
     await page.goto("/en")
 
-    const graphCopy = page.locator("#knowledge-graph > div").nth(0)
-    const graphMedia = page.locator("#knowledge-graph > div").nth(1)
-    const graphCopyBox = await graphCopy.boundingBox()
-    const graphMediaBox = await graphMedia.boundingBox()
-    expect(graphCopyBox).not.toBeNull()
-    expect(graphMediaBox).not.toBeNull()
-    if (!graphCopyBox || !graphMediaBox) return
-    expect(graphMediaBox.x).toBeGreaterThan(graphCopyBox.x)
-
-    const chartCopy = page.locator("#live-charts > div").nth(0)
-    const chartMedia = page.locator("#live-charts > div").nth(1)
-    const chartCopyBox = await chartCopy.boundingBox()
-    const chartMediaBox = await chartMedia.boundingBox()
-    expect(chartCopyBox).not.toBeNull()
-    expect(chartMediaBox).not.toBeNull()
-    if (!chartCopyBox || !chartMediaBox) return
-    expect(chartMediaBox.x).toBeGreaterThan(chartCopyBox.x)
+    const desktopCards = page.locator("[data-product-card]")
+    const desktopBoxes = await desktopCards.evaluateAll((cards) =>
+      cards.map((card) => {
+        const rect = card.getBoundingClientRect()
+        return { height: rect.height, width: rect.width, x: rect.x, y: rect.y }
+      })
+    )
+    expect(desktopBoxes).toHaveLength(5)
+    expect(new Set(desktopBoxes.map((box) => Math.round(box.y))).size).toBe(1)
+    expect(
+      new Set(desktopBoxes.map((box) => Math.round(box.height))).size
+    ).toBe(1)
+    expect(desktopBoxes.every((box) => box.width > 0)).toBe(true)
 
     await page.setViewportSize({ width: 375, height: 900 })
-    await page.goto("/en")
-    const mobileChartCopy = page.locator("#live-charts > div").nth(0)
-    const mobileChartMedia = page.locator("#live-charts > div").nth(1)
-    const mobileChartCopyBox = await mobileChartCopy.boundingBox()
-    const mobileChartMediaBox = await mobileChartMedia.boundingBox()
-    expect(mobileChartCopyBox).not.toBeNull()
-    expect(mobileChartMediaBox).not.toBeNull()
-    if (!mobileChartCopyBox || !mobileChartMediaBox) return
-    expect(mobileChartMediaBox.y).toBeGreaterThan(mobileChartCopyBox.y)
-
-    const mobileGraphCopy = page.locator("#knowledge-graph > div").nth(0)
-    const mobileGraphMedia = page.locator("#knowledge-graph > div").nth(1)
-    const mobileGraphCopyBox = await mobileGraphCopy.boundingBox()
-    const mobileGraphMediaBox = await mobileGraphMedia.boundingBox()
-    expect(mobileGraphCopyBox).not.toBeNull()
-    expect(mobileGraphMediaBox).not.toBeNull()
-    if (!mobileGraphCopyBox || !mobileGraphMediaBox) return
-    expect(mobileGraphMediaBox.y).toBeGreaterThan(mobileGraphCopyBox.y)
+    const mobileBoxes = await page
+      .locator("[data-product-card]")
+      .evaluateAll((cards) =>
+        cards.map((card) => {
+          const rect = card.getBoundingClientRect()
+          return {
+            bottom: rect.bottom,
+            left: rect.left,
+            right: rect.right,
+            y: rect.y,
+          }
+        })
+      )
+    expect(mobileBoxes).toHaveLength(5)
+    expect(
+      mobileBoxes.every(
+        (box, index) => index === 0 || box.y > mobileBoxes[index - 1].y
+      )
+    ).toBe(true)
+    expect(mobileBoxes.every((box) => box.left >= 0 && box.right <= 375)).toBe(
+      true
+    )
   })
 
   test("keeps the native mobile disclosure keyboard-operable", async ({

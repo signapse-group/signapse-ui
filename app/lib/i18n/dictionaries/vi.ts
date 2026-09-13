@@ -855,6 +855,7 @@ export const vi = {
       knowledgeGraphOutcome: "Nắm trọn bức tranh thị trường.",
       knowledgeGraphBody:
         "Kết nối giá, tin tức, sự kiện và nguồn liên quan để bạn nhìn thấy toàn cảnh trong một nơi.",
+      knowledgeGraphLinkLabel: "Hiểu bối cảnh nhanh hơn",
       knowledgeGraphMediaTitle: "Ảnh Đồ thị Tri thức",
       knowledgeGraphMediaCaption:
         "Ảnh Graph View cho thấy quan hệ giữa một sự kiện, tài sản liên quan và nguồn tin.",
@@ -867,6 +868,7 @@ export const vi = {
       liveChartsOutcome: "Thấy rõ điều gì đang làm giá chuyển động.",
       liveChartsBody:
         "Đặt diễn biến giá cạnh các sự kiện và nguồn tin liên quan để hiểu tác động, không chỉ nhìn vào một biểu đồ.",
+      liveChartsLinkLabel: "Theo dấu tác động",
       liveChartsDetail:
         "Theo dấu tác động từ biến động giá tới sự kiện và nguồn liên quan.",
       liveChartsMediaTitle: "Ảnh biểu đồ trực tiếp",
@@ -878,16 +880,19 @@ export const vi = {
       aiAssistantOutcome: "Hỏi nhanh, hiểu sâu cùng AI.",
       aiAssistantBody:
         "Đặt câu hỏi bằng ngôn ngữ tự nhiên, đào sâu theo mạch hội thoại và nhận góc nhìn dựa trên dữ liệu liên quan.",
+      aiAssistantLinkLabel: "Hỏi Signapse",
       telegramTitle: "04 · TELEGRAM",
       telegramOutcome: "Tín hiệu quan trọng, gửi thẳng đến Telegram.",
       telegramBody:
         "Cài đặt tài sản, điều kiện và lịch nhận để tin tức, tín hiệu và cảnh báo đến đúng kênh, đúng lúc.",
+      telegramLinkLabel: "Thiết lập luồng nhận tin",
       telegramSetup:
         "Thiết lập luồng nhận tin theo nhu cầu và lịch làm việc của bạn.",
       strategyTitle: "05 · STRATEGY CODING",
       strategyOutcome: "Biến ý tưởng giao dịch thành chiến lược.",
       strategyBody:
         "Coding chỉ báo, kiểm thử logic và đánh giá kết quả trước khi đưa vào quy trình tự động hóa.",
+      strategyLinkLabel: "Xây dựng chiến lược",
       media: {
         error: "Không thể tải ảnh này.",
       },

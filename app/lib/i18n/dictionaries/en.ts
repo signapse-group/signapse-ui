@@ -855,6 +855,7 @@ export const en: Dictionary = {
       knowledgeGraphOutcome: "See the complete market picture.",
       knowledgeGraphBody:
         "Connect prices, news, events, and related sources so you can see the full picture in one place.",
+      knowledgeGraphLinkLabel: "Understand context faster",
       knowledgeGraphMediaTitle: "Knowledge Graph capture",
       knowledgeGraphMediaCaption:
         "A Graph View capture shows the relationship between an event, a related asset, and a source.",
@@ -867,6 +868,7 @@ export const en: Dictionary = {
       liveChartsOutcome: "See what is moving prices.",
       liveChartsBody:
         "Place price action alongside related events and sources to understand impact, not just read a chart.",
+      liveChartsLinkLabel: "Trace the impact",
       liveChartsDetail:
         "Trace the impact from price movement to related events and sources.",
       liveChartsMediaTitle: "Live charts capture",
@@ -878,16 +880,19 @@ export const en: Dictionary = {
       aiAssistantOutcome: "Ask quickly and understand deeply with AI.",
       aiAssistantBody:
         "Ask questions in natural language, follow a conversational thread, and get perspectives grounded in related data.",
+      aiAssistantLinkLabel: "Ask Signapse",
       telegramTitle: "04 · TELEGRAM",
       telegramOutcome: "Send important signals straight to Telegram.",
       telegramBody:
         "Configure assets, conditions, and schedules so news, signals, and alerts reach the right channel at the right time.",
+      telegramLinkLabel: "Set up delivery",
       telegramSetup:
         "Set up the delivery flow around your needs and working schedule.",
       strategyTitle: "05 · STRATEGY CODING",
       strategyOutcome: "Turn a trading idea into a strategy.",
       strategyBody:
         "Code indicators, test logic, and evaluate results before adding a strategy to an automated workflow.",
+      strategyLinkLabel: "Build a strategy",
       media: {
         error: "This image could not be loaded.",
       },
