@@ -1,4 +1,6 @@
 .landingRoot {
+  --landing-header-height: 4.5rem;
+  padding-top: var(--landing-header-height);
   --landing-navy: #03141d;
   --landing-navy-surface: #08232e;
   --landing-mint: #12d6b1;
@@ -32,6 +34,60 @@
   --chart-3: var(--landing-boundary);
   --chart-4: var(--landing-mint);
   --chart-5: var(--landing-muted);
+}
+
+.header {
+  position: fixed;
+  z-index: 40;
+  inset: 0 0 auto;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in oklab, var(--landing-mint) 18%, var(--background)),
+    color-mix(in oklab, var(--landing-mint) 7%, var(--background)) 55%,
+    var(--background)
+  );
+  backdrop-filter: blur(16px);
+}
+
+.headerInner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: var(--landing-header-height);
+}
+
+.headerNavItem {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.875rem;
+  border: 1px dashed color-mix(in oklab, var(--border) 65%, transparent);
+  color: var(--foreground);
+  font-weight: 500;
+}
+
+.headerNavItem:hover {
+  background: var(--muted);
+  border-color: var(--muted-foreground);
+}
+
+.headerNavItem:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 3px;
+}
+
+.landingRoot [id],
+.landingRoot :where(a, button, summary, input, [tabindex]) {
+  scroll-margin-top: calc(var(--landing-header-height) + 1.5rem);
+}
+
+@media (min-width: 1280px) {
+  .headerInner {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  }
 }
 
 .darkSurface {

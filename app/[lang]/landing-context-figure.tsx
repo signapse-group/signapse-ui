@@ -141,6 +141,8 @@ export function LandingContextFigure({
     let lastX = 0
     let lastY = 0
     let manualInteractionUntil = 0
+    let pointerX = 0
+    let pointerY = 0
     const pointerQuery = window.matchMedia("(pointer: fine)")
     let supportsFinePointer = pointerQuery.matches
     const reduceMotionQuery = window.matchMedia(
@@ -213,6 +215,8 @@ export function LandingContextFigure({
     const onPointerLeave = () => {
       if (!rendererReadyRef.current) return
       hoveredRef.current = false
+      pointerX = 0
+      pointerY = 0
       hoverSuppressedRef.current = false
       if (!pinnedPriceActionRef.current && !pointerDown) setFigureMode("graph")
       manualInteractionUntil = performance.now() + 250
@@ -235,6 +239,15 @@ export function LandingContextFigure({
     }
 
     const onPointerMove = (event: PointerEvent) => {
+      if (supportsFinePointer && !reduceMotion && !pointerDown) {
+        const bounds = stage.getBoundingClientRect()
+        pointerX =
+          (event.clientX - bounds.left) / Math.max(1, bounds.width) - 0.5
+        pointerY =
+          (event.clientY - bounds.top) / Math.max(1, bounds.height) - 0.5
+        manualInteractionUntil = performance.now() + 500
+        scheduleFrame()
+      }
       if (!pointerDown || event.pointerId !== activePointer || !rootGroup)
         return
       const totalX = event.clientX - startX
@@ -363,21 +376,23 @@ export function LandingContextFigure({
 
         const chartGroup = new three.Group()
         rootGroup.add(chartGroup)
+        const tiltGroup = new three.Group()
+        scene.remove(rootGroup)
+        tiltGroup.add(rootGroup)
+        scene.add(tiltGroup)
         const graph: import("three").Vector3[] = []
         const chart: import("three").Vector3[] = []
         const current = new Float32Array(GRAPH_NODE_COUNT * 3)
 
         for (let index = 0; index < GRAPH_NODE_COUNT; index += 1) {
-          const u = seededRandom(index + 1)
-          const v = seededRandom(index + 43)
-          const w = seededRandom(index + 91)
-          const theta = u * Math.PI * 2
-          const phi = Math.acos(2 * v - 1)
-          const radius = 1.45 + w * 1.65
+          // Evenly distribute nodes across a sphere using the golden angle.
+          const theta = index * Math.PI * (3 - Math.sqrt(5))
+          const phi = Math.acos(1 - (2 * (index + 0.5)) / GRAPH_NODE_COUNT)
+          const radius = 2.2
           const position = new three.Vector3(
-            Math.sin(phi) * Math.cos(theta) * radius * 1.15,
-            Math.cos(phi) * radius * 0.72,
-            Math.sin(phi) * Math.sin(theta) * radius * 0.72
+            Math.sin(phi) * Math.cos(theta) * radius,
+            Math.cos(phi) * radius,
+            Math.sin(phi) * Math.sin(theta) * radius
           )
           graph.push(position)
           current[index * 3] = position.x
@@ -444,9 +459,15 @@ export function LandingContextFigure({
           "position",
           new three.BufferAttribute(current, 3)
         )
+        const nodeColors = new Float32Array(GRAPH_NODE_COUNT * 3)
+        nodeGeometry.setAttribute(
+          "color",
+          new three.BufferAttribute(nodeColors, 3)
+        )
         nodeMaterial = new three.PointsMaterial({
-          color: foreground,
-          size: 0.36,
+          color: 0xffffff,
+          vertexColors: true,
+          size: 0.22,
           map: dotTexture,
           transparent: true,
           alphaTest: 0.35,
@@ -500,6 +521,72 @@ export function LandingContextFigure({
         const graphEdges = new three.LineSegments(edgeGeometry, edgeMaterial)
         graphEdges.renderOrder = 2
         rootGroup.add(graphEdges)
+
+        // Follow connected edges so each pulse reads as a signal, not random noise.
+        const signalPath = [0]
+        for (let step = 0; step < 5; step += 1) {
+          const last = signalPath[signalPath.length - 1]
+          const next = pairs
+            .filter(([a, b]) => a === last || b === last)
+            .map(([a, b]) => (a === last ? b : a))
+            .find((node) => !signalPath.includes(node))
+          if (next === undefined) break
+          signalPath.push(next)
+        }
+        const glowCanvas = document.createElement("canvas")
+        glowCanvas.width = glowCanvas.height = 64
+        const glowContext = glowCanvas.getContext("2d")
+        if (glowContext) {
+          const gradient = glowContext.createRadialGradient(
+            32,
+            32,
+            0,
+            32,
+            32,
+            32
+          )
+          gradient.addColorStop(0, "rgba(255,255,255,1)")
+          gradient.addColorStop(0.2, "rgba(255,255,255,0.6)")
+          gradient.addColorStop(1, "rgba(255,255,255,0)")
+          glowContext.fillStyle = gradient
+          glowContext.fillRect(0, 0, 64, 64)
+        }
+        const glowTexture = new three.CanvasTexture(glowCanvas)
+        const glowGeometry = new three.BufferGeometry()
+        const glowPositions = new Float32Array(9)
+        glowGeometry.setAttribute(
+          "position",
+          new three.BufferAttribute(glowPositions, 3)
+        )
+        const glowMaterial = new three.PointsMaterial({
+          color: accent,
+          size: 0.85,
+          map: glowTexture,
+          transparent: true,
+          depthWrite: false,
+          depthTest: false,
+          opacity: 0,
+        })
+        rootGroup.add(new three.Points(glowGeometry, glowMaterial))
+        const pulseGeometry = new three.BufferGeometry()
+        const pulsePositions = new Float32Array(18)
+        pulseGeometry.setAttribute(
+          "position",
+          new three.BufferAttribute(pulsePositions, 3)
+        )
+        const pulseMaterial = new three.PointsMaterial({
+          color: accent,
+          size: 0.2,
+          map: glowTexture,
+          transparent: true,
+          depthWrite: false,
+          depthTest: false,
+          opacity: 0,
+        })
+        const pulse = new three.Points(pulseGeometry, pulseMaterial)
+        pulse.frustumCulled = false
+        pulse.renderOrder = 11
+        rootGroup.add(pulse)
 
         const candleVertices: number[] = []
         const candleIndices: number[] = []
@@ -608,6 +695,11 @@ export function LandingContextFigure({
         chartGroup.add(new three.LineSegments(gridGeometry, gridMaterial))
 
         resources = [
+          glowTexture,
+          glowGeometry,
+          glowMaterial,
+          pulseGeometry,
+          pulseMaterial,
           nodeGeometry,
           edgeGeometry,
           candleGeometry,
@@ -678,11 +770,17 @@ export function LandingContextFigure({
 
         const resizeObserver = new ResizeObserver(resize)
         resizeObserver.observe(stage)
+        visible = false
         intersectionObserver = new IntersectionObserver(([entry]) => {
           visible = entry.isIntersecting
           if (visible) scheduleFrame()
         })
         intersectionObserver.observe(stage)
+        let elapsed = 0
+        let transition = 0
+        let lastTarget = 0
+        const depthPosition = new three.Vector3()
+        const nodeColor = new three.Color()
         frame = (now) => {
           frameId = 0
           if (disposed || !renderer || !scene || !rootGroup || !nodeGeometry)
@@ -690,49 +788,163 @@ export function LandingContextFigure({
           const previous = (frame as { last?: number }).last ?? now
           ;(frame as { last?: number }).last = now
           const delta = Math.min(32, now - previous)
+          if (!visible || documentHidden) return
+          elapsed += delta
           const nextTarget = targetMode() === "price" ? 1 : 0
+          if (nextTarget !== lastTarget) transition = 0
+          lastTarget = nextTarget
+          transition += delta
+          const intro = reduceMotion ? 1 : Math.min(1, elapsed / 1400)
+          const gather =
+            nextTarget && !reduceMotion
+              ? Math.sin(Math.min(1, transition / 320) * Math.PI) * 0.16
+              : 0
+          const morphTarget =
+            nextTarget && transition < 320 && !reduceMotion ? 0 : nextTarget
           const currentMorph = (frame as { morph?: number }).morph ?? 0
           const morph = reduceMotion
             ? nextTarget
             : currentMorph +
-              (nextTarget - currentMorph) * (1 - Math.pow(0.9, delta / 16.67))
+              (morphTarget - currentMorph) * (1 - Math.pow(0.9, delta / 16.67))
           ;(frame as { morph?: number }).morph = morph
 
           const positions = nodeGeometry.attributes.position
             .array as Float32Array
+          rootGroup.updateWorldMatrix(true, false)
           for (let index = 0; index < GRAPH_NODE_COUNT; index += 1) {
             const graphPosition = graph[index]
             const chartPosition = chart[index]
+            const localMorph = reduceMotion
+              ? morph
+              : three.MathUtils.smoothstep(
+                  morph,
+                  (index / GRAPH_NODE_COUNT) * 0.2,
+                  0.95
+                )
             const targetX =
-              graphPosition.x + (chartPosition.x - graphPosition.x) * morph
+              (graphPosition.x +
+                (chartPosition.x - graphPosition.x) * localMorph) *
+              (1 - gather)
             const targetY =
-              graphPosition.y + (chartPosition.y - graphPosition.y) * morph
+              (graphPosition.y +
+                (chartPosition.y - graphPosition.y) * localMorph) *
+              (1 - gather)
             const targetZ =
-              graphPosition.z + (chartPosition.z - graphPosition.z) * morph
+              graphPosition.z + (chartPosition.z - graphPosition.z) * localMorph
             positions[index * 3] +=
               (targetX - positions[index * 3]) * (reduceMotion ? 1 : 0.18)
             positions[index * 3 + 1] +=
               (targetY - positions[index * 3 + 1]) * (reduceMotion ? 1 : 0.18)
             positions[index * 3 + 2] +=
               (targetZ - positions[index * 3 + 2]) * (reduceMotion ? 1 : 0.18)
+            depthPosition
+              .fromArray(positions, index * 3)
+              .applyMatrix4(rootGroup.matrixWorld)
+            const depth = three.MathUtils.clamp(
+              (depthPosition.z + 2.5) / 5,
+              0,
+              1
+            )
+            const reveal = reduceMotion
+              ? 1
+              : three.MathUtils.smoothstep(
+                  intro,
+                  (index / GRAPH_NODE_COUNT) * 0.3,
+                  0.5
+                )
+            nodeColor
+              .copy(foreground)
+              .multiplyScalar((0.3 + depth * 0.7) * reveal)
+            nodeColor.toArray(nodeColors, index * 3)
           }
           nodeGeometry.attributes.position.needsUpdate = true
+          nodeGeometry.attributes.color.needsUpdate = true
           updateEdges()
+          edgeGeometry?.setDrawRange(
+            0,
+            Math.floor(
+              three.MathUtils.smoothstep(intro, 0.3, 0.8) * pairs.length
+            ) * 2
+          )
+          const chartReveal = reduceMotion
+            ? morph
+            : three.MathUtils.smoothstep(morph, 0.5, 0.98)
+          candleGeometry?.setDrawRange(
+            0,
+            Math.floor(chartReveal * CANDLE_COUNT) * 12
+          )
+          priceGeometry?.setDrawRange(0, Math.ceil(chartReveal * CANDLE_COUNT))
           if (edgeMaterial)
-            edgeMaterial.opacity = GRAPH_EDGE_OPACITY * (1 - morph)
+            edgeMaterial.opacity = GRAPH_EDGE_OPACITY * 0.55 * (1 - morph)
           if (candleMaterial) candleMaterial.opacity = 0.72 * morph
           if (priceMaterial) priceMaterial.opacity = 0.92 * morph
           if (gridMaterial) gridMaterial.opacity = 0.11 * morph
-          if (nodeMaterial) nodeMaterial.size = 0.36 - 0.054 * morph
+          if (nodeMaterial) nodeMaterial.size = 0.22 - 0.1 * morph
+          const signalTime =
+            Math.max(0, elapsed - 1000) / (supportsFinePointer ? 650 : 1000)
+          const signalStep = signalTime % (signalPath.length + 2)
+          if (!reduceMotion && signalStep < signalPath.length - 1) {
+            const segment = Math.floor(signalStep)
+            const fraction = signalStep - segment
+            for (let endpoint = 0; endpoint < 2; endpoint += 1) {
+              const index = signalPath[segment + endpoint]
+              nodeColor
+                .fromArray(nodeColors, index * 3)
+                .lerp(
+                  accent,
+                  (endpoint === 0 ? 1 - fraction : fraction) *
+                    (1 - morph) *
+                    three.MathUtils.smoothstep(intro, 0.7, 1)
+                )
+              nodeColor.toArray(nodeColors, index * 3)
+            }
+          }
+          for (let dot = 0; dot < 6; dot += 1) {
+            const progress = Math.max(0, signalStep - dot * 0.045)
+            const segment = Math.min(
+              signalPath.length - 2,
+              Math.floor(progress)
+            )
+            const from = signalPath[segment] * 3
+            const to = signalPath[segment + 1] * 3
+            const fraction = Math.min(1, progress - segment)
+            for (let axis = 0; axis < 3; axis += 1)
+              pulsePositions[dot * 3 + axis] =
+                positions[from + axis] +
+                (positions[to + axis] - positions[from + axis]) * fraction
+          }
+          pulseGeometry.attributes.position.needsUpdate = true
+          pulseMaterial.opacity =
+            !reduceMotion && signalStep < signalPath.length - 1
+              ? (1 - morph) * three.MathUtils.smoothstep(intro, 0.7, 1)
+              : 0
+          for (let hub = 0; hub < 3; hub += 1) {
+            const node = signalPath[Math.min(hub, signalPath.length - 1)]
+            glowPositions.set(
+              positions.subarray(node * 3, node * 3 + 3),
+              hub * 3
+            )
+          }
+          glowGeometry.attributes.position.needsUpdate = true
+          glowMaterial.opacity = (1 - morph) * intro * 0.65
+          glowMaterial.size = 0.85 + gather * 2
+          const tiltAmount = reduceMotion || pointerDown ? 0 : 0.14
+          tiltGroup.rotation.x +=
+            (-pointerY * tiltAmount - tiltGroup.rotation.x) *
+            (reduceMotion ? 1 : 0.08)
+          tiltGroup.rotation.y +=
+            (pointerX * tiltAmount - tiltGroup.rotation.y) *
+            (reduceMotion ? 1 : 0.08)
           if (autoRotateRef.current && !pointerDown && rootGroup) {
             const graphWeight = 1 - morph
             const chartWeight = morph
             rootGroup.rotation.y +=
-              (0.0017 * graphWeight + 0.00045 * chartWeight) * (delta / 16.67)
+              (0.0034 * graphWeight + 0.00045 * chartWeight) * (delta / 16.67)
           }
           renderer.render(scene, camera)
 
           const needsMotion =
+            (!reduceMotion && intro < 1) ||
             autoRotateRef.current ||
             pointerDown ||
             Math.abs(nextTarget - morph) > 0.002 ||

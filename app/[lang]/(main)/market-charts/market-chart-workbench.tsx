@@ -859,7 +859,7 @@ function MarketChartTopToolbar({
 
           <Separator orientation="vertical" className="hidden lg:block" />
 
-          <div className="flex flex-wrap items-center gap-1">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
             <Popover>
               <PopoverTrigger
                 render={

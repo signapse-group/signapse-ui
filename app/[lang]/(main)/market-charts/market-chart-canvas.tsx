@@ -1699,7 +1699,6 @@ export const MarketChartCanvas = forwardRef<
         <div className="absolute inset-x-0 bottom-0 z-[4] h-7">
           {calendarMarkerPositions.map(({ group, x }) => {
             const count = group.events.length
-            const emphasized = group.priority === "high"
 
             return (
               <Popover key={group.id}>
@@ -1736,7 +1735,7 @@ export const MarketChartCanvas = forwardRef<
                       count > 1
                         ? "relative flex size-6 items-center justify-center rounded-full border-2 border-background bg-sky-500 text-[11px] font-semibold text-white shadow-sm ring-2 ring-sky-500/30"
                         : "relative block rounded-full border-2 border-background bg-sky-500 shadow-sm ring-2 ring-sky-500/30",
-                      count > 1 ? null : emphasized ? "size-5" : "size-4"
+                      count > 1 ? null : "size-4"
                     )}
                   >
                     {count > 1 ? formatNumber(count) : null}

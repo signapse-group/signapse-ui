@@ -113,9 +113,11 @@ function LandingHeader({
     <header
       data-landing-part="header"
       data-landing-surface="dark"
-      className={`${styles.darkSurface} border-b border-border/80 bg-background/95`}
+      className={`${styles.darkSurface} ${styles.header}`}
     >
-      <div className="mx-auto flex min-h-16 w-full max-w-7xl items-center gap-3 px-4 sm:px-6 lg:px-8">
+      <div
+        className={`${styles.headerInner} mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8`}
+      >
         <Link
           href={withLocalePath("/", locale)}
           aria-label={dictionary.common.appName}
@@ -131,10 +133,12 @@ function LandingHeader({
 
         <nav
           aria-label={t.accessibility.headerNavigation}
-          className="ml-auto hidden items-center gap-5 text-sm text-muted-foreground lg:flex"
+          className="hidden items-center justify-center gap-2 text-sm text-muted-foreground xl:flex"
         >
           <LandingNavigationDisclosure className="group relative">
-            <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-md px-3 py-2 font-medium text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring [&::-webkit-details-marker]:hidden">
+            <summary
+              className={`${styles.headerNavItem} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}
+            >
               {t.nav.product}
               <ChevronDownIcon
                 aria-hidden="true"
@@ -154,9 +158,15 @@ function LandingHeader({
               ))}
             </ul>
           </LandingNavigationDisclosure>
+          <a href="#how-it-works" className={styles.headerNavItem}>
+            {t.nav.flow}
+          </a>
+          <a href="#access" className={styles.headerNavItem}>
+            {t.nav.access}
+          </a>
         </nav>
 
-        <div className="ml-auto flex items-center gap-1 sm:gap-2 lg:ml-4">
+        <div className="ml-auto flex items-center gap-1 sm:gap-2">
           <div className="hidden sm:block">
             <Suspense
               fallback={
@@ -188,14 +198,14 @@ function LandingHeader({
           <LandingActionButton action={access.headerPrimary} />
 
           <LandingNavigationDisclosure
-            className="relative lg:hidden"
+            className="relative xl:hidden"
             data-mobile-menu
           >
             <summary className="flex min-h-11 min-w-11 cursor-pointer list-none items-center justify-center rounded-md border border-border bg-background text-foreground transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring [&::-webkit-details-marker]:hidden">
               <span className="sr-only">{t.nav.openMenu}</span>
               <MenuIcon aria-hidden="true" className="size-5" />
             </summary>
-            <div className="absolute top-[calc(100%+0.5rem)] right-0 z-20 flex max-h-[calc(100dvh-5rem)] w-[min(19rem,calc(100vw-2rem))] flex-col gap-3 overflow-y-auto border border-border bg-background p-3 shadow-lg">
+            <div className="absolute top-[calc(100%+0.5rem)] right-0 z-20 flex max-h-[calc(100dvh-6rem)] w-[min(19rem,calc(100vw-2rem))] flex-col gap-3 overflow-y-auto border border-border bg-background p-3 shadow-lg">
               <div className="border-b border-border pb-3 sm:hidden">
                 <Suspense
                   fallback={

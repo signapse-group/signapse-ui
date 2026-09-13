@@ -63,7 +63,7 @@ const nearGlyphs: readonly Glyph[] = [
 
 function GlyphLayer({ glyphs }: { glyphs: readonly Glyph[] }) {
   return glyphs.map(([value, x, y, size]) => (
-    <text fontSize={size} key={`${value}-${x}-${y}`} x={x} y={y}>
+    <text fontSize={size * 0.8} key={`${value}-${x}-${y}`} x={x} y={y}>
       {value}
     </text>
   ))
