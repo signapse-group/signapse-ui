@@ -13,29 +13,33 @@ import { LandingPage } from "@/app/[lang]/landing-page"
 import { en as enDictionary } from "@/app/lib/i18n/dictionaries/en"
 import { vi as viDictionary } from "@/app/lib/i18n/dictionaries/vi"
 
-function renderLanding(locale: "vi" | "en") {
+function renderLanding(locale: "vi" | "en", isAuthenticated = true) {
   return renderToStaticMarkup(
     <LandingPage
       dictionary={locale === "vi" ? viDictionary : enDictionary}
       locale={locale}
-      isAuthenticated
+      isAuthenticated={isAuthenticated}
     />
   )
 }
 
 describe("localized landing composition", () => {
   it.each([
-    ["vi", "Biến dữ liệu thị trường thành Đồ thị Tri thức."],
-    ["en", "Turn market data into a Knowledge Graph."],
-  ] as const)("renders the four-feature %s story", (locale, heading) => {
+    ["vi", "Hiểu nhanh hơn. Hành động chủ động hơn."],
+    ["en", "Understand faster. Act proactively."],
+  ] as const)("renders the five-capability %s story", (locale, heading) => {
     const html = renderLanding(locale)
     expect(html).toContain('data-landing-theme="fixed-signapse"')
-    expect((html.match(/data-landing-surface="dark"/g) ?? []).length).toBe(4)
-    expect((html.match(/data-landing-surface="light"/g) ?? []).length).toBe(3)
+    expect((html.match(/data-landing-surface="dark"/g) ?? []).length).toBe(5)
+    expect((html.match(/data-landing-surface="light"/g) ?? []).length).toBe(5)
+
     const sectionOrder = [
       "hero-product-proof",
+      "capability-strip",
       "product-story",
+      "audiences",
       "analysis-flow",
+      "showcase",
       "trust-boundary",
       "final-access-cta",
     ]
@@ -47,9 +51,10 @@ describe("localized landing composition", () => {
     expect(positions).toEqual([...positions].sort((a, b) => a - b))
     expect((html.match(/<h1/g) ?? []).length).toBe(1)
     expect(html).toContain(heading)
-    expect(html).toContain("MARKET INTELLIGENCE PLATFORM")
-    expect(html).toContain('href="#how-it-works"')
-    expect(html).not.toContain("data-feature-links")
+    expect(html).toContain(
+      "MARKET INTELLIGENCE &amp; TRADING AUTOMATION PLATFORM"
+    )
+    expect(html).toContain('href="#product"')
     expect(html).toContain(
       locale === "vi" ? "Trợ lý AI chuyên biệt" : "Specialized AI Assistant"
     )
@@ -59,51 +64,40 @@ describe("localized landing composition", () => {
         : "Read the context, not just the candles"
     )
 
-    expect((html.match(/data-product-chapter/g) ?? []).length).toBe(4)
-    expect((html.match(/data-media-state="approved"/g) ?? []).length).toBe(4)
-    expect((html.match(/data-media-state="text-first"/g) ?? []).length).toBe(2)
-    expect((html.match(/data-landing-media-slot/g) ?? []).length).toBe(2)
-    expect(html).not.toContain(
-      locale === "vi" ? "Xem ảnh lớn" : "View larger image"
+    expect((html.match(/data-product-chapter/g) ?? []).length).toBe(5)
+    expect((html.match(/data-media-state="approved"/g) ?? []).length).toBe(5)
+    expect((html.match(/data-media-state="text-first"/g) ?? []).length).toBe(3)
+    expect((html.match(/data-landing-media-slot/g) ?? []).length).toBe(3)
+    expect(html).toContain(
+      locale === "vi"
+        ? "Nắm trọn bức tranh thị trường."
+        : "See the complete market picture."
     )
     expect(html).toContain(
       locale === "vi"
-        ? "Nhìn thấy các mối liên hệ trong thị trường."
-        : "See how market information connects."
+        ? "Thấy rõ điều gì đang làm giá chuyển động."
+        : "See what is moving prices."
+    )
+    expect(html).toContain(
+      locale === "vi" ? "Theo dõi thị trường" : "Monitor the market"
     )
     expect(html).toContain(
       locale === "vi"
-        ? "Theo dõi thị trường khi giá đang chuyển động."
-        : "Follow markets as prices move."
+        ? "Phân phối qua Telegram hoặc triển khai bot trong phạm vi quyền kiểm soát."
+        : "Distribute through Telegram or deploy a bot within controlled limits."
     )
     expect(html).toContain(
       locale === "vi"
-        ? "Chọn tài sản, xem diễn biến giá"
-        : "Choose an asset, review price action"
+        ? "Công nghệ phù hợp với từng mục tiêu giao dịch."
+        : "Technology shaped around every trading objective."
     )
     expect(html).toContain(
       locale === "vi"
-        ? "Mở chi tiết sự kiện để đọc phản ứng thị trường và đối chiếu với các nguồn tin."
-        : "Open event details to read market reactions and cross-check them against news sources."
-    )
-    expect(html).toContain(
-      locale === "vi"
-        ? "Trợ lý AI hỗ trợ bạn phân tích quan hệ giữa sự kiện, tài sản và tin tức để tìm hiểu thêm những thông tin liên quan."
-        : "The AI Assistant helps you analyze relationships between events, assets, and news to explore related information."
+        ? "Không chỉ nói về công nghệ. Hãy nhìn thấy kết quả."
+        : "Do not just hear about the technology. See the result."
     )
     expect(html).not.toContain("workspace-ai")
-    expect(html).not.toContain("Reaction &amp; Evidence")
-    expect(html).not.toContain("Track → Contextualize → Inspect → Explore")
-    expect(html).not.toContain(
-      locale === "vi"
-        ? "Hiểu thị trường qua Đồ thị Tri thức và AI."
-        : "Understand markets through the Knowledge Graph and AI."
-    )
     expect(html).not.toContain("Market Query")
-    expect(html).not.toContain(
-      locale === "vi" ? "kênh công khai" : "public channel"
-    )
-    expect(html).not.toContain(locale === "vi" ? "độc quyền" : "exclusive")
     expect(
       (html.match(/data-landing-decoration="ohlcv-depth-field"/g) ?? []).length
     ).toBe(1)
@@ -113,5 +107,15 @@ describe("localized landing composition", () => {
     expect(html).toContain('focusable="false"')
     expect(html).toContain('data-landing-visual="context-figure"')
     expect(html).toContain('<figcaption class="sr-only">')
+  })
+
+  it("renders the localized demo form for anonymous visitors", () => {
+    const html = renderLanding("vi", false)
+
+    expect(html).toContain("Họ và tên")
+    expect(html).toContain("Email công việc")
+    expect(html).toContain("Nhu cầu chính")
+    expect(html).toContain("Đăng ký xem demo")
+    expect(html).not.toContain("Bản demo tĩnh")
   })
 })

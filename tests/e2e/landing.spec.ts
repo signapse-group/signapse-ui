@@ -4,21 +4,24 @@ import { expect, test } from "./fixtures"
 
 const sectionOrder = [
   "hero-product-proof",
+  "capability-strip",
   "product-story",
+  "audiences",
   "analysis-flow",
+  "showcase",
   "trust-boundary",
   "final-access-cta",
 ]
 
 test.describe("P0 public landing", () => {
   for (const locale of ["vi", "en"] as const) {
-    test(`${locale} renders the four-feature story and authenticated access paths`, async ({
+    test(`${locale} renders the five-capability story and authenticated access paths`, async ({
       page,
     }) => {
       await page.goto(`/${locale}`)
 
       await expect(page.locator("h1")).toHaveCount(1)
-      await expect(page.locator("[data-landing-section]")).toHaveCount(5)
+      await expect(page.locator("[data-landing-section]")).toHaveCount(8)
       await expect(
         page
           .locator("[data-landing-section]")
@@ -29,36 +32,34 @@ test.describe("P0 public landing", () => {
           )
       ).resolves.toEqual(sectionOrder)
 
-      await expect(page.locator("[data-product-chapter]")).toHaveCount(4)
+      await expect(page.locator("[data-product-chapter]")).toHaveCount(5)
       await expect(
         page.locator('[data-product-chapter][data-media-state="approved"]')
       ).toHaveCount(2)
       await expect(
         page.locator('[data-product-chapter][data-media-state="text-first"]')
-      ).toHaveCount(2)
-      await expect(page.locator("[data-landing-media-slot]")).toHaveCount(2)
-      await expect(page.locator("[data-landing-media-slot] img")).toHaveCount(2)
+      ).toHaveCount(3)
+      await expect(page.locator("[data-landing-media-slot]")).toHaveCount(3)
+      await expect(page.locator("[data-landing-media-slot] img")).toHaveCount(3)
       await expect(
         page.locator("[data-landing-media-slot] button")
       ).toHaveCount(0)
-      await expect(page.locator("[data-product-chapter] h3")).toHaveCount(4)
+      await expect(page.locator("[data-product-chapter] h3")).toHaveCount(5)
       await expect(
         page.locator("[data-product-chapter] h3").first()
       ).toContainText(
         locale === "vi"
-          ? "Nhìn thấy các mối liên hệ trong thị trường."
-          : "See how market information connects."
+          ? "Nắm trọn bức tranh thị trường."
+          : "See the complete market picture."
       )
 
       await expect(page.locator("#how-it-works")).toContainText(
-        locale === "vi"
-          ? "Chọn tài sản, xem diễn biến giá"
-          : "Choose an asset, review price action"
+        locale === "vi" ? "Theo dõi thị trường" : "Monitor the market"
       )
       await expect(page.locator("#how-it-works")).toContainText(
         locale === "vi"
-          ? "Phân tích cùng Trợ lý AI"
-          : "Analyze with the AI Assistant"
+          ? "Gửi cảnh báo hoặc chạy bot"
+          : "Send alerts or run a bot"
       )
       await expect(page.locator("#workspace-ai")).toHaveCount(0)
       await expect(page.locator("#product")).not.toContainText("Market Query")
@@ -95,10 +96,10 @@ test.describe("P0 public landing", () => {
       await expect(
         page
           .locator('[data-landing-section="hero-product-proof"]')
-          .locator('a[href="#how-it-works"]')
+          .locator('a[href="#product"]')
       ).toBeVisible()
       await expect(page.getByText("request-access@signapse.ai")).toBeVisible()
-      await expect(page.locator('a[href^="mailto:"]')).toHaveAttribute(
+      await expect(page.locator('a[href^="mailto:"]').first()).toHaveAttribute(
         "href",
         "mailto:request-access@signapse.ai?subject=Signapse%20access%20request"
       )
@@ -110,8 +111,8 @@ test.describe("P0 public landing", () => {
         page.locator('[data-landing-section="hero-product-proof"]')
       ).toContainText(
         locale === "vi"
-          ? "Biến dữ liệu thị trường thành Đồ thị Tri thức."
-          : "Turn market data into a Knowledge Graph."
+          ? "Hiểu nhanh hơn. Hành động chủ động hơn."
+          : "Understand faster. Act proactively."
       )
     })
   }
@@ -135,7 +136,9 @@ test.describe("P0 public landing", () => {
     await expect(page).toHaveURL(/\/vi\?source=footer$/)
   })
 
-  test("keeps a fixed landing palette across global themes", async ({ page }) => {
+  test("keeps a fixed landing palette across global themes", async ({
+    page,
+  }) => {
     const palettes = []
 
     for (const colorScheme of ["light", "dark"] as const) {
@@ -160,8 +163,14 @@ test.describe("P0 public landing", () => {
               mint: getComputedStyle(root)
                 .getPropertyValue("--landing-mint")
                 .trim(),
-              darkBackground: read('[data-landing-surface="dark"]', "--background"),
-              darkForeground: read('[data-landing-surface="dark"]', "--foreground"),
+              darkBackground: read(
+                '[data-landing-surface="dark"]',
+                "--background"
+              ),
+              darkForeground: read(
+                '[data-landing-surface="dark"]',
+                "--foreground"
+              ),
               lightBackground: read(
                 '[data-landing-surface="light"]',
                 "--background"
@@ -188,7 +197,9 @@ test.describe("P0 public landing", () => {
       figureBackground: "#03141d",
     })
     await expect(
-      page.locator('[data-landing-part="header"] img[src*="signapse_logo_dark.svg"]')
+      page.locator(
+        '[data-landing-part="header"] img[src*="signapse_logo_dark.svg"]'
+      )
     ).toBeVisible()
   })
 
@@ -203,9 +214,9 @@ test.describe("P0 public landing", () => {
     await expect(
       page.locator('[data-landing-theme="fixed-signapse"]')
     ).toBeVisible()
-    await expect(page.evaluate(() => localStorage.getItem("theme"))).resolves.toBe(
-      "dark"
-    )
+    await expect(
+      page.evaluate(() => localStorage.getItem("theme"))
+    ).resolves.toBe("dark")
   })
 
   test("keeps approved product captures native inside landing frames", async ({
@@ -214,7 +225,7 @@ test.describe("P0 public landing", () => {
     await page.goto("/en")
 
     const images = page.locator("[data-landing-media-slot] img")
-    await expect(images).toHaveCount(2)
+    await expect(images).toHaveCount(3)
     const imageStyles = await images.evaluateAll((elements) =>
       elements.map((element) => {
         const style = getComputedStyle(element)

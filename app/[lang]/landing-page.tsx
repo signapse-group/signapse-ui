@@ -2,9 +2,11 @@ import Link from "next/link"
 import { Suspense, type ElementType } from "react"
 import {
   ArrowRightIcon,
+  BellRingIcon,
   BrainCircuitIcon,
   CalendarClockIcon,
   ChevronDownIcon,
+  Code2Icon,
   LineChartIcon,
   MenuIcon,
   NetworkIcon,
@@ -21,8 +23,10 @@ import {
 import { LandingOhlcvBackground } from "./landing-ohlcv-background"
 import {
   createLandingAccessModel,
+  REQUEST_ACCESS_EMAIL,
   type LandingAccessAction,
 } from "./landing-access"
+import { LandingDemoForm } from "./landing-demo-form"
 import styles from "./landing-page.module.css"
 import { LandingContextFigure } from "./landing-context-figure"
 import {
@@ -72,9 +76,12 @@ export function LandingPage({
 
       <main id="main-content" tabIndex={-1}>
         <HeroSection access={access} dictionary={dictionary} locale={locale} />
+        <CapabilityStrip dictionary={dictionary} />
         <ProductStory dictionary={dictionary} locale={locale} />
+        <AudienceSection dictionary={dictionary} />
         <AnalysisFlow dictionary={dictionary} />
-        <TrustBoundary dictionary={dictionary} />
+        <ShowcaseSection dictionary={dictionary} locale={locale} />
+        <TrustBoundary access={access} dictionary={dictionary} />
         <FinalAccessCta access={access} dictionary={dictionary} />
       </main>
 
@@ -95,10 +102,10 @@ function LandingHeader({
   const t = dictionary.landing
   const sectionLinks = [
     { href: "#product", label: t.nav.overview },
-    { href: "#knowledge-graph", label: t.product.knowledgeGraphTitle },
-    { href: "#live-charts", label: t.product.liveChartsTitle },
-    { href: "#ai-assistant", label: t.product.aiAssistantTitle },
-    { href: "#telegram", label: t.product.telegramTitle },
+    { href: "#knowledge-graph", label: t.nav.knowledgeGraph },
+    { href: "#live-charts", label: t.nav.liveCharts },
+    { href: "#ai-assistant", label: t.nav.aiAssistant },
+    { href: "#telegram", label: t.nav.telegram },
     { href: "#how-it-works", label: t.nav.flow },
   ]
 
@@ -345,13 +352,49 @@ function ProofPoint({ title, body }: { title: string; body: string }) {
   )
 }
 
+function CapabilityStrip({ dictionary }: { dictionary: Dictionary }) {
+  const t = dictionary.landing.capabilityStrip
+  const capabilities = [
+    { title: t.marketViewTitle, body: t.marketViewBody },
+    { title: t.impactTitle, body: t.impactBody },
+    { title: t.aiTitle, body: t.aiBody },
+    { title: t.telegramTitle, body: t.telegramBody },
+    { title: t.strategyTitle, body: t.strategyBody },
+  ]
+
+  return (
+    <section
+      data-landing-section="capability-strip"
+      data-landing-surface="light"
+      aria-label={dictionary.landing.product.eyebrow}
+      className={`${styles.lightSurface} border-b border-border/80 bg-muted/40`}
+    >
+      <dl className="mx-auto grid w-full max-w-7xl px-4 sm:grid-cols-2 sm:px-6 lg:grid-cols-5 lg:px-8">
+        {capabilities.map((capability) => (
+          <div
+            key={capability.title}
+            className="flex min-w-0 flex-col gap-1 border-b border-border py-5 last:border-b-0 sm:px-5 lg:border-r lg:border-b-0 lg:first:pl-0 lg:last:border-r-0"
+          >
+            <dt className="text-sm font-semibold">{capability.title}</dt>
+            <dd className="text-xs leading-5 text-muted-foreground">
+              {capability.body}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </section>
+  )
+}
+
 function AnalysisFlow({ dictionary }: { dictionary: Dictionary }) {
   const t = dictionary.landing.analysisFlow
   const steps = [
     { title: t.stepOneTitle, body: t.stepOneBody },
     { title: t.stepTwoTitle, body: t.stepTwoBody },
     { title: t.stepThreeTitle, body: t.stepThreeBody },
+    { title: t.stepFourTitle, body: t.stepFourBody },
   ]
+  const loop = [t.loopNews, t.loopSignal, t.loopStrategy, t.loopDelivery]
 
   return (
     <section
@@ -361,32 +404,63 @@ function AnalysisFlow({ dictionary }: { dictionary: Dictionary }) {
       aria-labelledby="landing-flow-heading"
       className={`${styles.lightSurface} border-b border-border/80 bg-background`}
     >
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-10 px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
-        <div className="flex max-w-3xl flex-col gap-5">
-          <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
-            {t.eyebrow}
-          </p>
-          <h2
-            id="landing-flow-heading"
-            className="text-3xl leading-tight font-semibold tracking-[-0.02em] sm:text-4xl"
-          >
-            {t.heading}
-          </h2>
+      <div className="mx-auto grid w-full max-w-7xl gap-12 px-4 py-16 sm:px-6 sm:py-24 lg:grid-cols-[minmax(0,0.82fr)_minmax(0,1.18fr)] lg:px-8">
+        <div className="flex min-w-0 flex-col gap-8">
+          <div className="flex max-w-3xl flex-col gap-5">
+            <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+              {t.eyebrow}
+            </p>
+            <h2
+              id="landing-flow-heading"
+              className="text-3xl leading-tight font-semibold tracking-[-0.02em] sm:text-4xl"
+            >
+              {t.heading}
+            </h2>
+            <p className="leading-7 text-muted-foreground">{t.body}</p>
+          </div>
+          <aside className="flex flex-col gap-4 border border-border bg-muted/30 p-6">
+            <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+              {t.loopEyebrow}
+            </p>
+            <h3 className="text-2xl leading-tight font-semibold">
+              {t.loopTitle}
+            </h3>
+            <p className="text-sm leading-6 text-muted-foreground">
+              {t.loopBody}
+            </p>
+            <ol className="flex flex-wrap items-center gap-2 text-xs font-semibold">
+              {loop.map((item, index) => (
+                <li key={item} className="flex items-center gap-2">
+                  <span className="border border-border bg-background px-3 py-2">
+                    {item}
+                  </span>
+                  {index < loop.length - 1 ? (
+                    <ArrowRightIcon
+                      aria-hidden="true"
+                      className="size-3 text-muted-foreground"
+                    />
+                  ) : null}
+                </li>
+              ))}
+            </ol>
+          </aside>
         </div>
 
-        <ol className="grid min-w-0 gap-0 border-y border-border min-[1200px]:grid-cols-3 min-[1200px]:border-y-0 min-[1200px]:border-l">
+        <ol className="min-w-0 border-t border-border">
           {steps.map((step, index) => (
             <li
               key={step.title}
-              className="flex min-w-0 flex-col gap-4 border-b border-border py-6 last:border-b-0 min-[1200px]:border-r min-[1200px]:border-b-0 min-[1200px]:px-6 min-[1200px]:py-6 min-[1200px]:first:pl-6"
+              className="grid min-w-0 grid-cols-[3rem_minmax(0,1fr)] gap-4 border-b border-border py-6"
             >
               <span className="font-mono text-xs text-muted-foreground tabular-nums">
                 {String(index + 1).padStart(2, "0")}
               </span>
-              <h3 className="text-xl font-semibold">{step.title}</h3>
-              <p className="max-w-md leading-7 text-muted-foreground">
-                {step.body}
-              </p>
+              <div className="flex flex-col gap-2">
+                <h3 className="text-xl font-semibold">{step.title}</h3>
+                <p className="max-w-md leading-7 text-muted-foreground">
+                  {step.body}
+                </p>
+              </div>
             </li>
           ))}
         </ol>
@@ -461,6 +535,13 @@ function ProductStory({
       detail: t.telegramSetup,
       icon: CalendarClockIcon,
     },
+    {
+      id: "strategy-coding",
+      title: t.strategyTitle,
+      outcome: t.strategyOutcome,
+      body: t.strategyBody,
+      icon: Code2Icon,
+    },
   ]
 
   return (
@@ -482,6 +563,7 @@ function ProductStory({
           >
             {t.heading}
           </h2>
+          <p className="leading-7 text-muted-foreground">{t.body}</p>
         </div>
 
         <div className="flex flex-col border-y border-border">
@@ -557,7 +639,168 @@ function FeatureChapter({
   )
 }
 
-function TrustBoundary({ dictionary }: { dictionary: Dictionary }) {
+function AudienceSection({ dictionary }: { dictionary: Dictionary }) {
+  const t = dictionary.landing.audiences
+  const audiences = [
+    { label: t.traderLabel, title: t.traderTitle, body: t.traderBody },
+    { label: t.analystLabel, title: t.analystTitle, body: t.analystBody },
+    {
+      label: t.developerLabel,
+      title: t.developerTitle,
+      body: t.developerBody,
+    },
+    { label: t.teamLabel, title: t.teamTitle, body: t.teamBody },
+  ]
+
+  return (
+    <section
+      id="audiences"
+      data-landing-section="audiences"
+      data-landing-surface="dark"
+      aria-labelledby="landing-audiences-heading"
+      className={`${styles.darkSurface} border-b border-border/80 bg-background`}
+    >
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-12 px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
+        <div className="flex max-w-3xl flex-col gap-5">
+          <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+            {t.eyebrow}
+          </p>
+          <h2
+            id="landing-audiences-heading"
+            className="text-3xl leading-tight font-semibold tracking-[-0.02em] sm:text-4xl"
+          >
+            {t.heading}
+          </h2>
+          <p className="leading-7 text-muted-foreground">{t.body}</p>
+        </div>
+        <div className="grid border-y border-border sm:grid-cols-2 lg:grid-cols-4">
+          {audiences.map((audience) => (
+            <article
+              key={audience.label}
+              className="flex min-w-0 flex-col gap-5 border-b border-border py-7 sm:border-r sm:px-6 lg:border-b-0 lg:last:border-r-0"
+            >
+              <p className="font-mono text-xs text-muted-foreground">
+                {audience.label}
+              </p>
+              <h3 className="text-xl leading-tight font-semibold">
+                {audience.title}
+              </h3>
+              <p className="text-sm leading-6 text-muted-foreground">
+                {audience.body}
+              </p>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function ShowcaseSection({
+  dictionary,
+  locale,
+}: {
+  dictionary: Dictionary
+  locale: AppLocale
+}) {
+  const t = dictionary.landing.showcase
+  const product = dictionary.landing.product
+  const capture = getApprovedLandingProductCapture(locale, "knowledge-graph")
+
+  return (
+    <section
+      data-landing-section="showcase"
+      data-landing-surface="light"
+      aria-labelledby="landing-showcase-heading"
+      className={`${styles.lightSurface} border-b border-border/80 bg-background`}
+    >
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-12 px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
+        <div className="flex max-w-3xl flex-col gap-5">
+          <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+            {t.eyebrow}
+          </p>
+          <h2
+            id="landing-showcase-heading"
+            className="text-3xl leading-tight font-semibold tracking-[-0.02em] sm:text-4xl"
+          >
+            {t.heading}
+          </h2>
+          <p className="leading-7 text-muted-foreground">{t.body}</p>
+        </div>
+        <div className="grid min-w-0 gap-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(20rem,0.9fr)]">
+          {capture ? (
+            <LandingProductCapture
+              capture={capture}
+              labels={{
+                alt: product.knowledgeGraphMediaAlt,
+                label: product.knowledgeGraphMediaTitle,
+                caption: product.knowledgeGraphMediaCaption,
+                error: product.media.error,
+                annotations: [
+                  product.knowledgeGraphAnnotationEvent,
+                  product.knowledgeGraphAnnotationAsset,
+                  product.knowledgeGraphAnnotationSource,
+                ],
+              }}
+            />
+          ) : null}
+          <div className="flex min-w-0 flex-col gap-6">
+            <article className="flex flex-col gap-4 border border-border bg-muted/30 p-6">
+              <div className="flex items-center gap-3">
+                <BellRingIcon aria-hidden="true" className="size-5" />
+                <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+                  {t.telegramEyebrow}
+                </p>
+              </div>
+              <h3 className="text-2xl leading-tight font-semibold">
+                {t.telegramTitle}
+              </h3>
+              <p className="text-sm leading-6 text-muted-foreground">
+                {t.telegramBody}
+              </p>
+              <aside className="flex flex-col gap-2 border-l-2 border-chart-2 bg-background p-4">
+                <p className="text-xs font-semibold">{t.telegramAlertTitle}</p>
+                <p className="text-sm leading-6 text-muted-foreground">
+                  {t.telegramAlertBody}
+                </p>
+              </aside>
+            </article>
+            <article
+              className={`${styles.darkSurface} flex flex-col gap-4 bg-background p-6`}
+            >
+              <div className="flex items-center gap-3">
+                <Code2Icon aria-hidden="true" className="size-5" />
+                <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+                  {t.strategyEyebrow}
+                </p>
+              </div>
+              <h3 className="text-2xl leading-tight font-semibold">
+                {t.strategyTitle}
+              </h3>
+              <p className="text-sm leading-6 text-muted-foreground">
+                {t.strategyBody}
+              </p>
+              <pre className="overflow-x-auto border border-border bg-muted/30 p-4 font-mono text-xs leading-6">
+                <code>{`strategy("Momentum Context")
+when price > moving_average
+and event_impact == "high"
+then emit_signal("watch")`}</code>
+              </pre>
+            </article>
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function TrustBoundary({
+  access,
+  dictionary,
+}: {
+  access: ReturnType<typeof createLandingAccessModel>
+  dictionary: Dictionary
+}) {
   const t = dictionary.landing.trust
 
   return (
@@ -568,32 +811,59 @@ function TrustBoundary({ dictionary }: { dictionary: Dictionary }) {
       aria-labelledby="landing-trust-heading"
       className={`${styles.lightSurface} border-b border-border/80 bg-background`}
     >
-      <div className="mx-auto grid w-full max-w-7xl gap-8 px-4 py-16 sm:px-6 sm:py-24 lg:grid-cols-[auto_minmax(0,1fr)] lg:gap-10 lg:px-8">
-        <div
-          aria-hidden="true"
-          className="flex size-12 items-center justify-center border border-border bg-muted/30"
-        >
-          <ShieldCheckIcon className="text-muted-foreground" />
-        </div>
-        <div className="flex max-w-4xl flex-col gap-5">
-          <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
-            {t.eyebrow}
-          </p>
-          <h2
-            id="landing-trust-heading"
-            className="text-3xl leading-tight font-semibold tracking-[-0.02em] sm:text-4xl"
+      <div className="mx-auto grid w-full max-w-7xl gap-12 px-4 py-16 sm:px-6 sm:py-24 lg:grid-cols-[minmax(0,1.2fr)_minmax(20rem,0.8fr)] lg:px-8">
+        <div className="grid min-w-0 gap-8 sm:grid-cols-[auto_minmax(0,1fr)]">
+          <div
+            aria-hidden="true"
+            className="flex size-12 items-center justify-center border border-border bg-muted/30"
           >
-            {t.heading}
-          </h2>
-          <p className="leading-7 text-muted-foreground">{t.body}</p>
-          <ul className="grid gap-3 border-t border-border pt-5 sm:grid-cols-3">
-            {[t.pointOne, t.pointTwo, t.pointThree].map((point) => (
-              <li key={point} className="text-sm leading-6">
-                {point}
-              </li>
-            ))}
-          </ul>
+            <ShieldCheckIcon className="text-muted-foreground" />
+          </div>
+          <div className="flex max-w-4xl flex-col gap-5">
+            <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+              {t.eyebrow}
+            </p>
+            <h2
+              id="landing-trust-heading"
+              className="text-3xl leading-tight font-semibold tracking-[-0.02em] sm:text-4xl"
+            >
+              {t.heading}
+            </h2>
+            <p className="leading-7 text-muted-foreground">{t.body}</p>
+            <ol className="flex flex-col gap-4 border-t border-border pt-5">
+              {[t.pointOne, t.pointTwo, t.pointThree].map((point, index) => (
+                <li
+                  key={point}
+                  className="grid grid-cols-[2rem_minmax(0,1fr)] gap-3 text-sm leading-6"
+                >
+                  <span className="font-mono text-xs text-muted-foreground">
+                    {String(index + 1).padStart(2, "0")}
+                  </span>
+                  <span>{point}</span>
+                </li>
+              ))}
+            </ol>
+          </div>
         </div>
+        <aside className="flex flex-col items-start gap-5 border border-border bg-muted/30 p-6">
+          <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+            {t.enterpriseEyebrow}
+          </p>
+          <h3 className="text-2xl leading-tight font-semibold">
+            {t.enterpriseTitle}
+          </h3>
+          <p className="text-sm leading-6 text-muted-foreground">
+            {t.enterpriseBody}
+          </p>
+          <a
+            href={access.footerRequestAccess.href}
+            aria-label={t.enterpriseCta}
+            className={buttonVariants({ variant: "default", size: "lg" })}
+          >
+            {t.enterpriseCta}
+            <ArrowRightIcon data-icon="inline-end" aria-hidden="true" />
+          </a>
+        </aside>
       </div>
     </section>
   )
@@ -616,22 +886,24 @@ function FinalAccessCta({
       aria-labelledby="landing-access-heading"
       className={`${styles.darkSurface} border-b border-border/80 bg-background`}
     >
-      <div className="mx-auto flex w-full max-w-4xl flex-col items-center gap-6 px-4 py-20 text-center sm:px-6 sm:py-28">
-        <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
-          {t.accessLabel}
-        </p>
-        <h2
-          id="landing-access-heading"
-          className="text-3xl leading-tight font-semibold tracking-[-0.02em] sm:text-4xl"
-        >
-          {t.heading}
-        </h2>
-        <p className="max-w-2xl leading-7 text-muted-foreground">{t.body}</p>
-        <LandingActionButton action={access.finalCta} size="lg" />
-        {access.finalCta.kind === "email" ? (
-          <p className="text-sm text-muted-foreground">
-            {access.requestAccessNote}
+      <div className="mx-auto grid w-full max-w-7xl gap-12 px-4 py-20 sm:px-6 sm:py-28 lg:grid-cols-[minmax(0,1fr)_minmax(22rem,0.8fr)] lg:items-center lg:px-8">
+        <div className="flex max-w-3xl flex-col items-start gap-6">
+          <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+            {t.accessLabel}
           </p>
+          <h2
+            id="landing-access-heading"
+            className="text-3xl leading-tight font-semibold tracking-[-0.02em] sm:text-4xl"
+          >
+            {t.heading}
+          </h2>
+          <p className="max-w-2xl leading-7 text-muted-foreground">{t.body}</p>
+          {access.finalCta.kind === "internal" ? (
+            <LandingActionButton action={access.finalCta} size="lg" />
+          ) : null}
+        </div>
+        {access.finalCta.kind === "email" ? (
+          <LandingDemoForm email={REQUEST_ACCESS_EMAIL} labels={t} />
         ) : null}
       </div>
     </section>
@@ -655,7 +927,7 @@ function LandingFooter({
       data-landing-surface="dark"
       className={`${styles.darkSurface} bg-background`}
     >
-      <div className="mx-auto grid w-full max-w-7xl gap-10 px-4 py-12 sm:px-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:px-8">
+      <div className="mx-auto grid w-full max-w-7xl gap-10 px-4 py-12 sm:grid-cols-2 sm:px-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(10rem,0.7fr)_minmax(10rem,0.7fr)] lg:px-8">
         <div className="flex max-w-md flex-col gap-4">
           <Link
             href={withLocalePath("/", locale)}
@@ -674,40 +946,78 @@ function LandingFooter({
 
         <nav
           aria-label={t.accessibility.footerNavigation}
-          className="flex flex-col items-start gap-4 text-sm sm:items-end"
+          className="flex flex-col items-start gap-3 text-sm"
         >
-          <Suspense
-            fallback={
-              <LandingLocaleLinksFallback
-                locale={locale}
-                labels={t.localeControl}
-              />
-            }
+          <p className="font-semibold text-foreground">
+            {t.footer.productHeading}
+          </p>
+          <a
+            href="#knowledge-graph"
+            className="text-muted-foreground hover:text-foreground"
           >
-            <LandingLocaleLinks
-              currentLocale={locale}
-              labels={{
-                group: t.localeControl.label,
-                vi: t.localeControl.vietnamese,
-                en: t.localeControl.english,
-              }}
-            />
-          </Suspense>
+            {t.footer.productMarketView}
+          </a>
+          <a
+            href="#live-charts"
+            className="text-muted-foreground hover:text-foreground"
+          >
+            {t.footer.productImpact}
+          </a>
+          <a
+            href="#ai-assistant"
+            className="text-muted-foreground hover:text-foreground"
+          >
+            {t.footer.productAi}
+          </a>
+          <a
+            href="#telegram"
+            className="text-muted-foreground hover:text-foreground"
+          >
+            {t.footer.productTelegram}
+          </a>
+          <a
+            href="#strategy-coding"
+            className="text-muted-foreground hover:text-foreground"
+          >
+            {t.footer.productStrategy}
+          </a>
+        </nav>
+
+        <nav
+          aria-label={t.footer.contactHeading}
+          className="flex flex-col items-start gap-3 text-sm"
+        >
+          <p className="font-semibold text-foreground">
+            {t.footer.contactHeading}
+          </p>
+          <a
+            href="#access"
+            className="text-muted-foreground hover:text-foreground"
+          >
+            {t.footer.demo}
+          </a>
           <LandingActionLink
             action={access.footerAppEntry}
-            className="rounded-md px-2 py-2 font-medium hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            className="text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           />
           <a
             href={access.footerRequestAccess.href}
             aria-label={t.footer.requestAccessEmailLabel}
-            className="rounded-md px-2 py-2 font-mono text-xs text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            className="font-mono text-xs text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           >
             {access.footerRequestAccess.label}
           </a>
-          <p className="max-w-xs text-left text-xs leading-5 text-muted-foreground sm:text-right">
-            {t.footer.requestAccessEmailNote}
-          </p>
+          <a
+            href="#how-it-works"
+            className="text-muted-foreground hover:text-foreground"
+          >
+            {t.footer.workflow}
+          </a>
         </nav>
+      </div>
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-2 border-t border-border px-4 py-5 text-xs text-muted-foreground sm:flex-row sm:justify-between sm:px-6 lg:px-8">
+        <span>{t.footer.copyright}</span>
+        <span>{t.footer.disclaimer}</span>
       </div>
     </footer>
   )
