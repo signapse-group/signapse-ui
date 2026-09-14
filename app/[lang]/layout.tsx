@@ -1,7 +1,7 @@
 import { ClerkProvider } from "@clerk/nextjs"
 import { enUS, viVN } from "@clerk/localizations"
 import { notFound } from "next/navigation"
-import { Geist, Geist_Mono } from "next/font/google"
+import { Geist, Geist_Mono, Inter } from "next/font/google"
 import NextTopLoader from "nextjs-toploader"
 import type { Metadata } from "next"
 
@@ -23,6 +23,11 @@ const fontSans = Geist({
 const fontMono = Geist_Mono({
   subsets: ["latin", "latin-ext"],
   variable: "--font-mono",
+})
+
+const fontDisplay = Inter({
+  subsets: ["latin", "latin-ext", "vietnamese"],
+  variable: "--font-display",
 })
 
 const clerkLocalizations: Record<AppLocale, typeof viVN> = {
@@ -69,6 +74,7 @@ export default async function RootLayout({
       suppressHydrationWarning
       className={cn(
         "h-screen antialiased",
+        fontDisplay.variable,
         fontMono.variable,
         "font-sans",
         fontSans.variable

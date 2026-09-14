@@ -350,7 +350,7 @@ export function LandingAudienceFigure({
         const edgeMaterial = new three.LineBasicMaterial({
           color: muted,
           transparent: true,
-          opacity: 0.34,
+          opacity: 0.52,
         })
         rootGroup.add(new three.LineSegments(edgeGeometry, edgeMaterial))
 
@@ -378,7 +378,7 @@ export function LandingAudienceFigure({
         const boxMaterial = new three.LineBasicMaterial({
           color: accent,
           transparent: true,
-          opacity: 0.1,
+          opacity: 0.18,
         })
         rootGroup.add(new three.LineSegments(boxGeometry, boxMaterial))
 
@@ -532,7 +532,7 @@ export function LandingAudienceFigure({
           } else if (!reduceMotion) {
             rootGroup.rotation.y += 0.00055 * (delta / 16.67)
           }
-          edgeMaterial.opacity = settling ? 0.22 : 0.34
+          edgeMaterial.opacity = settling ? 0.4 : 0.52
           renderer.render(scene, camera)
           frameId = requestAnimationFrame(frame)
         }

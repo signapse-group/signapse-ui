@@ -298,7 +298,7 @@ function HeroSection({
           <div className="flex max-w-3xl flex-col gap-5">
             <h1
               id="landing-hero-heading"
-              className="max-w-3xl text-4xl leading-[1.02] font-semibold tracking-[-0.045em] sm:text-6xl lg:text-7xl"
+              className={`${styles.landingDisplayHeading} max-w-3xl text-4xl leading-[1.02] sm:text-6xl lg:text-7xl`}
             >
               {t.hero.title}
             </h1>
@@ -367,11 +367,36 @@ function ProofPoint({ title, body }: { title: string; body: string }) {
 function CapabilityStrip({ dictionary }: { dictionary: Dictionary }) {
   const t = dictionary.landing.capabilityStrip
   const capabilities = [
-    { title: t.marketViewTitle, body: t.marketViewBody },
-    { title: t.impactTitle, body: t.impactBody },
-    { title: t.aiTitle, body: t.aiBody },
-    { title: t.telegramTitle, body: t.telegramBody },
-    { title: t.strategyTitle, body: t.strategyBody },
+    {
+      title: t.marketViewTitle,
+      body: t.marketViewBody,
+      href: "#knowledge-graph",
+      icon: NetworkIcon,
+    },
+    {
+      title: t.impactTitle,
+      body: t.impactBody,
+      href: "#live-charts",
+      icon: LineChartIcon,
+    },
+    {
+      title: t.aiTitle,
+      body: t.aiBody,
+      href: "#ai-assistant",
+      icon: BrainCircuitIcon,
+    },
+    {
+      title: t.telegramTitle,
+      body: t.telegramBody,
+      href: "#telegram",
+      icon: BellRingIcon,
+    },
+    {
+      title: t.strategyTitle,
+      body: t.strategyBody,
+      href: "#strategy-coding",
+      icon: Code2Icon,
+    },
   ]
 
   return (
@@ -381,29 +406,49 @@ function CapabilityStrip({ dictionary }: { dictionary: Dictionary }) {
       aria-label={dictionary.landing.product.eyebrow}
       className={`${styles.heroContent} ${styles.heroRail} mx-auto w-full max-w-[100rem] px-4 pb-4 sm:px-6 sm:pb-6 lg:px-8 lg:pb-4`}
     >
-      <dl
+      <ul
         className={`${styles.landingCardGrid} grid sm:grid-cols-2 lg:grid-cols-5`}
       >
-        {capabilities.map((capability, index) => (
-          <div
-            key={capability.title}
-            className={`${styles.landingCardGridItem} grid min-w-0 grid-cols-[2.5rem_minmax(0,1fr)] gap-3 sm:min-h-28 lg:grid-cols-1 lg:content-center lg:gap-4`}
-          >
-            <span
-              aria-hidden="true"
-              className="font-mono text-sm text-chart-1 tabular-nums"
+        {capabilities.map((capability, index) => {
+          const Icon = capability.icon
+
+          return (
+            <li
+              key={capability.title}
+              className={`${styles.landingCardGridItem} ${styles.capabilityRailItem} min-w-0`}
             >
-              {String(index + 1).padStart(2, "0")}
-            </span>
-            <div className="flex min-w-0 flex-col gap-1">
-              <dt className="text-sm font-semibold">{capability.title}</dt>
-              <dd className="text-xs leading-5 text-muted-foreground">
-                {capability.body}
-              </dd>
-            </div>
-          </div>
-        ))}
-      </dl>
+              <a href={capability.href} className={styles.capabilityRailLink}>
+                <span className={styles.capabilityRailTopline}>
+                  <span
+                    aria-hidden="true"
+                    className={styles.capabilityRailIcon}
+                  >
+                    <Icon />
+                  </span>
+                  <span
+                    aria-hidden="true"
+                    className={styles.capabilityRailNumber}
+                  >
+                    {String(index + 1).padStart(2, "0")}
+                  </span>
+                </span>
+                <span className={styles.capabilityRailCopy}>
+                  <span className={styles.capabilityRailTitle}>
+                    {capability.title}
+                  </span>
+                  <span className={styles.capabilityRailBody}>
+                    {capability.body}
+                  </span>
+                </span>
+                <ArrowRightIcon
+                  aria-hidden="true"
+                  className={styles.capabilityRailArrow}
+                />
+              </a>
+            </li>
+          )
+        })}
+      </ul>
     </section>
   )
 }
@@ -434,7 +479,7 @@ function AnalysisFlow({ dictionary }: { dictionary: Dictionary }) {
             </p>
             <h2
               id="landing-flow-heading"
-              className="text-3xl leading-tight font-semibold tracking-[-0.02em] sm:text-4xl"
+              className={`${styles.landingDisplayHeading} text-3xl leading-tight sm:text-4xl`}
             >
               {t.heading}
             </h2>
@@ -560,7 +605,7 @@ function ProductStory({ dictionary }: { dictionary: Dictionary }) {
           </p>
           <h2
             id="landing-product-heading"
-            className="max-w-4xl text-4xl leading-[1.02] font-semibold tracking-[-0.045em] sm:text-5xl lg:text-6xl"
+            className={`${styles.landingDisplayHeading} max-w-4xl text-4xl leading-[1.02] sm:text-5xl lg:text-6xl`}
           >
             {t.heading}
           </h2>
@@ -650,7 +695,7 @@ function ShowcaseSection({
           </p>
           <h2
             id="landing-showcase-heading"
-            className="text-3xl leading-tight font-semibold tracking-[-0.02em] sm:text-4xl"
+            className={`${styles.landingDisplayHeading} text-3xl leading-tight sm:text-4xl`}
           >
             {t.heading}
           </h2>
@@ -767,7 +812,7 @@ function TrustBoundary({
             </p>
             <h2
               id="landing-trust-heading"
-              className="text-3xl leading-tight font-semibold tracking-[-0.02em] sm:text-4xl"
+              className={`${styles.landingDisplayHeading} text-3xl leading-tight sm:text-4xl`}
             >
               {t.heading}
             </h2>
@@ -841,7 +886,7 @@ function FinalAccessCta({
           </p>
           <h2
             id="landing-access-heading"
-            className="text-3xl leading-tight font-semibold tracking-[-0.02em] sm:text-4xl"
+            className={`${styles.landingDisplayHeading} text-3xl leading-tight sm:text-4xl`}
           >
             {t.heading}
           </h2>
