@@ -1,6 +1,9 @@
 .landingRoot {
   --landing-header-height: 4.5rem;
-  padding-top: var(--landing-header-height);
+  --landing-control-height: 2.75rem;
+  --landing-control-radius: 0.5rem;
+  --landing-card-radius: 0.75rem;
+  --landing-card-padding: 1.5rem;
   --landing-navy: #03141d;
   --landing-navy-surface: #08232e;
   --landing-mint: #12d6b1;
@@ -40,16 +43,67 @@
   position: fixed;
   z-index: 40;
   inset: 0 0 auto;
-  background: linear-gradient(
-    to bottom,
-    color-mix(in oklab, var(--landing-mint) 18%, var(--background)),
-    color-mix(in oklab, var(--landing-mint) 7%, var(--background)) 55%,
-    var(--background)
+  isolation: isolate;
+  background: transparent;
+  backdrop-filter: none;
+  transition:
+    color 500ms ease,
+    background-color 500ms ease,
+    backdrop-filter 500ms ease,
+    box-shadow 500ms ease;
+}
+
+.header[data-scrolled="true"] {
+  background-color: color-mix(in oklab, var(--landing-navy) 28%, transparent);
+  box-shadow: none;
+  -webkit-backdrop-filter: blur(16px) saturate(145%);
+  backdrop-filter: blur(16px) saturate(145%);
+}
+
+.header[data-header-surface="light"] {
+  color-scheme: light;
+  --background: var(--landing-off-white);
+  --foreground: var(--landing-navy);
+  --card: var(--landing-off-white);
+  --card-foreground: var(--landing-navy);
+  --popover: var(--landing-off-white);
+  --popover-foreground: var(--landing-navy);
+  --primary: var(--landing-navy);
+  --primary-foreground: var(--landing-off-white);
+  --secondary: var(--landing-light-muted-surface);
+  --secondary-foreground: var(--landing-navy);
+  --muted: var(--landing-light-muted-surface);
+  --muted-foreground: var(--landing-light-muted-foreground);
+  --accent: var(--landing-light-muted-surface);
+  --accent-foreground: var(--landing-navy);
+  --border: color-mix(
+    in oklab,
+    var(--landing-navy) 20%,
+    var(--landing-off-white)
   );
-  backdrop-filter: blur(16px);
+  --input: var(--border);
+  --ring: var(--landing-mint-strong);
+  background-color: var(--landing-off-white);
+  box-shadow: none;
+  -webkit-backdrop-filter: blur(12px) saturate(120%);
+  backdrop-filter: blur(12px) saturate(120%);
+}
+
+.headerLogoLight {
+  display: none;
+}
+
+.header[data-header-surface="light"] .headerLogoDark {
+  display: none;
+}
+
+.header[data-header-surface="light"] .headerLogoLight {
+  display: block;
 }
 
 .headerInner {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   gap: 0.75rem;
@@ -61,11 +115,16 @@
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  min-height: 2.75rem;
+  min-height: var(--landing-control-height);
   padding: 0.5rem 0.875rem;
   border: 1px dashed color-mix(in oklab, var(--border) 65%, transparent);
+  border-radius: var(--landing-control-radius);
   color: var(--foreground);
   font-weight: 500;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease;
 }
 
 .headerNavItem:hover {
@@ -76,6 +135,284 @@
 .headerNavItem:focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 3px;
+}
+
+.headerAction {
+  min-height: var(--landing-control-height);
+  border-radius: var(--landing-control-radius);
+}
+
+.headerSecondaryAction {
+  background: var(--muted);
+  color: var(--foreground);
+}
+
+.headerSecondaryAction:hover {
+  background: color-mix(in oklab, var(--muted), var(--foreground) 6%);
+  color: var(--foreground);
+}
+
+.headerMenuTrigger {
+  display: flex;
+  min-height: var(--landing-control-height);
+  min-width: var(--landing-control-height);
+  align-items: center;
+  justify-content: center;
+  border: 1px solid color-mix(in oklab, var(--border) 65%, transparent);
+  border-radius: var(--landing-control-radius);
+  background: var(--background);
+  color: var(--foreground);
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease;
+}
+
+.headerMenuTrigger:hover {
+  background: var(--muted);
+  border-color: var(--muted-foreground);
+}
+
+.headerMenuTrigger:focus-visible,
+.headerMenuItem:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 3px;
+}
+
+.headerMenuItem {
+  display: flex;
+  min-height: var(--landing-control-height);
+  align-items: center;
+  border-radius: var(--landing-control-radius);
+  padding: 0.5rem 0.75rem;
+  color: var(--foreground);
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.headerMenuItem:hover {
+  background: var(--muted);
+  color: var(--foreground);
+}
+
+.sectionAction {
+  min-height: var(--landing-control-height);
+  border-radius: var(--landing-control-radius);
+}
+
+.landingCardGrid {
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--landing-card-radius);
+  background: var(--border);
+}
+
+.landingCardGridItem {
+  background: color-mix(in oklab, var(--card) 94%, transparent);
+  padding: var(--landing-card-padding);
+  transition: background-color 150ms ease;
+}
+
+.landingCardGridItem:hover {
+  background: var(--card);
+}
+
+.landingPanel {
+  border: 1px solid var(--border);
+  border-radius: var(--landing-card-radius);
+  background: color-mix(in oklab, var(--muted) 38%, transparent);
+  padding: var(--landing-card-padding);
+  box-shadow: none;
+}
+
+.audienceInteractive {
+  position: relative;
+  min-height: 32rem;
+}
+
+.audienceList {
+  width: 42%;
+  min-width: 0;
+  border-top: 1px solid var(--border);
+}
+
+.audienceItem {
+  display: flex;
+  position: relative;
+  width: 100%;
+  min-height: 5.5rem;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+  padding: 1.25rem 0;
+  padding-left: 1rem;
+  color: var(--muted-foreground);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    color 180ms ease,
+    background-color 180ms ease,
+    border-color 180ms ease;
+}
+
+.audienceItem:hover,
+.audienceItemActive {
+  color: var(--foreground);
+}
+
+.audienceItem::before {
+  position: absolute;
+  top: 1.25rem;
+  bottom: 1.25rem;
+  left: 0;
+  width: 2px;
+  border-radius: 999px;
+  background: var(--landing-mint);
+  content: "";
+  opacity: 0;
+  transform: scaleY(0.4);
+  transition:
+    opacity 180ms ease,
+    transform 180ms ease;
+}
+
+.audienceItemActive::before {
+  opacity: 1;
+  transform: scaleY(1);
+}
+
+.audienceItem:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 4px;
+}
+
+.audienceItemLabel {
+  color: var(--chart-1);
+  font-family: var(--font-mono), monospace;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.audienceItemTitle {
+  max-width: 34rem;
+  font-size: clamp(1.3rem, 2.2vw, 2rem);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.08;
+}
+
+.audienceItemBody {
+  max-width: 34rem;
+  color: var(--muted-foreground);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.audienceVisual {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: radial-gradient(
+    circle at 50% 48%,
+    color-mix(in oklab, var(--landing-mint) 7%, transparent),
+    transparent 62%
+  );
+  color: var(--landing-off-white);
+}
+
+.audienceVisualMobile {
+  position: absolute;
+  inset: 0 0 0 auto;
+  width: 53%;
+}
+
+.audienceVisualTitle {
+  position: absolute;
+  right: 1.25rem;
+  bottom: 1.25rem;
+  z-index: 2;
+  max-width: 12rem;
+  color: color-mix(in oklab, var(--landing-off-white) 68%, transparent);
+  font-size: 0.75rem;
+  line-height: 1.35;
+  text-align: right;
+}
+
+.audienceVisualStage {
+  position: absolute;
+  inset: 0;
+}
+
+.audienceVisualStage canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.audienceVisualCorners {
+  position: absolute;
+  inset: 1.25rem;
+  background:
+    linear-gradient(var(--border), var(--border)) top left / 2rem 1px no-repeat,
+    linear-gradient(var(--border), var(--border)) top left / 1px 2rem no-repeat,
+    linear-gradient(var(--border), var(--border)) top right / 2rem 1px no-repeat,
+    linear-gradient(var(--border), var(--border)) top right / 1px 2rem no-repeat,
+    linear-gradient(var(--border), var(--border)) bottom left / 2rem 1px
+      no-repeat,
+    linear-gradient(var(--border), var(--border)) bottom left / 1px 2rem
+      no-repeat,
+    linear-gradient(var(--border), var(--border)) bottom right / 2rem 1px
+      no-repeat,
+    linear-gradient(var(--border), var(--border)) bottom right / 1px 2rem
+      no-repeat;
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+@media (max-width: 1023px) {
+  .audienceInteractive {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    min-height: 0;
+  }
+
+  .audienceList {
+    display: contents;
+  }
+
+  .audienceRow:first-child .audienceItem {
+    border-top: 1px solid var(--border);
+  }
+
+  .audienceVisualMobile {
+    position: relative;
+    inset: auto;
+    width: 100%;
+    height: auto;
+    padding-top: 1.25rem;
+  }
+
+  .audienceVisualMobile .audienceVisual {
+    aspect-ratio: 4 / 3;
+    min-height: 20rem;
+  }
+}
+
+.header :global([data-locale-links]) {
+  color: var(--foreground);
 }
 
 .landingRoot [id],
@@ -125,16 +462,16 @@
 .heroSection {
   background-image:
     radial-gradient(
-      ellipse 58% 78% at 82% 38%,
-      color-mix(in oklab, var(--landing-mint) 11%, transparent),
-      transparent 72%
+      ellipse 64% 88% at 84% 34%,
+      color-mix(in oklab, var(--landing-mint) 18%, transparent),
+      transparent 68%
     ),
     linear-gradient(
-      150deg,
+      158deg,
       var(--landing-navy) 0%,
-      color-mix(in oklab, var(--landing-navy-surface) 72%, var(--landing-navy))
-        62%,
-      var(--landing-navy) 100%
+      color-mix(in oklab, var(--landing-navy-surface) 82%, var(--landing-navy))
+        58%,
+      color-mix(in oklab, var(--landing-mint) 16%, var(--landing-navy)) 100%
     );
 }
 
@@ -217,12 +554,17 @@
 }
 
 .heroCopy,
-.heroVisual {
+.heroVisual,
+.heroRail {
   animation: hero-enter 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .heroVisual {
   animation-delay: 90ms;
+}
+
+.heroRail {
+  animation-delay: 160ms;
 }
 
 @keyframes hero-enter {
@@ -234,5 +576,13 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .heroCopy,
+  .heroVisual,
+  .heroRail {
+    animation: none;
   }
 }

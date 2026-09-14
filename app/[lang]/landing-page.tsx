@@ -2,9 +2,11 @@ import Link from "next/link"
 import { Suspense, type ElementType } from "react"
 import {
   ArrowRightIcon,
+  BellRingIcon,
   BrainCircuitIcon,
   CalendarClockIcon,
   ChevronDownIcon,
+  Code2Icon,
   LineChartIcon,
   MenuIcon,
   NetworkIcon,
@@ -21,14 +23,15 @@ import {
 import { LandingOhlcvBackground } from "./landing-ohlcv-background"
 import {
   createLandingAccessModel,
+  REQUEST_ACCESS_EMAIL,
   type LandingAccessAction,
 } from "./landing-access"
+import { LandingDemoForm } from "./landing-demo-form"
 import styles from "./landing-page.module.css"
+import { LandingAudienceSection } from "./landing-audience-section"
 import { LandingContextFigure } from "./landing-context-figure"
-import {
-  LandingProductCapture,
-  type LandingProductCaptureLabels,
-} from "./landing-product-capture"
+import { LandingHeaderShell } from "./landing-header-shell"
+import { LandingProductCapture } from "./landing-product-capture"
 import { LandingLocaleLinks } from "./landing-locale-links"
 import { LandingNavigationDisclosure } from "./landing-navigation-disclosure"
 import { Logo } from "@/components/logo"
@@ -72,9 +75,11 @@ export function LandingPage({
 
       <main id="main-content" tabIndex={-1}>
         <HeroSection access={access} dictionary={dictionary} locale={locale} />
-        <ProductStory dictionary={dictionary} locale={locale} />
+        <ProductStory dictionary={dictionary} />
+        <LandingAudienceSection dictionary={dictionary} />
         <AnalysisFlow dictionary={dictionary} />
-        <TrustBoundary dictionary={dictionary} />
+        <ShowcaseSection dictionary={dictionary} locale={locale} />
+        <TrustBoundary access={access} dictionary={dictionary} />
         <FinalAccessCta access={access} dictionary={dictionary} />
       </main>
 
@@ -95,29 +100,34 @@ function LandingHeader({
   const t = dictionary.landing
   const sectionLinks = [
     { href: "#product", label: t.nav.overview },
-    { href: "#knowledge-graph", label: t.product.knowledgeGraphTitle },
-    { href: "#live-charts", label: t.product.liveChartsTitle },
-    { href: "#ai-assistant", label: t.product.aiAssistantTitle },
-    { href: "#telegram", label: t.product.telegramTitle },
+    { href: "#knowledge-graph", label: t.nav.knowledgeGraph },
+    { href: "#live-charts", label: t.nav.liveCharts },
+    { href: "#ai-assistant", label: t.nav.aiAssistant },
+    { href: "#telegram", label: t.nav.telegram },
     { href: "#how-it-works", label: t.nav.flow },
   ]
 
   return (
-    <header
+    <LandingHeaderShell
       data-landing-part="header"
       data-landing-surface="dark"
       className={`${styles.darkSurface} ${styles.header}`}
     >
       <div
-        className={`${styles.headerInner} mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8`}
+        className={`${styles.headerInner} mx-auto w-full max-w-[120rem] px-4 sm:px-6 lg:px-8`}
       >
         <Link
           href={withLocalePath("/", locale)}
           aria-label={dictionary.common.appName}
           className="flex shrink-0 items-center gap-3 rounded-md font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
         >
-          <span aria-hidden="true">
-            <Logo width={32} height={32} colorScheme="dark" />
+          <span aria-hidden="true" className="size-8 shrink-0">
+            <span className={styles.headerLogoDark}>
+              <Logo width={32} height={32} colorScheme="dark" />
+            </span>
+            <span className={styles.headerLogoLight}>
+              <Logo width={32} height={32} colorScheme="light" />
+            </span>
           </span>
           <span className="hidden truncate sm:inline">
             {dictionary.common.appName}
@@ -141,10 +151,7 @@ function LandingHeader({
             <ul className="absolute top-[calc(100%+0.5rem)] right-0 z-20 flex w-64 flex-col gap-1 rounded-lg border border-border bg-background p-2 shadow-lg">
               {sectionLinks.map((link) => (
                 <li key={link.href}>
-                  <a
-                    href={link.href}
-                    className="flex min-h-11 items-center rounded-md px-3 py-2 text-sm text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                  >
+                  <a href={link.href} className={styles.headerMenuItem}>
                     {link.label}
                   </a>
                 </li>
@@ -184,17 +191,25 @@ function LandingHeader({
             <div className="hidden sm:block">
               <LandingActionButton
                 action={access.headerSecondary}
+                className={`${styles.headerAction} ${styles.headerSecondaryAction}`}
+                size="lg"
                 variant="ghost"
               />
             </div>
           ) : null}
-          <LandingActionButton action={access.headerPrimary} />
+          <LandingActionButton
+            action={access.headerPrimary}
+            className={styles.headerAction}
+            size="lg"
+          />
 
           <LandingNavigationDisclosure
             className="relative xl:hidden"
             data-mobile-menu
           >
-            <summary className="flex min-h-11 min-w-11 cursor-pointer list-none items-center justify-center rounded-md border border-border bg-background text-foreground transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring [&::-webkit-details-marker]:hidden">
+            <summary
+              className={`${styles.headerMenuTrigger} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}
+            >
               <span className="sr-only">{t.nav.openMenu}</span>
               <MenuIcon aria-hidden="true" className="size-5" />
             </summary>
@@ -229,22 +244,20 @@ function LandingHeader({
                   <a
                     key={link.href}
                     href={link.href}
-                    className="flex min-h-11 items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                    className={styles.headerMenuItem}
                   >
                     {link.label}
                   </a>
                 ))}
-                <a
-                  href="#access"
-                  className="flex min-h-11 items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                >
+                <a href="#access" className={styles.headerMenuItem}>
                   {t.nav.access}
                 </a>
               </nav>
               {access.headerSecondary ? (
                 <LandingActionButton
                   action={access.headerSecondary}
-                  className="w-full"
+                  className={`${styles.headerAction} ${styles.headerSecondaryAction} w-full`}
+                  size="lg"
                   variant="outline"
                 />
               ) : null}
@@ -252,7 +265,7 @@ function LandingHeader({
           </LandingNavigationDisclosure>
         </div>
       </div>
-    </header>
+    </LandingHeaderShell>
   )
 }
 
@@ -272,11 +285,11 @@ function HeroSection({
       data-landing-section="hero-product-proof"
       data-landing-surface="dark"
       aria-labelledby="landing-hero-heading"
-      className={`${styles.darkSurface} ${styles.heroSection} relative overflow-hidden border-b border-border/80 bg-background`}
+      className={`${styles.darkSurface} ${styles.heroSection} relative flex min-h-svh flex-col overflow-hidden border-b border-border/80 bg-background`}
     >
       <LandingOhlcvBackground />
       <div
-        className={`${styles.heroContent} mx-auto grid w-full max-w-7xl gap-10 px-4 py-14 sm:px-6 sm:py-20 lg:grid-cols-[minmax(0,0.9fr)_minmax(28rem,1.1fr)] lg:items-center lg:gap-14 lg:px-8 lg:py-24`}
+        className={`${styles.heroContent} mx-auto grid w-full max-w-[100rem] flex-1 gap-12 px-4 pt-[calc(var(--landing-header-height)+3.5rem)] pb-14 sm:px-6 sm:pt-[calc(var(--landing-header-height)+5rem)] sm:pb-20 lg:grid-cols-[minmax(0,0.88fr)_minmax(32rem,1.12fr)] lg:items-center lg:gap-16 lg:px-8 lg:pt-[calc(var(--landing-header-height)+2rem)] lg:pb-8`}
       >
         <div className={`${styles.heroCopy} flex min-w-0 flex-col gap-7`}>
           <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
@@ -285,7 +298,7 @@ function HeroSection({
           <div className="flex max-w-3xl flex-col gap-5">
             <h1
               id="landing-hero-heading"
-              className="text-3xl leading-[1.08] font-semibold tracking-[-0.03em] sm:text-5xl lg:text-6xl"
+              className="max-w-3xl text-4xl leading-[1.02] font-semibold tracking-[-0.045em] sm:text-6xl lg:text-7xl"
             >
               {t.hero.title}
             </h1>
@@ -297,22 +310,17 @@ function HeroSection({
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <LandingActionButton
               action={access.heroPrimary}
-              className="w-full sm:w-auto"
+              className={`${styles.sectionAction} w-full sm:w-auto`}
               size="lg"
             />
             <LandingActionButton
               action={access.heroSecondary}
-              className="w-full sm:w-auto"
+              className={`${styles.sectionAction} w-full sm:w-auto`}
               size="lg"
               variant="outline"
               showArrow={false}
             />
           </div>
-          {access.heroPrimary.kind === "email" ? (
-            <p className="max-w-xl text-sm text-muted-foreground">
-              {access.requestAccessNote}
-            </p>
-          ) : null}
           <p className="max-w-xl border-l-2 border-chart-2 pl-4 text-sm leading-6 text-foreground">
             {t.hero.trustNote}
           </p>
@@ -342,6 +350,7 @@ function HeroSection({
           </dl>
         </div>
       </div>
+      <CapabilityStrip dictionary={dictionary} />
     </section>
   )
 }
@@ -355,13 +364,59 @@ function ProofPoint({ title, body }: { title: string; body: string }) {
   )
 }
 
+function CapabilityStrip({ dictionary }: { dictionary: Dictionary }) {
+  const t = dictionary.landing.capabilityStrip
+  const capabilities = [
+    { title: t.marketViewTitle, body: t.marketViewBody },
+    { title: t.impactTitle, body: t.impactBody },
+    { title: t.aiTitle, body: t.aiBody },
+    { title: t.telegramTitle, body: t.telegramBody },
+    { title: t.strategyTitle, body: t.strategyBody },
+  ]
+
+  return (
+    <section
+      id="capability-strip"
+      data-landing-section="capability-strip"
+      aria-label={dictionary.landing.product.eyebrow}
+      className={`${styles.heroContent} ${styles.heroRail} mx-auto w-full max-w-[100rem] px-4 pb-4 sm:px-6 sm:pb-6 lg:px-8 lg:pb-4`}
+    >
+      <dl
+        className={`${styles.landingCardGrid} grid sm:grid-cols-2 lg:grid-cols-5`}
+      >
+        {capabilities.map((capability, index) => (
+          <div
+            key={capability.title}
+            className={`${styles.landingCardGridItem} grid min-w-0 grid-cols-[2.5rem_minmax(0,1fr)] gap-3 sm:min-h-28 lg:grid-cols-1 lg:content-center lg:gap-4`}
+          >
+            <span
+              aria-hidden="true"
+              className="font-mono text-sm text-chart-1 tabular-nums"
+            >
+              {String(index + 1).padStart(2, "0")}
+            </span>
+            <div className="flex min-w-0 flex-col gap-1">
+              <dt className="text-sm font-semibold">{capability.title}</dt>
+              <dd className="text-xs leading-5 text-muted-foreground">
+                {capability.body}
+              </dd>
+            </div>
+          </div>
+        ))}
+      </dl>
+    </section>
+  )
+}
+
 function AnalysisFlow({ dictionary }: { dictionary: Dictionary }) {
   const t = dictionary.landing.analysisFlow
   const steps = [
     { title: t.stepOneTitle, body: t.stepOneBody },
     { title: t.stepTwoTitle, body: t.stepTwoBody },
     { title: t.stepThreeTitle, body: t.stepThreeBody },
+    { title: t.stepFourTitle, body: t.stepFourBody },
   ]
+  const loop = [t.loopNews, t.loopSignal, t.loopStrategy, t.loopDelivery]
 
   return (
     <section
@@ -371,32 +426,63 @@ function AnalysisFlow({ dictionary }: { dictionary: Dictionary }) {
       aria-labelledby="landing-flow-heading"
       className={`${styles.lightSurface} border-b border-border/80 bg-background`}
     >
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-10 px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
-        <div className="flex max-w-3xl flex-col gap-5">
-          <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
-            {t.eyebrow}
-          </p>
-          <h2
-            id="landing-flow-heading"
-            className="text-3xl leading-tight font-semibold tracking-[-0.02em] sm:text-4xl"
-          >
-            {t.heading}
-          </h2>
+      <div className="mx-auto grid w-full max-w-7xl gap-12 px-4 py-16 sm:px-6 sm:py-24 lg:grid-cols-[minmax(0,0.82fr)_minmax(0,1.18fr)] lg:px-8">
+        <div className="flex min-w-0 flex-col gap-8">
+          <div className="flex max-w-3xl flex-col gap-5">
+            <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+              {t.eyebrow}
+            </p>
+            <h2
+              id="landing-flow-heading"
+              className="text-3xl leading-tight font-semibold tracking-[-0.02em] sm:text-4xl"
+            >
+              {t.heading}
+            </h2>
+            <p className="leading-7 text-muted-foreground">{t.body}</p>
+          </div>
+          <aside className={`${styles.landingPanel} flex flex-col gap-4`}>
+            <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+              {t.loopEyebrow}
+            </p>
+            <h3 className="text-2xl leading-tight font-semibold">
+              {t.loopTitle}
+            </h3>
+            <p className="text-sm leading-6 text-muted-foreground">
+              {t.loopBody}
+            </p>
+            <ol className="flex flex-wrap items-center gap-2 text-xs font-semibold">
+              {loop.map((item, index) => (
+                <li key={item} className="flex items-center gap-2">
+                  <span className="border border-border bg-background px-3 py-2">
+                    {item}
+                  </span>
+                  {index < loop.length - 1 ? (
+                    <ArrowRightIcon
+                      aria-hidden="true"
+                      className="size-3 text-muted-foreground"
+                    />
+                  ) : null}
+                </li>
+              ))}
+            </ol>
+          </aside>
         </div>
 
-        <ol className="grid min-w-0 gap-0 border-y border-border min-[1200px]:grid-cols-3 min-[1200px]:border-y-0 min-[1200px]:border-l">
+        <ol className="min-w-0 border-t border-border">
           {steps.map((step, index) => (
             <li
               key={step.title}
-              className="flex min-w-0 flex-col gap-4 border-b border-border py-6 last:border-b-0 min-[1200px]:border-r min-[1200px]:border-b-0 min-[1200px]:px-6 min-[1200px]:py-6 min-[1200px]:first:pl-6"
+              className="grid min-w-0 grid-cols-[3rem_minmax(0,1fr)] gap-4 border-b border-border py-6"
             >
               <span className="font-mono text-xs text-muted-foreground tabular-nums">
                 {String(index + 1).padStart(2, "0")}
               </span>
-              <h3 className="text-xl font-semibold">{step.title}</h3>
-              <p className="max-w-md leading-7 text-muted-foreground">
-                {step.body}
-              </p>
+              <div className="flex flex-col gap-2">
+                <h3 className="text-xl font-semibold">{step.title}</h3>
+                <p className="max-w-md leading-7 text-muted-foreground">
+                  {step.body}
+                </p>
+              </div>
             </li>
           ))}
         </ol>
@@ -405,41 +491,24 @@ function AnalysisFlow({ dictionary }: { dictionary: Dictionary }) {
   )
 }
 
-type ProductChapter = {
+type ProductCapability = {
   id: LandingProductFeature
   title: string
   outcome: string
   body: string
-  detail?: string
-  media?: LandingProductCaptureLabels
+  linkLabel: string
   icon: ElementType
 }
 
-function ProductStory({
-  dictionary,
-  locale,
-}: {
-  dictionary: Dictionary
-  locale: AppLocale
-}) {
+function ProductStory({ dictionary }: { dictionary: Dictionary }) {
   const t = dictionary.landing.product
-  const chapters: ProductChapter[] = [
+  const capabilities: ProductCapability[] = [
     {
       id: "knowledge-graph",
       title: t.knowledgeGraphTitle,
       outcome: t.knowledgeGraphOutcome,
       body: t.knowledgeGraphBody,
-      media: {
-        alt: t.knowledgeGraphMediaAlt,
-        label: t.knowledgeGraphMediaTitle,
-        caption: t.knowledgeGraphMediaCaption,
-        error: t.media.error,
-        annotations: [
-          t.knowledgeGraphAnnotationEvent,
-          t.knowledgeGraphAnnotationAsset,
-          t.knowledgeGraphAnnotationSource,
-        ],
-      },
+      linkLabel: t.knowledgeGraphLinkLabel,
       icon: NetworkIcon,
     },
     {
@@ -447,13 +516,7 @@ function ProductStory({
       title: t.liveChartsTitle,
       outcome: t.liveChartsOutcome,
       body: t.liveChartsBody,
-      detail: t.liveChartsDetail,
-      media: {
-        alt: t.liveChartsMediaAlt,
-        label: t.liveChartsMediaTitle,
-        caption: t.liveChartsMediaCaption,
-        error: t.media.error,
-      },
+      linkLabel: t.liveChartsLinkLabel,
       icon: LineChartIcon,
     },
     {
@@ -461,6 +524,7 @@ function ProductStory({
       title: t.aiAssistantTitle,
       outcome: t.aiAssistantOutcome,
       body: t.aiAssistantBody,
+      linkLabel: t.aiAssistantLinkLabel,
       icon: BrainCircuitIcon,
     },
     {
@@ -468,8 +532,16 @@ function ProductStory({
       title: t.telegramTitle,
       outcome: t.telegramOutcome,
       body: t.telegramBody,
-      detail: t.telegramSetup,
+      linkLabel: t.telegramLinkLabel,
       icon: CalendarClockIcon,
+    },
+    {
+      id: "strategy-coding",
+      title: t.strategyTitle,
+      outcome: t.strategyOutcome,
+      body: t.strategyBody,
+      linkLabel: t.strategyLinkLabel,
+      icon: Code2Icon,
     },
   ]
 
@@ -482,25 +554,26 @@ function ProductStory({
       className={`${styles.lightSurface} border-b border-border/80 bg-background`}
     >
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-12 px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
-        <div className="flex max-w-3xl flex-col gap-5">
+        <div className="flex max-w-5xl flex-col gap-5">
           <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
             {t.eyebrow}
           </p>
           <h2
             id="landing-product-heading"
-            className="text-3xl leading-tight font-semibold tracking-[-0.02em] sm:text-4xl"
+            className="max-w-4xl text-4xl leading-[1.02] font-semibold tracking-[-0.045em] sm:text-5xl lg:text-6xl"
           >
             {t.heading}
           </h2>
+          <p className="max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">
+            {t.body}
+          </p>
         </div>
 
-        <div className="flex flex-col border-y border-border">
-          {chapters.map((chapter) => (
-            <FeatureChapter
-              chapter={chapter}
-              key={chapter.id}
-              locale={locale}
-            />
+        <div
+          className={`${styles.landingCardGrid} grid auto-rows-fr sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5`}
+        >
+          {capabilities.map((capability) => (
+            <CapabilityCard capability={capability} key={capability.id} />
           ))}
         </div>
       </div>
@@ -508,66 +581,168 @@ function ProductStory({
   )
 }
 
-function FeatureChapter({
-  chapter,
-  locale,
-}: {
-  chapter: ProductChapter
-  locale: AppLocale
-}) {
-  const Icon = chapter.icon
-  const capture =
-    chapter.id === "knowledge-graph" || chapter.id === "live-charts"
-      ? getApprovedLandingProductCapture(locale, chapter.id)
-      : null
-  const hasMedia = Boolean(capture && chapter.media)
-  const isKnowledgeGraph = chapter.id === "knowledge-graph"
+function CapabilityCard({ capability }: { capability: ProductCapability }) {
+  const Icon = capability.icon
 
   return (
     <article
-      id={chapter.id}
-      data-product-chapter
-      data-media-state={hasMedia ? "approved" : "text-first"}
-      className={
-        isKnowledgeGraph && hasMedia
-          ? "grid min-w-0 gap-8 border-b border-border py-10 last:border-b-0 min-[1200px]:grid-cols-[minmax(18rem,0.65fr)_minmax(0,1.35fr)] min-[1200px]:items-start min-[1200px]:gap-14 min-[1200px]:py-14"
-          : hasMedia
-            ? "grid min-w-0 gap-8 border-b border-border py-10 last:border-b-0 min-[1200px]:grid-cols-2 min-[1200px]:gap-14 min-[1200px]:py-14"
-            : "flex min-w-0 flex-col gap-5 border-b border-border py-10 last:border-b-0 min-[1200px]:max-w-3xl min-[1200px]:py-14"
-      }
+      id={capability.id}
+      data-product-card
+      aria-labelledby={`${capability.id}-title`}
+      className={`${styles.landingCardGridItem} flex h-full min-w-0 flex-col gap-0 xl:min-h-[23rem]`}
     >
-      <div className="order-0 flex min-w-0 flex-col justify-center gap-5">
-        <div className="flex items-center gap-3">
-          <span
-            aria-hidden="true"
-            className="flex size-10 items-center justify-center border border-border bg-muted/30"
-          >
-            <Icon className="text-muted-foreground" />
-          </span>
-          <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
-            {chapter.title}
-          </p>
-        </div>
-        <h3 className="max-w-2xl text-2xl leading-tight font-semibold tracking-[-0.02em] sm:text-3xl">
-          {chapter.outcome}
+      <span
+        aria-hidden="true"
+        className="flex size-11 items-center justify-center rounded-xl border border-border bg-background text-chart-1"
+      >
+        <Icon className="size-5" />
+      </span>
+
+      <div className="mt-12 flex min-w-0 flex-col gap-3">
+        <p className="text-[0.7rem] font-semibold tracking-[0.16em] text-chart-1 uppercase">
+          {capability.title}
+        </p>
+        <h3
+          id={`${capability.id}-title`}
+          className="text-xl leading-[1.08] font-semibold tracking-[-0.025em]"
+        >
+          {capability.outcome}
         </h3>
-        <p className="leading-7 text-muted-foreground">{chapter.body}</p>
-        {chapter.detail ? (
-          <p className="border-l-2 border-border pl-4 text-sm leading-6 text-foreground">
-            {chapter.detail}
-          </p>
-        ) : null}
+        <p className="text-sm leading-6 text-muted-foreground">
+          {capability.body}
+        </p>
       </div>
-      {capture && chapter.media ? (
-        <div className="order-0 min-w-0">
-          <LandingProductCapture capture={capture} labels={chapter.media} />
-        </div>
-      ) : null}
+
+      <p className="mt-auto flex items-center gap-1.5 pt-6 text-xs font-semibold text-chart-1">
+        {capability.linkLabel}
+        <ArrowRightIcon aria-hidden="true" className="size-3" />
+      </p>
     </article>
   )
 }
 
-function TrustBoundary({ dictionary }: { dictionary: Dictionary }) {
+function ShowcaseSection({
+  dictionary,
+  locale,
+}: {
+  dictionary: Dictionary
+  locale: AppLocale
+}) {
+  const t = dictionary.landing.showcase
+  const product = dictionary.landing.product
+  const graphCapture = getApprovedLandingProductCapture(
+    locale,
+    "knowledge-graph"
+  )
+  const chartCapture = getApprovedLandingProductCapture(locale, "live-charts")
+
+  return (
+    <section
+      data-landing-section="showcase"
+      data-landing-surface="light"
+      aria-labelledby="landing-showcase-heading"
+      className={`${styles.lightSurface} border-b border-border/80 bg-background`}
+    >
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-12 px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
+        <div className="flex max-w-3xl flex-col gap-5">
+          <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+            {t.eyebrow}
+          </p>
+          <h2
+            id="landing-showcase-heading"
+            className="text-3xl leading-tight font-semibold tracking-[-0.02em] sm:text-4xl"
+          >
+            {t.heading}
+          </h2>
+          <p className="leading-7 text-muted-foreground">{t.body}</p>
+        </div>
+        <div className="grid min-w-0 gap-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(20rem,0.9fr)]">
+          <div className="flex min-w-0 flex-col gap-6">
+            {graphCapture ? (
+              <LandingProductCapture
+                capture={graphCapture}
+                labels={{
+                  alt: product.knowledgeGraphMediaAlt,
+                  label: product.knowledgeGraphMediaTitle,
+                  caption: product.knowledgeGraphMediaCaption,
+                  error: product.media.error,
+                  annotations: [
+                    product.knowledgeGraphAnnotationEvent,
+                    product.knowledgeGraphAnnotationAsset,
+                    product.knowledgeGraphAnnotationSource,
+                  ],
+                }}
+              />
+            ) : null}
+            {chartCapture ? (
+              <LandingProductCapture
+                capture={chartCapture}
+                labels={{
+                  alt: product.liveChartsMediaAlt,
+                  label: product.liveChartsMediaTitle,
+                  caption: product.liveChartsMediaCaption,
+                  error: product.media.error,
+                }}
+              />
+            ) : null}
+          </div>
+          <div className="flex min-w-0 flex-col gap-6">
+            <article className={`${styles.landingPanel} flex flex-col gap-4`}>
+              <div className="flex items-center gap-3">
+                <BellRingIcon aria-hidden="true" className="size-5" />
+                <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+                  {t.telegramEyebrow}
+                </p>
+              </div>
+              <h3 className="text-2xl leading-tight font-semibold">
+                {t.telegramTitle}
+              </h3>
+              <p className="text-sm leading-6 text-muted-foreground">
+                {t.telegramBody}
+              </p>
+              <aside className="flex flex-col gap-2 border-l-2 border-chart-2 bg-background p-4">
+                <p className="text-xs font-semibold">{t.telegramAlertTitle}</p>
+                <p className="text-sm leading-6 text-muted-foreground">
+                  {t.telegramAlertBody}
+                </p>
+              </aside>
+            </article>
+            <article
+              className={`${styles.darkSurface} ${styles.landingPanel} flex flex-col gap-4`}
+            >
+              <div className="flex items-center gap-3">
+                <Code2Icon aria-hidden="true" className="size-5" />
+                <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+                  {t.strategyEyebrow}
+                </p>
+              </div>
+              <h3 className="text-2xl leading-tight font-semibold">
+                {t.strategyTitle}
+              </h3>
+              <p className="text-sm leading-6 text-muted-foreground">
+                {t.strategyBody}
+              </p>
+              <pre className="overflow-x-auto border border-border bg-muted/30 p-4 font-mono text-xs leading-6">
+                <code>{`strategy("Momentum Context")
+when price > moving_average
+and event_impact == "high"
+then emit_signal("watch")`}</code>
+              </pre>
+            </article>
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function TrustBoundary({
+  access,
+  dictionary,
+}: {
+  access: ReturnType<typeof createLandingAccessModel>
+  dictionary: Dictionary
+}) {
   const t = dictionary.landing.trust
 
   return (
@@ -578,32 +753,65 @@ function TrustBoundary({ dictionary }: { dictionary: Dictionary }) {
       aria-labelledby="landing-trust-heading"
       className={`${styles.lightSurface} border-b border-border/80 bg-background`}
     >
-      <div className="mx-auto grid w-full max-w-7xl gap-8 px-4 py-16 sm:px-6 sm:py-24 lg:grid-cols-[auto_minmax(0,1fr)] lg:gap-10 lg:px-8">
-        <div
-          aria-hidden="true"
-          className="flex size-12 items-center justify-center border border-border bg-muted/30"
-        >
-          <ShieldCheckIcon className="text-muted-foreground" />
-        </div>
-        <div className="flex max-w-4xl flex-col gap-5">
-          <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
-            {t.eyebrow}
-          </p>
-          <h2
-            id="landing-trust-heading"
-            className="text-3xl leading-tight font-semibold tracking-[-0.02em] sm:text-4xl"
+      <div className="mx-auto grid w-full max-w-7xl gap-12 px-4 py-16 sm:px-6 sm:py-24 lg:grid-cols-[minmax(0,1.2fr)_minmax(20rem,0.8fr)] lg:px-8">
+        <div className="grid min-w-0 gap-8 sm:grid-cols-[auto_minmax(0,1fr)]">
+          <div
+            aria-hidden="true"
+            className="flex size-12 items-center justify-center border border-border bg-muted/30"
           >
-            {t.heading}
-          </h2>
-          <p className="leading-7 text-muted-foreground">{t.body}</p>
-          <ul className="grid gap-3 border-t border-border pt-5 sm:grid-cols-3">
-            {[t.pointOne, t.pointTwo, t.pointThree].map((point) => (
-              <li key={point} className="text-sm leading-6">
-                {point}
-              </li>
-            ))}
-          </ul>
+            <ShieldCheckIcon className="text-muted-foreground" />
+          </div>
+          <div className="flex max-w-4xl flex-col gap-5">
+            <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+              {t.eyebrow}
+            </p>
+            <h2
+              id="landing-trust-heading"
+              className="text-3xl leading-tight font-semibold tracking-[-0.02em] sm:text-4xl"
+            >
+              {t.heading}
+            </h2>
+            <p className="leading-7 text-muted-foreground">{t.body}</p>
+            <ol className="flex flex-col gap-4 border-t border-border pt-5">
+              {[t.pointOne, t.pointTwo, t.pointThree].map((point, index) => (
+                <li
+                  key={point}
+                  className="grid grid-cols-[2rem_minmax(0,1fr)] gap-3 text-sm leading-6"
+                >
+                  <span className="font-mono text-xs text-muted-foreground">
+                    {String(index + 1).padStart(2, "0")}
+                  </span>
+                  <span>{point}</span>
+                </li>
+              ))}
+            </ol>
+          </div>
         </div>
+        <aside
+          className={`${styles.landingPanel} flex flex-col items-start gap-5`}
+        >
+          <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+            {t.enterpriseEyebrow}
+          </p>
+          <h3 className="text-2xl leading-tight font-semibold">
+            {t.enterpriseTitle}
+          </h3>
+          <p className="text-sm leading-6 text-muted-foreground">
+            {t.enterpriseBody}
+          </p>
+          <a
+            href={access.footerRequestAccess.href}
+            aria-label={t.enterpriseCta}
+            className={buttonVariants({
+              variant: "default",
+              size: "lg",
+              className: styles.sectionAction,
+            })}
+          >
+            {t.enterpriseCta}
+            <ArrowRightIcon data-icon="inline-end" aria-hidden="true" />
+          </a>
+        </aside>
       </div>
     </section>
   )
@@ -626,22 +834,28 @@ function FinalAccessCta({
       aria-labelledby="landing-access-heading"
       className={`${styles.darkSurface} border-b border-border/80 bg-background`}
     >
-      <div className="mx-auto flex w-full max-w-4xl flex-col items-center gap-6 px-4 py-20 text-center sm:px-6 sm:py-28">
-        <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
-          {t.accessLabel}
-        </p>
-        <h2
-          id="landing-access-heading"
-          className="text-3xl leading-tight font-semibold tracking-[-0.02em] sm:text-4xl"
-        >
-          {t.heading}
-        </h2>
-        <p className="max-w-2xl leading-7 text-muted-foreground">{t.body}</p>
-        <LandingActionButton action={access.finalCta} size="lg" />
-        {access.finalCta.kind === "email" ? (
-          <p className="text-sm text-muted-foreground">
-            {access.requestAccessNote}
+      <div className="mx-auto grid w-full max-w-7xl gap-12 px-4 py-20 sm:px-6 sm:py-28 lg:grid-cols-[minmax(0,1fr)_minmax(22rem,0.8fr)] lg:items-center lg:px-8">
+        <div className="flex max-w-3xl flex-col items-start gap-6">
+          <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+            {t.accessLabel}
           </p>
+          <h2
+            id="landing-access-heading"
+            className="text-3xl leading-tight font-semibold tracking-[-0.02em] sm:text-4xl"
+          >
+            {t.heading}
+          </h2>
+          <p className="max-w-2xl leading-7 text-muted-foreground">{t.body}</p>
+          {access.finalCta.kind === "internal" ? (
+            <LandingActionButton
+              action={access.finalCta}
+              className={styles.sectionAction}
+              size="lg"
+            />
+          ) : null}
+        </div>
+        {access.finalCta.kind === "email" ? (
+          <LandingDemoForm email={REQUEST_ACCESS_EMAIL} labels={t} />
         ) : null}
       </div>
     </section>
@@ -665,7 +879,7 @@ function LandingFooter({
       data-landing-surface="dark"
       className={`${styles.darkSurface} bg-background`}
     >
-      <div className="mx-auto grid w-full max-w-7xl gap-10 px-4 py-12 sm:px-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:px-8">
+      <div className="mx-auto grid w-full max-w-7xl gap-10 px-4 py-12 sm:grid-cols-2 sm:px-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(10rem,0.7fr)_minmax(10rem,0.7fr)] lg:px-8">
         <div className="flex max-w-md flex-col gap-4">
           <Link
             href={withLocalePath("/", locale)}
@@ -684,40 +898,78 @@ function LandingFooter({
 
         <nav
           aria-label={t.accessibility.footerNavigation}
-          className="flex flex-col items-start gap-4 text-sm sm:items-end"
+          className="flex flex-col items-start gap-3 text-sm"
         >
-          <Suspense
-            fallback={
-              <LandingLocaleLinksFallback
-                locale={locale}
-                labels={t.localeControl}
-              />
-            }
+          <p className="font-semibold text-foreground">
+            {t.footer.productHeading}
+          </p>
+          <a
+            href="#knowledge-graph"
+            className="text-muted-foreground hover:text-foreground"
           >
-            <LandingLocaleLinks
-              currentLocale={locale}
-              labels={{
-                group: t.localeControl.label,
-                vi: t.localeControl.vietnamese,
-                en: t.localeControl.english,
-              }}
-            />
-          </Suspense>
+            {t.footer.productMarketView}
+          </a>
+          <a
+            href="#live-charts"
+            className="text-muted-foreground hover:text-foreground"
+          >
+            {t.footer.productImpact}
+          </a>
+          <a
+            href="#ai-assistant"
+            className="text-muted-foreground hover:text-foreground"
+          >
+            {t.footer.productAi}
+          </a>
+          <a
+            href="#telegram"
+            className="text-muted-foreground hover:text-foreground"
+          >
+            {t.footer.productTelegram}
+          </a>
+          <a
+            href="#strategy-coding"
+            className="text-muted-foreground hover:text-foreground"
+          >
+            {t.footer.productStrategy}
+          </a>
+        </nav>
+
+        <nav
+          aria-label={t.footer.contactHeading}
+          className="flex flex-col items-start gap-3 text-sm"
+        >
+          <p className="font-semibold text-foreground">
+            {t.footer.contactHeading}
+          </p>
+          <a
+            href="#access"
+            className="text-muted-foreground hover:text-foreground"
+          >
+            {t.footer.demo}
+          </a>
           <LandingActionLink
             action={access.footerAppEntry}
-            className="rounded-md px-2 py-2 font-medium hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            className="text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           />
           <a
             href={access.footerRequestAccess.href}
             aria-label={t.footer.requestAccessEmailLabel}
-            className="rounded-md px-2 py-2 font-mono text-xs text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            className="font-mono text-xs text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           >
             {access.footerRequestAccess.label}
           </a>
-          <p className="max-w-xs text-left text-xs leading-5 text-muted-foreground sm:text-right">
-            {t.footer.requestAccessEmailNote}
-          </p>
+          <a
+            href="#how-it-works"
+            className="text-muted-foreground hover:text-foreground"
+          >
+            {t.footer.workflow}
+          </a>
         </nav>
+      </div>
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-2 border-t border-border px-4 py-5 text-xs text-muted-foreground sm:flex-row sm:justify-between sm:px-6 lg:px-8">
+        <span>{t.footer.copyright}</span>
+        <span>{t.footer.disclaimer}</span>
       </div>
     </footer>
   )

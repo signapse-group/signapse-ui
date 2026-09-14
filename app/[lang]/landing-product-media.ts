@@ -1,7 +1,11 @@
 import type { AppLocale } from "@/app/lib/i18n/config"
 
 export type LandingProductFeature =
-  "knowledge-graph" | "live-charts" | "ai-assistant" | "telegram"
+  | "knowledge-graph"
+  | "live-charts"
+  | "ai-assistant"
+  | "telegram"
+  | "strategy-coding"
 
 export type LandingProductMediaFeature = Extract<
   LandingProductFeature,

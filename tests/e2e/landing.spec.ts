@@ -4,21 +4,24 @@ import { expect, test } from "./fixtures"
 
 const sectionOrder = [
   "hero-product-proof",
+  "capability-strip",
   "product-story",
+  "audiences",
   "analysis-flow",
+  "showcase",
   "trust-boundary",
   "final-access-cta",
 ]
 
 test.describe("P0 public landing", () => {
   for (const locale of ["vi", "en"] as const) {
-    test(`${locale} renders the four-feature story and authenticated access paths`, async ({
+    test(`${locale} renders the five-capability story and authenticated access paths`, async ({
       page,
     }) => {
       await page.goto(`/${locale}`)
 
       await expect(page.locator("h1")).toHaveCount(1)
-      await expect(page.locator("[data-landing-section]")).toHaveCount(5)
+      await expect(page.locator("[data-landing-section]")).toHaveCount(8)
       await expect(
         page
           .locator("[data-landing-section]")
@@ -29,36 +32,28 @@ test.describe("P0 public landing", () => {
           )
       ).resolves.toEqual(sectionOrder)
 
-      await expect(page.locator("[data-product-chapter]")).toHaveCount(4)
-      await expect(
-        page.locator('[data-product-chapter][data-media-state="approved"]')
-      ).toHaveCount(2)
-      await expect(
-        page.locator('[data-product-chapter][data-media-state="text-first"]')
-      ).toHaveCount(2)
+      await expect(page.locator("[data-product-card]")).toHaveCount(5)
       await expect(page.locator("[data-landing-media-slot]")).toHaveCount(2)
       await expect(page.locator("[data-landing-media-slot] img")).toHaveCount(2)
       await expect(
         page.locator("[data-landing-media-slot] button")
       ).toHaveCount(0)
-      await expect(page.locator("[data-product-chapter] h3")).toHaveCount(4)
+      await expect(page.locator("[data-product-card] h3")).toHaveCount(5)
       await expect(
-        page.locator("[data-product-chapter] h3").first()
+        page.locator("[data-product-card] h3").first()
       ).toContainText(
         locale === "vi"
-          ? "Nhìn thấy các mối liên hệ trong thị trường."
-          : "See how market information connects."
+          ? "Nắm trọn bức tranh thị trường."
+          : "See the complete market picture."
       )
 
       await expect(page.locator("#how-it-works")).toContainText(
-        locale === "vi"
-          ? "Chọn tài sản, xem diễn biến giá"
-          : "Choose an asset, review price action"
+        locale === "vi" ? "Theo dõi thị trường" : "Monitor the market"
       )
       await expect(page.locator("#how-it-works")).toContainText(
         locale === "vi"
-          ? "Phân tích cùng Trợ lý AI"
-          : "Analyze with the AI Assistant"
+          ? "Gửi cảnh báo hoặc chạy bot"
+          : "Send alerts or run a bot"
       )
       await expect(page.locator("#workspace-ai")).toHaveCount(0)
       await expect(page.locator("#product")).not.toContainText("Market Query")
@@ -95,10 +90,10 @@ test.describe("P0 public landing", () => {
       await expect(
         page
           .locator('[data-landing-section="hero-product-proof"]')
-          .locator('a[href="#how-it-works"]')
+          .locator('a[href="#product"]')
       ).toBeVisible()
       await expect(page.getByText("request-access@signapse.ai")).toBeVisible()
-      await expect(page.locator('a[href^="mailto:"]')).toHaveAttribute(
+      await expect(page.locator('a[href^="mailto:"]').first()).toHaveAttribute(
         "href",
         "mailto:request-access@signapse.ai?subject=Signapse%20access%20request"
       )
@@ -110,8 +105,8 @@ test.describe("P0 public landing", () => {
         page.locator('[data-landing-section="hero-product-proof"]')
       ).toContainText(
         locale === "vi"
-          ? "Biến dữ liệu thị trường thành Đồ thị Tri thức."
-          : "Turn market data into a Knowledge Graph."
+          ? "Hiểu nhanh hơn. Hành động chủ động hơn."
+          : "Understand faster. Act proactively."
       )
     })
   }
@@ -135,7 +130,9 @@ test.describe("P0 public landing", () => {
     await expect(page).toHaveURL(/\/vi\?source=footer$/)
   })
 
-  test("keeps a fixed landing palette across global themes", async ({ page }) => {
+  test("keeps a fixed landing palette across global themes", async ({
+    page,
+  }) => {
     const palettes = []
 
     for (const colorScheme of ["light", "dark"] as const) {
@@ -160,8 +157,14 @@ test.describe("P0 public landing", () => {
               mint: getComputedStyle(root)
                 .getPropertyValue("--landing-mint")
                 .trim(),
-              darkBackground: read('[data-landing-surface="dark"]', "--background"),
-              darkForeground: read('[data-landing-surface="dark"]', "--foreground"),
+              darkBackground: read(
+                '[data-landing-surface="dark"]',
+                "--background"
+              ),
+              darkForeground: read(
+                '[data-landing-surface="dark"]',
+                "--foreground"
+              ),
               lightBackground: read(
                 '[data-landing-surface="light"]',
                 "--background"
@@ -188,7 +191,9 @@ test.describe("P0 public landing", () => {
       figureBackground: "#03141d",
     })
     await expect(
-      page.locator('[data-landing-part="header"] img[src*="signapse_logo_dark.svg"]')
+      page.locator(
+        '[data-landing-part="header"] img[src*="signapse_logo_dark.svg"]'
+      )
     ).toBeVisible()
   })
 
@@ -203,9 +208,37 @@ test.describe("P0 public landing", () => {
     await expect(
       page.locator('[data-landing-theme="fixed-signapse"]')
     ).toBeVisible()
-    await expect(page.evaluate(() => localStorage.getItem("theme"))).resolves.toBe(
-      "dark"
-    )
+    await expect(
+      page.evaluate(() => localStorage.getItem("theme"))
+    ).resolves.toBe("dark")
+  })
+
+  test("uses a dark liquid-glass header after scrolling", async ({ page }) => {
+    await page.goto("/vi")
+    await page.evaluate(() => window.scrollTo(0, 720))
+
+    const header = page.locator('[data-landing-part="header"]')
+    await expect(header).toHaveAttribute("data-scrolled", "true")
+    await expect
+      .poll(() =>
+        header.evaluate((element) => getComputedStyle(element).backgroundColor)
+      )
+      .toMatch(/\/ 0\.28\)/)
+
+    const glassStyle = await header.evaluate((element) => {
+      const computed = getComputedStyle(element)
+
+      return {
+        backdropFilter: computed.backdropFilter,
+        backgroundImage: computed.backgroundImage,
+        boxShadow: computed.boxShadow,
+      }
+    })
+
+    expect(glassStyle.backdropFilter).toContain("blur(16px)")
+    expect(glassStyle.backdropFilter).toContain("saturate(")
+    expect(glassStyle.backgroundImage).toBe("none")
+    expect(glassStyle.boxShadow).toContain("inset")
   })
 
   test("keeps approved product captures native inside landing frames", async ({
@@ -245,49 +278,49 @@ test.describe("P0 public landing", () => {
     )
   })
 
-  test("uses the approved graph and chart proof geometry across breakpoints", async ({
+  test("reflows the five capability cards without horizontal overflow", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 1440, height: 900 })
     await page.goto("/en")
 
-    const graphCopy = page.locator("#knowledge-graph > div").nth(0)
-    const graphMedia = page.locator("#knowledge-graph > div").nth(1)
-    const graphCopyBox = await graphCopy.boundingBox()
-    const graphMediaBox = await graphMedia.boundingBox()
-    expect(graphCopyBox).not.toBeNull()
-    expect(graphMediaBox).not.toBeNull()
-    if (!graphCopyBox || !graphMediaBox) return
-    expect(graphMediaBox.x).toBeGreaterThan(graphCopyBox.x)
-
-    const chartCopy = page.locator("#live-charts > div").nth(0)
-    const chartMedia = page.locator("#live-charts > div").nth(1)
-    const chartCopyBox = await chartCopy.boundingBox()
-    const chartMediaBox = await chartMedia.boundingBox()
-    expect(chartCopyBox).not.toBeNull()
-    expect(chartMediaBox).not.toBeNull()
-    if (!chartCopyBox || !chartMediaBox) return
-    expect(chartMediaBox.x).toBeGreaterThan(chartCopyBox.x)
+    const desktopCards = page.locator("[data-product-card]")
+    const desktopBoxes = await desktopCards.evaluateAll((cards) =>
+      cards.map((card) => {
+        const rect = card.getBoundingClientRect()
+        return { height: rect.height, width: rect.width, x: rect.x, y: rect.y }
+      })
+    )
+    expect(desktopBoxes).toHaveLength(5)
+    expect(new Set(desktopBoxes.map((box) => Math.round(box.y))).size).toBe(1)
+    expect(
+      new Set(desktopBoxes.map((box) => Math.round(box.height))).size
+    ).toBe(1)
+    expect(desktopBoxes.every((box) => box.width > 0)).toBe(true)
 
     await page.setViewportSize({ width: 375, height: 900 })
-    await page.goto("/en")
-    const mobileChartCopy = page.locator("#live-charts > div").nth(0)
-    const mobileChartMedia = page.locator("#live-charts > div").nth(1)
-    const mobileChartCopyBox = await mobileChartCopy.boundingBox()
-    const mobileChartMediaBox = await mobileChartMedia.boundingBox()
-    expect(mobileChartCopyBox).not.toBeNull()
-    expect(mobileChartMediaBox).not.toBeNull()
-    if (!mobileChartCopyBox || !mobileChartMediaBox) return
-    expect(mobileChartMediaBox.y).toBeGreaterThan(mobileChartCopyBox.y)
-
-    const mobileGraphCopy = page.locator("#knowledge-graph > div").nth(0)
-    const mobileGraphMedia = page.locator("#knowledge-graph > div").nth(1)
-    const mobileGraphCopyBox = await mobileGraphCopy.boundingBox()
-    const mobileGraphMediaBox = await mobileGraphMedia.boundingBox()
-    expect(mobileGraphCopyBox).not.toBeNull()
-    expect(mobileGraphMediaBox).not.toBeNull()
-    if (!mobileGraphCopyBox || !mobileGraphMediaBox) return
-    expect(mobileGraphMediaBox.y).toBeGreaterThan(mobileGraphCopyBox.y)
+    const mobileBoxes = await page
+      .locator("[data-product-card]")
+      .evaluateAll((cards) =>
+        cards.map((card) => {
+          const rect = card.getBoundingClientRect()
+          return {
+            bottom: rect.bottom,
+            left: rect.left,
+            right: rect.right,
+            y: rect.y,
+          }
+        })
+      )
+    expect(mobileBoxes).toHaveLength(5)
+    expect(
+      mobileBoxes.every(
+        (box, index) => index === 0 || box.y > mobileBoxes[index - 1].y
+      )
+    ).toBe(true)
+    expect(mobileBoxes.every((box) => box.left >= 0 && box.right <= 375)).toBe(
+      true
+    )
   })
 
   test("keeps the native mobile disclosure keyboard-operable", async ({
@@ -397,11 +430,11 @@ test.describe("P0 public landing", () => {
         await stage.press("Enter")
         await expect(stage).toHaveAttribute("data-context-mode", "price")
       } else {
-        await expect(page.locator("[data-figure-fallback]")).toBeVisible()
+        await expect(page.locator("[data-figure-fallback]")).toHaveCount(0)
         await expect(page.locator("[data-context-status]")).toContainText(
           locale === "vi"
-            ? "Đang hiển thị hình tĩnh"
-            : "Showing the static figure"
+            ? "Hình tương tác hiện không khả dụng"
+            : "The interactive figure is unavailable"
         )
       }
     })

@@ -21,13 +21,15 @@ const accessCopy = {
   },
   cta: {
     requestAccess: "Request access",
+    bookDemo: "Book a demo",
+    bookDemoAria: "Book a Signapse demo",
     signIn: "Sign in",
     openDashboard: "Open dashboard",
     requestAccessAria: "Request access to Signapse",
     signInAria: "Sign in to Signapse",
     openDashboardAria: "Open the Signapse dashboard",
-    exploreJourney: "See how Signapse analyzes markets",
-    exploreJourneyAria: "See how Signapse supports market analysis",
+    exploreJourney: "Explore the platform",
+    exploreJourneyAria: "Explore the Signapse platform",
     requestAccessNote: "This action opens your email application.",
   },
   footer: {
@@ -169,9 +171,9 @@ describe("landing metadata policy", () => {
         indexable: true,
       })
     ).toThrow(/https:\/\/signapse\.cloud/)
-    expect(() =>
-      resolveLandingDeploymentPolicy({ indexable: true })
-    ).toThrow(/https:\/\/signapse\.cloud/)
+    expect(() => resolveLandingDeploymentPolicy({ indexable: true })).toThrow(
+      /https:\/\/signapse\.cloud/
+    )
   })
 
   it("allows the exact apex origin without noindex", () => {
