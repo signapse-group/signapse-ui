@@ -28,7 +28,9 @@ import {
 } from "./landing-access"
 import { LandingDemoForm } from "./landing-demo-form"
 import styles from "./landing-page.module.css"
+import { LandingAudienceSection } from "./landing-audience-section"
 import { LandingContextFigure } from "./landing-context-figure"
+import { LandingHeaderShell } from "./landing-header-shell"
 import { LandingProductCapture } from "./landing-product-capture"
 import { LandingLocaleLinks } from "./landing-locale-links"
 import { LandingNavigationDisclosure } from "./landing-navigation-disclosure"
@@ -73,9 +75,8 @@ export function LandingPage({
 
       <main id="main-content" tabIndex={-1}>
         <HeroSection access={access} dictionary={dictionary} locale={locale} />
-        <CapabilityStrip dictionary={dictionary} />
         <ProductStory dictionary={dictionary} />
-        <AudienceSection dictionary={dictionary} />
+        <LandingAudienceSection dictionary={dictionary} />
         <AnalysisFlow dictionary={dictionary} />
         <ShowcaseSection dictionary={dictionary} locale={locale} />
         <TrustBoundary access={access} dictionary={dictionary} />
@@ -107,21 +108,26 @@ function LandingHeader({
   ]
 
   return (
-    <header
+    <LandingHeaderShell
       data-landing-part="header"
       data-landing-surface="dark"
       className={`${styles.darkSurface} ${styles.header}`}
     >
       <div
-        className={`${styles.headerInner} mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8`}
+        className={`${styles.headerInner} mx-auto w-full max-w-[120rem] px-4 sm:px-6 lg:px-8`}
       >
         <Link
           href={withLocalePath("/", locale)}
           aria-label={dictionary.common.appName}
           className="flex shrink-0 items-center gap-3 rounded-md font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
         >
-          <span aria-hidden="true">
-            <Logo width={32} height={32} colorScheme="dark" />
+          <span aria-hidden="true" className="size-8 shrink-0">
+            <span className={styles.headerLogoDark}>
+              <Logo width={32} height={32} colorScheme="dark" />
+            </span>
+            <span className={styles.headerLogoLight}>
+              <Logo width={32} height={32} colorScheme="light" />
+            </span>
           </span>
           <span className="hidden truncate sm:inline">
             {dictionary.common.appName}
@@ -145,10 +151,7 @@ function LandingHeader({
             <ul className="absolute top-[calc(100%+0.5rem)] right-0 z-20 flex w-64 flex-col gap-1 rounded-lg border border-border bg-background p-2 shadow-lg">
               {sectionLinks.map((link) => (
                 <li key={link.href}>
-                  <a
-                    href={link.href}
-                    className="flex min-h-11 items-center rounded-md px-3 py-2 text-sm text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                  >
+                  <a href={link.href} className={styles.headerMenuItem}>
                     {link.label}
                   </a>
                 </li>
@@ -188,17 +191,25 @@ function LandingHeader({
             <div className="hidden sm:block">
               <LandingActionButton
                 action={access.headerSecondary}
+                className={`${styles.headerAction} ${styles.headerSecondaryAction}`}
+                size="lg"
                 variant="ghost"
               />
             </div>
           ) : null}
-          <LandingActionButton action={access.headerPrimary} />
+          <LandingActionButton
+            action={access.headerPrimary}
+            className={styles.headerAction}
+            size="lg"
+          />
 
           <LandingNavigationDisclosure
             className="relative xl:hidden"
             data-mobile-menu
           >
-            <summary className="flex min-h-11 min-w-11 cursor-pointer list-none items-center justify-center rounded-md border border-border bg-background text-foreground transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring [&::-webkit-details-marker]:hidden">
+            <summary
+              className={`${styles.headerMenuTrigger} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}
+            >
               <span className="sr-only">{t.nav.openMenu}</span>
               <MenuIcon aria-hidden="true" className="size-5" />
             </summary>
@@ -233,22 +244,20 @@ function LandingHeader({
                   <a
                     key={link.href}
                     href={link.href}
-                    className="flex min-h-11 items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                    className={styles.headerMenuItem}
                   >
                     {link.label}
                   </a>
                 ))}
-                <a
-                  href="#access"
-                  className="flex min-h-11 items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                >
+                <a href="#access" className={styles.headerMenuItem}>
                   {t.nav.access}
                 </a>
               </nav>
               {access.headerSecondary ? (
                 <LandingActionButton
                   action={access.headerSecondary}
-                  className="w-full"
+                  className={`${styles.headerAction} ${styles.headerSecondaryAction} w-full`}
+                  size="lg"
                   variant="outline"
                 />
               ) : null}
@@ -256,7 +265,7 @@ function LandingHeader({
           </LandingNavigationDisclosure>
         </div>
       </div>
-    </header>
+    </LandingHeaderShell>
   )
 }
 
@@ -276,11 +285,11 @@ function HeroSection({
       data-landing-section="hero-product-proof"
       data-landing-surface="dark"
       aria-labelledby="landing-hero-heading"
-      className={`${styles.darkSurface} ${styles.heroSection} relative overflow-hidden border-b border-border/80 bg-background`}
+      className={`${styles.darkSurface} ${styles.heroSection} relative flex min-h-svh flex-col overflow-hidden border-b border-border/80 bg-background`}
     >
       <LandingOhlcvBackground />
       <div
-        className={`${styles.heroContent} mx-auto grid w-full max-w-7xl gap-10 px-4 py-14 sm:px-6 sm:py-20 lg:grid-cols-[minmax(0,0.9fr)_minmax(28rem,1.1fr)] lg:items-center lg:gap-14 lg:px-8 lg:py-24`}
+        className={`${styles.heroContent} mx-auto grid w-full max-w-[100rem] flex-1 gap-12 px-4 pt-[calc(var(--landing-header-height)+3.5rem)] pb-14 sm:px-6 sm:pt-[calc(var(--landing-header-height)+5rem)] sm:pb-20 lg:grid-cols-[minmax(0,0.88fr)_minmax(32rem,1.12fr)] lg:items-center lg:gap-16 lg:px-8 lg:pt-[calc(var(--landing-header-height)+2rem)] lg:pb-8`}
       >
         <div className={`${styles.heroCopy} flex min-w-0 flex-col gap-7`}>
           <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
@@ -289,7 +298,7 @@ function HeroSection({
           <div className="flex max-w-3xl flex-col gap-5">
             <h1
               id="landing-hero-heading"
-              className="text-3xl leading-[1.08] font-semibold tracking-[-0.03em] sm:text-5xl lg:text-6xl"
+              className="max-w-3xl text-4xl leading-[1.02] font-semibold tracking-[-0.045em] sm:text-6xl lg:text-7xl"
             >
               {t.hero.title}
             </h1>
@@ -301,22 +310,17 @@ function HeroSection({
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <LandingActionButton
               action={access.heroPrimary}
-              className="w-full sm:w-auto"
+              className={`${styles.sectionAction} w-full sm:w-auto`}
               size="lg"
             />
             <LandingActionButton
               action={access.heroSecondary}
-              className="w-full sm:w-auto"
+              className={`${styles.sectionAction} w-full sm:w-auto`}
               size="lg"
               variant="outline"
               showArrow={false}
             />
           </div>
-          {access.heroPrimary.kind === "email" ? (
-            <p className="max-w-xl text-sm text-muted-foreground">
-              {access.requestAccessNote}
-            </p>
-          ) : null}
           <p className="max-w-xl border-l-2 border-chart-2 pl-4 text-sm leading-6 text-foreground">
             {t.hero.trustNote}
           </p>
@@ -346,6 +350,7 @@ function HeroSection({
           </dl>
         </div>
       </div>
+      <CapabilityStrip dictionary={dictionary} />
     </section>
   )
 }
@@ -371,21 +376,31 @@ function CapabilityStrip({ dictionary }: { dictionary: Dictionary }) {
 
   return (
     <section
+      id="capability-strip"
       data-landing-section="capability-strip"
-      data-landing-surface="light"
       aria-label={dictionary.landing.product.eyebrow}
-      className={`${styles.lightSurface} border-b border-border/80 bg-muted/40`}
+      className={`${styles.heroContent} ${styles.heroRail} mx-auto w-full max-w-[100rem] px-4 pb-4 sm:px-6 sm:pb-6 lg:px-8 lg:pb-4`}
     >
-      <dl className="mx-auto grid w-full max-w-7xl px-4 sm:grid-cols-2 sm:px-6 lg:grid-cols-5 lg:px-8">
-        {capabilities.map((capability) => (
+      <dl
+        className={`${styles.landingCardGrid} grid sm:grid-cols-2 lg:grid-cols-5`}
+      >
+        {capabilities.map((capability, index) => (
           <div
             key={capability.title}
-            className="flex min-w-0 flex-col gap-1 border-b border-border py-5 last:border-b-0 sm:px-5 lg:border-r lg:border-b-0 lg:first:pl-0 lg:last:border-r-0"
+            className={`${styles.landingCardGridItem} grid min-w-0 grid-cols-[2.5rem_minmax(0,1fr)] gap-3 sm:min-h-28 lg:grid-cols-1 lg:content-center lg:gap-4`}
           >
-            <dt className="text-sm font-semibold">{capability.title}</dt>
-            <dd className="text-xs leading-5 text-muted-foreground">
-              {capability.body}
-            </dd>
+            <span
+              aria-hidden="true"
+              className="font-mono text-sm text-chart-1 tabular-nums"
+            >
+              {String(index + 1).padStart(2, "0")}
+            </span>
+            <div className="flex min-w-0 flex-col gap-1">
+              <dt className="text-sm font-semibold">{capability.title}</dt>
+              <dd className="text-xs leading-5 text-muted-foreground">
+                {capability.body}
+              </dd>
+            </div>
           </div>
         ))}
       </dl>
@@ -425,7 +440,7 @@ function AnalysisFlow({ dictionary }: { dictionary: Dictionary }) {
             </h2>
             <p className="leading-7 text-muted-foreground">{t.body}</p>
           </div>
-          <aside className="flex flex-col gap-4 border border-border bg-muted/30 p-6">
+          <aside className={`${styles.landingPanel} flex flex-col gap-4`}>
             <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
               {t.loopEyebrow}
             </p>
@@ -554,7 +569,9 @@ function ProductStory({ dictionary }: { dictionary: Dictionary }) {
           </p>
         </div>
 
-        <div className="grid auto-rows-fr gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        <div
+          className={`${styles.landingCardGrid} grid auto-rows-fr sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5`}
+        >
           {capabilities.map((capability) => (
             <CapabilityCard capability={capability} key={capability.id} />
           ))}
@@ -572,7 +589,7 @@ function CapabilityCard({ capability }: { capability: ProductCapability }) {
       id={capability.id}
       data-product-card
       aria-labelledby={`${capability.id}-title`}
-      className="flex h-full min-w-0 flex-col rounded-3xl border border-border bg-muted/40 p-6 transition-[border-color,box-shadow] duration-200 hover:border-muted-foreground/60 hover:shadow-sm motion-reduce:transition-none xl:min-h-[23rem]"
+      className={`${styles.landingCardGridItem} flex h-full min-w-0 flex-col gap-0 xl:min-h-[23rem]`}
     >
       <span
         aria-hidden="true"
@@ -601,63 +618,6 @@ function CapabilityCard({ capability }: { capability: ProductCapability }) {
         <ArrowRightIcon aria-hidden="true" className="size-3" />
       </p>
     </article>
-  )
-}
-
-function AudienceSection({ dictionary }: { dictionary: Dictionary }) {
-  const t = dictionary.landing.audiences
-  const audiences = [
-    { label: t.traderLabel, title: t.traderTitle, body: t.traderBody },
-    { label: t.analystLabel, title: t.analystTitle, body: t.analystBody },
-    {
-      label: t.developerLabel,
-      title: t.developerTitle,
-      body: t.developerBody,
-    },
-    { label: t.teamLabel, title: t.teamTitle, body: t.teamBody },
-  ]
-
-  return (
-    <section
-      id="audiences"
-      data-landing-section="audiences"
-      data-landing-surface="dark"
-      aria-labelledby="landing-audiences-heading"
-      className={`${styles.darkSurface} border-b border-border/80 bg-background`}
-    >
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-12 px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
-        <div className="flex max-w-3xl flex-col gap-5">
-          <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
-            {t.eyebrow}
-          </p>
-          <h2
-            id="landing-audiences-heading"
-            className="text-3xl leading-tight font-semibold tracking-[-0.02em] sm:text-4xl"
-          >
-            {t.heading}
-          </h2>
-          <p className="leading-7 text-muted-foreground">{t.body}</p>
-        </div>
-        <div className="grid border-y border-border sm:grid-cols-2 lg:grid-cols-4">
-          {audiences.map((audience) => (
-            <article
-              key={audience.label}
-              className="flex min-w-0 flex-col gap-5 border-b border-border py-7 sm:border-r sm:px-6 lg:border-b-0 lg:last:border-r-0"
-            >
-              <p className="font-mono text-xs text-muted-foreground">
-                {audience.label}
-              </p>
-              <h3 className="text-xl leading-tight font-semibold">
-                {audience.title}
-              </h3>
-              <p className="text-sm leading-6 text-muted-foreground">
-                {audience.body}
-              </p>
-            </article>
-          ))}
-        </div>
-      </div>
-    </section>
   )
 }
 
@@ -727,7 +687,7 @@ function ShowcaseSection({
             ) : null}
           </div>
           <div className="flex min-w-0 flex-col gap-6">
-            <article className="flex flex-col gap-4 border border-border bg-muted/30 p-6">
+            <article className={`${styles.landingPanel} flex flex-col gap-4`}>
               <div className="flex items-center gap-3">
                 <BellRingIcon aria-hidden="true" className="size-5" />
                 <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
@@ -748,7 +708,7 @@ function ShowcaseSection({
               </aside>
             </article>
             <article
-              className={`${styles.darkSurface} flex flex-col gap-4 bg-background p-6`}
+              className={`${styles.darkSurface} ${styles.landingPanel} flex flex-col gap-4`}
             >
               <div className="flex items-center gap-3">
                 <Code2Icon aria-hidden="true" className="size-5" />
@@ -827,7 +787,9 @@ function TrustBoundary({
             </ol>
           </div>
         </div>
-        <aside className="flex flex-col items-start gap-5 border border-border bg-muted/30 p-6">
+        <aside
+          className={`${styles.landingPanel} flex flex-col items-start gap-5`}
+        >
           <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
             {t.enterpriseEyebrow}
           </p>
@@ -840,7 +802,11 @@ function TrustBoundary({
           <a
             href={access.footerRequestAccess.href}
             aria-label={t.enterpriseCta}
-            className={buttonVariants({ variant: "default", size: "lg" })}
+            className={buttonVariants({
+              variant: "default",
+              size: "lg",
+              className: styles.sectionAction,
+            })}
           >
             {t.enterpriseCta}
             <ArrowRightIcon data-icon="inline-end" aria-hidden="true" />
@@ -881,7 +847,11 @@ function FinalAccessCta({
           </h2>
           <p className="max-w-2xl leading-7 text-muted-foreground">{t.body}</p>
           {access.finalCta.kind === "internal" ? (
-            <LandingActionButton action={access.finalCta} size="lg" />
+            <LandingActionButton
+              action={access.finalCta}
+              className={styles.sectionAction}
+              size="lg"
+            />
           ) : null}
         </div>
         {access.finalCta.kind === "email" ? (

@@ -213,6 +213,34 @@ test.describe("P0 public landing", () => {
     ).resolves.toBe("dark")
   })
 
+  test("uses a dark liquid-glass header after scrolling", async ({ page }) => {
+    await page.goto("/vi")
+    await page.evaluate(() => window.scrollTo(0, 720))
+
+    const header = page.locator('[data-landing-part="header"]')
+    await expect(header).toHaveAttribute("data-scrolled", "true")
+    await expect
+      .poll(() =>
+        header.evaluate((element) => getComputedStyle(element).backgroundColor)
+      )
+      .toMatch(/\/ 0\.28\)/)
+
+    const glassStyle = await header.evaluate((element) => {
+      const computed = getComputedStyle(element)
+
+      return {
+        backdropFilter: computed.backdropFilter,
+        backgroundImage: computed.backgroundImage,
+        boxShadow: computed.boxShadow,
+      }
+    })
+
+    expect(glassStyle.backdropFilter).toContain("blur(16px)")
+    expect(glassStyle.backdropFilter).toContain("saturate(")
+    expect(glassStyle.backgroundImage).toBe("none")
+    expect(glassStyle.boxShadow).toContain("inset")
+  })
+
   test("keeps approved product captures native inside landing frames", async ({
     page,
   }) => {
@@ -402,11 +430,11 @@ test.describe("P0 public landing", () => {
         await stage.press("Enter")
         await expect(stage).toHaveAttribute("data-context-mode", "price")
       } else {
-        await expect(page.locator("[data-figure-fallback]")).toBeVisible()
+        await expect(page.locator("[data-figure-fallback]")).toHaveCount(0)
         await expect(page.locator("[data-context-status]")).toContainText(
           locale === "vi"
-            ? "Đang hiển thị hình tĩnh"
-            : "Showing the static figure"
+            ? "Hình tương tác hiện không khả dụng"
+            : "The interactive figure is unavailable"
         )
       }
     })

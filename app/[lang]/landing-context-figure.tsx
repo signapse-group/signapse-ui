@@ -25,8 +25,11 @@ type LandingPalette = {
 
 type LandingPaletteFallback = Record<keyof LandingPalette, number>
 
-const GRAPH_NODE_COUNT = 84
+const GRAPH_NODE_COUNT = 120
 const CANDLE_COUNT = 12
+const CANDLE_INDEX_COUNT = 32
+const SIGNAL_PATH_COUNT = 3
+const SIGNAL_TRAIL_LENGTH = 6
 const DRAG_THRESHOLD = 5
 const GRAPH_EDGE_OPACITY = 0.8
 const LANDING_PALETTE_FALLBACK: LandingPaletteFallback = {
@@ -274,12 +277,24 @@ export function LandingContextFigure({
 
     const onPointerUp = (event: PointerEvent) => {
       if (!pointerDown || event.pointerId !== activePointer) return
+      const wasDragging = dragging
       pointerDown = false
       dragging = false
       activePointer = null
       stage.dataset.dragging = "false"
       if (stage.hasPointerCapture(event.pointerId))
         stage.releasePointerCapture(event.pointerId)
+      if (
+        event.type === "pointerup" &&
+        !wasDragging &&
+        supportsFinePointer &&
+        hoveredRef.current
+      ) {
+        const nextMode = modeRef.current === "price" ? "graph" : "price"
+        pinnedPriceActionRef.current = nextMode === "price"
+        hoverSuppressedRef.current = true
+        setFigureMode(nextMode)
+      }
       manualInteractionUntil = performance.now() + 500
       scheduleFrame()
     }
@@ -383,12 +398,17 @@ export function LandingContextFigure({
         const graph: import("three").Vector3[] = []
         const chart: import("three").Vector3[] = []
         const current = new Float32Array(GRAPH_NODE_COUNT * 3)
+        const hubIndices = [0, 29, 58, 87]
 
         for (let index = 0; index < GRAPH_NODE_COUNT; index += 1) {
-          // Evenly distribute nodes across a sphere using the golden angle.
+          // Layered shells make the graph read as a volume instead of a skin.
           const theta = index * Math.PI * (3 - Math.sqrt(5))
           const phi = Math.acos(1 - (2 * (index + 0.5)) / GRAPH_NODE_COUNT)
-          const radius = 2.2
+          const radius = hubIndices.includes(index)
+            ? 0.82 + seededRandom(index + 70) * 0.28
+            : index % 4 === 0
+              ? 1.58 + seededRandom(index + 80) * 0.18
+              : 2.38 + seededRandom(index + 90) * 0.18
           const position = new three.Vector3(
             Math.sin(phi) * Math.cos(theta) * radius,
             Math.cos(phi) * radius,
@@ -439,6 +459,21 @@ export function LandingContextFigure({
             chart.push(new three.Vector3(a, b, depth))
           )
         }
+
+        const chartTargets = Array.from(
+          { length: GRAPH_NODE_COUNT },
+          (_, index) => {
+            const progress =
+              (index / Math.max(1, GRAPH_NODE_COUNT - 1)) *
+              Math.max(0, chart.length - 1)
+            const fromIndex = Math.floor(progress)
+            const toIndex = Math.min(chart.length - 1, fromIndex + 1)
+
+            return chart[fromIndex]
+              .clone()
+              .lerp(chart[toIndex], progress - fromIndex)
+          }
+        )
 
         const dotCanvas = document.createElement("canvas")
         dotCanvas.width = 128
@@ -493,7 +528,8 @@ export function LandingContextFigure({
               ])
           }
           nearest.sort((a, b) => a[0] - b[0])
-          for (let neighbor = 0; neighbor < 2; neighbor += 1) {
+          const neighborCount = hubIndices.includes(index) ? 5 : 2
+          for (let neighbor = 0; neighbor < neighborCount; neighbor += 1) {
             const first = Math.min(index, nearest[neighbor][1])
             const second = Math.max(index, nearest[neighbor][1])
             const key = `${first}:${second}`
@@ -505,13 +541,19 @@ export function LandingContextFigure({
         }
         graphPairs = pairs
         const edgeArray = new Float32Array(pairs.length * 6)
+        const edgeColors = new Float32Array(pairs.length * 6)
         edgeGeometry = new three.BufferGeometry()
         edgeGeometry.setAttribute(
           "position",
           new three.BufferAttribute(edgeArray, 3)
         )
+        edgeGeometry.setAttribute(
+          "color",
+          new three.BufferAttribute(edgeColors, 3)
+        )
         edgeMaterial = new three.LineBasicMaterial({
-          color: edgeColor,
+          color: 0xffffff,
+          vertexColors: true,
           transparent: true,
           opacity: GRAPH_EDGE_OPACITY,
           depthTest: false,
@@ -522,17 +564,22 @@ export function LandingContextFigure({
         graphEdges.renderOrder = 2
         rootGroup.add(graphEdges)
 
-        // Follow connected edges so each pulse reads as a signal, not random noise.
-        const signalPath = [0]
-        for (let step = 0; step < 5; step += 1) {
-          const last = signalPath[signalPath.length - 1]
-          const next = pairs
-            .filter(([a, b]) => a === last || b === last)
-            .map(([a, b]) => (a === last ? b : a))
-            .find((node) => !signalPath.includes(node))
-          if (next === undefined) break
-          signalPath.push(next)
-        }
+        // Follow real edges so each signal visibly travels through the graph.
+        const signalPaths = hubIndices
+          .slice(0, SIGNAL_PATH_COUNT)
+          .map((start) => {
+            const path = [start]
+            for (let step = 0; step < 6; step += 1) {
+              const last = path[path.length - 1]
+              const next = pairs
+                .filter(([a, b]) => a === last || b === last)
+                .map(([a, b]) => (a === last ? b : a))
+                .find((node) => !path.includes(node))
+              if (next === undefined) break
+              path.push(next)
+            }
+            return path
+          })
         const glowCanvas = document.createElement("canvas")
         glowCanvas.width = glowCanvas.height = 64
         const glowContext = glowCanvas.getContext("2d")
@@ -552,6 +599,40 @@ export function LandingContextFigure({
           glowContext.fillRect(0, 0, 64, 64)
         }
         const glowTexture = new three.CanvasTexture(glowCanvas)
+        glowTexture.colorSpace = three.SRGBColorSpace
+        const hubPositions = new Float32Array(hubIndices.length * 3)
+        const hubGeometry = new three.BufferGeometry()
+        hubGeometry.setAttribute(
+          "position",
+          new three.BufferAttribute(hubPositions, 3)
+        )
+        const hubMaterial = new three.PointsMaterial({
+          color: accent,
+          size: 0.5,
+          map: glowTexture,
+          transparent: true,
+          depthWrite: false,
+          depthTest: false,
+          opacity: 0,
+        })
+        const hubs = new three.Points(hubGeometry, hubMaterial)
+        hubs.renderOrder = 9
+        rootGroup.add(hubs)
+        const coreGlowGeometry = new three.BufferGeometry().setFromPoints([
+          new three.Vector3(0, 0, 0),
+        ])
+        const coreGlowMaterial = new three.PointsMaterial({
+          color: accent,
+          size: 4.8,
+          map: glowTexture,
+          transparent: true,
+          depthWrite: false,
+          depthTest: false,
+          opacity: 0,
+        })
+        const coreGlow = new three.Points(coreGlowGeometry, coreGlowMaterial)
+        coreGlow.renderOrder = 1
+        rootGroup.add(coreGlow)
         const glowGeometry = new three.BufferGeometry()
         const glowPositions = new Float32Array(9)
         glowGeometry.setAttribute(
@@ -569,7 +650,9 @@ export function LandingContextFigure({
         })
         rootGroup.add(new three.Points(glowGeometry, glowMaterial))
         const pulseGeometry = new three.BufferGeometry()
-        const pulsePositions = new Float32Array(18)
+        const pulsePositions = new Float32Array(
+          SIGNAL_PATH_COUNT * SIGNAL_TRAIL_LENGTH * 3
+        )
         pulseGeometry.setAttribute(
           "position",
           new three.BufferAttribute(pulsePositions, 3)
@@ -594,46 +677,61 @@ export function LandingContextFigure({
           const bottom = Math.min(candle.open, candle.close)
           const top = Math.max(candle.open, candle.close)
           const handle = 0.14
-          const base = candleVertices.length / 3
-          candleVertices.push(
-            candle.x,
-            candle.low,
-            0,
-            candle.x,
-            bottom,
-            0,
-            candle.x - handle,
-            bottom,
-            0,
-            candle.x + handle,
-            bottom,
-            0,
-            candle.x - handle,
-            top,
-            0,
-            candle.x + handle,
-            top,
-            0,
-            candle.x,
-            candle.high,
-            0,
-            candle.x,
-            top,
-            0
-          )
+          const appendFace = (depth: number) => {
+            const base = candleVertices.length / 3
+            candleVertices.push(
+              candle.x,
+              candle.low,
+              depth,
+              candle.x,
+              bottom,
+              depth,
+              candle.x - handle,
+              bottom,
+              depth,
+              candle.x + handle,
+              bottom,
+              depth,
+              candle.x - handle,
+              top,
+              depth,
+              candle.x + handle,
+              top,
+              depth,
+              candle.x,
+              candle.high,
+              depth,
+              candle.x,
+              top,
+              depth
+            )
+            candleIndices.push(
+              base,
+              base + 1,
+              base + 2,
+              base + 3,
+              base + 2,
+              base + 4,
+              base + 3,
+              base + 5,
+              base + 4,
+              base + 5,
+              base + 6,
+              base + 7
+            )
+            return base
+          }
+          const front = appendFace(0.12)
+          const back = appendFace(-0.16)
           candleIndices.push(
-            base,
-            base + 1,
-            base + 2,
-            base + 3,
-            base + 2,
-            base + 4,
-            base + 3,
-            base + 5,
-            base + 4,
-            base + 5,
-            base + 6,
-            base + 7
+            front + 2,
+            back + 2,
+            front + 3,
+            back + 3,
+            front + 4,
+            back + 4,
+            front + 5,
+            back + 5
           )
         })
         candleGeometry = new three.BufferGeometry()
@@ -659,7 +757,7 @@ export function LandingContextFigure({
 
         priceGeometry = new three.BufferGeometry().setFromPoints(
           candleInfo.map(
-            (candle) => new three.Vector3(candle.x, candle.close, 0.08)
+            (candle) => new three.Vector3(candle.x, candle.close, 0.2)
           )
         )
         priceMaterial = new three.LineBasicMaterial({
@@ -674,11 +772,36 @@ export function LandingContextFigure({
         priceLine.renderOrder = 5
         chartGroup.add(priceLine)
 
+        const comparisonGeometry = new three.BufferGeometry().setFromPoints(
+          candleInfo.map(
+            (candle, index) =>
+              new three.Vector3(
+                candle.x,
+                candle.close - 0.24 + Math.sin(index * 0.8) * 0.1,
+                -0.42
+              )
+          )
+        )
+        const comparisonMaterial = new three.LineBasicMaterial({
+          color: muted,
+          transparent: true,
+          opacity: 0,
+          depthTest: false,
+          depthWrite: false,
+          fog: false,
+        })
+        const comparisonLine = new three.Line(
+          comparisonGeometry,
+          comparisonMaterial
+        )
+        comparisonLine.renderOrder = 3
+        chartGroup.add(comparisonLine)
+
         const gridVertices: number[] = []
         for (let y = -1.8; y <= 1.8; y += 0.6)
-          gridVertices.push(-3.8, y, -0.1, 3.8, y, -0.1)
+          gridVertices.push(-3.8, y, -0.58, 3.8, y, -0.58)
         for (let x = -3.6; x <= 3.6; x += 1.2)
-          gridVertices.push(x, -2, -0.1, x, 2.05, -0.1)
+          gridVertices.push(x, -2, -0.58, x, 2.05, -0.58)
         gridGeometry = new three.BufferGeometry()
         gridGeometry.setAttribute(
           "position",
@@ -694,8 +817,27 @@ export function LandingContextFigure({
         })
         chartGroup.add(new three.LineSegments(gridGeometry, gridMaterial))
 
+        const eventRingGeometry = new three.RingGeometry(0.16, 0.2, 32)
+        const eventRingMaterial = new three.MeshBasicMaterial({
+          color: accent,
+          transparent: true,
+          opacity: 0,
+          depthTest: false,
+          depthWrite: false,
+          side: three.DoubleSide,
+        })
+        const eventCandle = candleInfo[7]
+        const eventRing = new three.Mesh(eventRingGeometry, eventRingMaterial)
+        eventRing.position.set(eventCandle.x, eventCandle.close, 0.26)
+        eventRing.renderOrder = 7
+        chartGroup.add(eventRing)
+
         resources = [
           glowTexture,
+          hubGeometry,
+          hubMaterial,
+          coreGlowGeometry,
+          coreGlowMaterial,
           glowGeometry,
           glowMaterial,
           pulseGeometry,
@@ -704,12 +846,16 @@ export function LandingContextFigure({
           edgeGeometry,
           candleGeometry,
           priceGeometry,
+          comparisonGeometry,
           gridGeometry,
+          eventRingGeometry,
           nodeMaterial,
           edgeMaterial,
           candleMaterial,
           priceMaterial,
+          comparisonMaterial,
           gridMaterial,
+          eventRingMaterial,
         ]
 
         const resize = () => {
@@ -720,13 +866,17 @@ export function LandingContextFigure({
             Math.max(1, bounds.height),
             false
           )
+          camera.position.z = bounds.width < 640 ? 9.15 : 8.2
           camera.aspect = bounds.width / Math.max(1, bounds.height)
           camera.updateProjectionMatrix()
           scheduleFrame()
         }
 
+        const edgeDepthPosition = new three.Vector3()
+        const edgeDepthColor = new three.Color()
         const updateEdges = () => {
-          if (!nodeGeometry || !edgeGeometry) return
+          if (!nodeGeometry || !edgeGeometry || !rootGroup) return
+          const activeRootGroup = rootGroup
           const positions = nodeGeometry.attributes.position
             .array as Float32Array
           const edgePositions = edgeGeometry.attributes.position
@@ -739,8 +889,26 @@ export function LandingContextFigure({
             edgePositions[offset + 3] = positions[second * 3]
             edgePositions[offset + 4] = positions[second * 3 + 1]
             edgePositions[offset + 5] = positions[second * 3 + 2]
+            for (const [node, colorOffset] of [
+              [first, offset],
+              [second, offset + 3],
+            ] as const) {
+              edgeDepthPosition
+                .fromArray(positions, node * 3)
+                .applyMatrix4(activeRootGroup.matrixWorld)
+              const depth = three.MathUtils.clamp(
+                (edgeDepthPosition.z + 2.7) / 5.4,
+                0,
+                1
+              )
+              edgeDepthColor
+                .copy(edgeColor)
+                .multiplyScalar(0.28 + depth * 0.72)
+                .toArray(edgeColors, colorOffset)
+            }
           })
           edgeGeometry.attributes.position.needsUpdate = true
+          edgeGeometry.attributes.color.needsUpdate = true
         }
 
         const onContextLost = (event: Event) => {
@@ -777,8 +945,6 @@ export function LandingContextFigure({
         })
         intersectionObserver.observe(stage)
         let elapsed = 0
-        let transition = 0
-        let lastTarget = 0
         const depthPosition = new three.Vector3()
         const nodeColor = new three.Color()
         frame = (now) => {
@@ -791,21 +957,12 @@ export function LandingContextFigure({
           if (!visible || documentHidden) return
           elapsed += delta
           const nextTarget = targetMode() === "price" ? 1 : 0
-          if (nextTarget !== lastTarget) transition = 0
-          lastTarget = nextTarget
-          transition += delta
           const intro = reduceMotion ? 1 : Math.min(1, elapsed / 1400)
-          const gather =
-            nextTarget && !reduceMotion
-              ? Math.sin(Math.min(1, transition / 320) * Math.PI) * 0.16
-              : 0
-          const morphTarget =
-            nextTarget && transition < 320 && !reduceMotion ? 0 : nextTarget
           const currentMorph = (frame as { morph?: number }).morph ?? 0
           const morph = reduceMotion
             ? nextTarget
             : currentMorph +
-              (morphTarget - currentMorph) * (1 - Math.pow(0.9, delta / 16.67))
+              (nextTarget - currentMorph) * (1 - Math.pow(0.9, delta / 16.67))
           ;(frame as { morph?: number }).morph = morph
 
           const positions = nodeGeometry.attributes.position
@@ -813,7 +970,7 @@ export function LandingContextFigure({
           rootGroup.updateWorldMatrix(true, false)
           for (let index = 0; index < GRAPH_NODE_COUNT; index += 1) {
             const graphPosition = graph[index]
-            const chartPosition = chart[index]
+            const chartPosition = chartTargets[index]
             const localMorph = reduceMotion
               ? morph
               : three.MathUtils.smoothstep(
@@ -822,13 +979,9 @@ export function LandingContextFigure({
                   0.95
                 )
             const targetX =
-              (graphPosition.x +
-                (chartPosition.x - graphPosition.x) * localMorph) *
-              (1 - gather)
+              graphPosition.x + (chartPosition.x - graphPosition.x) * localMorph
             const targetY =
-              (graphPosition.y +
-                (chartPosition.y - graphPosition.y) * localMorph) *
-              (1 - gather)
+              graphPosition.y + (chartPosition.y - graphPosition.y) * localMorph
             const targetZ =
               graphPosition.z + (chartPosition.z - graphPosition.z) * localMorph
             positions[index * 3] +=
@@ -859,6 +1012,15 @@ export function LandingContextFigure({
           }
           nodeGeometry.attributes.position.needsUpdate = true
           nodeGeometry.attributes.color.needsUpdate = true
+          hubIndices.forEach((node, hub) => {
+            hubPositions[hub * 3] = positions[node * 3]
+            hubPositions[hub * 3 + 1] = positions[node * 3 + 1]
+            hubPositions[hub * 3 + 2] = positions[node * 3 + 2]
+          })
+          hubGeometry.attributes.position.needsUpdate = true
+          hubMaterial.opacity = (1 - morph) * intro * 0.78
+          coreGlowMaterial.opacity =
+            (1 - morph) * intro * (0.055 + Math.sin(elapsed * 0.0015) * 0.012)
           updateEdges()
           edgeGeometry?.setDrawRange(
             0,
@@ -871,63 +1033,108 @@ export function LandingContextFigure({
             : three.MathUtils.smoothstep(morph, 0.5, 0.98)
           candleGeometry?.setDrawRange(
             0,
-            Math.floor(chartReveal * CANDLE_COUNT) * 12
+            Math.floor(chartReveal * CANDLE_COUNT) * CANDLE_INDEX_COUNT
           )
           priceGeometry?.setDrawRange(0, Math.ceil(chartReveal * CANDLE_COUNT))
           if (edgeMaterial)
-            edgeMaterial.opacity = GRAPH_EDGE_OPACITY * 0.55 * (1 - morph)
-          if (candleMaterial) candleMaterial.opacity = 0.72 * morph
+            edgeMaterial.opacity = GRAPH_EDGE_OPACITY * 0.62 * (1 - morph)
+          if (candleMaterial) candleMaterial.opacity = 0.78 * morph
           if (priceMaterial) priceMaterial.opacity = 0.92 * morph
-          if (gridMaterial) gridMaterial.opacity = 0.11 * morph
-          if (nodeMaterial) nodeMaterial.size = 0.22 - 0.1 * morph
+          comparisonMaterial.opacity = 0.28 * morph
+          if (gridMaterial) gridMaterial.opacity = 0.14 * morph
+          if (nodeMaterial) nodeMaterial.size = 0.2 - 0.08 * morph
+          eventRingMaterial.opacity = reduceMotion
+            ? 0.5 * morph
+            : (0.34 + Math.sin(elapsed * 0.004) * 0.2) * morph
+          const eventScale = reduceMotion
+            ? 1.35
+            : 1.15 + (Math.sin(elapsed * 0.003) + 1) * 0.32
+          eventRing.scale.setScalar(eventScale)
           const signalTime =
             Math.max(0, elapsed - 1000) / (supportsFinePointer ? 650 : 1000)
-          const signalStep = signalTime % (signalPath.length + 2)
-          if (!reduceMotion && signalStep < signalPath.length - 1) {
-            const segment = Math.floor(signalStep)
-            const fraction = signalStep - segment
-            for (let endpoint = 0; endpoint < 2; endpoint += 1) {
-              const index = signalPath[segment + endpoint]
-              nodeColor
-                .fromArray(nodeColors, index * 3)
-                .lerp(
-                  accent,
-                  (endpoint === 0 ? 1 - fraction : fraction) *
-                    (1 - morph) *
-                    three.MathUtils.smoothstep(intro, 0.7, 1)
-                )
-              nodeColor.toArray(nodeColors, index * 3)
+          const pricePositions = priceGeometry?.attributes.position.array as
+            Float32Array | undefined
+          pulsePositions.fill(99)
+          glowPositions.fill(99)
+          let signalOpacity = 0
+          signalPaths.forEach((signalPath, pathIndex) => {
+            const signalStep =
+              (signalTime + pathIndex * 0.9) % (signalPath.length + 2)
+            const priceSignalStep =
+              (signalTime + pathIndex * 3.8) % (CANDLE_COUNT + 2)
+            const graphSignalActive = signalStep < signalPath.length - 1
+            const priceSignalActive =
+              pricePositions !== undefined && priceSignalStep < CANDLE_COUNT - 1
+            const pathOpacity =
+              (1 - morph) * (graphSignalActive ? 1 : 0) +
+              morph * (priceSignalActive ? 1 : 0)
+            signalOpacity = Math.max(signalOpacity, pathOpacity)
+
+            if (!reduceMotion && graphSignalActive) {
+              const segment = Math.floor(signalStep)
+              const fraction = signalStep - segment
+              for (let endpoint = 0; endpoint < 2; endpoint += 1) {
+                const index = signalPath[segment + endpoint]
+                nodeColor
+                  .fromArray(nodeColors, index * 3)
+                  .lerp(
+                    accent,
+                    (endpoint === 0 ? 1 - fraction : fraction) *
+                      (1 - morph) *
+                      three.MathUtils.smoothstep(intro, 0.7, 1)
+                  )
+                nodeColor.toArray(nodeColors, index * 3)
+              }
             }
-          }
-          for (let dot = 0; dot < 6; dot += 1) {
-            const progress = Math.max(0, signalStep - dot * 0.045)
-            const segment = Math.min(
-              signalPath.length - 2,
-              Math.floor(progress)
-            )
-            const from = signalPath[segment] * 3
-            const to = signalPath[segment + 1] * 3
-            const fraction = Math.min(1, progress - segment)
-            for (let axis = 0; axis < 3; axis += 1)
-              pulsePositions[dot * 3 + axis] =
-                positions[from + axis] +
-                (positions[to + axis] - positions[from + axis]) * fraction
-          }
+
+            if (pathOpacity <= 0.02) return
+            for (let trail = 0; trail < SIGNAL_TRAIL_LENGTH; trail += 1) {
+              const graphProgress = three.MathUtils.clamp(
+                signalStep - trail * 0.045,
+                0,
+                signalPath.length - 1.001
+              )
+              const graphSegment = Math.floor(graphProgress)
+              const graphFrom = signalPath[graphSegment] * 3
+              const graphTo = signalPath[graphSegment + 1] * 3
+              const graphFraction = graphProgress - graphSegment
+              const priceProgress = three.MathUtils.clamp(
+                priceSignalStep - trail * 0.045,
+                0,
+                CANDLE_COUNT - 1.001
+              )
+              const priceSegment = Math.floor(priceProgress)
+              const priceFrom = priceSegment * 3
+              const priceTo = (priceSegment + 1) * 3
+              const priceFraction = priceProgress - priceSegment
+              const dot = pathIndex * SIGNAL_TRAIL_LENGTH + trail
+              for (let axis = 0; axis < 3; axis += 1) {
+                const graphPoint =
+                  positions[graphFrom + axis] +
+                  (positions[graphTo + axis] - positions[graphFrom + axis]) *
+                    graphFraction
+                const pricePoint = pricePositions
+                  ? pricePositions[priceFrom + axis] +
+                    (pricePositions[priceTo + axis] -
+                      pricePositions[priceFrom + axis]) *
+                      priceFraction
+                  : graphPoint
+                pulsePositions[dot * 3 + axis] =
+                  graphPoint * (1 - morph) + pricePoint * morph
+                if (trail === 0)
+                  glowPositions[pathIndex * 3 + axis] =
+                    pulsePositions[dot * 3 + axis]
+              }
+            }
+          })
+          nodeGeometry.attributes.color.needsUpdate = true
           pulseGeometry.attributes.position.needsUpdate = true
-          pulseMaterial.opacity =
-            !reduceMotion && signalStep < signalPath.length - 1
-              ? (1 - morph) * three.MathUtils.smoothstep(intro, 0.7, 1)
-              : 0
-          for (let hub = 0; hub < 3; hub += 1) {
-            const node = signalPath[Math.min(hub, signalPath.length - 1)]
-            glowPositions.set(
-              positions.subarray(node * 3, node * 3 + 3),
-              hub * 3
-            )
-          }
+          pulseMaterial.opacity = !reduceMotion
+            ? signalOpacity * three.MathUtils.smoothstep(intro, 0.7, 1)
+            : 0
           glowGeometry.attributes.position.needsUpdate = true
-          glowMaterial.opacity = (1 - morph) * intro * 0.65
-          glowMaterial.size = 0.85 + gather * 2
+          glowMaterial.opacity = signalOpacity * intro * 0.62
+          glowMaterial.size = 0.85
           const tiltAmount = reduceMotion || pointerDown ? 0 : 0.14
           tiltGroup.rotation.x +=
             (-pointerY * tiltAmount - tiltGroup.rotation.x) *
@@ -1044,32 +1251,7 @@ export function LandingContextFigure({
             ? "landing-context-figure-description landing-context-figure-instructions"
             : undefined
         }
-      >
-        <div
-          className={styles.fallback}
-          aria-hidden={interactiveReady}
-          data-figure-fallback
-        >
-          <div className={styles.fallbackView}>
-            <div className={styles.fallbackGraph} aria-hidden="true">
-              <div className={styles.graphCluster}>
-                <span className={styles.graphNode} />
-                <span className={styles.graphNode} />
-                <span className={styles.graphNode} />
-                <span className={styles.graphNode} />
-                <span className={styles.graphNode} />
-              </div>
-            </div>
-          </div>
-          <div className={styles.fallbackView}>
-            <div className={styles.fallbackPrice} aria-hidden="true">
-              {Array.from({ length: 8 }, (_, index) => (
-                <span className={styles.priceBar} key={index} />
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
+      ></div>
 
       <p id="landing-context-figure-instructions" className="sr-only">
         {labels.keyboardHint}

@@ -795,8 +795,7 @@ export const vi = {
       contextFigureStatusPrice: "Đang hiển thị Diễn biến giá.",
       contextFigureReady:
         "Sẵn sàng · Di chuột để xem diễn biến giá, kéo hoặc dùng phím mũi tên để xoay.",
-      contextFigureFallback:
-        "Đang hiển thị hình tĩnh; nội dung hai góc nhìn vẫn đầy đủ.",
+      contextFigureFallback: "Hình tương tác hiện không khả dụng.",
     },
     cta: {
       requestAccess: "Yêu cầu truy cập",
@@ -809,7 +808,6 @@ export const vi = {
       openDashboardAria: "Mở bảng điều khiển Signapse",
       exploreJourney: "Khám phá nền tảng",
       exploreJourneyAria: "Khám phá nền tảng Signapse",
-      requestAccessNote: "Thao tác này sẽ mở ứng dụng email của bạn.",
     },
     capabilityStrip: {
       marketViewTitle: "Toàn cảnh thị trường",

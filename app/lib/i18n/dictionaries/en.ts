@@ -795,8 +795,7 @@ export const en: Dictionary = {
       contextFigureStatusPrice: "Showing price action.",
       contextFigureReady:
         "Ready · Hover to preview price action, drag or use arrow keys to rotate.",
-      contextFigureFallback:
-        "Showing the static figure; both complementary views remain available.",
+      contextFigureFallback: "The interactive figure is unavailable.",
     },
     cta: {
       requestAccess: "Request access",
@@ -809,7 +808,6 @@ export const en: Dictionary = {
       openDashboardAria: "Open the Signapse dashboard",
       exploreJourney: "Explore the platform",
       exploreJourneyAria: "Explore the Signapse platform",
-      requestAccessNote: "This action opens your email application.",
     },
     capabilityStrip: {
       marketViewTitle: "Complete market view",

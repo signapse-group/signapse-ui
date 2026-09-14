@@ -24,7 +24,6 @@ export type LandingAccessModel = {
   finalCta: LandingAccessAction
   footerAppEntry: LandingAccessAction
   footerRequestAccess: LandingAccessAction
-  requestAccessNote: string
 }
 
 type LandingAccessCopy = {
@@ -79,6 +78,5 @@ export function createLandingAccessModel(
       ...requestAccess,
       label: copy.footer.requestAccessEmail,
     },
-    requestAccessNote: copy.cta.requestAccessNote,
   }
 }

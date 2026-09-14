@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react"
 
 import type { Dictionary } from "@/app/lib/i18n/dictionary-types"
+import styles from "./landing-page.module.css"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -114,7 +115,11 @@ export function LandingDemoForm({ email, labels }: LandingDemoFormProps) {
           </FieldGroup>
         </CardContent>
         <CardFooter className="flex-col items-stretch gap-3">
-          <Button type="submit" size="lg" className="w-full">
+          <Button
+            type="submit"
+            size="lg"
+            className={`${styles.sectionAction} w-full`}
+          >
             {labels.submit}
             <ArrowRightIcon data-icon="inline-end" aria-hidden="true" />
           </Button>
