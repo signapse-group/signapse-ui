@@ -2,9 +2,8 @@ import type { AppLocale } from "@/app/lib/i18n/config"
 import type { Dictionary } from "@/app/lib/i18n/dictionary-types"
 import { withLocalePath } from "@/app/lib/i18n/routing"
 
-export const REQUEST_ACCESS_EMAIL = "request-access@signapse.ai"
-export const REQUEST_ACCESS_HREF =
-  "mailto:request-access@signapse.ai?subject=Signapse%20access%20request"
+export const REQUEST_ACCESS_EMAIL = "access@signapse.cloud"
+export const REQUEST_ACCESS_HREF = `mailto:${REQUEST_ACCESS_EMAIL}?subject=Signapse%20access%20request`
 export const HERO_JOURNEY_HREF = "#product"
 
 type LandingActionKind = "email" | "internal" | "anchor"

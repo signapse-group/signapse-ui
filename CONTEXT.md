@@ -34,6 +34,14 @@ _Avoid_: Placeholder mock, synthetic product preview
 A static capture of an available Signapse product surface or a real Signapse Telegram message, using demo data approved for public use and with the final image approved by the Product Owner. It illustrates an actual product state, not a conceptual visual or an interactive product demo.
 _Avoid_: Generated product screenshot, private-workspace capture, live demo
 
+**Interactive Telegram workflow demo (Demo tương tác quy trình Telegram)**:
+A public DOM simulation of the supported scheduled asset-analysis workflow, using fixed demo data without calling the backend or sending a Telegram message. It may reproduce selected product concepts and states, but it is not a live product session or proof of delivery.
+_Avoid_: Live demo, Telegram delivery test, approved product capture, synthetic product screenshot
+
+**Interactive product showcase (Showcase sản phẩm tương tác)**:
+A public landing section that presents the four primary Signapse capabilities through feature selectors and one shared demonstration stage. Each capability owns its stage content while the surrounding section preserves a consistent product-story hierarchy.
+_Avoid_: Product card wall, screenshot gallery, live application workspace
+
 **Interactive market-context figure (Hình bối cảnh thị trường tương tác)**:
 A localized conceptual landing visual that presents the Market Knowledge Graph and price action as complementary views of market context. It has no visible control chrome, but supports fine-pointer hover and drag; coarse pointers do not expose a hidden tap mode. It begins once per page view with a brief graph-only rotation that settles automatically, supports nonvisual keyboard exploration with focus feedback, and keeps a silent dual-view fallback with a nonvisual description when rendering is unavailable. It is not a product capture and does not imply that the graph generates, predicts, or transforms into market prices.
 _Avoid_: Product demo, live trading chart, graph-generated price, prediction visualization

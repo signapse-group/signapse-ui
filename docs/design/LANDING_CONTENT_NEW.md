@@ -172,25 +172,15 @@ and event_impact == "high"
 then emit_signal("watch")
 ```
 
-## Ranh giới tin cậy
+## Tích hợp AI
 
-**Eyebrow:** Bối cảnh rõ ràng · quyết định có trách nhiệm
+**Eyebrow:** Tích hợp AI đa nhà cung cấp
 
-## Công nghệ mạnh hơn khi người dùng hiểu giới hạn của nó.
+## Nhiều mô hình AI. Một nền tảng Signapse.
 
-Signapse hỗ trợ phân tích, phát triển chiến lược và tự động hóa theo cấu hình. Nền tảng không cam kết lợi nhuận và không thay thế đánh giá rủi ro của người dùng.
+Linh hoạt lựa chọn mô hình AI cho từng tác vụ phân tích và phát triển chiến lược.
 
-1. Nguồn dữ liệu, thời điểm và mối liên hệ cần được hiển thị rõ ràng.
-2. Tín hiệu là đầu vào để đánh giá, không phải lời hứa về kết quả tương lai.
-3. Bot cần hoạt động trong giới hạn quyền, chiến lược và quản trị rủi ro được cấu hình.
-
-### Dành cho doanh nghiệp
-
-**Sẵn sàng trao đổi về quy trình của đội ngũ?**
-
-Thêm thông tin về dữ liệu, thị trường hỗ trợ, bảo mật, tích hợp, pricing và case study để tăng độ tin cậy khi ra mắt chính thức.
-
-CTA: Trao đổi nhu cầu ↗
+**Providers:** OpenAI · Gemini · Anthropic · DeepSeek · Groq · Z.AI
 
 ## CTA và form đăng ký demo
 
@@ -237,7 +227,7 @@ AI market intelligence và trading automation cho những người cần hiểu 
 ### Liên hệ
 
 - Đặt lịch demo
-- request-access@signapse.ai
+- access@signapse.cloud
 - Cách hoạt động
 
 ### Pháp lý
@@ -249,7 +239,7 @@ AI market intelligence và trading automation cho những người cần hiểu 
 
 - Ảnh hero: `ai_trading_tool_images/signapse_market_chart_screenshot.png`
 - Ảnh showcase: `ai_trading_tool_images/signapse_graph_screenshot.png`
-- Email: `request-access@signapse.ai`
+- Email: `access@signapse.cloud`
 - Anchor: `#top`, `#platform`, `#audiences`, `#workflow`, `#access`
 
 ## Ánh xạ với landing page hiện tại
@@ -262,7 +252,7 @@ AI market intelligence và trading automation cho những người cần hiểu 
 | 4 nhóm đối tượng    | Chưa có                               | Thêm section                                                                                                   |
 | Workflow 4 bước     | `landing.analysisFlow` hiện có 3 bước | Thay copy và mở rộng cấu trúc                                                                                  |
 | Showcase            | Product captures hiện tại             | Cần quyết định tái sử dụng capture hiện có hay bố cục mới                                                      |
-| Ranh giới tin cậy   | `landing.trust`                       | Thay copy; thêm khối doanh nghiệp                                                                              |
+| Tích hợp AI         | `landing.trust`                       | Thay section cũ bằng logo rail chuyển động chậm cho 6 provider                                                  |
 | CTA + form demo     | `landing.finalCta` hiện chỉ có CTA    | Thêm form và luồng xử lý production                                                                            |
 | Footer mở rộng      | `landing.footer`                      | Thay copy và mở rộng link/pháp lý                                                                              |
 

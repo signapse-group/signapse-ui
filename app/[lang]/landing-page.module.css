@@ -120,7 +120,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
+  gap: 0.75rem;
   min-height: var(--landing-control-height);
   padding: 0.5rem 0.875rem;
   border: 1px dashed color-mix(in oklab, var(--border) 65%, transparent);
@@ -227,164 +227,281 @@
   background: var(--card);
 }
 
-.capabilityRailItem {
-  padding: 0;
+.capabilityFlow {
+  position: relative;
+  padding: 0.5rem 0;
 }
 
-.capabilityRailLink {
+.capabilityFlowTrack {
+  position: absolute;
+  top: 2rem;
+  bottom: 2rem;
+  left: 1.5rem;
+  width: 1px;
+  overflow: visible;
+  background: color-mix(in oklab, var(--chart-1) 28%, transparent);
+}
+
+.capabilityFlowLight {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  z-index: 2;
+  width: 0.48rem;
+  height: 0.48rem;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--chart-1) 72%, white);
+  box-shadow:
+    0 0 0 0.14rem color-mix(in oklab, var(--chart-1) 44%, transparent),
+    0 0 0.65rem 0.12rem color-mix(in oklab, var(--chart-1) 64%, transparent),
+    0 0 1.4rem 0.25rem color-mix(in oklab, var(--landing-mint) 30%, transparent);
+  transform: translate(-50%, -50%);
+  animation: capabilityFlowTravelVertical 4.8s linear 250ms infinite;
+  animation-play-state: paused;
+}
+
+.capabilityFlowLight::before {
+  position: absolute;
+  bottom: 50%;
+  left: 50%;
+  width: 2px;
+  height: 2rem;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    color-mix(in oklab, var(--chart-1) 62%, transparent)
+  );
+  filter: drop-shadow(
+    0 0 0.2rem color-mix(in oklab, var(--chart-1) 60%, transparent)
+  );
+  transform: translateX(-50%);
+  content: "";
+}
+
+.capabilityFlowList {
   display: grid;
   position: relative;
-  height: 100%;
-  min-height: 10rem;
-  grid-template-columns: 3.25rem minmax(0, 1fr) auto;
+  gap: 0.75rem;
+}
+
+.capabilityFlowItem {
+  --capability-delay: 250ms;
+
+  min-width: 0;
+}
+
+.capabilityFlowItem:nth-child(2) {
+  --capability-delay: 1100ms;
+}
+
+.capabilityFlowItem:nth-child(3) {
+  --capability-delay: 1950ms;
+}
+
+.capabilityFlowItem:nth-child(4) {
+  --capability-delay: 2800ms;
+}
+
+.capabilityFlowItem:nth-child(5) {
+  --capability-delay: 3650ms;
+}
+
+.capabilityRailStep {
+  display: grid;
+  min-height: 3rem;
+  grid-template-columns: 3rem minmax(0, 1fr);
   align-items: center;
   gap: 1rem;
-  padding: 1.25rem;
   color: var(--foreground);
-  transition:
-    background-color 180ms ease,
-    color 180ms ease;
-}
-
-.capabilityRailLink:hover {
-  background: color-mix(in oklab, var(--landing-mint) 7%, transparent);
-}
-
-.capabilityRailLink:focus-visible {
-  z-index: 1;
-  outline: 2px solid var(--ring);
-  outline-offset: -3px;
-}
-
-.capabilityRailTopline {
-  display: flex;
-  position: relative;
-  align-items: center;
-  justify-content: center;
 }
 
 .capabilityRailIcon {
   display: grid;
   position: relative;
-  width: 3.25rem;
-  height: 3.25rem;
+  z-index: 1;
+  width: 3rem;
+  height: 3rem;
   place-items: center;
-  overflow: hidden;
-  border: 1px solid color-mix(in oklab, var(--chart-1) 48%, var(--border));
-  border-radius: 0.625rem;
-  background:
-    radial-gradient(
-      circle at 72% 28%,
-      color-mix(in oklab, var(--landing-mint) 26%, transparent),
-      transparent 42%
-    ),
-    color-mix(in oklab, var(--card) 86%, transparent);
-  color: var(--chart-1);
-  transition:
-    border-color 180ms ease,
-    transform 180ms ease;
-}
-
-.capabilityRailIcon::after {
-  position: absolute;
-  inset: 0.3rem;
-  border: 1px dashed color-mix(in oklab, var(--chart-1) 24%, transparent);
-  border-radius: 0.35rem;
-  content: "";
+  border: 1px solid color-mix(in oklab, var(--chart-1) 32%, var(--border));
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--landing-navy-surface) 92%, transparent);
+  color: color-mix(in oklab, var(--chart-1) 70%, var(--muted-foreground));
+  animation: capabilityStepPulse 4.8s ease-out var(--capability-delay) infinite
+    backwards;
+  animation-play-state: paused;
 }
 
 .capabilityRailIcon svg {
-  z-index: 1;
-  width: 1.4rem;
-  height: 1.4rem;
+  width: 1.3rem;
+  height: 1.3rem;
   stroke-width: 1.7;
 }
 
-.capabilityRailNumber {
-  position: absolute;
-  top: -0.3rem;
-  right: -0.3rem;
-  z-index: 2;
-  padding: 0.1rem 0.28rem;
-  border-radius: 0.25rem;
-  background: var(--landing-navy-surface);
-  color: var(--muted-foreground);
-  font-family: var(--font-mono), monospace;
-  font-size: 0.625rem;
-  line-height: 1.25;
-}
-
-.capabilityRailCopy {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  gap: 0.3rem;
-}
-
 .capabilityRailTitle {
-  font-size: 1rem;
+  opacity: 0.42;
+  color: var(--foreground);
+  font-family: var(--font-mono), monospace;
+  font-size: 0.75rem;
   font-weight: 650;
-  letter-spacing: -0.015em;
+  letter-spacing: 0.08em;
   line-height: 1.25;
+  animation: capabilityLabelPulse 4.8s ease-out
+    calc(var(--capability-delay) + 100ms) infinite backwards;
+  animation-play-state: paused;
 }
 
-.capabilityRailBody {
-  color: var(--muted-foreground);
-  font-size: 0.8125rem;
-  line-height: 1.45;
+.capabilityFlow[data-flow-active] .capabilityFlowLight,
+.capabilityFlow[data-flow-active] .capabilityRailIcon,
+.capabilityFlow[data-flow-active] .capabilityRailTitle {
+  animation-play-state: running;
 }
 
-.capabilityRailArrow {
-  width: 1rem;
-  height: 1rem;
-  color: var(--chart-1);
-  opacity: 0;
-  transform: translateX(-0.25rem);
-  transition:
-    opacity 180ms ease,
-    transform 180ms ease;
-}
-
-.capabilityRailLink:hover .capabilityRailIcon,
-.capabilityRailLink:focus-visible .capabilityRailIcon {
-  border-color: var(--chart-1);
-  transform: translateY(-0.125rem);
-}
-
-.capabilityRailLink:hover .capabilityRailArrow,
-.capabilityRailLink:focus-visible .capabilityRailArrow {
-  opacity: 1;
-  transform: translateX(0);
-}
-
-@media (min-width: 1024px) {
-  .capabilityRailLink {
-    min-height: 11.25rem;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-content: space-between;
-    align-items: start;
+@media (min-width: 768px) {
+  .capabilityFlow {
+    padding: 0.75rem 0 0.25rem;
   }
 
-  .capabilityRailTopline {
-    grid-column: 1 / -1;
-    justify-content: flex-start;
+  .capabilityFlowTrack {
+    top: 2.25rem;
+    right: 10%;
+    bottom: auto;
+    left: 10%;
+    width: auto;
+    height: 1px;
   }
 
-  .capabilityRailCopy {
-    align-self: end;
+  .capabilityFlowLight {
+    top: 50%;
+    animation-name: capabilityFlowTravelHorizontal;
   }
 
-  .capabilityRailArrow {
-    align-self: end;
-    margin-bottom: 0.15rem;
+  .capabilityFlowLight::before {
+    top: 50%;
+    right: 50%;
+    bottom: auto;
+    left: auto;
+    width: 2.5rem;
+    height: 2px;
+    background: linear-gradient(
+      to right,
+      transparent,
+      color-mix(in oklab, var(--chart-1) 62%, transparent)
+    );
+    transform: translateY(-50%);
+  }
+
+  .capabilityFlowList {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0;
+  }
+
+  .capabilityRailStep {
+    min-height: 6.25rem;
+    grid-template-columns: 1fr;
+    grid-template-rows: 3rem auto;
+    justify-items: center;
+    gap: 0.85rem;
+    padding-inline: 0.5rem;
+    text-align: center;
+  }
+}
+
+@keyframes capabilityFlowTravelVertical {
+  0% {
+    top: 0;
+    opacity: 0;
+  }
+  3%,
+  70% {
+    opacity: 1;
+  }
+  71% {
+    top: 100%;
+    opacity: 0;
+  }
+  100% {
+    top: 100%;
+    opacity: 0;
+  }
+}
+
+@keyframes capabilityFlowTravelHorizontal {
+  0% {
+    left: 0;
+    opacity: 0;
+  }
+  3%,
+  70% {
+    opacity: 1;
+  }
+  71% {
+    left: 100%;
+    opacity: 0;
+  }
+  100% {
+    left: 100%;
+    opacity: 0;
+  }
+}
+
+@keyframes capabilityStepPulse {
+  0% {
+    border-color: color-mix(in oklab, var(--chart-1) 32%, var(--border));
+    box-shadow: none;
+    color: color-mix(in oklab, var(--chart-1) 70%, var(--muted-foreground));
+    transform: scale(1);
+  }
+  3%,
+  11% {
+    border-color: var(--chart-1);
+    box-shadow:
+      0 0 0 0.35rem color-mix(in oklab, var(--chart-1) 15%, transparent),
+      0 0 1.35rem color-mix(in oklab, var(--chart-1) 72%, transparent),
+      0 0 2.4rem color-mix(in oklab, var(--landing-mint) 32%, transparent);
+    color: var(--chart-1);
+    transform: scale(1.12);
+  }
+  17%,
+  100% {
+    border-color: color-mix(in oklab, var(--chart-1) 42%, var(--border));
+    box-shadow: none;
+    color: var(--chart-1);
+    transform: scale(1);
+  }
+}
+
+@keyframes capabilityLabelPulse {
+  0% {
+    opacity: 0.42;
+    text-shadow: none;
+  }
+  3%,
+  13% {
+    opacity: 1;
+    color: var(--chart-1);
+    text-shadow: 0 0 0.85rem
+      color-mix(in oklab, var(--chart-1) 60%, transparent);
+  }
+  20%,
+  100% {
+    opacity: 0.62;
+    color: var(--foreground);
+    text-shadow: none;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .capabilityRailLink,
+  .capabilityFlowLight {
+    display: none;
+  }
+
   .capabilityRailIcon,
-  .capabilityRailArrow {
-    transition: none;
+  .capabilityRailTitle {
+    animation: none;
+  }
+
+  .capabilityRailTitle {
+    opacity: 1;
   }
 }
 
@@ -394,6 +511,111 @@
   background: color-mix(in oklab, var(--muted) 38%, transparent);
   padding: var(--landing-card-padding);
   box-shadow: none;
+}
+
+.providerRail {
+  width: 100%;
+}
+
+.providerMarquee {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+}
+
+.providerMarquee::before,
+.providerMarquee::after {
+  position: absolute;
+  z-index: 2;
+  inset-block: 0;
+  width: min(4rem, 8vw);
+  content: "";
+  pointer-events: none;
+}
+
+.providerMarquee::before {
+  left: 0;
+  background: linear-gradient(to right, var(--background), transparent);
+}
+
+.providerMarquee::after {
+  right: 0;
+  background: linear-gradient(to left, var(--background), transparent);
+}
+
+.providerTrack {
+  display: flex;
+  width: max-content;
+  animation: provider-marquee 52s linear infinite;
+  will-change: transform;
+}
+
+.providerList {
+  display: flex;
+  flex-shrink: 0;
+  gap: clamp(3.5rem, 7vw, 7rem);
+  margin: 0;
+  padding-inline: clamp(2rem, 5vw, 5rem);
+  list-style: none;
+}
+
+.providerItem {
+  display: flex;
+  min-width: 11rem;
+  min-height: 6rem;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding-block: 1.25rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+
+.providerLogo {
+  width: 2.5rem;
+  height: 2.5rem;
+  flex: none;
+  background: var(--provider-paint);
+  -webkit-mask: var(--provider-logo) center / contain no-repeat;
+  mask: var(--provider-logo) center / contain no-repeat;
+}
+
+@keyframes provider-marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@media (max-width: 639px) {
+  .providerList {
+    gap: 3rem;
+    padding-inline: 2rem;
+  }
+
+  .providerItem {
+    min-width: 10rem;
+    min-height: 5.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .providerMarquee {
+    overflow-x: auto;
+  }
+
+  .providerMarquee::before,
+  .providerMarquee::after {
+    display: none;
+  }
+
+  .providerTrack {
+    animation: none;
+  }
+
+  .providerList[aria-hidden="true"] {
+    display: none;
+  }
 }
 
 .audienceInteractive {
@@ -504,18 +726,6 @@
   position: absolute;
   inset: 0 0 0 auto;
   width: 53%;
-}
-
-.audienceVisualTitle {
-  position: absolute;
-  right: 1.25rem;
-  bottom: 1.25rem;
-  z-index: 2;
-  max-width: 12rem;
-  color: color-mix(in oklab, var(--landing-off-white) 68%, transparent);
-  font-size: 0.75rem;
-  line-height: 1.35;
-  text-align: right;
 }
 
 .audienceVisualStage {

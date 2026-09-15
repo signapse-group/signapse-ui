@@ -810,16 +810,11 @@ export const vi = {
       exploreJourneyAria: "Khám phá nền tảng Signapse",
     },
     capabilityStrip: {
-      marketViewTitle: "Toàn cảnh thị trường",
-      marketViewBody: "Giá · tin tức · sự kiện · nguồn",
-      impactTitle: "Sự kiện & biến động",
-      impactBody: "Thấy điều gì đang tác động tới giá",
-      aiTitle: "AI hỏi đáp",
-      aiBody: "Hỏi nhanh · hiểu sâu · theo ngữ cảnh",
-      telegramTitle: "Cảnh báo Telegram",
-      telegramBody: "Tín hiệu · thông tin · đúng thời điểm",
-      strategyTitle: "Xây dựng chiến lược",
-      strategyBody: "Chỉ báo · backtest · logic giao dịch",
+      marketViewTitle: "MARKET VIEW",
+      impactTitle: "IMPACT GRAPH",
+      aiTitle: "AI CONVERSATION",
+      telegramTitle: "TELEGRAM",
+      strategyTitle: "STRATEGY CODING",
     },
     analysisFlow: {
       eyebrow: "TỪ TÍN HIỆU ĐẾN TỰ ĐỘNG HÓA",
@@ -874,7 +869,7 @@ export const vi = {
         "Ảnh biểu đồ cho thấy diễn biến giá cùng dấu mốc sự kiện và lịch kinh tế.",
       liveChartsMediaAlt:
         "Biểu đồ giá hiển thị dấu mốc sự kiện và lịch kinh tế liên quan.",
-      aiAssistantTitle: "03 · AI CHAT",
+      aiAssistantTitle: "03 · AI CONVERSATION",
       aiAssistantOutcome: "Hỏi nhanh, hiểu sâu cùng AI.",
       aiAssistantBody:
         "Đặt câu hỏi bằng ngôn ngữ tự nhiên, đào sâu theo mạch hội thoại và nhận góc nhìn dựa trên dữ liệu liên quan.",
@@ -904,7 +899,7 @@ export const vi = {
       traderBody:
         "Theo dõi danh sách tài sản và nhận tín hiệu được lọc theo điều kiện riêng.",
       analystLabel: "02 / ANALYST",
-      analystTitle: "Chuẩn bị research có bối cảnh.",
+      analystTitle: "Nghiên cứu có bối cảnh.",
       analystBody:
         "Kết nối sự kiện, giá và nguồn tin để xây dựng góc nhìn dễ kiểm chứng.",
       developerLabel: "03 / STRATEGY DEVELOPER",
@@ -933,20 +928,10 @@ export const vi = {
         "Trình bày rõ logic chiến lược, kết quả backtest và các giới hạn rủi ro cần theo dõi.",
     },
     trust: {
-      eyebrow: "BỐI CẢNH RÕ RÀNG · QUYẾT ĐỊNH CÓ TRÁCH NHIỆM",
-      heading: "Công nghệ mạnh hơn khi người dùng hiểu giới hạn của nó.",
-      body: "Signapse hỗ trợ phân tích, phát triển chiến lược và tự động hóa theo cấu hình. Nền tảng không cam kết lợi nhuận và không thay thế đánh giá rủi ro của người dùng.",
-      pointOne:
-        "Nguồn dữ liệu, thời điểm và mối liên hệ cần được hiển thị rõ ràng.",
-      pointTwo:
-        "Tín hiệu là đầu vào để đánh giá, không phải lời hứa về kết quả tương lai.",
-      pointThree:
-        "Bot cần hoạt động trong giới hạn quyền, chiến lược và quản trị rủi ro được cấu hình.",
-      enterpriseEyebrow: "DÀNH CHO DOANH NGHIỆP",
-      enterpriseTitle: "Sẵn sàng trao đổi về quy trình của đội ngũ?",
-      enterpriseBody:
-        "Trao đổi về dữ liệu, thị trường hỗ trợ, bảo mật, tích hợp và nhu cầu vận hành của đội ngũ bạn.",
-      enterpriseCta: "Trao đổi nhu cầu",
+      eyebrow: "TÍCH HỢP AI ĐA NHÀ CUNG CẤP",
+      heading: "Nhiều mô hình AI. Một nền tảng Signapse.",
+      body: "Linh hoạt lựa chọn mô hình AI cho từng tác vụ phân tích và phát triển chiến lược.",
+      providerListLabel: "Các nhà cung cấp AI được Signapse tích hợp",
     },
     finalCta: {
       heading: "Bắt đầu từ tín hiệu, chiến lược hay bot?",
@@ -981,7 +966,7 @@ export const vi = {
       workflow: "Cách hoạt động",
       copyright: "© 2026 Signapse. All rights reserved.",
       disclaimer: "Phân tích và tự động hóa không phải là cam kết lợi nhuận.",
-      requestAccessEmail: "request-access@signapse.ai",
+      requestAccessEmail: "access@signapse.cloud",
       requestAccessEmailLabel: "Email yêu cầu truy cập",
       requestAccessEmailNote:
         "Sao chép địa chỉ hoặc mở ứng dụng email để bắt đầu.",

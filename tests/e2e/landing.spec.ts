@@ -9,7 +9,7 @@ const sectionOrder = [
   "audiences",
   "analysis-flow",
   "showcase",
-  "trust-boundary",
+  "ai-providers",
   "final-access-cta",
 ]
 
@@ -46,7 +46,6 @@ test.describe("P0 public landing", () => {
           ? "Nắm trọn bức tranh thị trường."
           : "See the complete market picture."
       )
-
       await expect(page.locator("#how-it-works")).toContainText(
         locale === "vi" ? "Theo dõi thị trường" : "Monitor the market"
       )
@@ -57,6 +56,17 @@ test.describe("P0 public landing", () => {
       )
       await expect(page.locator("#workspace-ai")).toHaveCount(0)
       await expect(page.locator("#product")).not.toContainText("Market Query")
+
+      const providerSection = page.locator(
+        '[data-landing-section="ai-providers"]'
+      )
+      await expect(providerSection.locator("[data-provider-item]")).toHaveCount(
+        6
+      )
+      await expect(providerSection.locator("[data-provider-logo]")).toHaveCount(
+        12
+      )
+      await expect(providerSection).toContainText("Anthropic")
 
       await expect(page.locator("[data-feature-links]")).toHaveCount(0)
       const heroDecoration = page.locator(
@@ -92,10 +102,10 @@ test.describe("P0 public landing", () => {
           .locator('[data-landing-section="hero-product-proof"]')
           .locator('a[href="#product"]')
       ).toBeVisible()
-      await expect(page.getByText("request-access@signapse.ai")).toBeVisible()
+      await expect(page.getByText("access@signapse.cloud")).toBeVisible()
       await expect(page.locator('a[href^="mailto:"]').first()).toHaveAttribute(
         "href",
-        "mailto:request-access@signapse.ai?subject=Signapse%20access%20request"
+        "mailto:access@signapse.cloud?subject=Signapse%20access%20request"
       )
 
       const figure = page.locator('[data-landing-visual="context-figure"]')
@@ -394,6 +404,22 @@ test.describe("P0 public landing", () => {
           violation.impact === "serious" || violation.impact === "critical"
       )
     ).toEqual([])
+  })
+
+  test("keeps provider logos static when reduced motion is requested", async ({
+    page,
+  }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" })
+    await page.goto("/en#trust")
+
+    const providerSection = page.locator(
+      '[data-landing-section="ai-providers"]'
+    )
+    await expect(providerSection.locator("[data-provider-item]")).toHaveCount(6)
+    await expect(providerSection.locator("ul[aria-hidden='true']")).toBeHidden()
+    await expect(
+      providerSection.locator("[data-provider-logo]").first()
+    ).toBeVisible()
   })
 
   for (const locale of ["vi", "en"] as const) {

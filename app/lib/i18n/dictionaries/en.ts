@@ -810,16 +810,11 @@ export const en: Dictionary = {
       exploreJourneyAria: "Explore the Signapse platform",
     },
     capabilityStrip: {
-      marketViewTitle: "Complete market view",
-      marketViewBody: "Prices · news · events · sources",
-      impactTitle: "Events & market moves",
-      impactBody: "See what is affecting prices",
-      aiTitle: "AI Q&A",
-      aiBody: "Ask quickly · go deeper · stay in context",
-      telegramTitle: "Telegram alerts",
-      telegramBody: "Signals · information · right on time",
-      strategyTitle: "Strategy building",
-      strategyBody: "Indicators · backtests · trading logic",
+      marketViewTitle: "MARKET VIEW",
+      impactTitle: "IMPACT GRAPH",
+      aiTitle: "AI CONVERSATION",
+      telegramTitle: "TELEGRAM",
+      strategyTitle: "STRATEGY CODING",
     },
     analysisFlow: {
       eyebrow: "FROM SIGNALS TO AUTOMATION",
@@ -874,7 +869,7 @@ export const en: Dictionary = {
         "A chart capture shows price movement alongside event markers and the economic calendar.",
       liveChartsMediaAlt:
         "Price chart showing related event markers and economic-calendar context.",
-      aiAssistantTitle: "03 · AI CHAT",
+      aiAssistantTitle: "03 · AI CONVERSATION",
       aiAssistantOutcome: "Ask quickly and understand deeply with AI.",
       aiAssistantBody:
         "Ask questions in natural language, follow a conversational thread, and get perspectives grounded in related data.",
@@ -933,20 +928,10 @@ export const en: Dictionary = {
         "Make strategy logic, backtest results, and risk limits clear before automation.",
     },
     trust: {
-      eyebrow: "CLEAR CONTEXT · RESPONSIBLE DECISIONS",
-      heading: "Technology is stronger when people understand its limits.",
-      body: "Signapse supports analysis, strategy development, and configured automation. The platform does not promise profits or replace the user's own risk assessment.",
-      pointOne:
-        "Data sources, timing, and relationships should be displayed clearly.",
-      pointTwo:
-        "A signal is an input for evaluation, not a promise of future results.",
-      pointThree:
-        "Bots must operate within configured permissions, strategy rules, and risk controls.",
-      enterpriseEyebrow: "FOR ENTERPRISES",
-      enterpriseTitle: "Ready to discuss your team's workflow?",
-      enterpriseBody:
-        "Talk with us about data, supported markets, security, integrations, and your team's operating needs.",
-      enterpriseCta: "Discuss your needs",
+      eyebrow: "MULTI-PROVIDER AI INTEGRATIONS",
+      heading: "Multiple AI models. One Signapse platform.",
+      body: "Choose the right AI model for each analysis and strategy-development task.",
+      providerListLabel: "AI providers integrated with Signapse",
     },
     finalCta: {
       heading: "Start with a signal, a strategy, or a bot?",
@@ -981,7 +966,7 @@ export const en: Dictionary = {
       workflow: "How it works",
       copyright: "© 2026 Signapse. All rights reserved.",
       disclaimer: "Analysis and automation are not a promise of profit.",
-      requestAccessEmail: "request-access@signapse.ai",
+      requestAccessEmail: "access@signapse.cloud",
       requestAccessEmailLabel: "Request-access email",
       requestAccessEmailNote:
         "Copy the address or open your email application to begin.",

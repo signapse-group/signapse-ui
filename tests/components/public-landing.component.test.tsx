@@ -31,7 +31,7 @@ describe("localized landing composition", () => {
     const html = renderLanding(locale)
     expect(html).toContain('data-landing-theme="fixed-signapse"')
     expect((html.match(/data-landing-surface="dark"/g) ?? []).length).toBe(5)
-    expect((html.match(/data-landing-surface="light"/g) ?? []).length).toBe(5)
+    expect((html.match(/data-landing-surface="light"/g) ?? []).length).toBe(4)
 
     const sectionOrder = [
       "hero-product-proof",
@@ -40,7 +40,7 @@ describe("localized landing composition", () => {
       "audiences",
       "analysis-flow",
       "showcase",
-      "trust-boundary",
+      "ai-providers",
       "final-access-cta",
     ]
     const positions = sectionOrder.map((section) =>
@@ -102,6 +102,14 @@ describe("localized landing composition", () => {
         ? "Không chỉ nói về công nghệ. Hãy nhìn thấy kết quả."
         : "Do not just hear about the technology. See the result."
     )
+    expect(html).toContain(
+      locale === "vi"
+        ? "Nhiều mô hình AI. Một nền tảng Signapse."
+        : "Multiple AI models. One Signapse platform."
+    )
+    expect((html.match(/data-provider-item=/g) ?? []).length).toBe(6)
+    expect(html).toContain("Anthropic")
+    expect(html).toContain("/images/providers/anthropic.svg")
     expect(html).not.toContain("workspace-ai")
     expect(html).not.toContain("Market Query")
     expect(

@@ -33,7 +33,7 @@ const accessCopy = {
     requestAccessNote: "This action opens your email application.",
   },
   footer: {
-    requestAccessEmail: "request-access@signapse.ai",
+    requestAccessEmail: "access@signapse.cloud",
   },
 }
 
@@ -80,7 +80,7 @@ describe("landing access model", () => {
     expect(model.heroSecondary.href).toBe(HERO_JOURNEY_HREF)
     expect(model.finalCta.href).toBe(REQUEST_ACCESS_HREF)
     expect(model.footerAppEntry.href).toBe("/vi/sign-in")
-    expect(model.footerRequestAccess.label).toBe("request-access@signapse.ai")
+    expect(model.footerRequestAccess.label).toBe("access@signapse.cloud")
   })
 
   it("uses localized dashboard destinations for authenticated visitors", () => {

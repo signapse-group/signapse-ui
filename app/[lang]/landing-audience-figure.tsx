@@ -235,10 +235,8 @@ function resolveColor(
 
 export function LandingAudienceFigure({
   activeIndex,
-  title,
 }: {
   activeIndex: number
-  title: string
 }) {
   const stageRef = useRef<HTMLDivElement>(null)
   const activeIndexRef = useRef(activeIndex)
@@ -577,7 +575,6 @@ export function LandingAudienceFigure({
     >
       <div ref={stageRef} className={styles.audienceVisualStage} />
       <span className={styles.audienceVisualCorners} />
-      <span className={styles.audienceVisualTitle}>{title}</span>
     </div>
   )
 }

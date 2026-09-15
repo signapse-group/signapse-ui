@@ -23,7 +23,6 @@ export function LandingAudienceSection({
     { label: t.teamLabel, title: t.teamTitle, body: t.teamBody },
   ]
   const [activeIndex, setActiveIndex] = useState(0)
-  const activeAudience = audiences[activeIndex]
 
   return (
     <section
@@ -89,10 +88,7 @@ export function LandingAudienceSection({
             className={styles.audienceVisualMobile}
             style={{ gridRow: activeIndex + 2 }}
           >
-            <LandingAudienceFigure
-              activeIndex={activeIndex}
-              title={activeAudience.title}
-            />
+            <LandingAudienceFigure activeIndex={activeIndex} />
           </div>
         </div>
       </div>

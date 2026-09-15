@@ -10,7 +10,6 @@ import {
   LineChartIcon,
   MenuIcon,
   NetworkIcon,
-  ShieldCheckIcon,
 } from "lucide-react"
 
 import type { AppLocale } from "@/app/lib/i18n/config"
@@ -29,9 +28,11 @@ import {
 import { LandingDemoForm } from "./landing-demo-form"
 import styles from "./landing-page.module.css"
 import { LandingAudienceSection } from "./landing-audience-section"
+import { LandingCapabilityFlowReveal } from "./landing-capability-flow-reveal"
 import { LandingContextFigure } from "./landing-context-figure"
 import { LandingHeaderShell } from "./landing-header-shell"
 import { LandingProductCapture } from "./landing-product-capture"
+import { LandingProviderMarquee } from "./landing-provider-marquee"
 import { LandingLocaleLinks } from "./landing-locale-links"
 import { LandingNavigationDisclosure } from "./landing-navigation-disclosure"
 import { Logo } from "@/components/logo"
@@ -79,7 +80,7 @@ export function LandingPage({
         <LandingAudienceSection dictionary={dictionary} />
         <AnalysisFlow dictionary={dictionary} />
         <ShowcaseSection dictionary={dictionary} locale={locale} />
-        <TrustBoundary access={access} dictionary={dictionary} />
+        <ProviderIntegrations dictionary={dictionary} />
         <FinalAccessCta access={access} dictionary={dictionary} />
       </main>
 
@@ -292,7 +293,7 @@ function HeroSection({
         className={`${styles.heroContent} mx-auto grid w-full max-w-[100rem] flex-1 gap-12 px-4 pt-[calc(var(--landing-header-height)+3.5rem)] pb-14 sm:px-6 sm:pt-[calc(var(--landing-header-height)+5rem)] sm:pb-20 lg:grid-cols-[minmax(0,0.88fr)_minmax(32rem,1.12fr)] lg:items-center lg:gap-16 lg:px-8 lg:pt-[calc(var(--landing-header-height)+2rem)] lg:pb-8`}
       >
         <div className={`${styles.heroCopy} flex min-w-0 flex-col gap-7`}>
-          <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+          <p className="text-xs font-semibold tracking-[0.18em] text-chart-1 uppercase">
             {t.hero.eyebrow}
           </p>
           <div className="flex max-w-3xl flex-col gap-5">
@@ -369,32 +370,22 @@ function CapabilityStrip({ dictionary }: { dictionary: Dictionary }) {
   const capabilities = [
     {
       title: t.marketViewTitle,
-      body: t.marketViewBody,
-      href: "#knowledge-graph",
       icon: NetworkIcon,
     },
     {
       title: t.impactTitle,
-      body: t.impactBody,
-      href: "#live-charts",
       icon: LineChartIcon,
     },
     {
       title: t.aiTitle,
-      body: t.aiBody,
-      href: "#ai-assistant",
       icon: BrainCircuitIcon,
     },
     {
       title: t.telegramTitle,
-      body: t.telegramBody,
-      href: "#telegram",
       icon: BellRingIcon,
     },
     {
       title: t.strategyTitle,
-      body: t.strategyBody,
-      href: "#strategy-coding",
       icon: Code2Icon,
     },
   ]
@@ -406,49 +397,32 @@ function CapabilityStrip({ dictionary }: { dictionary: Dictionary }) {
       aria-label={dictionary.landing.product.eyebrow}
       className={`${styles.heroContent} ${styles.heroRail} mx-auto w-full max-w-[100rem] px-4 pb-4 sm:px-6 sm:pb-6 lg:px-8 lg:pb-4`}
     >
-      <ul
-        className={`${styles.landingCardGrid} grid sm:grid-cols-2 lg:grid-cols-5`}
-      >
-        {capabilities.map((capability, index) => {
-          const Icon = capability.icon
+      <LandingCapabilityFlowReveal className={styles.capabilityFlow}>
+        <span aria-hidden="true" className={styles.capabilityFlowTrack}>
+          <span className={styles.capabilityFlowLight} />
+        </span>
+        <ul className={styles.capabilityFlowList}>
+          {capabilities.map((capability) => {
+            const Icon = capability.icon
 
-          return (
-            <li
-              key={capability.title}
-              className={`${styles.landingCardGridItem} ${styles.capabilityRailItem} min-w-0`}
-            >
-              <a href={capability.href} className={styles.capabilityRailLink}>
-                <span className={styles.capabilityRailTopline}>
+            return (
+              <li key={capability.title} className={styles.capabilityFlowItem}>
+                <div className={styles.capabilityRailStep}>
                   <span
                     aria-hidden="true"
                     className={styles.capabilityRailIcon}
                   >
                     <Icon />
                   </span>
-                  <span
-                    aria-hidden="true"
-                    className={styles.capabilityRailNumber}
-                  >
-                    {String(index + 1).padStart(2, "0")}
-                  </span>
-                </span>
-                <span className={styles.capabilityRailCopy}>
                   <span className={styles.capabilityRailTitle}>
                     {capability.title}
                   </span>
-                  <span className={styles.capabilityRailBody}>
-                    {capability.body}
-                  </span>
-                </span>
-                <ArrowRightIcon
-                  aria-hidden="true"
-                  className={styles.capabilityRailArrow}
-                />
-              </a>
-            </li>
-          )
-        })}
-      </ul>
+                </div>
+              </li>
+            )
+          })}
+        </ul>
+      </LandingCapabilityFlowReveal>
     </section>
   )
 }
@@ -781,82 +755,32 @@ then emit_signal("watch")`}</code>
   )
 }
 
-function TrustBoundary({
-  access,
-  dictionary,
-}: {
-  access: ReturnType<typeof createLandingAccessModel>
-  dictionary: Dictionary
-}) {
+function ProviderIntegrations({ dictionary }: { dictionary: Dictionary }) {
   const t = dictionary.landing.trust
 
   return (
     <section
       id="trust"
-      data-landing-section="trust-boundary"
+      data-landing-section="ai-providers"
       data-landing-surface="light"
-      aria-labelledby="landing-trust-heading"
+      aria-labelledby="landing-provider-heading"
       className={`${styles.lightSurface} border-b border-border/80 bg-background`}
     >
-      <div className="mx-auto grid w-full max-w-7xl gap-12 px-4 py-16 sm:px-6 sm:py-24 lg:grid-cols-[minmax(0,1.2fr)_minmax(20rem,0.8fr)] lg:px-8">
-        <div className="grid min-w-0 gap-8 sm:grid-cols-[auto_minmax(0,1fr)]">
-          <div
-            aria-hidden="true"
-            className="flex size-12 items-center justify-center border border-border bg-muted/30"
-          >
-            <ShieldCheckIcon className="text-muted-foreground" />
-          </div>
-          <div className="flex max-w-4xl flex-col gap-5">
-            <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
-              {t.eyebrow}
-            </p>
-            <h2
-              id="landing-trust-heading"
-              className={`${styles.landingDisplayHeading} text-3xl leading-tight sm:text-4xl`}
-            >
-              {t.heading}
-            </h2>
-            <p className="leading-7 text-muted-foreground">{t.body}</p>
-            <ol className="flex flex-col gap-4 border-t border-border pt-5">
-              {[t.pointOne, t.pointTwo, t.pointThree].map((point, index) => (
-                <li
-                  key={point}
-                  className="grid grid-cols-[2rem_minmax(0,1fr)] gap-3 text-sm leading-6"
-                >
-                  <span className="font-mono text-xs text-muted-foreground">
-                    {String(index + 1).padStart(2, "0")}
-                  </span>
-                  <span>{point}</span>
-                </li>
-              ))}
-            </ol>
-          </div>
-        </div>
-        <aside
-          className={`${styles.landingPanel} flex flex-col items-start gap-5`}
-        >
+      <div className="mx-auto flex w-full max-w-7xl flex-col items-center gap-10 px-4 py-16 text-center sm:px-6 sm:py-24 lg:px-8">
+        <div className="flex max-w-3xl flex-col items-center gap-5">
           <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
-            {t.enterpriseEyebrow}
+            {t.eyebrow}
           </p>
-          <h3 className="text-2xl leading-tight font-semibold">
-            {t.enterpriseTitle}
-          </h3>
-          <p className="text-sm leading-6 text-muted-foreground">
-            {t.enterpriseBody}
-          </p>
-          <a
-            href={access.footerRequestAccess.href}
-            aria-label={t.enterpriseCta}
-            className={buttonVariants({
-              variant: "default",
-              size: "lg",
-              className: styles.sectionAction,
-            })}
+          <h2
+            id="landing-provider-heading"
+            className={`${styles.landingDisplayHeading} text-3xl leading-tight sm:text-4xl`}
           >
-            {t.enterpriseCta}
-            <ArrowRightIcon data-icon="inline-end" aria-hidden="true" />
-          </a>
-        </aside>
+            {t.heading}
+          </h2>
+          <p className="leading-7 text-muted-foreground">{t.body}</p>
+        </div>
+
+        <LandingProviderMarquee label={t.providerListLabel} />
       </div>
     </section>
   )
@@ -881,7 +805,7 @@ function FinalAccessCta({
     >
       <div className="mx-auto grid w-full max-w-7xl gap-12 px-4 py-20 sm:px-6 sm:py-28 lg:grid-cols-[minmax(0,1fr)_minmax(22rem,0.8fr)] lg:items-center lg:px-8">
         <div className="flex max-w-3xl flex-col items-start gap-6">
-          <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+          <p className="text-xs font-semibold tracking-[0.18em] text-chart-1 uppercase">
             {t.accessLabel}
           </p>
           <h2
