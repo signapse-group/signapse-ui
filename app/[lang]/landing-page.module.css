@@ -8,11 +8,11 @@
   --landing-navy-surface: #08232e;
   --landing-mint: #12d6b1;
   --landing-mint-strong: #006f66;
-  --landing-off-white: #eafdf8;
+  --landing-off-white: #f2f1ed;
   --landing-muted: #a6c4bf;
   --landing-boundary: #3c6a70;
-  --landing-light-muted-surface: #d8f2ec;
-  --landing-light-muted-foreground: #315c5f;
+  --landing-light-muted-surface: #e7e6e0;
+  --landing-light-muted-foreground: #565d60;
   --landing-dark-muted-surface: #123d43;
 
   --background: var(--landing-off-white);

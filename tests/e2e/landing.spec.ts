@@ -288,6 +288,104 @@ test.describe("P0 public landing", () => {
     )
   })
 
+  test("plays the Telegram showcase automatically and restarts after returning", async ({
+    page,
+  }) => {
+    await page.goto("/en")
+    const showcase = page.locator('[data-landing-section="showcase"]')
+    await showcase.scrollIntoViewIfNeeded()
+    await expect(showcase.getByRole("tab")).toHaveCount(4)
+
+    const telegramTab = showcase.getByRole("tab", {
+      name: /Scheduled Telegram/,
+    })
+    const telegramDemo = showcase.locator('[data-demo-renderer="motion"]')
+    await expect(telegramDemo).toBeVisible({ timeout: 8000 })
+    await expect(telegramDemo).toHaveAttribute("data-demo-mode", "automatic")
+    await expect(telegramDemo.locator("[inert]")).toHaveCount(1)
+    await expect(telegramDemo.getByRole("button")).toHaveCount(0)
+    await expect(telegramDemo.getByRole("combobox")).toHaveCount(0)
+    await expect(telegramTab.locator("svg")).toBeVisible()
+    await expect(telegramDemo).toHaveAttribute(
+      "data-telegram-demo-playback",
+      "autoplay"
+    )
+    await expect(telegramDemo).toHaveAttribute(
+      "data-telegram-demo-state",
+      "preview",
+      { timeout: 12000 }
+    )
+    await expect(telegramDemo).toHaveAttribute(
+      "data-telegram-demo-state",
+      "start",
+      { timeout: 12000 }
+    )
+
+    await showcase.getByRole("tab", { name: "Knowledge Graph" }).click()
+    await expect(telegramDemo).toHaveAttribute(
+      "data-telegram-demo-playback",
+      "paused"
+    )
+    await expect(
+      showcase.locator('[data-landing-media-slot="knowledge-graph"] img')
+    ).toBeVisible()
+    await telegramTab.click()
+    await expect(telegramDemo).toHaveAttribute(
+      "data-telegram-demo-state",
+      "start"
+    )
+    await telegramTab.press("ArrowUp")
+    await expect(
+      showcase.getByRole("tab", { name: "AI Conversation" })
+    ).toHaveAttribute("aria-selected", "true")
+    await showcase.getByRole("tab", { name: "AI Conversation" }).press("End")
+    await expect(telegramTab).toHaveAttribute("aria-selected", "true")
+
+    await page.evaluate(() => window.scrollTo(0, 0))
+    await expect(telegramDemo).toHaveAttribute(
+      "data-telegram-demo-playback",
+      "paused"
+    )
+    const pausedPhase = await telegramDemo.getAttribute(
+      "data-telegram-demo-state"
+    )
+    await page.waitForTimeout(400)
+    await expect(telegramDemo).toHaveAttribute(
+      "data-telegram-demo-state",
+      pausedPhase!
+    )
+    await showcase.scrollIntoViewIfNeeded()
+    await expect(telegramDemo).toHaveAttribute(
+      "data-telegram-demo-state",
+      "start"
+    )
+    await expect(showcase).not.toContainText(/delivered|read receipt/i)
+  })
+
+  test("keeps a static final Telegram illustration with reduced motion", async ({
+    page,
+  }) => {
+    const serverResponse = await page.request.get("/en")
+    expect(serverResponse.ok()).toBe(true)
+    expect(await serverResponse.text()).toContain('data-demo-renderer="static"')
+    await page.emulateMedia({ reducedMotion: "reduce" })
+    await page.goto("/en")
+    const showcase = page.locator('[data-landing-section="showcase"]')
+    await showcase.scrollIntoViewIfNeeded()
+    const telegramDemo = showcase.locator('[data-demo-renderer="motion"]')
+    await expect(telegramDemo).toBeVisible({ timeout: 8000 })
+    await expect(telegramDemo).toHaveAttribute(
+      "data-telegram-demo-state",
+      "preview"
+    )
+    await expect(telegramDemo).toHaveAttribute(
+      "data-telegram-demo-playback",
+      "complete"
+    )
+    await expect(telegramDemo.getByRole("button")).toHaveCount(0)
+    await expect(telegramDemo.locator('[data-visible="true"]')).toHaveCount(1)
+  })
+
   test("reflows the five capability cards without horizontal overflow", async ({
     page,
   }) => {
@@ -379,6 +477,24 @@ test.describe("P0 public landing", () => {
           )
         )
         .toBe(true)
+
+      const tabListBox = await page
+        .locator('[data-landing-section="showcase"] [role="tablist"]')
+        .boundingBox()
+      const stageBox = await page
+        .locator('[data-landing-section="showcase"] [role="tabpanel"]')
+        .boundingBox()
+      expect(tabListBox).not.toBeNull()
+      expect(stageBox).not.toBeNull()
+      if (width < 1200) {
+        expect(tabListBox!.y + tabListBox!.height).toBeLessThanOrEqual(
+          stageBox!.y + 1
+        )
+      } else {
+        expect(tabListBox!.x + tabListBox!.width).toBeLessThanOrEqual(
+          stageBox!.x + 1
+        )
+      }
     }
 
     await page.setViewportSize({ width: 375, height: 900 })
@@ -394,6 +510,15 @@ test.describe("P0 public landing", () => {
         )
       )
       .toBe(true)
+    const zoomedTabList = await page
+      .locator('[data-landing-section="showcase"] [role="tablist"]')
+      .boundingBox()
+    const zoomedStage = await page
+      .locator('[data-landing-section="showcase"] [role="tabpanel"]')
+      .boundingBox()
+    expect(zoomedTabList!.y + zoomedTabList!.height).toBeLessThanOrEqual(
+      zoomedStage!.y + 1
+    )
 
     const results = await new AxeBuilder({ page })
       .withTags(["wcag2a", "wcag2aa"])

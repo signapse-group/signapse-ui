@@ -99,9 +99,39 @@ describe("localized landing composition", () => {
     )
     expect(html).toContain(
       locale === "vi"
-        ? "Không chỉ nói về công nghệ. Hãy nhìn thấy kết quả."
-        : "Do not just hear about the technology. See the result."
+        ? "Xem cách Signapse biến dữ liệu thành hành động."
+        : "See how Signapse turns data into action."
     )
+    const showcaseSelectorOrder = [
+      locale === "vi" ? "Đồ thị Tri thức" : "Knowledge Graph",
+      locale === "vi" ? "Biểu đồ thị trường" : "Market Chart",
+      locale === "vi" ? "Hội thoại AI" : "AI Conversation",
+      locale === "vi" ? "Telegram theo lịch" : "Scheduled Telegram",
+    ]
+    const showcaseSelectorPositions = showcaseSelectorOrder.map((label) =>
+      html.indexOf(label)
+    )
+    expect(showcaseSelectorPositions.every((position) => position >= 0)).toBe(
+      true
+    )
+    expect(showcaseSelectorPositions).toEqual(
+      [...showcaseSelectorPositions].sort((a, b) => a - b)
+    )
+    expect((html.match(/role="tab"/g) ?? []).length).toBe(4)
+    expect(html).toContain('data-feature-selector="scheduled-telegram"')
+    expect(html).toMatch(
+      /aria-selected="true"[^>]*data-feature-selector="scheduled-telegram"/
+    )
+    expect(html).toContain('data-feature-stage="scheduled-telegram"')
+    expect(html).toContain('data-demo-mode="automatic"')
+    expect(html).toContain('data-demo-renderer="static"')
+    expect(html).toContain('data-telegram-demo-state="preview"')
+    expect(html).toContain("DEMO")
+    expect(html).toContain("Market Desk")
+    expect(html).toContain("XAU/USD")
+    expect(html).toContain("Asia/Bangkok")
+    expect(html).not.toContain("Strategy Coding")
+    expect(html).not.toContain("Price threshold alert")
     expect(html).toContain(
       locale === "vi"
         ? "Nhiều mô hình AI. Một nền tảng Signapse."

@@ -913,19 +913,78 @@ export const vi = {
     },
     showcase: {
       eyebrow: "SEE THE WORKFLOW",
-      heading: "Không chỉ nói về công nghệ. Hãy nhìn thấy kết quả.",
-      body: "Từ đồ thị tác động đến tin nhắn Telegram và logic chiến lược, mỗi màn hình đều cho thấy Signapse giúp công việc tiến lên như thế nào.",
-      telegramEyebrow: "TELEGRAM AUTOMATION",
-      telegramTitle: "Tín hiệu quan trọng, gửi đúng nơi.",
-      telegramBody:
-        "Cài đặt loại nội dung, tài sản và thời điểm nhận để thông tin đến đúng kênh.",
-      telegramAlertTitle: "SIGNAPSE ALERT · XAU/USD",
-      telegramAlertBody:
-        "Giá chạm vùng theo dõi. Có 3 sự kiện liên quan và 12 nguồn tin cần kiểm tra.",
-      strategyEyebrow: "STRATEGY CODING",
-      strategyTitle: "Kiểm thử trước khi tự động hóa.",
-      strategyBody:
-        "Trình bày rõ logic chiến lược, kết quả backtest và các giới hạn rủi ro cần theo dõi.",
+      heading: "Xem cách Signapse biến dữ liệu thành hành động.",
+      body: "Khám phá cách Đồ thị Tri thức, biểu đồ thị trường, hội thoại AI và Telegram kết nối trong quy trình phân tích.",
+      tabListLabel: "Tính năng trong quy trình Signapse",
+      knowledgeGraph: {
+        label: "Đồ thị Tri thức",
+        title: "Theo dấu các mối liên hệ trong thị trường.",
+        body: "Khám phá cách sự kiện, tài sản và tin tức kết nối để mở rộng bối cảnh quanh thông tin bạn đang quan tâm.",
+      },
+      marketChart: {
+        label: "Biểu đồ thị trường",
+        title: "Đặt diễn biến giá trong đúng bối cảnh.",
+        body: "Theo dõi giá cùng dấu mốc sự kiện, lịch kinh tế, phản ứng thị trường và nguồn tin liên quan.",
+      },
+      aiConversation: {
+        label: "Hội thoại AI",
+        title: "Đặt câu hỏi với ngữ cảnh từ Đồ thị Tri thức.",
+        body: "Phân tích quan hệ giữa sự kiện, tài sản và tin tức, tiếp tục câu hỏi và xem lại lịch sử trong workspace hiện tại.",
+        proofEyebrow: "HỘI THOẠI THEO NGỮ CẢNH",
+        proofTitle: "Một cuộc trao đổi, nhiều lớp bối cảnh.",
+        proofBody:
+          "Trợ lý AI dùng ngữ cảnh từ Đồ thị Tri thức để hỗ trợ câu hỏi thị trường bằng văn bản.",
+        proofContextLabel: "Ngữ cảnh",
+        proofContext: "Sự kiện · Tài sản · Tin tức",
+        proofHistoryLabel: "Lịch sử",
+        proofHistory: "Lịch sử thuộc workspace hiện tại",
+      },
+      telegram: {
+        label: "Telegram theo lịch",
+        title: "Từ lịch phân tích đến điểm nhận Telegram.",
+        body: "Xem cách cấu hình tài sản, giờ gửi và ngôn ngữ đầu ra trong Signapse, rồi nhận bản phân tích theo lịch trên Telegram.",
+        demoLabel: "DEMO",
+        stageLabel:
+          "Mô phỏng tự động cấu hình lịch trong Signapse và nhận bản phân tích trên Telegram",
+        destinationLabel: "Điểm nhận",
+        destinationName: "Market Desk",
+        routeName: "Phân tích thị trường theo lịch",
+        enabledStatus: "Đã bật",
+        scheduleNameLabel: "Tên lịch",
+        scheduleName: "Bản tin đầu ngày",
+        assetLabel: "Tài sản theo dõi",
+        timeLabel: "Giờ gửi địa phương",
+        languageLabel: "Ngôn ngữ đầu ra",
+        timezoneLabel: "Múi giờ của lịch",
+        timezone: "Asia/Bangkok",
+        languageVietnamese: "Tiếng Việt",
+        languageEnglish: "English",
+        scheduledStatus: "Đã lên lịch",
+        formTitle: "Tạo lịch phân tích thị trường",
+        formDescription:
+          "Chọn nơi nhận và thời điểm Signapse chuẩn bị bản phân tích.",
+        createSchedule: "Tạo lịch",
+        telegramToday: "Hôm nay",
+        telegramMessagePlaceholder: "Tin nhắn",
+        telegramLastSeen: "bot",
+        messageMeta: "Demo · {timezone} · {language}",
+        messageTemplates: {
+          vi: {
+            title: "BẢN PHÂN TÍCH TỪ SIGNAPSE · {asset}",
+            prepared:
+              "Bản phân tích thị trường theo lịch {time} đã được chuẩn bị.",
+            action:
+              "Mở Signapse để xem toàn bộ bối cảnh và nguồn dữ liệu trước khi tự đưa ra quyết định.",
+          },
+          en: {
+            title: "SIGNAPSE MARKET ANALYSIS · {asset}",
+            prepared:
+              "Your scheduled {time} market analysis has been prepared.",
+            action:
+              "Open Signapse to review the full context and sources before making your decision.",
+          },
+        },
+      },
     },
     trust: {
       eyebrow: "TÍCH HỢP AI ĐA NHÀ CUNG CẤP",

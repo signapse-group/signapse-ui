@@ -12,6 +12,8 @@ import {
 } from "@/app/lib/public-landing/metadata-policy"
 import { isPublicLandingPathname } from "@/app/lib/public-landing/public-path"
 import { negotiateLocale } from "@/app/lib/i18n/routing"
+import { en } from "@/app/lib/i18n/dictionaries/en"
+import { vi } from "@/app/lib/i18n/dictionaries/vi"
 
 const accessCopy = {
   nav: {
@@ -68,6 +70,25 @@ describe("root locale negotiation", () => {
     expect(negotiateLocale("fr-FR, en;q=0.8")).toBe("en")
     expect(negotiateLocale("fr-FR")).toBe("vi")
   })
+})
+
+describe("landing showcase claim policy", () => {
+  it.each([
+    ["vi", vi.landing.showcase],
+    ["en", en.landing.showcase],
+  ] as const)(
+    "keeps the %s Telegram simulation labeled and bounded",
+    (_, copy) => {
+      const serialized = JSON.stringify(copy)
+
+      expect(copy.telegram.demoLabel).toBe("DEMO")
+      expect(serialized).not.toMatch(
+        /giá chạm vùng theo dõi|price reached the watch zone|delivered|read receipt|public channel|kênh công khai|trading signal/i
+      )
+      expect(serialized).not.toContain("strategyEyebrow")
+      expect(serialized).not.toContain("telegramAlertTitle")
+    }
+  )
 })
 
 describe("landing access model", () => {

@@ -144,33 +144,34 @@ Luồng: News → Signal → Strategy → Bot / Telegram
 
 **Eyebrow:** See the workflow
 
-## Không chỉ nói về công nghệ. Hãy nhìn thấy kết quả.
+## Xem cách Signapse biến dữ liệu thành hành động.
 
-Từ đồ thị tác động đến tin nhắn Telegram và logic chiến lược, mỗi màn hình đều cho thấy Signapse giúp công việc tiến lên như thế nào.
+Khám phá cách Đồ thị Tri thức, biểu đồ thị trường, hội thoại AI và Telegram kết nối trong quy trình phân tích.
 
-- Alt ảnh chính: Đồ thị Tri thức Signapse kết nối tin tức, sự kiện và tài sản
+### Đồ thị Tri thức
 
-### Telegram automation
+Static proof: dùng approved Graph View capture theo locale hiện tại.
 
-**Tín hiệu quan trọng, gửi đúng nơi.**
+### Biểu đồ thị trường
 
-Cài đặt loại nội dung, tài sản và thời điểm nhận để thông tin đến đúng kênh.
+Static proof: dùng approved Market Chart capture theo locale hiện tại.
 
-> ● SIGNAPSE ALERT · XAU/USD  
-> Giá chạm vùng theo dõi. Có 3 sự kiện liên quan và 12 nguồn tin cần kiểm tra.
+### Hội thoại AI
 
-### Strategy coding
+Static text-first proof: Trợ lý AI dùng ngữ cảnh từ Đồ thị Tri thức để hỗ trợ câu hỏi về quan hệ giữa sự kiện, tài sản và tin tức; lịch sử thuộc workspace hiện tại.
 
-**Kiểm thử trước khi tự động hóa.**
+### Telegram theo lịch
 
-Trình bày rõ logic chiến lược, kết quả backtest và các giới hạn rủi ro cần theo dõi.
+**Từ lịch phân tích đến điểm nhận Telegram.**
 
-```text
-strategy("Momentum Context")
-when price > moving_average
-and event_impact == "high"
-then emit_signal("watch")
-```
+Chọn tài sản, giờ gửi và ngôn ngữ đầu ra. Signapse chuẩn bị bản phân tích theo lịch và chuyển đến điểm nhận Telegram đã cấu hình.
+
+- Demo fixture: `Market Desk · Active`, Scheduled Market Analysis đang bật, `Morning briefing`, `Asia/Bangkok`.
+- Lựa chọn: XAU/USD/BTC/USD, 08:00/18:00, Tiếng Việt/English.
+- Sequence: Route ready → Configure → Scheduled → Scheduled run → Telegram preview.
+- CTA: `Xem luồng gửi`; hỗ trợ chọn bước và Replay.
+- Motion chạy một lần khi đủ visible; pointer/focus/selection chuyển sang manual; reduced motion đổi state tức thời.
+- Message preview luôn có nhãn `Demo`, không gọi backend, không gửi Telegram và không dùng delivery/read receipt hoặc claim cảnh báo ngưỡng giá.
 
 ## Tích hợp AI
 
@@ -251,7 +252,7 @@ AI market intelligence và trading automation cho những người cần hiểu 
 | 5 năng lực nền tảng | `landing.product` hiện có 4 tính năng | Thay/ mở rộng cấu trúc, thêm Strategy coding                                                                   |
 | 4 nhóm đối tượng    | Chưa có                               | Thêm section                                                                                                   |
 | Workflow 4 bước     | `landing.analysisFlow` hiện có 3 bước | Thay copy và mở rộng cấu trúc                                                                                  |
-| Showcase            | Product captures hiện tại             | Cần quyết định tái sử dụng capture hiện có hay bố cục mới                                                      |
+| Showcase            | Product captures và Telegram card      | Dùng bốn feature tabs trên shared stage; Graph/Chart static, AI text-first, Scheduled Telegram dùng Motion    |
 | Tích hợp AI         | `landing.trust`                       | Thay section cũ bằng logo rail chuyển động chậm cho 6 provider                                                  |
 | CTA + form demo     | `landing.finalCta` hiện chỉ có CTA    | Thêm form và luồng xử lý production                                                                            |
 | Footer mở rộng      | `landing.footer`                      | Thay copy và mở rộng link/pháp lý                                                                              |

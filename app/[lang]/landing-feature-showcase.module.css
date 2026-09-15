@@ -1,0 +1,837 @@
+.showcase {
+  display: grid;
+  min-width: 0;
+  gap: clamp(2rem, 5vw, 5rem);
+}
+
+.tabList {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-self: start;
+  border-top: 1px solid var(--border);
+}
+
+.tab {
+  display: grid;
+  width: 100%;
+  min-height: 4.5rem;
+  grid-template-columns: 2rem minmax(0, 1fr);
+  gap: 0.75rem;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  padding: 1.25rem 0;
+  color: var(--muted-foreground);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    color 180ms ease,
+    padding 180ms ease;
+}
+
+.tab:hover {
+  color: var(--foreground);
+}
+
+.tab:focus-visible {
+  border-radius: 0.5rem;
+  outline: 2px solid var(--ring);
+  outline-offset: 4px;
+}
+
+.tab[aria-selected="true"] {
+  padding-block: 1.5rem;
+  color: var(--foreground);
+}
+
+.tabIndex {
+  padding-top: 0.18rem;
+  color: var(--muted-foreground);
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.12em;
+}
+
+.tab[aria-selected="true"] .tabIndex {
+  color: var(--chart-2);
+}
+
+.tabCopy,
+.tabDetail {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.tabCopy {
+  gap: 0.75rem;
+}
+
+.tabDetail {
+  gap: 0.5rem;
+  animation: reveal-tab-detail 180ms ease-out both;
+}
+
+.tabLabel {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.78rem;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.tabTitle {
+  color: var(--foreground);
+  font-size: clamp(1.125rem, 2vw, 1.35rem);
+  font-weight: 650;
+  line-height: 1.25;
+}
+
+.tabBody {
+  max-width: 31rem;
+  color: var(--muted-foreground);
+  font-size: 0.925rem;
+  line-height: 1.65;
+}
+
+.stage {
+  position: relative;
+  min-width: 0;
+  min-height: clamp(31rem, 52vw, 38rem);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--landing-card-radius);
+  background:
+    linear-gradient(var(--border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border) 1px, transparent 1px),
+    color-mix(in oklab, var(--muted) 20%, var(--background));
+  background-size: 3.5rem 3.5rem;
+  padding: clamp(1rem, 3vw, 2.25rem);
+  box-shadow: 0 1.5rem 4rem
+    color-mix(in oklab, var(--foreground) 8%, transparent);
+}
+
+.stage:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 4px;
+}
+
+.proofPanel {
+  min-width: 0;
+}
+
+.proofPanel > figure {
+  position: relative;
+  z-index: 1;
+  margin: auto;
+  max-width: 58rem;
+  border-radius: calc(var(--landing-card-radius) * 0.78);
+  background: var(--background);
+  padding: clamp(0.75rem, 2vw, 1.25rem);
+  box-shadow: 0 1.25rem 3rem
+    color-mix(in oklab, var(--foreground) 12%, transparent);
+}
+
+.proofPanel > figure img {
+  border-radius: calc(var(--landing-card-radius) * 0.52);
+}
+
+.missingCapture,
+.aiProof {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 50rem);
+  margin: auto;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--landing-card-radius) * 0.78);
+  background: color-mix(in oklab, var(--background) 94%, transparent);
+  box-shadow: 0 1.25rem 3rem
+    color-mix(in oklab, var(--foreground) 12%, transparent);
+}
+
+.missingCapture {
+  display: grid;
+  min-height: 20rem;
+  place-items: center;
+  padding: 2rem;
+  color: var(--muted-foreground);
+  text-align: center;
+}
+
+.aiProof {
+  display: flex;
+  min-height: 25rem;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1rem;
+  padding: clamp(1.5rem, 5vw, 4rem);
+}
+
+.aiProof h3 {
+  max-width: 34rem;
+  font-size: clamp(1.75rem, 4vw, 3rem);
+  font-weight: 650;
+  line-height: 1.05;
+  letter-spacing: -0.035em;
+}
+
+.aiProof > p:not(.paneEyebrow) {
+  max-width: 34rem;
+  color: var(--muted-foreground);
+  line-height: 1.7;
+}
+
+.aiProof dl {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+  border-top: 1px solid var(--border);
+  padding-top: 1.5rem;
+}
+
+.aiProof dl div {
+  display: grid;
+  min-width: 0;
+  gap: 0.25rem;
+}
+
+.aiProof dt {
+  color: var(--muted-foreground);
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.aiProof dd {
+  min-width: 0;
+  color: var(--foreground);
+  font-size: 0.9rem;
+  font-weight: 550;
+}
+
+.paneEyebrow {
+  color: var(--muted-foreground);
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.68rem;
+  font-weight: 650;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.activeDot {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--chart-2);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.activeDot::before {
+  width: 0.42rem;
+  height: 0.42rem;
+  border-radius: 999px;
+  background: currentColor;
+  content: "";
+}
+
+.messageTitle {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.045em;
+}
+
+.messageMeta {
+  color: var(--muted-foreground);
+  font-size: 0.68rem;
+}
+
+.telegramWindows {
+  --demo-window-border: oklch(0.145 0 0 / 14%);
+  --demo-window-shadow:
+    0 1px 2px oklch(0.145 0 0 / 8%), 0 12px 30px -10px oklch(0.145 0 0 / 16%),
+    0 28px 56px -24px oklch(0.145 0 0 / 18%);
+  display: grid;
+  min-height: 35rem;
+  gap: 1rem;
+  pointer-events: none;
+  user-select: none;
+}
+
+.signapseWindow,
+.telegramWindow {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--demo-window-border);
+  border-radius: 0.85rem;
+  box-shadow: var(--demo-window-shadow);
+}
+
+.signapseWindow {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: var(--background);
+}
+
+.signapseAppBar,
+.telegramAppBar {
+  display: flex;
+  min-height: 3.25rem;
+  align-items: center;
+  gap: 0.65rem;
+  border-bottom: 1px solid var(--border);
+  padding: 0.65rem 0.8rem;
+}
+
+.signapseAppBar {
+  background: color-mix(in oklab, var(--muted) 35%, var(--background));
+}
+
+.signapseMark,
+.telegramAvatar {
+  display: inline-flex;
+  width: 1.85rem;
+  height: 1.85rem;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.signapseMark {
+  background: transparent;
+}
+
+.signapseMark img,
+.telegramAvatar img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.signapseBreadcrumb {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.signapseBreadcrumb span {
+  margin-inline: 0.25rem;
+  color: var(--muted-foreground);
+}
+
+.signapseAppBar .activeDot {
+  white-space: nowrap;
+}
+
+.signapseFormHeader {
+  display: flex;
+  gap: 0.75rem;
+  padding: 1rem 1rem 0.75rem;
+}
+
+.formIcon {
+  display: inline-flex;
+  width: 2.15rem;
+  height: 2.15rem;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.65rem;
+  background: var(--muted);
+  color: var(--foreground);
+}
+
+.formIcon svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.signapseFormHeader h3 {
+  font-size: 0.9rem;
+  font-weight: 650;
+  line-height: 1.25;
+}
+
+.signapseFormHeader p {
+  margin-top: 0.2rem;
+  color: var(--muted-foreground);
+  font-size: 0.7rem;
+  line-height: 1.4;
+}
+
+.signapseForm {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 0.5rem 1rem 1rem;
+}
+
+.demoFieldGroup {
+  gap: 0.75rem;
+}
+
+.demoFieldRow {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.signapseFormFooter {
+  display: flex;
+  min-height: 4.5rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: auto;
+  border-top: 1px solid var(--border);
+  padding-top: 0.85rem;
+}
+
+.formStatus {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--muted-foreground);
+  font-size: 0.62rem;
+  line-height: 1.3;
+}
+
+.formStatus svg {
+  width: 0.85rem;
+  height: 0.85rem;
+  flex: 0 0 auto;
+  color: var(--chart-2);
+}
+
+.telegramWindow {
+  display: flex;
+  flex-direction: column;
+  background: #d9e7e2;
+  color: #17212b;
+}
+
+.telegramAppBar {
+  border-color: rgb(23 33 43 / 10%);
+  background: #ffffff;
+  color: #17212b;
+}
+
+.telegramAppBar > svg {
+  width: 1.05rem;
+  height: 1.05rem;
+  flex: 0 0 auto;
+  color: #5e6d79;
+}
+
+.telegramAvatar {
+  background: transparent;
+}
+
+.telegramIdentity {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.telegramIdentity strong {
+  overflow: hidden;
+  font-size: 0.78rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.telegramIdentity small {
+  margin-top: 0.2rem;
+  color: #2aabee;
+  font-size: 0.62rem;
+}
+
+.telegramConversation {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  background:
+    radial-gradient(
+      circle at 18% 22%,
+      rgb(255 255 255 / 28%) 0 1px,
+      transparent 2px
+    ),
+    radial-gradient(
+      circle at 76% 68%,
+      rgb(79 110 99 / 14%) 0 1px,
+      transparent 2px
+    ),
+    #d9e7e2;
+  background-size:
+    1.75rem 1.75rem,
+    2.25rem 2.25rem;
+  padding: 0.8rem;
+}
+
+.telegramDate {
+  align-self: center;
+  border-radius: 999px;
+  background: rgb(91 121 111 / 62%);
+  padding: 0.25rem 0.6rem;
+  color: #ffffff;
+  font-size: 0.58rem;
+  font-weight: 650;
+}
+
+.messageArea {
+  display: flex;
+  position: relative;
+  min-height: 16rem;
+  flex: 1;
+  align-items: flex-end;
+  padding-block: 1rem;
+}
+
+.telegramMessage {
+  width: 100%;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(12px);
+  transition:
+    opacity 280ms ease-out,
+    transform 280ms ease-out;
+}
+
+.telegramMessage[data-visible="true"] {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.telegramMessage [data-slot="bubble"] {
+  max-width: 92%;
+}
+
+.telegramMessage [data-slot="bubble-content"] {
+  --background: #ffffff;
+  --foreground: #17212b;
+  --border: rgb(23 33 43 / 8%);
+  color: var(--foreground);
+}
+
+.telegramMessage p + p {
+  margin-top: 0.55rem;
+}
+
+.telegramMessage .messageMeta {
+  color: #70808c;
+  text-align: right;
+}
+
+.telegramTyping {
+  position: absolute;
+  bottom: 1rem;
+  left: 0;
+  visibility: hidden;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.22rem;
+  border-radius: 0.75rem 0.75rem 0.75rem 0.2rem;
+  background: #ffffff;
+  padding: 0.65rem 0.75rem;
+  box-shadow: 0 0.15rem 0.4rem rgb(23 33 43 / 8%);
+}
+
+.telegramTyping span {
+  width: 0.3rem;
+  height: 0.3rem;
+  border-radius: 999px;
+  background: #82919c;
+}
+
+.telegramComposer {
+  display: flex;
+  min-height: 3rem;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.55rem 0.75rem;
+  background: #ffffff;
+  color: #778793;
+}
+
+.telegramComposer span {
+  flex: 1;
+  font-size: 0.72rem;
+}
+
+.telegramComposer svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.telegramComposer svg:last-child {
+  color: #2aabee;
+}
+
+@media (min-width: 48rem) {
+  .aiProof dl {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 75rem) {
+  .showcase {
+    grid-template-columns: minmax(19rem, 0.68fr) minmax(0, 1.32fr);
+    align-items: start;
+  }
+
+  .tabList {
+    position: sticky;
+    top: calc(var(--landing-header-height) + 2rem);
+  }
+}
+
+@media (max-width: 47.999rem) {
+  .stage {
+    min-height: 36rem;
+  }
+
+  .telegramWindows {
+    min-height: auto;
+  }
+
+  .signapseWindow,
+  .telegramWindow {
+    min-height: 32rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tab,
+  .tabDetail {
+    animation: none;
+    transition: none;
+  }
+}
+
+@keyframes reveal-tab-detail {
+  from {
+    opacity: 0;
+    transform: translateY(-0.25rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Telegram owns two windows only; the other showcase panels keep their stage. */
+.stage[data-feature-stage="scheduled-telegram"] {
+  container: telegram-showcase / inline-size;
+  min-height: 0;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  padding: 0;
+  box-shadow: none;
+}
+
+@container telegram-showcase (min-width: 38rem) {
+  .telegramWindows {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.tabHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.demoProgress {
+  width: 1.375rem;
+  height: 1.375rem;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  transform: rotate(-90deg);
+}
+
+.demoProgress[data-active="false"] {
+  display: none;
+}
+
+.demoProgressTrack {
+  opacity: 0.15;
+}
+
+.demoCaption {
+  color: var(--muted-foreground);
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+}
+
+.demoSelect {
+  position: relative;
+  min-width: 0;
+}
+
+.demoSelect[data-open="true"] {
+  z-index: 2;
+}
+
+.demoSelect[data-open="true"]::after {
+  position: absolute;
+  inset: -2px;
+  border: 2px solid var(--ring);
+  border-radius: calc(var(--radius-lg) + 2px);
+  pointer-events: none;
+  content: "";
+}
+
+/* Noninteractive depiction of the preset menu, scoped to the illustration. */
+.demoSelectMenu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 2;
+  width: 100%;
+  min-width: 8rem;
+  visibility: hidden;
+  border-radius: var(--radius-lg);
+  background: var(--popover);
+  padding: 0.25rem;
+  color: var(--popover-foreground);
+  box-shadow: 0 4px 12px color-mix(in oklab, var(--foreground) 15%, transparent);
+  outline: 1px solid color-mix(in oklab, var(--foreground) 10%, transparent);
+  opacity: 0;
+  list-style: none;
+  transition: opacity 150ms ease-out;
+}
+
+.demoSelectMenu[data-open="true"] {
+  visibility: visible;
+  opacity: 1;
+}
+
+.demoSelectMenu li {
+  display: flex;
+  min-height: 1.75rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  border-radius: var(--radius-md);
+  padding: 0.25rem 0.375rem;
+  font-size: 0.875rem;
+}
+
+.demoSelectMenu li[data-selected="true"] {
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+
+.demoSelectMenu svg {
+  width: 0.875rem;
+  height: 0.875rem;
+  flex-shrink: 0;
+}
+
+.demoSubmit {
+  transition: transform 120ms ease-out;
+}
+
+.demoSubmit[data-pressed="true"] {
+  transform: translateY(1px) scale(0.97);
+}
+
+.demoCursor {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 3;
+  width: 1.5rem;
+  height: 1.5rem;
+  color: #17212b;
+  pointer-events: none;
+  transform-origin: 0 0;
+  filter: drop-shadow(0 1px 2px rgb(0 0 0 / 25%));
+}
+
+.demoCursor svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  stroke: #ffffff;
+  stroke-width: 1.5;
+}
+
+.telegramTyping[data-visible="true"] {
+  visibility: visible;
+}
+
+.telegramTyping[data-visible="true"] span {
+  animation: telegram-typing 700ms ease-in-out infinite alternate;
+}
+
+.telegramTyping span:nth-child(2) {
+  animation-delay: 150ms;
+}
+
+.telegramTyping span:nth-child(3) {
+  animation-delay: 300ms;
+}
+
+[data-telegram-demo-playback="paused"] .telegramTyping span {
+  animation-play-state: paused;
+}
+
+@keyframes telegram-typing {
+  to {
+    opacity: 0.35;
+    transform: translateY(-2px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .telegramMessage,
+  .demoSelectMenu,
+  .demoSubmit,
+  .telegramTyping[data-visible="true"] span {
+    animation: none;
+    transition: none;
+  }
+  .demoCursor {
+    display: none;
+  }
+}

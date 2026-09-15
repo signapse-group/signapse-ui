@@ -30,8 +30,8 @@ import styles from "./landing-page.module.css"
 import { LandingAudienceSection } from "./landing-audience-section"
 import { LandingCapabilityFlowReveal } from "./landing-capability-flow-reveal"
 import { LandingContextFigure } from "./landing-context-figure"
+import { LandingFeatureShowcase } from "./landing-feature-showcase"
 import { LandingHeaderShell } from "./landing-header-shell"
-import { LandingProductCapture } from "./landing-product-capture"
 import { LandingProviderMarquee } from "./landing-provider-marquee"
 import { LandingLocaleLinks } from "./landing-locale-links"
 import { LandingNavigationDisclosure } from "./landing-navigation-disclosure"
@@ -662,7 +662,7 @@ function ShowcaseSection({
       aria-labelledby="landing-showcase-heading"
       className={`${styles.lightSurface} border-b border-border/80 bg-background`}
     >
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-12 px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
+      <div className="mx-auto flex w-full max-w-[100rem] flex-col gap-12 px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
         <div className="flex max-w-3xl flex-col gap-5">
           <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
             {t.eyebrow}
@@ -675,81 +675,35 @@ function ShowcaseSection({
           </h2>
           <p className="leading-7 text-muted-foreground">{t.body}</p>
         </div>
-        <div className="grid min-w-0 gap-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(20rem,0.9fr)]">
-          <div className="flex min-w-0 flex-col gap-6">
-            {graphCapture ? (
-              <LandingProductCapture
-                capture={graphCapture}
-                labels={{
-                  alt: product.knowledgeGraphMediaAlt,
-                  label: product.knowledgeGraphMediaTitle,
-                  caption: product.knowledgeGraphMediaCaption,
-                  error: product.media.error,
-                  annotations: [
-                    product.knowledgeGraphAnnotationEvent,
-                    product.knowledgeGraphAnnotationAsset,
-                    product.knowledgeGraphAnnotationSource,
-                  ],
-                }}
-              />
-            ) : null}
-            {chartCapture ? (
-              <LandingProductCapture
-                capture={chartCapture}
-                labels={{
-                  alt: product.liveChartsMediaAlt,
-                  label: product.liveChartsMediaTitle,
-                  caption: product.liveChartsMediaCaption,
-                  error: product.media.error,
-                }}
-              />
-            ) : null}
-          </div>
-          <div className="flex min-w-0 flex-col gap-6">
-            <article className={`${styles.landingPanel} flex flex-col gap-4`}>
-              <div className="flex items-center gap-3">
-                <BellRingIcon aria-hidden="true" className="size-5" />
-                <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
-                  {t.telegramEyebrow}
-                </p>
-              </div>
-              <h3 className="text-2xl leading-tight font-semibold">
-                {t.telegramTitle}
-              </h3>
-              <p className="text-sm leading-6 text-muted-foreground">
-                {t.telegramBody}
-              </p>
-              <aside className="flex flex-col gap-2 border-l-2 border-chart-2 bg-background p-4">
-                <p className="text-xs font-semibold">{t.telegramAlertTitle}</p>
-                <p className="text-sm leading-6 text-muted-foreground">
-                  {t.telegramAlertBody}
-                </p>
-              </aside>
-            </article>
-            <article
-              className={`${styles.darkSurface} ${styles.landingPanel} flex flex-col gap-4`}
-            >
-              <div className="flex items-center gap-3">
-                <Code2Icon aria-hidden="true" className="size-5" />
-                <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
-                  {t.strategyEyebrow}
-                </p>
-              </div>
-              <h3 className="text-2xl leading-tight font-semibold">
-                {t.strategyTitle}
-              </h3>
-              <p className="text-sm leading-6 text-muted-foreground">
-                {t.strategyBody}
-              </p>
-              <pre className="overflow-x-auto border border-border bg-muted/30 p-4 font-mono text-xs leading-6">
-                <code>{`strategy("Momentum Context")
-when price > moving_average
-and event_impact == "high"
-then emit_signal("watch")`}</code>
-              </pre>
-            </article>
-          </div>
-        </div>
+        <LandingFeatureShowcase
+          locale={locale}
+          labels={t}
+          captures={{
+            knowledgeGraph: {
+              capture: graphCapture,
+              labels: {
+                alt: product.knowledgeGraphMediaAlt,
+                label: product.knowledgeGraphMediaTitle,
+                caption: product.knowledgeGraphMediaCaption,
+                error: product.media.error,
+                annotations: [
+                  product.knowledgeGraphAnnotationEvent,
+                  product.knowledgeGraphAnnotationAsset,
+                  product.knowledgeGraphAnnotationSource,
+                ],
+              },
+            },
+            marketChart: {
+              capture: chartCapture,
+              labels: {
+                alt: product.liveChartsMediaAlt,
+                label: product.liveChartsMediaTitle,
+                caption: product.liveChartsMediaCaption,
+                error: product.media.error,
+              },
+            },
+          }}
+        />
       </div>
     </section>
   )

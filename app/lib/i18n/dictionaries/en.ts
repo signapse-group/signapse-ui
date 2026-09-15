@@ -913,19 +913,78 @@ export const en: Dictionary = {
     },
     showcase: {
       eyebrow: "SEE THE WORKFLOW",
-      heading: "Do not just hear about the technology. See the result.",
-      body: "From impact graphs to Telegram messages and strategy logic, every surface shows how Signapse moves the work forward.",
-      telegramEyebrow: "TELEGRAM AUTOMATION",
-      telegramTitle: "Send important signals to the right place.",
-      telegramBody:
-        "Configure content type, assets, and delivery timing so information reaches the right channel.",
-      telegramAlertTitle: "SIGNAPSE ALERT · XAU/USD",
-      telegramAlertBody:
-        "Price reached the watch zone. Review 3 related events and 12 news sources.",
-      strategyEyebrow: "STRATEGY CODING",
-      strategyTitle: "Test before you automate.",
-      strategyBody:
-        "Make strategy logic, backtest results, and risk limits clear before automation.",
+      heading: "See how Signapse turns data into action.",
+      body: "Explore how the Knowledge Graph, market charts, AI conversations, and Telegram connect across the analysis workflow.",
+      tabListLabel: "Features in the Signapse workflow",
+      knowledgeGraph: {
+        label: "Knowledge Graph",
+        title: "Follow the relationships across the market.",
+        body: "Explore how events, assets, and news connect to expand the context around information that interests you.",
+      },
+      marketChart: {
+        label: "Market Chart",
+        title: "Put price action in context.",
+        body: "Follow prices alongside event markers, the economic calendar, market reactions, and related sources.",
+      },
+      aiConversation: {
+        label: "AI Conversation",
+        title: "Ask questions with Knowledge Graph context.",
+        body: "Analyze relationships between events, assets, and news, ask follow-up questions, and revisit history in the current workspace.",
+        proofEyebrow: "CONTEXTUAL AI CONVERSATION",
+        proofTitle: "One conversation, multiple layers of context.",
+        proofBody:
+          "The AI Assistant uses Knowledge Graph context to support text-based market questions.",
+        proofContextLabel: "Context",
+        proofContext: "Events · Assets · News",
+        proofHistoryLabel: "History",
+        proofHistory: "History belongs to the current workspace",
+      },
+      telegram: {
+        label: "Scheduled Telegram",
+        title: "From scheduled analysis to your Telegram destination.",
+        body: "Watch an asset, local send time, and output language being configured in Signapse, followed by the scheduled analysis arriving in Telegram.",
+        demoLabel: "DEMO",
+        stageLabel:
+          "Automatic animation of configuring a Signapse schedule and receiving the analysis in Telegram",
+        destinationLabel: "Destination",
+        destinationName: "Market Desk",
+        routeName: "Scheduled market analysis",
+        enabledStatus: "Enabled",
+        scheduleNameLabel: "Schedule name",
+        scheduleName: "Morning briefing",
+        assetLabel: "Watchlist asset",
+        timeLabel: "Local send time",
+        languageLabel: "Output language",
+        timezoneLabel: "Schedule timezone",
+        timezone: "Asia/Bangkok",
+        languageVietnamese: "Tiếng Việt",
+        languageEnglish: "English",
+        scheduledStatus: "Scheduled",
+        formTitle: "Create market analysis schedule",
+        formDescription:
+          "Choose where and when Signapse should prepare the analysis.",
+        createSchedule: "Create schedule",
+        telegramToday: "Today",
+        telegramMessagePlaceholder: "Message",
+        telegramLastSeen: "bot",
+        messageMeta: "Demo · {timezone} · {language}",
+        messageTemplates: {
+          vi: {
+            title: "BẢN PHÂN TÍCH TỪ SIGNAPSE · {asset}",
+            prepared:
+              "Bản phân tích thị trường theo lịch {time} đã được chuẩn bị.",
+            action:
+              "Mở Signapse để xem toàn bộ bối cảnh và nguồn dữ liệu trước khi tự đưa ra quyết định.",
+          },
+          en: {
+            title: "SIGNAPSE MARKET ANALYSIS · {asset}",
+            prepared:
+              "Your scheduled {time} market analysis has been prepared.",
+            action:
+              "Open Signapse to review the full context and sources before making your decision.",
+          },
+        },
+      },
     },
     trust: {
       eyebrow: "MULTI-PROVIDER AI INTEGRATIONS",

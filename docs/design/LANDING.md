@@ -2,9 +2,11 @@
 
 > Trạng thái: Đã chốt cho OpenSpec proposal và implementation  
 > Phạm vi: Landing công khai tại `/vi` và `/en`  
-> Cập nhật gần nhất: 2026-09-09
+> Cập nhật gần nhất: 2026-09-15
 
 Quyết định ngày 2026-09-09: landing tập trung vào bốn tính năng Đồ thị Tri thức, Biểu đồ trực tiếp, Trợ lý AI và Telegram. Graph và Chart dùng ảnh sản phẩm đã duyệt; AI Assistant và Telegram là hai chapter text-only hoàn chỉnh, không có hạng mục ảnh còn thiếu.
+
+Quyết định showcase ngày 2026-09-15: `SEE THE WORKFLOW` dùng bốn feature selector Đồ thị Tri thức, Biểu đồ thị trường, Hội thoại AI và Telegram theo lịch trên một shared stage. Graph/Chart tái sử dụng approved capture, AI giữ static text-first proof, và chỉ Telegram theo lịch dùng interactive DOM simulation có nhãn `Demo` cùng route-local Motion trong phase đầu.
 
 Quyết định visual ngày 2026-09-09: landing dùng fixed branded composition với palette navy/mint đã được duyệt cho Signapse. Quyết định này chỉ áp dụng cho landing; dashboard vẫn phản ứng theo theme preference của người dùng.
 
@@ -253,6 +255,23 @@ Product proof: chapter text-only mô tả ba nhóm nội dung người dùng nh�
 
 Luồng tiếp cận đã chốt: sau khi được cấp quyền phù hợp, người dùng liên kết điểm nhận Telegram, chọn luồng nội dung và thiết lập lịch phân tích theo tài sản. Sử dụng cấu hình bot/điểm nhận/routing/lịch hiện có, không xây onboarding mới hoặc tạo kênh chung. Không thêm CTA tham gia kênh công khai hay liên kết bot chưa được xác định. Dùng “bản phân tích từ Signapse”; không dùng “độc quyền” để ngụ ý quyền truy cập trả phí, quyền sở hữu hoặc lợi thế thương mại chưa được xác định.
 
+### `InteractiveProductShowcase` — `SEE THE WORKFLOW`
+
+| Vai trò | Tiếng Việt                                                                                                                       | English                                                                                                                              |
+| ------- | -------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Eyebrow | SEE THE WORKFLOW                                                                                                                 | SEE THE WORKFLOW                                                                                                                     |
+| H2      | Xem cách Signapse biến dữ liệu thành hành động.                                                                                  | See how Signapse turns data into action.                                                                                             |
+| Intro   | Khám phá cách Đồ thị Tri thức, biểu đồ thị trường, hội thoại AI và Telegram kết nối trong quy trình phân tích.                  | Explore how the Knowledge Graph, market charts, AI conversations, and Telegram connect across the analysis workflow.                 |
+
+- Feature selector dùng thứ tự Đồ thị Tri thức → Biểu đồ thị trường → Hội thoại AI → Telegram theo lịch trên một shared stage; Scheduled Telegram active mặc định.
+- Desktop dùng semantic vertical tabs ở cột trái và stage rộng ở cột phải. Narrow viewport và zoom `200%` giữ cùng tab model, xếp selector dọc phía trên stage; không đổi sang dropdown, horizontal tab rail hoặc accordion.
+- Graph và Chart dùng approved capture theo locale; AI Conversation dùng static text-first proof. Ba static stage không dùng spinner, skeleton hoặc public “Coming soon”.
+- Scheduled Telegram là interactive product-like surface duy nhất được phép trong phase này. Surface phải có nhãn `Demo`, dùng fixture cố định, không gọi backend, không gửi Telegram và không giả delivery/read receipt.
+- Demo bắt đầu từ `Market Desk` đang hoạt động, route Scheduled Market Analysis đã bật, lịch `Morning briefing` và múi giờ `Asia/Bangkok`. Người xem chọn XAU/USD/BTC/USD, 08:00/18:00 và Tiếng Việt/English rồi kích hoạt “Xem luồng gửi” / “View delivery flow”.
+- Sequence đi qua Route ready → Configure → Scheduled → Scheduled run → Telegram preview trong khoảng 3,1 giây, autoplay một lần khi đủ visible, dừng ở final state và nhường quyền điều khiển cho pointer/focus/selection. Replay là cách duy nhất chủ động chạy lại.
+- Reduced motion đổi state tức thời. Server fallback luôn giữ destination, schedule summary và localized message preview có nhãn `Demo` trong cùng footprint.
+- Message preview chỉ nói bản phân tích theo lịch đã được chuẩn bị và dẫn người xem về Signapse để kiểm tra bối cảnh/nguồn trước khi tự quyết định; không có giá, khuyến nghị, signal, cảnh báo ngưỡng giá, claim kênh công khai hoặc trạng thái delivered/read.
+
 ### `ProviderIntegrations` — `#trust`
 
 | Vai trò | Tiếng Việt                                                                                                                                                                 | English                                                                                                                                                    |
@@ -395,9 +414,10 @@ Nếu chưa có capture được duyệt, hero phải dùng text-first compositi
 | 2      | `HeroProductProof`              | `#top`          | Định vị Knowledge Graph/AI và dẫn tới hành động tiếp theo | H1/supporting copy baseline; CTA; trust line; hai proof point                               | Conceptual market-context figure hiện có             |
 | 3      | `ProductStory`                  | `#product`      | Giải thích bốn tính năng chính bằng bốn chapter lớn       | Đồ thị Tri thức → Biểu đồ trực tiếp → Trợ lý AI → Telegram                                  | Ảnh Graph/Chart; AI/Telegram text-only               |
 | 4      | `AnalysisFlow`                  | `#how-it-works` | Giúp người mới hình dung hành trình sử dụng               | Chọn tài sản, xem diễn biến giá → Mở sự kiện, kiểm tra nguồn tin → Phân tích cùng Trợ lý AI | Ba bước bằng text; đường nối thứ tự tĩnh là tùy chọn |
-| 5      | `ProviderIntegrations`          | `#trust`        | Cho thấy khả năng tích hợp nhiều nhà cung cấp AI          | OpenAI; Gemini; Anthropic; DeepSeek; Groq; Z.AI                                             | Logo màu, không khung, chuyển động chậm              |
-| 6      | `FinalAccessCta`                | `#access`       | Kết thúc bằng cùng một conversion path                    | Outcome recap; auth-aware CTA; email behavior microcopy                                     | Không cần media                                      |
-| 7      | `PublicFooter`                  | —               | Cung cấp fallback và locale path                          | Brand; sign-in hoặc dashboard theo auth state; request-access email; locale                 | Brand asset                                          |
+| 5      | `InteractiveProductShowcase`    | —               | Cho xem bốn feature trên một shared stage                 | Graph/Chart static proof; AI text-first; Scheduled Telegram Motion demo                     | Hai approved capture + DOM demo có nhãn              |
+| 6      | `ProviderIntegrations`          | `#trust`        | Cho thấy khả năng tích hợp nhiều nhà cung cấp AI          | OpenAI; Gemini; Anthropic; DeepSeek; Groq; Z.AI                                             | Logo màu, không khung, chuyển động chậm              |
+| 7      | `FinalAccessCta`                | `#access`       | Kết thúc bằng cùng một conversion path                    | Outcome recap; auth-aware CTA; email behavior microcopy                                     | Không cần media                                      |
+| 8      | `PublicFooter`                  | —               | Cung cấp fallback và locale path                          | Brand; sign-in hoặc dashboard theo auth state; request-access email; locale                 | Brand asset                                          |
 
 ### Composition rules
 
@@ -410,6 +430,7 @@ Nếu chưa có capture được duyệt, hero phải dùng text-first compositi
 - Header, Hero và Final CTA dùng cùng một primary destination.
 - Footer chỉ hiển thị link đang tồn tại; không render Docs, Privacy hoặc Terms trước khi route thật có sẵn.
 - Route-specific sections ở cạnh route. Không tạo shared component hoặc wrapper mới chỉ cho landing.
+- Showcase shell sở hữu feature selection và shared stage; mỗi feature renderer là route-local và có thể được thay độc lập. Phase đầu chỉ Telegram theo lịch có interactive renderer.
 
 ### Feature-specific composition
 
@@ -419,6 +440,8 @@ Nếu chưa có capture được duyệt, hero phải dùng text-first compositi
 | Biểu đồ trực tiếp | Copy trái, ảnh chart phải                  | Giá đi cùng dấu mốc sự kiện và lịch kinh tế; phản ứng/nguồn tin là nội dung hỗ trợ |
 | Trợ lý AI         | Text-only, measure tối đa `3xl`            | Ngữ cảnh Market Knowledge Graph và lịch sử hội thoại                               |
 | Telegram          | Text-only, measure tối đa `3xl`            | Ba nhóm nội dung nhận được và thiết lập                                            |
+
+Product chapter composition không đồng nhất với `InteractiveProductShowcase`: Telegram chapter vẫn text-only, còn showcase có một Scheduled Telegram DOM simulation được nhận diện rõ là `Demo`.
 
 Graph là điểm nhấn thị giác đầu tiên nhưng không tạo thêm section hoặc thay đổi vị thế bốn tính năng chính. Hero giữ hai proof point ngắn; điều hướng tới bốn feature thuộc Header và ProductStory, không lặp thành một hàng link trong Hero.
 
@@ -453,7 +476,7 @@ Landing phải gợi cảm giác một market briefing rõ ràng, chính xác v�
 - Product capture là visual chính; icon chỉ hỗ trợ scan và dùng Lucide, không dùng emoji.
 - Section rhythm dùng chapter Graph với copy trái và ảnh phải ở desktop, sau đó các chapter copy/media theo Feature-specific composition; giữ copy trước media ở mobile. Không copy giá trị màu hoặc tài sản của Graphify; không đổi geometry, font hoặc motion Hero chỉ để giống reference.
 - Không dùng bento wall, testimonial carousel, logo cloud, glassmorphism, purple gradient hoặc AI decoration không có product meaning.
-- Không thêm GSAP hoặc chart engine. Hero figure được phép dùng route-local `three@0.180.0` để tái hiện visual core đã duyệt; renderer phải dynamic-load, capped-pixel-ratio, dừng khi idle/paused/hidden/offscreen, dispose đầy đủ và tôn trọng reduced motion. Các transition UI khác dùng `150–250ms` cho hover/focus/disclosure.
+- Không thêm GSAP hoặc chart engine. Hero figure được phép dùng route-local `three@0.180.0` để tái hiện visual core đã duyệt; renderer phải dynamic-load, capped-pixel-ratio, dừng khi idle/paused/hidden/offscreen, dispose đầy đủ và tôn trọng reduced motion. Scheduled Telegram showcase được phép dùng route-local `motion` qua progressive client boundary; các transition UI khác dùng `150–250ms` cho hover/focus/disclosure.
 
 ## Responsive Behavior
 
@@ -461,8 +484,8 @@ Landing phải gợi cảm giác một market briefing rõ ràng, chính xác v�
 | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `< 640px`      | Một cột; copy trước visual; CTA full-width khi cần; header giữ brand + primary CTA + menu, locale và secondary action nằm trong native disclosure; touch target ưu tiên tối thiểu 44×44px. |
 | `640px–767px`  | Một cột; copy trước visual; mobile navigation dùng native disclosure; locale có thể hiển thị khi đủ chỗ; touch target ưu tiên tối thiểu 44×44px.                                           |
-| `768px–1199px` | Hero và product chapters vẫn một cột để product capture có đủ chiều rộng; AnalysisFlow ba bước xếp dọc để giữ reading order.                                                               |
-| `≥ 1200px`     | Hero có thể dùng split `5/7`; Graph và Chart có copy trái/ảnh phải; AI/Telegram text-only; AnalysisFlow ba bước cùng hàng; content measure của body copy giữ khoảng 60–70 ký tự mỗi dòng.  |
+| `768px–1199px` | Hero và product chapters vẫn một cột để product capture có đủ chiều rộng; AnalysisFlow ba bước xếp dọc; showcase selector đứng trước shared stage.                                         |
+| `≥ 1200px`     | Hero có thể dùng split `5/7`; Graph và Chart có copy trái/ảnh phải; AI/Telegram chapter text-only; AnalysisFlow cùng hàng; showcase selector trái, shared stage phải.                    |
 | Zoom `200%`    | Reflow như narrow viewport; không page-level horizontal overflow; sticky/fixed surface không che focus hoặc heading.                                                                       |
 
 - Không đặt essential popup/content bằng absolute positioning trên screenshot mock.
@@ -564,12 +587,12 @@ Landing phải gợi cảm giác một market briefing rõ ràng, chính xác v�
 
 ### Media
 
-- Chỉ approved brand asset hoặc approved product capture xuất hiện trên trang.
+- Chỉ approved brand asset, approved product capture hoặc Scheduled Telegram DOM simulation có nhãn `Demo` xuất hiện trên trang.
 - Nếu chưa có approved hero capture, hero render text-first với conceptual figure, không có synthetic mock.
 - Product capture đáp ứng toàn bộ capture approval checklist.
 - Chỉ Graph View và live chart có ảnh sản phẩm. Ghi rõ nguồn, locale và trạng thái duyệt của hai slot này; AI Assistant và Telegram là text-only theo thiết kế.
 - Capture có visible UI text dùng đúng asset `vi`/`en`; thiếu một locale thì locale đó dùng text-first, không fallback chéo ngôn ngữ.
-- Không có fake metric, fake control hoặc private/runtime-sensitive data.
+- Không có fake metric, private/runtime-sensitive data hoặc unlabeled synthetic product UI. Telegram controls chỉ thay đổi fixture công khai trong demo và không tạo external effect.
 - Có hồ sơ nguồn/demo approval và duyệt ảnh cuối cho Graph/Chart theo locale. Thiếu ảnh ở hai feature này thì bỏ media surface, không giữ text placeholder.
 
 ### Layout and accessibility
@@ -581,7 +604,7 @@ Landing phải gợi cảm giác một market briefing rõ ràng, chính xác v�
 - Conceptual figure có accessible text summary; decorative geometry không xuất hiện trong accessibility tree.
 - Trường glyph OHLCV xuất hiện đúng một lần trong Hero, nằm sau content/figure, không thêm accessible name, control hoặc tab stop và không tạo page-level overflow.
 - Screenshot alt text và adjacent copy truyền đạt cùng insight chính.
-- Graph và Chart có copy trái, ảnh phải ở desktop; AI/Telegram text-only; nhãn feature không cạnh tranh với outcome heading. Mobile và zoom giữ copy trước ảnh về cả thứ tự đọc lẫn thứ tự hiển thị.
+- Graph và Chart chapter có copy trái, ảnh phải ở desktop; AI/Telegram chapter text-only. Showcase giữ selector trái/stage phải ở desktop và selector trước stage trên mobile/zoom; nhãn feature không cạnh tranh với outcome heading.
 - Ảnh approved hiển thị đúng locale, không méo/crop sai; caption/annotation luôn đọc được ngoài ảnh và lỗi ảnh không làm mất nội dung chapter.
 
 ### Verification
@@ -591,7 +614,7 @@ Landing phải gợi cảm giác một market briefing rõ ràng, chính xác v�
 - Chạy targeted OpenSpec validation, lint, typecheck và production build.
 - Static search xác nhận old landing keys, old mock components và forbidden claims đã được loại bỏ.
 - Kiểm tra metadata, canonical/alternate locale URLs và mọi CTA/link destination.
-- Với thay đổi bốn tính năng: kiểm tra thứ tự section/chapter, copy VI/EN, ba bước AnalysisFlow, CTA và feature-anchor/locale behavior; kiểm tra Graph/Chart asset path, dimensions, locale và accessibility text. AI/Telegram phải không có media surface hoặc trạng thái thiếu ảnh.
+- Với thay đổi bốn tính năng: kiểm tra thứ tự section/chapter, copy VI/EN, ba bước AnalysisFlow, CTA và feature-anchor/locale behavior; kiểm tra Graph/Chart asset path, dimensions, locale và accessibility text. AI/Telegram chapter không có media surface; showcase kiểm tra riêng ba static proofs và một labeled Scheduled Telegram demo.
 - Với đợt cải thiện bố cục/media: automated checks từ repo kiểm tra heading hierarchy, text-first fallback cho Graph/Chart, bố cục chapter, thứ tự mobile, đúng ảnh/locale và trạng thái lỗi inline. Owner approval của Graph/Chart vẫn được ghi rõ riêng.
 - Apex cutover chỉ được duyệt sau khi automated gates pass và owner xác nhận Clerk thật, mailbox, visual/accessibility VI/EN light/dark/breakpoints, canonical/alternates và hai social card trên preview. Các owner/manual checks này là cutover gates, không phải archive-blocking checkbox của landing implementation change.
 
@@ -601,8 +624,8 @@ Landing phải gợi cảm giác một market briefing rõ ràng, chính xác v�
 - Pricing, free trial hoặc self-service signup.
 - Customer logos, testimonials, ratings, case studies hoặc product metrics.
 - Integration ngoài Telegram; kênh Telegram công khai mặc định hoặc onboarding mới.
-- Interactive product demo, video hoặc autoplay media.
-- Client-side scroll animation framework.
+- Interactive demo cho Knowledge Graph, Market Chart hoặc AI Conversation; video hoặc autoplay media ngoài bounded Scheduled Telegram sequence.
+- Client-side scroll animation framework ngoài route-local Motion boundary của Scheduled Telegram showcase.
 - Team collaboration hoặc shared-workspace positioning.
 - Dedicated social artwork ngoài approved brand assets.
 

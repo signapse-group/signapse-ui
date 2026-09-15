@@ -55,38 +55,44 @@
 
 ## 9. Interactive showcase contract and localization
 
-- [ ] 9.1 Synchronize the landing design/content documents with the four-feature interactive product showcase, static-proof rollout, Scheduled Telegram DOM-simulation boundary, approved bilingual section copy, and forbidden delivery or threshold-alert claims.
-- [ ] 9.2 Replace the obsolete Showcase and Strategy dictionary contract with matching Vietnamese and English feature-selector, demo-control, workflow-state, accessibility, Replay, schedule-summary, and Telegram-preview messages.
-- [ ] 9.3 Update static policy checks so they permit only the labeled Scheduled Telegram simulation while continuing to reject private data, fake metrics, public-channel claims, arbitrary threshold alerts, manual AI-answer delivery, guaranteed outcomes, and delivery/read receipts.
+- [x] 9.1 Synchronize the landing design/content documents with the four-feature interactive product showcase, static-proof rollout, Scheduled Telegram DOM-simulation boundary, approved bilingual section copy, and forbidden delivery or threshold-alert claims.
+- [x] 9.2 Replace the obsolete Showcase and Strategy dictionary contract with matching Vietnamese and English feature-selector, demo-control, workflow-state, accessibility, Replay, schedule-summary, and Telegram-preview messages.
+- [x] 9.3 Update static policy checks so they permit only the labeled Scheduled Telegram simulation while continuing to reject private data, fake metrics, public-channel claims, arbitrary threshold alerts, manual AI-answer delivery, guaranteed outcomes, and delivery/read receipts.
 
 ## 10. Four-feature showcase shell
 
-- [ ] 10.1 Replace the current disconnected Showcase composition with one server-renderable shell containing Knowledge Graph, Market Chart, AI Conversation, and Scheduled Telegram selectors in canonical order over one shared stage.
-- [ ] 10.2 Implement accessible vertical tab and tabpanel behavior with Scheduled Telegram selected by default, active-selector detail, pointer and keyboard selection, visible focus, and preserved state across tab changes.
-- [ ] 10.3 Reuse the locale-appropriate approved Knowledge Graph and Market Chart captures, add the localized static AI Conversation proof, and expose internal static versus interactive demo modes without public loading or coming-soon states.
-- [ ] 10.4 Implement the desktop selector/stage composition and narrow vertical selector-before-stage reflow with a stable footprint and no page-level horizontal overflow at required breakpoints or 200 percent zoom.
+- [x] 10.1 Replace the current disconnected Showcase composition with one server-renderable shell containing Knowledge Graph, Market Chart, AI Conversation, and Scheduled Telegram selectors in canonical order over one shared stage.
+- [x] 10.2 Implement accessible vertical tab and tabpanel behavior with Scheduled Telegram selected by default, active-selector detail, pointer and keyboard selection, visible focus, and preserved state across tab changes.
+- [x] 10.3 Reuse the locale-appropriate approved Knowledge Graph and Market Chart captures, add the localized static AI Conversation proof, and expose internal static versus interactive demo modes without public loading or coming-soon states.
+- [x] 10.4 Implement the desktop selector/stage composition and narrow vertical selector-before-stage reflow with a stable footprint and no page-level horizontal overflow at required breakpoints or 200 percent zoom.
 
 ## 11. Scheduled Telegram Motion demo
 
-- [ ] 11.1 Add the `motion` production dependency and a route-local progressively loaded client renderer without adding a global Motion provider or changing the server-rendered landing shell.
-- [ ] 11.2 Implement the deterministic demo model for the active `Market Desk` destination, enabled Scheduled Market Analysis route, `Morning briefing` schedule, `Asia/Bangkok` timezone, supported asset/time/language selections, and localized message derivation.
-- [ ] 11.3 Implement reducer-owned workflow and playback states for Route ready, Configure, Scheduled, Scheduled run, Telegram preview, direct step selection, manual interaction, and Replay.
-- [ ] 11.4 Implement declarative Motion variants, one-shot viewport autoplay, document-visibility and feature-tab interruption, stable-state resume, stale-run cancellation, final-state hold, and no automatic replay on tab return.
-- [ ] 11.5 Implement the server-rendered labeled static Telegram proof, client-load failure behavior, and reduced-motion state changes while preserving controls, content, focus, and stage dimensions.
-- [ ] 11.6 Remove the old Strategy Coding showcase surface, code sample, and unsupported price-threshold Telegram alert without removing the separate Strategy capability elsewhere on the landing.
+- [x] 11.1 Add the `motion` production dependency and a route-local progressively loaded client renderer without adding a global Motion provider or changing the server-rendered landing shell.
+- [x] 11.2 Implement the deterministic demo model for the active `Market Desk` destination, enabled Scheduled Market Analysis route, `Morning briefing` schedule, `Asia/Bangkok` timezone, supported asset/time/language selections, and localized message derivation.
+- [x] 11.3 Implement reducer-owned workflow and playback states for Route ready, Configure, Scheduled, Scheduled run, Telegram preview, direct step selection, manual interaction, and Replay.
+- [x] 11.4 Implement declarative Motion variants, one-shot viewport autoplay, document-visibility and feature-tab interruption, stable-state resume, stale-run cancellation, final-state hold, and no automatic replay on tab return.
+- [x] 11.5 Implement the server-rendered labeled static Telegram proof, client-load failure behavior, and reduced-motion state changes while preserving controls, content, focus, and stage dimensions.
+- [x] 11.6 Remove the old Strategy Coding showcase surface, code sample, and unsupported price-threshold Telegram alert without removing the separate Strategy capability elsewhere on the landing.
 
 ## 12. Showcase verification coverage
 
-- [ ] 12.1 Add a narrow reducer/lifecycle test for valid workflow progression, selection-derived message content, user interruption, Replay, offscreen waiting, and stale-run cancellation.
-- [ ] 12.2 Update localized landing composition tests for four selectors, canonical order, default Telegram selection, static and interactive proof modes, approved captures, AI text-first proof, server fallback, and removed Showcase content.
-- [ ] 12.3 Update browser tests for pointer and keyboard tab operation, asset/time/language controls, one-shot autoplay, manual interruption, preserved tab state, Replay, reduced motion, static fallback semantics, and absence of misleading delivery states.
-- [ ] 12.4 Verify the showcase at 375, 768, 1024, and 1440 CSS pixels and at 200 percent zoom for selector/stage order, readable content, visible focus, stable layout, and no horizontal overflow; run the existing axe pass.
+- [x] 12.1 Add a narrow reducer/lifecycle test for valid workflow progression, selection-derived message content, user interruption, Replay, offscreen waiting, and stale-run cancellation.
+- [x] 12.2 Update localized landing composition tests for four selectors, canonical order, default Telegram selection, static and interactive proof modes, approved captures, AI text-first proof, server fallback, and removed Showcase content.
+- [x] 12.3 Update browser tests for pointer and keyboard tab operation, asset/time/language controls, one-shot autoplay, manual interruption, preserved tab state, Replay, reduced motion, static fallback semantics, and absence of misleading delivery states.
+- [x] 12.4 Verify the showcase at 375, 768, 1024, and 1440 CSS pixels and at 200 percent zoom for selector/stage order, readable content, visible focus, stable layout, and no horizontal overflow; run the existing axe pass.
 
 ## 13. Interactive showcase completion gates
 
-- [ ] 13.1 Run the targeted reducer, component, policy, and landing browser tests and record environment-only failures separately from implementation failures.
-- [ ] 13.2 Run lint, typecheck, production build, and bundle inspection; confirm the Motion renderer stays behind the showcase client path and the server-rendered fallback remains available.
-- [ ] 13.3 Run `openspec validate --change "refocus-public-landing-features"` and inspect the final diff for UTF-8/newline integrity, localized-copy parity, unchanged public-route/access behavior, and absence of unrelated cleanup.
+- [x] 13.1 Run the targeted reducer, component, policy, and landing browser tests and record environment-only failures separately from implementation failures.
+- [x] 13.2 Run lint, typecheck, production build, and bundle inspection; confirm the Motion renderer stays behind the showcase client path and the server-rendered fallback remains available.
+- [x] 13.3 Run `openspec validate "refocus-public-landing-features" --type change --strict --no-interactive` and inspect the final diff for UTF-8/newline integrity, localized-copy parity, unchanged public-route/access behavior, and absence of unrelated cleanup.
+
+Verification notes:
+
+- The targeted reducer, component, policy, interaction, reduced-motion, responsive-order, and overflow checks pass.
+- The repository unit suite had one unrelated timing failure in `telegram-configuration.component.test.tsx`; the same test passed immediately when rerun alone.
+- The full landing browser run exposed existing failures in the header assertions and provider marquee accessibility. The showcase-specific browser tests pass, and the responsive assertions pass at 375, 768, 1024, 1440, and 200 percent zoom.
 
 User-owned manual QA:
 
