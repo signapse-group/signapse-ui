@@ -64,9 +64,11 @@ export function LandingScheduledTelegramDemo({
     if (!canPlay) return
 
     const targets = new Map<string, { x: number; y: number }>()
+    let hasPosition = false
     const measure = () => {
       const bounds = window.getBoundingClientRect()
-      targets.set("entry", { x: bounds.width - 30, y: bounds.height - 30 })
+      const entry = { x: bounds.width - 30, y: bounds.height - 30 }
+      targets.set("entry", entry)
       window
         .querySelectorAll<HTMLElement>("[data-cursor-target]")
         .forEach((element) => {
@@ -76,6 +78,11 @@ export function LandingScheduledTelegramDemo({
             y: rect.top - bounds.top - window.clientTop + rect.height * 0.5,
           })
         })
+      if (!hasPosition && bounds.width > 0 && bounds.height > 0) {
+        x.set(entry.x)
+        y.set(entry.y)
+        hasPosition = true
+      }
     }
     // Menus stay laid out while hidden so their target coordinates are stable.
     measure()
@@ -107,9 +114,11 @@ export function LandingScheduledTelegramDemo({
         if (from && to) {
           x.set(from.x + (to.x - from.x) * cursor.progress)
           y.set(from.y + (to.y - from.y) * cursor.progress)
+          opacity.set(cursor.opacity)
+        } else {
+          opacity.set(0)
         }
         scale.set(cursor.scale)
-        opacity.set(cursor.opacity)
       },
     })
 

@@ -117,6 +117,17 @@ describe("localized landing composition", () => {
     expect(showcaseSelectorPositions).toEqual(
       [...showcaseSelectorPositions].sort((a, b) => a - b)
     )
+    expect(html).toContain(
+      locale === "vi"
+        ? "Phân tích thị trường cùng Signapse AI"
+        : "Market analysis with Signapse AI"
+    )
+    expect(html).toContain(
+      locale === "vi" ? "Dấu vết bằng chứng" : "Evidence trail"
+    )
+    expect(html).toContain("BTC")
+    expect(html).toContain('data-ai-conversation-state="complete"')
+    expect(html).toContain('role="log"')
     expect((html.match(/role="tab"/g) ?? []).length).toBe(4)
     expect(html).toContain('data-feature-selector="scheduled-telegram"')
     expect(html).toMatch(

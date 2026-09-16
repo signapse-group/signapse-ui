@@ -17,12 +17,16 @@ import {
   LandingProductCapture,
   type LandingProductCaptureLabels,
 } from "./landing-product-capture"
+import { LandingAiConversationWindow } from "./landing-ai-conversation-window"
 import { TELEGRAM_DEMO_FINAL_FRAME } from "./landing-scheduled-telegram-demo-model"
 import { LandingTelegramWindows } from "./landing-telegram-windows"
 import styles from "./landing-feature-showcase.module.css"
 
 type ShowcaseLabels = Dictionary["landing"]["showcase"]
 type TelegramLabels = ShowcaseLabels["telegram"]
+type KnowledgeGraphLabels = ShowcaseLabels["knowledgeGraph"]
+type MarketChartLabels = ShowcaseLabels["marketChart"]
+type AiConversationLabels = ShowcaseLabels["aiConversation"]
 
 type ShowcaseFeature =
   "knowledge-graph" | "market-chart" | "ai-conversation" | "scheduled-telegram"
@@ -31,6 +35,24 @@ type TelegramDemoProps = {
   active: boolean
   labels: TelegramLabels
   locale: AppLocale
+  progressRef: RefObject<SVGCircleElement | null>
+}
+
+type KnowledgeGraphDemoProps = {
+  active: boolean
+  labels: KnowledgeGraphLabels
+  progressRef: RefObject<SVGCircleElement | null>
+}
+
+type MarketChartDemoProps = {
+  active: boolean
+  labels: MarketChartLabels
+  progressRef: RefObject<SVGCircleElement | null>
+}
+
+type AiConversationDemoProps = {
+  active: boolean
+  labels: AiConversationLabels
   progressRef: RefObject<SVGCircleElement | null>
 }
 
@@ -101,11 +123,20 @@ export function LandingFeatureShowcase({
   const rootRef = useRef<HTMLDivElement>(null)
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([])
   const requestedDemo = useRef(false)
-  const progressRef = useRef<SVGCircleElement>(null)
+  const telegramProgressRef = useRef<SVGCircleElement>(null)
+  const graphProgressRef = useRef<SVGCircleElement>(null)
+  const marketProgressRef = useRef<SVGCircleElement>(null)
+  const aiProgressRef = useRef<SVGCircleElement>(null)
   const [activeFeature, setActiveFeature] =
     useState<ShowcaseFeature>("scheduled-telegram")
   const [TelegramDemo, setTelegramDemo] =
     useState<ComponentType<TelegramDemoProps> | null>(null)
+  const [KnowledgeGraphDemo, setKnowledgeGraphDemo] =
+    useState<ComponentType<KnowledgeGraphDemoProps> | null>(null)
+  const [MarketChartDemo, setMarketChartDemo] =
+    useState<ComponentType<MarketChartDemoProps> | null>(null)
+  const [AiConversationDemo, setAiConversationDemo] =
+    useState<ComponentType<AiConversationDemoProps> | null>(null)
 
   useEffect(() => {
     const root = rootRef.current
@@ -121,6 +152,27 @@ export function LandingFeatureShowcase({
         void import("./landing-scheduled-telegram-demo")
           .then((module) => {
             setTelegramDemo(() => module.LandingScheduledTelegramDemo)
+          })
+          .catch(() => {
+            // The server-rendered proof remains the complete fallback.
+          })
+        void import("./landing-knowledge-graph-demo")
+          .then((module) => {
+            setKnowledgeGraphDemo(() => module.LandingKnowledgeGraphDemo)
+          })
+          .catch(() => {
+            // The approved product capture remains the fallback.
+          })
+        void import("./landing-market-chart-demo")
+          .then((module) => {
+            setMarketChartDemo(() => module.LandingMarketChartDemo)
+          })
+          .catch(() => {
+            // The approved product capture remains the fallback.
+          })
+        void import("./landing-ai-conversation-demo")
+          .then((module) => {
+            setAiConversationDemo(() => module.LandingAiConversationDemo)
           })
           .catch(() => {
             // The server-rendered proof remains the complete fallback.
@@ -199,40 +251,50 @@ export function LandingFeatureShowcase({
               <span className={styles.tabCopy}>
                 <span className={styles.tabHeading}>
                   <span className={styles.tabLabel}>{feature.label}</span>
-                  {feature.id === "scheduled-telegram" ? (
-                    <svg
-                      className={styles.demoProgress}
-                      viewBox="0 0 24 24"
-                      aria-hidden="true"
-                      data-active={active}
-                    >
-                      <circle
-                        cx="12"
-                        cy="12"
-                        r="9"
-                        className={styles.demoProgressTrack}
-                      />
-                      <circle
-                        ref={progressRef}
-                        cx="12"
-                        cy="12"
-                        r="9"
-                        pathLength="100"
-                        strokeDasharray="100"
-                        strokeDashoffset="100"
-                      />
-                    </svg>
-                  ) : null}
+                  <svg
+                    className={styles.demoProgress}
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                    data-active={active}
+                  >
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r="9"
+                      className={styles.demoProgressTrack}
+                    />
+                    <circle
+                      ref={
+                        feature.id === "knowledge-graph"
+                          ? graphProgressRef
+                          : feature.id === "market-chart"
+                            ? marketProgressRef
+                            : feature.id === "ai-conversation"
+                              ? aiProgressRef
+                              : telegramProgressRef
+                      }
+                      cx="12"
+                      cy="12"
+                      r="9"
+                      pathLength="100"
+                      strokeDasharray="100"
+                      strokeDashoffset="100"
+                    />
+                  </svg>
                 </span>
                 {active ? (
                   <span className={styles.tabDetail}>
                     <span className={styles.tabTitle}>{feature.title}</span>
                     <span className={styles.tabBody}>{feature.body}</span>
-                    {feature.id === "scheduled-telegram" ? (
-                      <span className={styles.demoCaption}>
-                        {labels.telegram.demoLabel}
-                      </span>
-                    ) : null}
+                    <span className={styles.demoCaption}>
+                      {feature.id === "knowledge-graph"
+                        ? labels.knowledgeGraph.demoLabel
+                        : feature.id === "market-chart"
+                          ? labels.marketChart.demoLabel
+                          : feature.id === "ai-conversation"
+                            ? labels.aiConversation.demoLabel
+                            : labels.telegram.demoLabel}
+                    </span>
                   </span>
                 ) : null}
               </span>
@@ -249,42 +311,52 @@ export function LandingFeatureShowcase({
         className={styles.stage}
         data-feature-stage={activeFeature}
         data-demo-mode={
-          activeFeature === "scheduled-telegram" ? "automatic" : "static"
+          activeFeature !== "ai-conversation" || AiConversationDemo
+            ? "automatic"
+            : "static"
         }
       >
         <div
           className={styles.proofPanel}
           hidden={activeFeature !== "knowledge-graph"}
         >
-          <StaticCaptureProof proof={captures.knowledgeGraph} />
+          {KnowledgeGraphDemo ? (
+            <KnowledgeGraphDemo
+              active={activeFeature === "knowledge-graph"}
+              labels={labels.knowledgeGraph}
+              progressRef={graphProgressRef}
+            />
+          ) : (
+            <StaticCaptureProof proof={captures.knowledgeGraph} />
+          )}
         </div>
         <div
           className={styles.proofPanel}
           hidden={activeFeature !== "market-chart"}
         >
-          <StaticCaptureProof proof={captures.marketChart} />
+          {MarketChartDemo ? (
+            <MarketChartDemo
+              active={activeFeature === "market-chart"}
+              labels={labels.marketChart}
+              progressRef={marketProgressRef}
+            />
+          ) : (
+            <StaticCaptureProof proof={captures.marketChart} />
+          )}
         </div>
         <div
           className={styles.proofPanel}
           hidden={activeFeature !== "ai-conversation"}
         >
-          <article className={styles.aiProof}>
-            <p className={styles.paneEyebrow}>
-              {labels.aiConversation.proofEyebrow}
-            </p>
-            <h3>{labels.aiConversation.proofTitle}</h3>
-            <p>{labels.aiConversation.proofBody}</p>
-            <dl>
-              <div>
-                <dt>{labels.aiConversation.proofContextLabel}</dt>
-                <dd>{labels.aiConversation.proofContext}</dd>
-              </div>
-              <div>
-                <dt>{labels.aiConversation.proofHistoryLabel}</dt>
-                <dd>{labels.aiConversation.proofHistory}</dd>
-              </div>
-            </dl>
-          </article>
+          {AiConversationDemo ? (
+            <AiConversationDemo
+              active={activeFeature === "ai-conversation"}
+              labels={labels.aiConversation}
+              progressRef={aiProgressRef}
+            />
+          ) : (
+            <LandingAiConversationWindow labels={labels.aiConversation} />
+          )}
         </div>
         <div
           className={styles.proofPanel}
@@ -293,7 +365,7 @@ export function LandingFeatureShowcase({
           {TelegramDemo ? (
             <TelegramDemo
               active={activeFeature === "scheduled-telegram"}
-              progressRef={progressRef}
+              progressRef={telegramProgressRef}
               labels={labels.telegram}
               locale={locale}
             />

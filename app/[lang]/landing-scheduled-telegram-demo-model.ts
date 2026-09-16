@@ -1,7 +1,7 @@
 import type { AppLocale } from "@/app/lib/i18n/config"
 import type { Dictionary } from "@/app/lib/i18n/dictionary-types"
 
-export const TELEGRAM_DEMO_DURATION = 9
+export const TELEGRAM_DEMO_DURATION = 20
 export const TELEGRAM_DEMO_TIMING = {
   start: 0,
   assetOpen: 1.05,
@@ -12,8 +12,15 @@ export const TELEGRAM_DEMO_TIMING = {
   languageSelected: 4.05,
   submit: 4.9,
   scheduled: 5.1,
-  running: 5.4,
-  preview: 6.7,
+  collecting: 5.4,
+  priceReady: 5.85,
+  technicalReady: 6.25,
+  contextReady: 6.65,
+  normalizing: 7,
+  reasoning: 7.8,
+  composing: 9.5,
+  sending: 10.5,
+  delivered: 12.2,
 } as const
 
 export type TelegramDemoPhase = keyof typeof TELEGRAM_DEMO_TIMING
@@ -74,7 +81,9 @@ export function getTelegramDemoCursor(seconds: number) {
         ? 1
         : 1 - 0.12 * Math.sin(((seconds - click) / 0.2) * Math.PI),
     opacity:
-      seconds >= TELEGRAM_DEMO_TIMING.running ? 0 : Math.min(1, seconds / 0.25),
+      seconds >= TELEGRAM_DEMO_TIMING.collecting
+        ? 0
+        : Math.min(1, seconds / 0.25),
   }
 }
 
@@ -89,6 +98,7 @@ export function getTelegramDemoMessage(
       : labels.languageEnglish
   const values = {
     asset: state.asset,
+    symbol: state.asset.replaceAll("/", ""),
     time: state.sendTime,
     timezone: labels.timezone,
     language,
@@ -101,8 +111,21 @@ export function getTelegramDemoMessage(
 
   return {
     title: format(templates.title),
-    prepared: format(templates.prepared),
-    action: templates.action,
+    horizon: format(templates.horizon),
+    summary: format(templates.summary),
+    contextTitle: format(templates.contextTitle),
+    supportContext: format(templates.supportContext),
+    pressureContext: format(templates.pressureContext),
+    levelsTitle: format(templates.levelsTitle),
+    supportLevel: format(templates.supportLevel),
+    resistanceLevel: format(templates.resistanceLevel),
+    scenario: format(templates.scenario),
+    entry: format(templates.entry),
+    targets: format(templates.targets),
+    trigger: format(templates.trigger),
+    invalidation: format(templates.invalidation),
+    event: format(templates.event),
+    risk: format(templates.risk),
     meta: format(labels.messageMeta),
   }
 }

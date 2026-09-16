@@ -11,10 +11,11 @@ import {
 } from "@/app/[lang]/landing-scheduled-telegram-demo-model"
 
 describe("Scheduled Telegram automatic timeline", () => {
-  it("opens menus before selecting values, then creates the schedule before receiving the message", () => {
-    const phases = [0, 1.1, 1.7, 2.4, 2.9, 3.6, 4.1, 4.95, 5.2, 5.5, 6.8].map(
-      (time) => getTelegramDemoFrame(time).phase
-    )
+  it("configures the schedule, builds the analysis, then delivers it", () => {
+    const phases = [
+      0, 1.1, 1.7, 2.4, 2.9, 3.6, 4.1, 4.95, 5.2, 5.5, 5.9, 6.3, 6.7, 7.1, 7.9,
+      9.6, 10.6, 12.3,
+    ].map((time) => getTelegramDemoFrame(time).phase)
     expect(phases).toEqual([
       "start",
       "assetOpen",
@@ -25,15 +26,22 @@ describe("Scheduled Telegram automatic timeline", () => {
       "languageSelected",
       "submit",
       "scheduled",
-      "running",
-      "preview",
+      "collecting",
+      "priceReady",
+      "technicalReady",
+      "contextReady",
+      "normalizing",
+      "reasoning",
+      "composing",
+      "sending",
+      "delivered",
     ])
     expect(getTelegramDemoFrame(TELEGRAM_DEMO_DURATION)).toBe(
       TELEGRAM_DEMO_FINAL_FRAME
     )
     expect(
-      TELEGRAM_DEMO_DURATION - TELEGRAM_DEMO_TIMING.preview
-    ).toBeGreaterThan(2)
+      TELEGRAM_DEMO_DURATION - TELEGRAM_DEMO_TIMING.delivered
+    ).toBeGreaterThanOrEqual(7)
     expect(getTelegramDemoFrame(0).phase).toBe("start")
   })
 
@@ -52,7 +60,9 @@ describe("Scheduled Telegram automatic timeline", () => {
     expect(click.from).toBe("submit")
     expect(click.to).toBe("submit")
     expect(click.scale).toBeCloseTo(0.88)
-    expect(getTelegramDemoCursor(TELEGRAM_DEMO_TIMING.running).opacity).toBe(0)
+    expect(getTelegramDemoCursor(TELEGRAM_DEMO_TIMING.collecting).opacity).toBe(
+      0
+    )
   })
 
   it("keeps cursor interpolation bounded throughout a loop and reuses frames between transitions", () => {
@@ -63,7 +73,7 @@ describe("Scheduled Telegram automatic timeline", () => {
       expect(cursor.scale).toBeGreaterThanOrEqual(0.879)
       expect(cursor.scale).toBeLessThanOrEqual(1.001)
     }
-    expect(getTelegramDemoFrame(7)).toBe(getTelegramDemoFrame(8.9))
+    expect(getTelegramDemoFrame(12.3)).toBe(getTelegramDemoFrame(19.9))
   })
 
   it("uses the output language for the entire analysis, independently of the page language", () => {
@@ -73,9 +83,10 @@ describe("Scheduled Telegram automatic timeline", () => {
       sendTime: "08:00",
       outputLanguage: "vi",
     })
-    expect(message.title).toBe("BẢN PHÂN TÍCH TỪ SIGNAPSE · XAU/USD")
-    expect(message.prepared).toContain("theo lịch 08:00")
-    expect(message.action).toBe(labels.messageTemplates.vi.action)
+    expect(message.title).toBe("📊 XAUUSD · 16/09/2026 08:00")
+    expect(message.horizon).toContain("THIÊN HƯỚNG: TĂNG")
+    expect(message.scenario).toContain("BUY PULLBACK")
+    expect(message.risk).toContain("breakout 3.705")
     expect(message.meta).toContain("Tiếng Việt")
   })
 })
