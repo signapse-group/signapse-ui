@@ -6,7 +6,7 @@
 
 Quyết định ngày 2026-09-09: landing tập trung vào bốn tính năng Đồ thị Tri thức, Biểu đồ trực tiếp, Trợ lý AI và Telegram. Graph và Chart dùng ảnh sản phẩm đã duyệt; AI Assistant và Telegram là hai chapter text-only hoàn chỉnh, không có hạng mục ảnh còn thiếu.
 
-Quyết định showcase ngày 2026-09-15: `SEE THE WORKFLOW` dùng bốn feature selector Đồ thị Tri thức, Biểu đồ thị trường, Hội thoại AI và Telegram theo lịch trên một shared stage. Graph/Chart tái sử dụng approved capture, AI giữ static text-first proof, và chỉ Telegram theo lịch dùng interactive DOM simulation có nhãn `Demo` cùng route-local Motion trong phase đầu.
+Quyết định showcase ngày 2026-09-15: `SEE THE WORKFLOW` dùng bốn feature selector Đồ thị Tri thức, Biểu đồ thị trường, Hội thoại AI và Telegram theo lịch trên một shared stage. Graph/Chart giữ approved product surfaces, AI dùng browser-window conversation simulation có nhãn `Demo`, và Telegram theo lịch dùng interactive DOM simulation với route-local Motion.
 
 Quyết định visual ngày 2026-09-09: landing dùng fixed branded composition với palette navy/mint đã được duyệt cho Signapse. Quyết định này chỉ áp dụng cho landing; dashboard vẫn phản ứng theo theme preference của người dùng.
 
@@ -265,8 +265,8 @@ Luồng tiếp cận đã chốt: sau khi được cấp quyền phù hợp, ng�
 
 - Feature selector dùng thứ tự Đồ thị Tri thức → Biểu đồ thị trường → Hội thoại AI → Telegram theo lịch trên một shared stage; Scheduled Telegram active mặc định.
 - Desktop dùng semantic vertical tabs ở cột trái và stage rộng ở cột phải. Narrow viewport và zoom `200%` giữ cùng tab model, xếp selector dọc phía trên stage; không đổi sang dropdown, horizontal tab rail hoặc accordion.
-- Graph và Chart dùng approved capture theo locale; AI Conversation dùng static text-first proof. Ba static stage không dùng spinner, skeleton hoặc public “Coming soon”.
-- Scheduled Telegram là interactive product-like surface duy nhất được phép trong phase này. Surface phải có nhãn `Demo`, dùng fixture cố định, không gọi backend, không gửi Telegram và không giả delivery/read receipt.
+- Graph và Chart giữ surface theo locale; AI Conversation dùng browser-window text-first simulation với câu hỏi, quy trình tổng hợp, evidence trail và kịch bản có điều kiện. Các stage không dùng spinner, skeleton hoặc public “Coming soon”.
+- AI Conversation và Scheduled Telegram là hai interactive product-like surface trong phase này. Cả hai phải có nhãn `Demo`, dùng fixture cố định và không gọi backend; Telegram không giả delivery/read receipt.
 - Demo bắt đầu từ `Market Desk` đang hoạt động, route Scheduled Market Analysis đã bật, lịch `Morning briefing` và múi giờ `Asia/Bangkok`. Người xem chọn XAU/USD/BTC/USD, 08:00/18:00 và Tiếng Việt/English rồi kích hoạt “Xem luồng gửi” / “View delivery flow”.
 - Sequence đi qua Route ready → Configure → Scheduled → Scheduled run → Telegram preview trong khoảng 3,1 giây, autoplay một lần khi đủ visible, dừng ở final state và nhường quyền điều khiển cho pointer/focus/selection. Replay là cách duy nhất chủ động chạy lại.
 - Reduced motion đổi state tức thời. Server fallback luôn giữ destination, schedule summary và localized message preview có nhãn `Demo` trong cùng footprint.
@@ -414,7 +414,7 @@ Nếu chưa có capture được duyệt, hero phải dùng text-first compositi
 | 2      | `HeroProductProof`              | `#top`          | Định vị Knowledge Graph/AI và dẫn tới hành động tiếp theo | H1/supporting copy baseline; CTA; trust line; hai proof point                               | Conceptual market-context figure hiện có             |
 | 3      | `ProductStory`                  | `#product`      | Giải thích bốn tính năng chính bằng bốn chapter lớn       | Đồ thị Tri thức → Biểu đồ trực tiếp → Trợ lý AI → Telegram                                  | Ảnh Graph/Chart; AI/Telegram text-only               |
 | 4      | `AnalysisFlow`                  | `#how-it-works` | Giúp người mới hình dung hành trình sử dụng               | Chọn tài sản, xem diễn biến giá → Mở sự kiện, kiểm tra nguồn tin → Phân tích cùng Trợ lý AI | Ba bước bằng text; đường nối thứ tự tĩnh là tùy chọn |
-| 5      | `InteractiveProductShowcase`    | —               | Cho xem bốn feature trên một shared stage                 | Graph/Chart static proof; AI text-first; Scheduled Telegram Motion demo                     | Hai approved capture + DOM demo có nhãn              |
+| 5      | `InteractiveProductShowcase`    | —               | Cho xem bốn feature trên một shared stage                 | Graph/Chart product surface; AI browser conversation; Scheduled Telegram Motion demo         | Hai approved surface + hai DOM demo có nhãn          |
 | 6      | `ProviderIntegrations`          | `#trust`        | Cho thấy khả năng tích hợp nhiều nhà cung cấp AI          | OpenAI; Gemini; Anthropic; DeepSeek; Groq; Z.AI                                             | Logo màu, không khung, chuyển động chậm              |
 | 7      | `FinalAccessCta`                | `#access`       | Kết thúc bằng cùng một conversion path                    | Outcome recap; auth-aware CTA; email behavior microcopy                                     | Không cần media                                      |
 | 8      | `PublicFooter`                  | —               | Cung cấp fallback và locale path                          | Brand; sign-in hoặc dashboard theo auth state; request-access email; locale                 | Brand asset                                          |
@@ -430,7 +430,7 @@ Nếu chưa có capture được duyệt, hero phải dùng text-first compositi
 - Header, Hero và Final CTA dùng cùng một primary destination.
 - Footer chỉ hiển thị link đang tồn tại; không render Docs, Privacy hoặc Terms trước khi route thật có sẵn.
 - Route-specific sections ở cạnh route. Không tạo shared component hoặc wrapper mới chỉ cho landing.
-- Showcase shell sở hữu feature selection và shared stage; mỗi feature renderer là route-local và có thể được thay độc lập. Phase đầu chỉ Telegram theo lịch có interactive renderer.
+- Showcase shell sở hữu feature selection và shared stage; mỗi feature renderer là route-local và có thể được thay độc lập. Graph, Chart và AI dùng cùng chuẩn browser frame; AI và Telegram có interactive renderer.
 
 ### Feature-specific composition
 
@@ -624,7 +624,7 @@ Landing phải gợi cảm giác một market briefing rõ ràng, chính xác v�
 - Pricing, free trial hoặc self-service signup.
 - Customer logos, testimonials, ratings, case studies hoặc product metrics.
 - Integration ngoài Telegram; kênh Telegram công khai mặc định hoặc onboarding mới.
-- Interactive demo cho Knowledge Graph, Market Chart hoặc AI Conversation; video hoặc autoplay media ngoài bounded Scheduled Telegram sequence.
+- Interactive demo ngoài các renderer đã duyệt cho Knowledge Graph, Market Chart hoặc AI Conversation; video hoặc autoplay media ngoài bounded showcase sequences.
 - Client-side scroll animation framework ngoài route-local Motion boundary của Scheduled Telegram showcase.
 - Team collaboration hoặc shared-workspace positioning.
 - Dedicated social artwork ngoài approved brand assets.

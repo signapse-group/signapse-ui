@@ -27,7 +27,20 @@ export function LandingAiConversationDemo({
   const isInView = useInView(rootRef, { amount: 0.2 })
   const prefersReducedMotion = useReducedMotion()
   const [frame, setFrame] = useState(() => getAiConversationDemoFrame(0))
+  const [seconds, setSeconds] = useState(0)
   const canPlay = active && isInView && !prefersReducedMotion
+
+  useEffect(() => {
+    if (!active) return
+
+    const resetFrame = window.requestAnimationFrame(() => {
+      setFrame(getAiConversationDemoFrame(0))
+      setSeconds(0)
+      if (progressRef.current)
+        progressRef.current.style.strokeDashoffset = "100"
+    })
+    return () => window.cancelAnimationFrame(resetFrame)
+  }, [active, progressRef])
 
   useEffect(() => {
     if (!canPlay) return
@@ -38,6 +51,7 @@ export function LandingAiConversationDemo({
       ease: "linear",
       repeat: Infinity,
       onUpdate: (seconds) => {
+        setSeconds(Math.round(seconds * 20) / 20)
         const next = getAiConversationDemoFrame(seconds)
         if (next !== previous) {
           previous = next
@@ -57,6 +71,9 @@ export function LandingAiConversationDemo({
   const visibleFrame = prefersReducedMotion
     ? AI_CONVERSATION_DEMO_FINAL_FRAME
     : frame
+  const visibleSeconds = prefersReducedMotion
+    ? AI_CONVERSATION_DEMO_DURATION
+    : seconds
 
   useEffect(() => {
     const transcript = transcriptRef.current
@@ -86,6 +103,7 @@ export function LandingAiConversationDemo({
       <LandingAiConversationWindow
         labels={labels}
         frame={visibleFrame}
+        seconds={visibleSeconds}
         animated
         transcriptRef={transcriptRef}
       />

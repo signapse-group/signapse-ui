@@ -46,6 +46,11 @@ describe("Scheduled Telegram automatic timeline", () => {
   })
 
   it("places the cursor on the actual option before each selection and presses the submit button", () => {
+    const initial = getTelegramDemoCursor(0)
+    expect(initial.from).toBe("center")
+    expect(initial.to).toBe("center")
+    expect(initial.opacity).toBe(1)
+
     for (const [time, target] of [
       [1.65, "asset-option"],
       [2.85, "time-option"],
@@ -61,7 +66,7 @@ describe("Scheduled Telegram automatic timeline", () => {
     expect(click.to).toBe("submit")
     expect(click.scale).toBeCloseTo(0.88)
     expect(getTelegramDemoCursor(TELEGRAM_DEMO_TIMING.collecting).opacity).toBe(
-      0
+      1
     )
   })
 

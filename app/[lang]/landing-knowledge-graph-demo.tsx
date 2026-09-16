@@ -235,9 +235,7 @@ export function LandingKnowledgeGraphDemo({
         ? positions.get("new-event")!
         : at >= timing.selectNarrative
           ? positions.get("new-narrative")!
-          : showArticle
-            ? { x: 23, y: 28 }
-            : positions.get("asset")!
+          : { x: 50, y: 50 }
   const clicking = visibleFrame.phase.startsWith("select")
   const detail =
     selectedId === "new-news"
@@ -434,7 +432,7 @@ export function LandingKnowledgeGraphDemo({
                 scale: clicking ? 0.82 : 1,
                 opacity: 1,
               }}
-              transition={{ duration: 0.55, ease: "easeInOut" }}
+              transition={{ duration: 0.28, ease: "easeInOut" }}
               aria-hidden="true"
             >
               <MousePointer2Icon fill="currentColor" />

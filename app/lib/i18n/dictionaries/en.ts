@@ -1038,14 +1038,40 @@ export const en: Dictionary = {
           "Animated simulation of an AI conversation that collects market context, cross-checks evidence, and forms scenarios",
         workspace: "AI Market Conversation",
         browserUrl: "https://www.signapse.cloud/",
-        chatTitle: "Market analysis with Signapse AI",
-        chatContext: "BTC/USD · 7 days · Illustrative data",
+        newConversationLabel: "New conversation",
+        expandLabel: "Expand conversation window",
+        closeLabel: "Close AI assistant",
+        composerLabel: "Message",
         composerPlaceholder: "Ask a follow-up question…",
+        sendLabel: "Send",
         transcriptLabel: "AI conversation demo transcript",
         userRole: "You",
         assistantRole: "Signapse AI",
-        workingLabel: "Synthesizing context",
-        readyLabel: "Analysis ready",
+        responseHeading:
+          "1. Reframe the premise: the last 7 days were not a breakout — they were a failed rally",
+        responseIntro:
+          "BTC/USD closed lower across the snapshot despite intraday attempts to recover. The evidence points to a rebound that was sold into, not sustained spot-led expansion.",
+        tableSource: "Daily closing data (BTC/USD, workspace price source):",
+        ohlcDateHeader: "Date (2026)",
+        ohlcOpenHeader: "Open",
+        ohlcHighHeader: "High",
+        ohlcLowHeader: "Low",
+        ohlcCloseHeader: "Close",
+        ohlcRowOneDate: "09/09",
+        ohlcRowOneOpen: "78,440.60",
+        ohlcRowOneHigh: "79,737.30",
+        ohlcRowOneLow: "77,768.15",
+        ohlcRowOneClose: "78,259.52",
+        ohlcRowTwoDate: "10/09",
+        ohlcRowTwoOpen: "78,260.38",
+        ohlcRowTwoHigh: "78,520.97",
+        ohlcRowTwoLow: "76,470.64",
+        ohlcRowTwoClose: "76,568.13",
+        ohlcRowThreeDate: "11/09",
+        ohlcRowThreeOpen: "76,559.13",
+        ohlcRowThreeHigh: "79,818.34",
+        ohlcRowThreeLow: "76,162.91",
+        ohlcRowThreeClose: "77,173.80",
         prompt:
           "Analyze BTC over the last 7 days. Is this move supported by spot demand or mostly leverage? Combine price action, derivatives positioning, and the next macro event. Give me 24–72 hour scenarios and what would change your view.",
         processTitle: "How this conclusion was formed",
@@ -1062,44 +1088,44 @@ export const en: Dictionary = {
         stepFourBody:
           "Set zones, confirmation conditions, and an invalidation condition.",
         synthesisBody:
-          "Working view: the move is supported by spot activity, but leverage makes the next 24–72 hours more fragile. The evidence is constructive, not a guarantee that the trend will continue.",
+          "Working view: the snapshot does not confirm a sustained spot-led breakout. The rebound was met by selling pressure while leverage stayed elevated, so the next 24–72 hours remain vulnerable to another rejection.",
         evidenceTitle: "Evidence trail",
         evidenceOneTitle: "Price & spot activity",
         evidenceOneBody:
-          "BTC rises 5%, from $64,000 to $67,200; spot volume is 24% higher and price reclaims $66,000. Supports participation, but volume is not net buying.",
+          "Daily closes move from $78,259.52 to $77,173.80 while the session reaches $79,818.34 before closing lower. The failed recovery is more consistent with supply overhead than a confirmed breakout.",
         evidenceTwoTitle: "Futures positioning",
         evidenceTwoBody:
           "Open interest in BTC is +18%; funding is +0.018% per 8h versus +0.006% median last week. Leverage risk is higher; OI is two-sided.",
         evidenceThreeTitle: "Market structure",
         evidenceThreeBody:
-          "A 4-hour close above $68,000 would extend the move; $66,000 is the key hold zone and $65,200 is deeper support.",
+          "A 4-hour close above $79,800 would repair the failed-rally structure; $77,000 is the first hold zone and $76,500 is deeper support.",
         evidenceFourTitle: "Macro context",
         evidenceFourBody:
           "A CPI release is 18 hours after the snapshot; its result is unknown. Reassess after the actual market response.",
         scenariosTitle: "24–72 hour scenarios",
         scenarioOneTitle: "Continuation",
         scenarioOneCondition:
-          "Holds $66,000; 4h close above $68,000 with spot volume above the prior 20 candles.",
+          "Reclaims $79,800; 4h close holds above it with spot volume above the prior 20 candles.",
         scenarioOneBody:
           "Strengthens the constructive view; watch whether funding overheats.",
         scenarioTwoTitle: "Consolidation",
         scenarioTwoCondition:
-          "Trades between $66,000–$68,000; funding cools and OI stops expanding quickly.",
+          "Trades between $77,000–$79,800; funding cools and OI stops expanding quickly.",
         scenarioTwoBody:
           "Leverage may be absorbed without a confirmed break above the range.",
         scenarioThreeTitle: "Weakness",
         scenarioThreeCondition:
-          "A 4h close below $66,000 fails to reclaim the level.",
+          "A 4h close below $76,500 fails to reclaim the level.",
         scenarioThreeBody:
-          "Monitor $65,200; falling OI would point to position unwind, not a new demand impulse.",
+          "Monitor $76,000; falling OI would point to position unwind, not a new demand impulse.",
         confidenceLabel: "Confidence",
         confidenceValue: "Moderate",
         limitationBody:
           "One illustrative exchange snapshot cannot establish all-market flow or causality; OI does not reveal the long/short split.",
         followUpPrompt:
-          "If BTC breaks above $68,000 but funding keeps rising, what changes?",
+          "If BTC breaks above $79,800 but funding keeps rising, what changes?",
         followUpAnswer:
-          "A break above resistance is not enough on its own. I would check whether the 4-hour close holds above $68,000, spot volume is stronger than the prior 20 candles, and OI is expanding faster than demand. If spot does not confirm while OI and funding rise together, I would lower confidence in continuation and treat $66,000 as the next level to monitor.",
+          "A break above resistance is not enough on its own. I would check whether the 4-hour close holds above $79,800, spot volume is stronger than the prior 20 candles, and OI is expanding faster than demand. If spot does not confirm while OI and funding rise together, I would lower confidence in continuation and treat $77,000 as the next level to monitor.",
       },
       telegram: {
         label: "Scheduled Telegram",

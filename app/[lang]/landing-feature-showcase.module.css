@@ -157,7 +157,9 @@
 }
 
 .aiConversationDemo {
-  min-height: 32rem;
+  display: flex;
+  min-height: 35rem;
+  flex-direction: column;
   overflow: hidden;
   border: 1px solid var(--demo-window-border, oklch(0.145 0 0 / 10%));
   border-radius: 0.85rem;
@@ -167,12 +169,14 @@
     0 1px 2px oklch(0.145 0 0 / 4%),
     0 18px 42px -18px oklch(0.145 0 0 / 14%),
     0 36px 64px -32px oklch(0.145 0 0 / 12%);
+  pointer-events: none;
   user-select: none;
 }
 
 .aiConversationCanvas {
   display: grid;
-  min-height: 29rem;
+  min-height: 0;
+  flex: 1;
   place-items: center;
   overflow: hidden;
   padding: clamp(0.75rem, 2vw, 1.35rem);
@@ -185,7 +189,8 @@
 .aiChatWindow {
   display: flex;
   width: min(100%, 42rem);
-  height: 25.5rem;
+  height: 28.5rem;
+  position: relative;
   overflow: hidden;
   border: 1px solid rgb(23 33 43 / 10%);
   border-radius: 0.85rem;
@@ -206,80 +211,71 @@
   background: #ffffff;
 }
 
-.aiChatAvatar {
-  display: grid;
-  width: 2rem;
-  height: 2rem;
-  flex: 0 0 auto;
-  place-items: center;
-  border-radius: 0.55rem;
-  background: #17212b;
-  color: #ffffff;
-}
-
-.aiChatAvatar svg {
-  width: 1rem;
-  height: 1rem;
-}
-
 .aiChatIdentity {
   display: flex;
   min-width: 0;
   flex: 1;
-  flex-direction: column;
-  gap: 0.08rem;
-}
-
-.aiChatIdentity strong,
-.aiChatIdentity small {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  align-items: center;
+  gap: 0.35rem;
+  color: #17212b;
 }
 
 .aiChatIdentity strong {
-  font-size: 0.72rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.82rem;
+  font-weight: 650;
 }
 
-.aiChatIdentity small {
-  color: #64748b;
-  font-size: 0.58rem;
-}
-
-.aiDemoBadge {
-  flex: 0 0 auto;
-  border: 1px solid rgb(15 118 110 / 22%);
-  border-radius: 999px;
-  padding: 0.2rem 0.38rem;
-  background: rgb(15 118 110 / 6%);
-  color: #0f766e;
-  font-family: var(--font-geist-mono), ui-monospace, monospace;
-  font-size: 0.5rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-}
-
-.aiChatStatus {
+.aiChatIdentity svg {
+  width: 0.78rem;
+  height: 0.78rem;
   flex: 0 0 auto;
   color: #64748b;
-  font-size: 0.58rem;
-  font-weight: 600;
+}
+
+.aiChatActions {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.35rem;
+  margin-left: 0.1rem;
 }
 
 .aiChatAction {
   display: grid;
-  width: 1.65rem;
-  height: 1.65rem;
+  width: 1.45rem;
+  height: 1.45rem;
   flex: 0 0 auto;
   place-items: center;
-  border: 1px solid rgb(23 33 43 / 9%);
-  border-radius: 0.45rem;
-  color: #64748b;
+  border: 0;
+  border-radius: 0.35rem;
+  background: transparent;
+  color: #17212b;
+  cursor: pointer;
 }
 
 .aiChatAction svg {
-  width: 0.78rem;
-  height: 0.78rem;
+  width: 1rem;
+  height: 1rem;
+}
+
+.aiChatAction:focus-visible {
+  outline: 2px solid #0f766e;
+  outline-offset: 2px;
+}
+
+.aiChatAction:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
+.aiTranscriptFrame {
+  position: relative;
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
 }
 
 .aiTranscript {
@@ -287,30 +283,34 @@
   min-height: 0;
   flex: 1;
   flex-direction: column;
-  gap: 0.65rem;
+  gap: 1rem;
   overflow-y: auto;
-  padding: 0.8rem;
-  background: #f8fafc;
-  scrollbar-gutter: stable;
+  padding: 1rem 1.15rem;
+  background: #ffffff;
+  scrollbar-width: none;
   scroll-behavior: smooth;
   overscroll-behavior: contain;
+}
+
+.aiTranscript::-webkit-scrollbar {
+  display: none;
 }
 
 .aiMessageUser,
 .aiMessageAssistant {
   display: grid;
-  gap: 0.45rem;
-  max-width: 92%;
-  border: 1px solid rgb(23 33 43 / 8%);
-  border-radius: 0.7rem;
-  padding: 0.65rem 0.75rem;
-  font-size: 0.66rem;
-  line-height: 1.5;
+  gap: 0.65rem;
+  max-width: 100%;
+  font-size: 0.82rem;
+  line-height: 1.55;
 }
 
 .aiMessageUser {
   align-self: flex-end;
-  border-bottom-right-radius: 0.2rem;
+  width: min(78%, 34rem);
+  border: 0;
+  border-radius: 1.15rem;
+  padding: 0.95rem 1.05rem;
   background: #17212b;
   color: #ffffff;
 }
@@ -318,8 +318,7 @@
 .aiMessageAssistant {
   align-self: flex-start;
   max-height: 120rem;
-  border-bottom-left-radius: 0.2rem;
-  background: #ffffff;
+  padding-block: 0.15rem;
   opacity: 1;
   transition:
     max-height 320ms ease,
@@ -333,27 +332,19 @@
 .aiMessageAssistant[data-visible="false"] {
   max-height: 0;
   visibility: hidden;
-  border-color: transparent;
   padding-block: 0;
   opacity: 0;
   transform: translateY(0.35rem);
 }
 
 .aiMessageRole {
-  color: #64748b;
-  font-family: var(--font-geist-mono), ui-monospace, monospace;
-  font-size: 0.5rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.aiMessageUser .aiMessageRole {
-  color: #cbd5e1;
-}
-
-.aiMessageUser > p:last-child {
-  color: #ffffff;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .aiMessageAssistant > p:last-child {
@@ -374,7 +365,7 @@
 }
 
 .aiProcessHeader strong {
-  font-size: 0.64rem;
+  font-size: 0.82rem;
 }
 
 .aiProcess {
@@ -425,12 +416,12 @@
 }
 
 .aiProcess strong {
-  font-size: 0.58rem;
+  font-size: 0.72rem;
 }
 
 .aiProcess small {
   color: #64748b;
-  font-size: 0.54rem;
+  font-size: 0.7rem;
   line-height: 1.35;
 }
 
@@ -458,11 +449,79 @@
 }
 
 .aiConclusion {
-  border-left: 2px solid #0f766e;
-  padding-left: 0.55rem;
+  margin: 0;
   color: #17212b;
-  font-weight: 600;
+  font-weight: 450;
   line-height: 1.5;
+}
+
+.aiResponseHeading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.aiResponseHeading h3 {
+  margin: 0;
+  color: #17212b;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.aiResponseHeading span {
+  flex: 0 0 auto;
+  padding-top: 0.05rem;
+  color: #17212b;
+  font-size: 1.15rem;
+  font-weight: 650;
+  line-height: 1;
+}
+
+.aiResponseTable {
+  display: grid;
+  gap: 0.6rem;
+  margin-top: 0.4rem;
+}
+
+.aiResponseTable > p {
+  margin: 0;
+  color: #17212b;
+}
+
+.aiTableWrap {
+  overflow-x: auto;
+}
+
+.aiTableWrap table {
+  width: 100%;
+  min-width: 34rem;
+  border-collapse: collapse;
+  color: #17212b;
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.aiTableWrap th,
+.aiTableWrap td {
+  border-bottom: 1px solid rgb(23 33 43 / 10%);
+  padding: 0.62rem 0.4rem;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.aiTableWrap th:first-child,
+.aiTableWrap td:first-child {
+  text-align: left;
+}
+
+.aiTableWrap th {
+  font-weight: 650;
+}
+
+.aiTableWrap td[data-emphasis="true"] {
+  font-weight: 750;
 }
 
 .aiMessageAssistant section {
@@ -475,7 +534,7 @@
 .aiMessageAssistant h4 {
   color: #64748b;
   font-family: var(--font-geist-mono), ui-monospace, monospace;
-  font-size: 0.52rem;
+  font-size: 0.65rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -490,7 +549,7 @@
 
 .aiEvidenceGrid strong,
 .aiScenarioList strong {
-  font-size: 0.57rem;
+  font-size: 0.72rem;
   font-weight: 650;
 }
 
@@ -499,7 +558,7 @@
 .aiScenarioList p,
 .aiConfidence p {
   color: #64748b;
-  font-size: 0.54rem;
+  font-size: 0.7rem;
   line-height: 1.4;
 }
 
@@ -523,7 +582,7 @@
 
 .aiConfidence strong,
 .aiConfidence span {
-  font-size: 0.56rem;
+  font-size: 0.7rem;
 }
 
 .aiConfidence span {
@@ -538,28 +597,82 @@
 
 .aiComposer {
   display: flex;
-  min-height: 2.65rem;
-  align-items: center;
-  gap: 0.6rem;
+  min-height: 4.75rem;
+  flex-direction: column;
+  align-items: stretch;
   border-top: 1px solid rgb(23 33 43 / 7%);
-  padding: 0.5rem 0.7rem;
+  margin: 0;
+  padding: 0.65rem 0.8rem 0.7rem;
   background: #ffffff;
+}
+
+.aiComposer[data-typing="true"] {
+  border-top-color: #0f766e;
+}
+
+.aiComposer textarea {
+  display: block;
+  width: 100%;
+  min-height: 2.35rem;
+  resize: none;
+  border: 0;
+  outline: 0;
+  padding: 0.25rem 0.35rem 0.2rem;
+  background: transparent;
+  color: #17212b;
+  font: inherit;
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.aiComposer textarea::placeholder {
   color: #94a3b8;
+  opacity: 1;
 }
 
-.aiComposer span {
-  flex: 1;
-  border: 1px solid rgb(23 33 43 / 9%);
-  border-radius: 999px;
-  padding: 0.4rem 0.65rem;
-  background: #f8fafc;
-  font-size: 0.58rem;
+.aiComposer textarea:focus-visible {
+  outline: 2px solid #0f766e;
+  outline-offset: -1px;
+  border-radius: 0.3rem;
 }
 
-.aiComposer svg {
-  width: 0.9rem;
-  height: 0.9rem;
-  color: #0f766e;
+.aiComposer textarea:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
+.aiComposerActions {
+  position: relative;
+  display: flex;
+  justify-content: flex-end;
+  padding: 0.15rem 0.15rem 0;
+}
+
+.aiComposer button {
+  display: grid;
+  width: 1.55rem;
+  height: 1.55rem;
+  place-items: center;
+  border: 0;
+  border-radius: 0.4rem;
+  background: #c5c5c5;
+  color: #ffffff;
+  cursor: not-allowed;
+  transition: transform 120ms ease-out;
+}
+
+.aiComposer button[data-pressed="true"] {
+  transform: translateY(1px) scale(0.97);
+}
+
+.aiComposer button svg {
+  width: 0.85rem;
+  height: 0.85rem;
+}
+
+.aiComposer button:focus-visible {
+  outline: 2px solid #0f766e;
+  outline-offset: 2px;
 }
 
 .activeDot {
@@ -1253,11 +1366,6 @@
     height: 29.5rem;
   }
 
-  .aiChatStatus,
-  .aiChatAction {
-    display: none;
-  }
-
   .telegramWindows {
     --demo-window-shadow:
       0 1px 2px oklch(0.145 0 0 / 4%), 0 12px 28px -16px oklch(0.145 0 0 / 11%),
@@ -1292,7 +1400,6 @@
   .marketIngest,
   .marketSpinner,
   .marketAnnotation,
-  .marketCursor,
   .marketDetail,
   .aiMessageAssistant,
   .aiReveal,
@@ -1324,24 +1431,6 @@
   }
 }
 
-@keyframes market-cursor-click {
-  0% {
-    opacity: 0;
-    transform: translate(1.5rem, 1.5rem);
-  }
-  55% {
-    opacity: 1;
-    transform: translate(0, 0) scale(1);
-  }
-  72% {
-    transform: translate(0, 0) scale(0.8);
-  }
-  100% {
-    opacity: 1;
-    transform: translate(0, 0) scale(1);
-  }
-}
-
 @keyframes market-detail-in {
   from {
     opacity: 0;
@@ -1364,7 +1453,7 @@
   }
 }
 
-/* Telegram owns two windows only; the other showcase panels keep their stage. */
+/* Each showcase demo owns its browser surface; the shared stage is transparent. */
 .stage[data-feature-stage="scheduled-telegram"] {
   container: telegram-showcase / inline-size;
   min-height: 0;
@@ -1396,10 +1485,27 @@
   box-shadow: none;
 }
 
+.stage[data-feature-stage="ai-conversation"] {
+  min-height: 0;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  padding: 0;
+  box-shadow: none;
+}
+
+.marketDemo,
+.graphDemo,
+.aiConversationDemo {
+  min-height: 35rem;
+}
+
 .marketDemo {
   --market-up: #16875f;
   --market-down: #c2415d;
-  min-height: 32rem;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
   border: 1px solid oklch(0.145 0 0 / 10%);
   border-radius: 0.85rem;
@@ -1479,7 +1585,8 @@
 
 .marketCanvas {
   position: relative;
-  min-height: 29rem;
+  min-height: 0;
+  flex: 1;
   overflow: hidden;
   background: #f8fafc;
 }
@@ -1794,7 +1901,14 @@
   top: 54%;
   left: 66%;
   z-index: 6;
-  animation: market-cursor-click 2s ease-in-out both;
+  transition:
+    left 50ms linear,
+    top 50ms linear,
+    transform 120ms ease-out;
+}
+
+.marketCursor[data-clicking="true"] {
+  transform: scale(0.82);
 }
 
 .marketDetail {
@@ -2062,7 +2176,8 @@
   --graph-asset: #0f766e;
   --graph-news: #be123c;
   --graph-narrative: #7c3aed;
-  min-height: 32rem;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
   border: 1px solid var(--demo-window-border, oklch(0.145 0 0 / 10%));
   border-radius: 0.85rem;
@@ -2164,7 +2279,8 @@
 
 .graphCanvas {
   position: relative;
-  min-height: 29rem;
+  min-height: 0;
+  flex: 1;
   overflow: hidden;
   background:
     radial-gradient(circle, rgb(100 116 139 / 17%) 0 1px, transparent 1.2px),
@@ -2757,7 +2873,18 @@
 .demoCursor {
   top: 0;
   left: 0;
-  z-index: 3;
+  z-index: 10;
+}
+
+.aiConversationCursor {
+  top: 50%;
+  left: 50%;
+  right: auto;
+  transform: translate(-50%, -50%);
+  transition:
+    left 50ms linear,
+    top 50ms linear,
+    transform 120ms ease-out;
 }
 
 .demoCursor,
@@ -2828,12 +2955,8 @@
   .marketIngest,
   .marketSpinner,
   .marketAnnotation,
-  .marketCursor,
   .marketDetail {
     animation: none;
     transition: none;
-  }
-  .demoCursor {
-    display: none;
   }
 }

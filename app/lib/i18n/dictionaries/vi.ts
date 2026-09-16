@@ -1037,14 +1037,41 @@ export const vi = {
           "Mô phỏng animation hội thoại AI tổng hợp ngữ cảnh thị trường, đối chiếu bằng chứng và xây dựng kịch bản",
         workspace: "Hội thoại thị trường với AI",
         browserUrl: "https://www.signapse.cloud/",
-        chatTitle: "Phân tích thị trường cùng Signapse AI",
-        chatContext: "BTC/USD · 7 ngày · Dữ liệu minh họa",
+        newConversationLabel: "Hội thoại mới",
+        expandLabel: "Mở rộng cửa sổ hội thoại",
+        closeLabel: "Đóng trợ lý AI",
+        composerLabel: "Tin nhắn",
         composerPlaceholder: "Đặt câu hỏi tiếp theo…",
+        sendLabel: "Gửi",
         transcriptLabel: "Bản demo hội thoại AI",
         userRole: "Bạn",
         assistantRole: "Signapse AI",
-        workingLabel: "Đang tổng hợp ngữ cảnh",
-        readyLabel: "Đã có phân tích",
+        responseHeading:
+          "1. Chỉnh lại tiền đề: 7 ngày qua BTC KHÔNG có “đợt tăng” — mà là một nhịp hồi bị bán ngược (failed rally)",
+        responseIntro:
+          "BTC/USD đóng cửa thấp hơn trong snapshot dù đã nhiều lần hồi trong ngày. Dữ liệu cho thấy một nhịp hồi bị bán xuống, chưa phải mở rộng bền vững được dẫn dắt bởi nhu cầu spot.",
+        tableSource:
+          "Dữ liệu giá đóng cửa ngày (BTC/USD, nguồn giá trong workspace):",
+        ohlcDateHeader: "Ngày (2026)",
+        ohlcOpenHeader: "Mở",
+        ohlcHighHeader: "Cao",
+        ohlcLowHeader: "Thấp",
+        ohlcCloseHeader: "Đóng",
+        ohlcRowOneDate: "09/09",
+        ohlcRowOneOpen: "78.440,60",
+        ohlcRowOneHigh: "79.737,30",
+        ohlcRowOneLow: "77.768,15",
+        ohlcRowOneClose: "78.259,52",
+        ohlcRowTwoDate: "10/09",
+        ohlcRowTwoOpen: "78.260,38",
+        ohlcRowTwoHigh: "78.520,97",
+        ohlcRowTwoLow: "76.470,64",
+        ohlcRowTwoClose: "76.568,13",
+        ohlcRowThreeDate: "11/09",
+        ohlcRowThreeOpen: "76.559,13",
+        ohlcRowThreeHigh: "79.818,34",
+        ohlcRowThreeLow: "76.162,91",
+        ohlcRowThreeClose: "77.173,80",
         prompt:
           "Phân tích BTC trong 7 ngày qua. Đợt tăng này được hỗ trợ bởi nhu cầu spot hay chủ yếu do đòn bẩy? Kết hợp diễn biến giá, vị thế phái sinh và sự kiện vĩ mô sắp tới. Đưa ra các kịch bản 24–72 giờ và điều gì sẽ khiến bạn thay đổi nhận định.",
         processTitle: "Cách hình thành nhận định",
@@ -1061,44 +1088,44 @@ export const vi = {
         stepFourBody:
           "Xác định vùng giá, điều kiện xác nhận và điều kiện làm nhận định mất hiệu lực.",
         synthesisBody:
-          "Nhận định hiện tại: đà tăng được hỗ trợ bởi hoạt động spot, nhưng đòn bẩy khiến 24–72 giờ tới dễ rung lắc hơn. Bằng chứng đang nghiêng tích cực, chưa phải cam kết xu hướng sẽ tiếp diễn.",
+          "Nhận định hiện tại: snapshot chưa xác nhận một đợt breakout bền vững được dẫn dắt bởi spot. Nhịp hồi gặp áp lực bán trong khi đòn bẩy vẫn cao, nên 24–72 giờ tới có rủi ro bị từ chối thêm.",
         evidenceTitle: "Dấu vết bằng chứng",
         evidenceOneTitle: "Giá và hoạt động spot",
         evidenceOneBody:
-          "BTC tăng 5%, từ 64.000 lên 67.200 USD; khối lượng spot cao hơn 24% và giá lấy lại vùng 66.000. Điều này cho thấy có sự tham gia của thị trường, nhưng khối lượng không đồng nghĩa với mua ròng.",
+          "Giá đóng cửa ngày đi từ 78.259,52 xuống 77.173,80 USD trong khi phiên có lúc chạm 79.818,34 rồi đóng thấp hơn. Nhịp hồi thất bại phù hợp với áp lực cung phía trên hơn là một breakout đã được xác nhận.",
         evidenceTwoTitle: "Vị thế phái sinh",
         evidenceTwoBody:
           "OI tính theo BTC tăng 18%; funding là +0,018% mỗi 8 giờ so với trung vị +0,006% tuần trước. Rủi ro đòn bẩy cao hơn; OI bao gồm cả hai phía hợp đồng.",
         evidenceThreeTitle: "Cấu trúc thị trường",
         evidenceThreeBody:
-          "Nến 4 giờ đóng trên 68.000 sẽ mở rộng đà tăng; 66.000 là vùng cần giữ và 65.200 là hỗ trợ sâu hơn.",
+          "Nến 4 giờ đóng trên 79.800 sẽ khôi phục cấu trúc của nhịp hồi; 77.000 là vùng cần giữ đầu tiên và 76.500 là hỗ trợ sâu hơn.",
         evidenceFourTitle: "Bối cảnh vĩ mô",
         evidenceFourBody:
           "Snapshot có công bố CPI sau 18 giờ; kết quả chưa biết. Cần đánh giá lại sau phản ứng thực tế của thị trường.",
         scenariosTitle: "Kịch bản 24–72 giờ",
         scenarioOneTitle: "Tiếp diễn",
         scenarioOneCondition:
-          "Giữ 66.000; nến 4 giờ đóng trên 68.000 với khối lượng spot cao hơn 20 nến trước.",
+          "Lấy lại 79.800; nến 4 giờ giữ trên vùng này với khối lượng spot cao hơn 20 nến trước.",
         scenarioOneBody:
           "Củng cố nhận định tích cực; tiếp tục theo dõi funding có nóng lên hay không.",
         scenarioTwoTitle: "Tích lũy",
         scenarioTwoCondition:
-          "Dao động trong 66.000–68.000; funding hạ nhiệt và OI không tăng nhanh thêm.",
+          "Dao động trong 77.000–79.800; funding hạ nhiệt và OI không tăng nhanh thêm.",
         scenarioTwoBody:
           "Thị trường có thể hấp thụ đòn bẩy mà chưa xác nhận vượt khỏi vùng dao động.",
         scenarioThreeTitle: "Suy yếu",
         scenarioThreeCondition:
-          "Nến 4 giờ đóng dưới 66.000 và không lấy lại được vùng này.",
+          "Nến 4 giờ đóng dưới 76.500 và không lấy lại được vùng này.",
         scenarioThreeBody:
-          "Theo dõi 65.200; OI giảm nhanh sẽ gợi ý tháo vị thế, không phải một nhịp cầu mới từ nhu cầu.",
+          "Theo dõi 76.000; OI giảm nhanh sẽ gợi ý tháo vị thế, không phải một nhịp cầu mới từ nhu cầu.",
         confidenceLabel: "Mức chắc chắn",
         confidenceValue: "Vừa phải",
         limitationBody:
           "Một snapshot minh họa từ một sàn không thể đại diện cho dòng tiền toàn thị trường hay chứng minh quan hệ nhân quả; OI không cho biết tỷ lệ long/short.",
         followUpPrompt:
-          "Nếu BTC vượt 68.000 nhưng funding vẫn tăng thì điều gì thay đổi?",
+          "Nếu BTC vượt 79.800 nhưng funding vẫn tăng thì điều gì thay đổi?",
         followUpAnswer:
-          "Vượt vùng cản chưa đủ để kết luận. Tôi sẽ kiểm tra nến 4 giờ có giữ trên 68.000 không, khối lượng spot có mạnh hơn 20 nến trước không và OI có tăng nhanh hơn nhu cầu không. Nếu spot không xác nhận trong khi OI và funding cùng tăng, tôi sẽ hạ mức tin cậy vào khả năng tiếp diễn và chuyển 66.000 thành vùng tiếp theo cần theo dõi.",
+          "Vượt vùng cản chưa đủ để kết luận. Tôi sẽ kiểm tra nến 4 giờ có giữ trên 79.800 không, khối lượng spot có mạnh hơn 20 nến trước không và OI có tăng nhanh hơn nhu cầu không. Nếu spot không xác nhận trong khi OI và funding cùng tăng, tôi sẽ hạ mức tin cậy vào khả năng tiếp diễn và chuyển 77.000 thành vùng tiếp theo cần theo dõi.",
       },
       telegram: {
         label: "Telegram theo lịch",

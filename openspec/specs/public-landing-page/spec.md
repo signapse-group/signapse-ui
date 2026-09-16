@@ -543,13 +543,14 @@ The landing page SHALL present Knowledge Graph, Market Chart, AI Conversation, a
 - **AND** the active selector exposes its localized outcome and description while the shared stage exposes the corresponding proof
 - **AND** the old Strategy Coding showcase surface is absent
 
-#### Scenario: Static features remain useful during phased rollout
+#### Scenario: Feature proofs remain useful during phased rollout
 
 - **WHEN** a visitor selects Knowledge Graph, Market Chart, or AI Conversation
 - **THEN** Knowledge Graph and Market Chart show their locale-appropriate approved captures when available
-- **AND** AI Conversation shows a complete localized text-first proof
-- **AND** none of the three static stages shows a spinner, loading skeleton, disabled selector, or public `Coming soon` message
-- **AND** the static stages do not animate as Scheduled Telegram workflows
+- **AND** AI Conversation shows a complete localized browser-window text-first simulation
+- **AND** the AI simulation uses fixed public demo data, carries a clear simulation label, and keeps useful server-rendered content before client motion loads
+- **AND** none of the three feature proofs shows a spinner, loading skeleton, disabled selector, or public `Coming soon` message
+- **AND** Knowledge Graph and Market Chart captures remain static and do not animate as Scheduled Telegram workflows
 
 #### Scenario: Feature selectors use accessible tab behavior
 

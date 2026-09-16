@@ -39,20 +39,18 @@ export const TELEGRAM_DEMO_FINAL_FRAME = getTelegramDemoFrame(
 )
 
 const cursorStops = [
-  { at: 0, target: "entry" },
-  { at: 0.8, target: "asset" },
-  { at: 1.1, target: "asset" },
-  { at: 1.45, target: "asset-option" },
-  { at: 1.8, target: "asset-option" },
-  { at: 2.15, target: "time" },
-  { at: 2.35, target: "time" },
-  { at: 2.65, target: "time-option" },
-  { at: 3, target: "time-option" },
-  { at: 3.35, target: "language" },
-  { at: 3.55, target: "language" },
-  { at: 3.85, target: "language-option" },
-  { at: 4.2, target: "language-option" },
-  { at: 4.75, target: "submit" },
+  { at: 0, target: "center" },
+  { at: 1.05, target: "center" },
+  { at: 1.25, target: "asset" },
+  { at: 1.55, target: "asset-option" },
+  { at: 2.3, target: "asset-option" },
+  { at: 2.5, target: "time" },
+  { at: 2.75, target: "time-option" },
+  { at: 3.5, target: "time-option" },
+  { at: 3.7, target: "language" },
+  { at: 3.95, target: "language-option" },
+  { at: 4.7, target: "language-option" },
+  { at: 4.9, target: "submit" },
   { at: TELEGRAM_DEMO_DURATION, target: "submit" },
 ] as const
 
@@ -68,7 +66,7 @@ export function getTelegramDemoCursor(seconds: number) {
     Math.min(1, (seconds - start.at) / (end.at - start.at))
   )
   const progress = fraction * fraction * (3 - 2 * fraction)
-  const click = [0.9, 1.55, 2.2, 2.75, 3.4, 3.95, 4.9].find(
+  const click = [1.55, 2.75, 3.95, 4.9].find(
     (at) => seconds >= at && seconds <= at + 0.2
   )
 
@@ -80,10 +78,7 @@ export function getTelegramDemoCursor(seconds: number) {
       click === undefined
         ? 1
         : 1 - 0.12 * Math.sin(((seconds - click) / 0.2) * Math.PI),
-    opacity:
-      seconds >= TELEGRAM_DEMO_TIMING.collecting
-        ? 0
-        : Math.min(1, seconds / 0.25),
+    opacity: 1,
   }
 }
 

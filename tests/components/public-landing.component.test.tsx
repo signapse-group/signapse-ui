@@ -119,8 +119,8 @@ describe("localized landing composition", () => {
     )
     expect(html).toContain(
       locale === "vi"
-        ? "Phân tích thị trường cùng Signapse AI"
-        : "Market analysis with Signapse AI"
+        ? "Phân tích BTC trong 7 ngày qua."
+        : "Analyze BTC over the last 7 days."
     )
     expect(html).toContain(
       locale === "vi" ? "Dấu vết bằng chứng" : "Evidence trail"
@@ -128,6 +128,19 @@ describe("localized landing composition", () => {
     expect(html).toContain("BTC")
     expect(html).toContain('data-ai-conversation-state="complete"')
     expect(html).toContain('role="log"')
+    expect(html).toContain(
+      locale === "vi"
+        ? 'aria-label="Hội thoại mới"'
+        : 'aria-label="New conversation"'
+    )
+    expect(html).toContain(
+      locale === "vi"
+        ? 'placeholder="Đặt câu hỏi tiếp theo…"'
+        : 'placeholder="Ask a follow-up question…"'
+    )
+    expect(html).toContain(locale === "vi" ? "Ngày (2026)" : "Date (2026)")
+    expect(html).toContain("inert")
+    expect(html).toMatch(/<textarea[^>]*disabled/)
     expect((html.match(/role="tab"/g) ?? []).length).toBe(4)
     expect(html).toContain('data-feature-selector="scheduled-telegram"')
     expect(html).toMatch(

@@ -14,7 +14,7 @@ Kịch bản khuyến nghị: **“BTC đang tăng: lực mua thực hay đòn b
 
 - [CONTEXT.md](../../CONTEXT.md): AI sử dụng ngữ cảnh Market Knowledge Graph; không hứa tự nhận node/chart đang chọn hoặc luôn có đầy đủ nguồn.
 - [Spec hội thoại](../../openspec/specs/ai-assistant-market-conversations/spec.md): hỗ trợ hội thoại và câu hỏi tiếp nối; request hiện đồng bộ, không token streaming.
-- [LANDING.md](LANDING.md): AI stage hiện là static text-first proof. Kịch bản dưới đây có thể hiển thị tĩnh; chuyển sang demo tương tác là thay đổi riêng.
+- [LANDING.md](LANDING.md): AI stage dùng browser-window text-first simulation; server-rendered/static fallback vẫn giữ transcript đầy đủ.
 - [Dictionary hiện tại](../../app/lib/i18n/dictionaries/vi.ts): phần AI Conversation mới có title, context và history, chưa chứng minh chất lượng một câu trả lời.
 - [Coinbase candles](https://docs.cdp.coinbase.com/api-reference/exchange-api/rest-api/products/get-product-candles): cung cấp OHLCV theo khoảng thời gian; dữ liệu có thể thiếu ở khoảng không có giao dịch. Hữu ích cho thiết kế lớp giá/khối lượng, không chứng minh Signapse đã kết nối Coinbase.
 - [Binance Futures market data](https://developers.binance.com/en/docs/catalog/core-trading-derivatives-trading-usd-s-m-futures/api/rest-api/market-data): tài liệu có open interest và lịch sử funding. Hữu ích cho lớp vị thế phái sinh; dữ liệu một sàn không đại diện toàn thị trường.
@@ -25,12 +25,12 @@ Các nguồn API xác nhận loại dữ liệu có thể sử dụng, không x�
 
 Hiện nhãn xuyên suốt: **Demo · Dữ liệu giả lập, không phải thị trường hiện tại**. Các mã D1–D4 là tham chiếu tới dữ liệu mẫu ngay trong demo, không phải nguồn thị trường thật.
 
-| Mã | Dữ liệu giả lập | Phạm vi |
-| --- | --- | --- |
-| D1 | BTC/USD từ 64.000 lên 67.200 USD (+5%); tổng khối lượng spot tăng 24% | 7 ngày so với 7 ngày liền trước; tập sàn mẫu cố định |
-| D2 | OI tính theo BTC tăng 18%; funding kỳ 8 giờ gần nhất +0,018%, trung vị kỳ 8 giờ tuần trước +0,006% | Một sàn phái sinh mẫu; không gộp USD và BTC |
-| D3 | Vùng vượt đỉnh 66.000; đáy sau vượt đỉnh 65.200; đỉnh gần nhất 68.000 | Cấu trúc nến 4 giờ trong snapshot mẫu |
-| D4 | Một công bố CPI dự kiến sau mốc snapshot 18 giờ; chưa có kết quả | Sự kiện giả lập có liên kết tới BTC trong ngữ cảnh mẫu |
+| Mã  | Dữ liệu giả lập                                                                                    | Phạm vi                                                |
+| --- | -------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| D1  | BTC/USD từ 64.000 lên 67.200 USD (+5%); tổng khối lượng spot tăng 24%                              | 7 ngày so với 7 ngày liền trước; tập sàn mẫu cố định   |
+| D2  | OI tính theo BTC tăng 18%; funding kỳ 8 giờ gần nhất +0,018%, trung vị kỳ 8 giờ tuần trước +0,006% | Một sàn phái sinh mẫu; không gộp USD và BTC            |
+| D3  | Vùng vượt đỉnh 66.000; đáy sau vượt đỉnh 65.200; đỉnh gần nhất 68.000                              | Cấu trúc nến 4 giờ trong snapshot mẫu                  |
+| D4  | Một công bố CPI dự kiến sau mốc snapshot 18 giờ; chưa có kết quả                                   | Sự kiện giả lập có liên kết tới BTC trong ngữ cảnh mẫu |
 
 Không gọi khối lượng spot là dòng tiền ròng. OI tăng không tự xác định bên long hay short; funding dương bổ sung bối cảnh nhưng không chứng minh đợt tăng chỉ do đòn bẩy. Không suy ra quan hệ nhân quả từ việc hai sự kiện xảy ra gần nhau.
 
@@ -46,16 +46,16 @@ Nhãn: **Cách hình thành nhận định**. Đây là bản tóm tắt phươn
 
 1. **Tổng hợp ngữ cảnh:** giá, khối lượng, vị thế phái sinh và sự kiện liên quan tới BTC trong bộ dữ liệu mẫu.
 2. **Đối chiếu dữ liệu:** so sánh hai giai đoạn 7 ngày; phân biệt OI theo BTC với giá trị danh nghĩa USD; giữ đúng kỳ funding 8 giờ.
-3. **Kiểm tra đồng thuận và mâu thuẫn:** giá và hoạt động spot cùng tăng, nhưng vị thế mở và chi phí giữ long cũng tăng.
+3. **Kiểm tra đồng thuận và mâu thuẫn:** giá đóng cửa suy yếu trong khi vị thế mở và chi phí giữ long vẫn cao.
 4. **Xây dựng kịch bản:** xác định vùng giá, điều kiện xác nhận và điều kiện làm nhận định mất hiệu lực.
 
 ### Trợ lý AI
 
-**BTC đang có động lượng tăng được hỗ trợ bởi hoạt động spot, nhưng mức độ tham gia của đòn bẩy khiến nhịp tăng dễ bị gián đoạn hơn.** Trong snapshot này, tôi nghiêng về khả năng duy trì xu hướng nếu vùng 66.000 USD được giữ; chưa đủ bằng chứng để gọi đây là một đợt tăng bền vững trên toàn thị trường.
+**BTC chưa có một đợt breakout được xác nhận; snapshot phù hợp hơn với một nhịp hồi bị bán ngược.** Giá đóng cửa suy yếu trong khi đòn bẩy vẫn cao, nên chưa đủ bằng chứng để gọi đây là mở rộng bền vững được dẫn dắt bởi spot.
 
-**1. Giá tăng đi cùng hoạt động giao dịch spot**
+**1. Giá hồi nhưng chưa xác nhận nhu cầu spot**
 
-BTC tăng 5%, từ 64.000 lên 67.200 USD trong 7 ngày. Khối lượng spot của tập sàn mẫu cao hơn 24% so với 7 ngày trước; giá đã vượt vùng 66.000 USD. Điều này hỗ trợ nhận định đợt tăng có sự tham gia của giao dịch spot. Tuy nhiên, tổng khối lượng không cho biết dòng tiền mua ròng, nên chưa thể kết luận lực mua chủ động hoàn toàn chi phối. [D1, D3]
+Giá đóng cửa đi từ 78.259,52 xuống 77.173,80 USD trong khi phiên có lúc chạm 79.818,34 rồi đóng thấp hơn. Nhịp hồi thất bại phù hợp với áp lực cung phía trên hơn là một breakout đã được xác nhận. [D1, D3]
 
 **2. Phái sinh đang làm tăng độ nhạy của thị trường**
 
@@ -67,35 +67,34 @@ Snapshot có một công bố CPI sau 18 giờ. Kết quả chưa xuất hiện,
 
 **4. Ba kịch bản cho 24–72 giờ**
 
-| Kịch bản | Điều kiện theo dõi | Hàm ý |
-| --- | --- | --- |
-| Tiếp diễn tăng | Giữ 66.000; nến 4 giờ đóng trên 68.000 với khối lượng spot cao hơn trung bình 20 nến 4 giờ trước | Luận điểm tăng được củng cố; cần xem funding có tiếp tục nóng lên hay không |
-| Tích lũy | Giá dao động 66.000–68.000, funding giảm về gần mức tham chiếu và OI không tăng thêm mạnh | Áp lực đòn bẩy có thể dịu lại; chưa có xác nhận vượt đỉnh |
-| Suy yếu | Nến 4 giờ đóng dưới 66.000 và không lấy lại vùng này trong nến kế tiếp | Ưu tiên theo dõi đáy 65.200; nếu OI cùng giảm nhanh, kiểm tra khả năng tháo vị thế |
+| Kịch bản       | Điều kiện theo dõi                                                                   | Hàm ý                                                                      |
+| -------------- | ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------- |
+| Tiếp diễn tăng | Lấy lại 79.800; nến 4 giờ giữ trên vùng này với khối lượng spot cao hơn 20 nến trước | Cấu trúc nhịp hồi được sửa; cần xem funding có tiếp tục nóng lên hay không |
+| Tích lũy       | Giá dao động 77.000–79.800, funding hạ nhiệt và OI không tăng thêm mạnh              | Đòn bẩy có thể được hấp thụ mà chưa xác nhận breakout                      |
+| Suy yếu        | Nến 4 giờ đóng dưới 76.500 và không lấy lại vùng này                                 | Theo dõi 76.000; OI giảm nhanh sẽ gợi ý tháo vị thế                        |
 
-**Điều gì khiến tôi thay đổi nhận định?** Một nến 4 giờ đóng dưới 65.200 USD phá vỡ cấu trúc đáy đang hỗ trợ luận điểm tăng. Ngược lại, vượt 68.000 với hoạt động spot mạnh hơn và funding hạ nhiệt sẽ làm nhận định tích cực thuyết phục hơn. Tôi cũng đánh giá lại sau CPI, thay vì giữ nguyên kết luận trước sự kiện. [D1–D4]
+**Điều gì khiến tôi thay đổi nhận định?** Một nến 4 giờ đóng dưới 76.500 USD và không lấy lại vùng này sẽ xác nhận áp lực bán tiếp diễn. Ngược lại, vượt 79.800 với hoạt động spot mạnh hơn và funding hạ nhiệt sẽ sửa được cấu trúc nhịp hồi. Tôi cũng đánh giá lại sau CPI, thay vì giữ nguyên kết luận trước sự kiện. [D1–D4]
 
 **Mức chắc chắn: vừa phải.** Giá và khối lượng đồng thuận, nhưng đòn bẩy là tín hiệu trái chiều; dữ liệu phái sinh chỉ từ một sàn mẫu, chưa có dòng mua/bán chủ động hay ETF để kiểm chứng thêm. Không gán xác suất phần trăm khi chưa có phương pháp hiệu chuẩn.
 
 ### Người dùng hỏi tiếp
 
-> Nếu BTC vượt 68.000 nhưng funding vẫn tăng thì sao?
+> Nếu BTC vượt 79.800 nhưng funding vẫn tăng thì sao?
 
 ### Trợ lý AI trả lời tiếp
 
-> Khi đó, giá đã xác nhận vượt vùng cản nhưng chất lượng của nhịp tăng vẫn cần kiểm tra. Tôi sẽ đối chiếu ba điểm: nến 4 giờ có giữ được trên 68.000 không, khối lượng spot có tăng so với 20 nến trước không, và OI có tiếp tục phình lên cùng funding không. Nếu spot không xác nhận trong khi OI và funding cùng tăng, tôi sẽ giảm mức tin cậy vào khả năng tiếp diễn. Nếu giá quay lại dưới 68.000, đó là dấu hiệu vượt cản chưa được duy trì; vùng 66.000 vẫn là mốc tiếp theo cần theo dõi.
+> Khi đó, giá đã vượt vùng cản nhưng chất lượng của nhịp tăng vẫn cần kiểm tra. Tôi sẽ đối chiếu ba điểm: nến 4 giờ có giữ được trên 79.800 không, khối lượng spot có tăng so với 20 nến trước không, và OI có tiếp tục phình lên cùng funding không. Nếu spot không xác nhận trong khi OI và funding cùng tăng, tôi sẽ giảm mức tin cậy vào khả năng tiếp diễn. Nếu giá quay lại dưới 79.800, đó là dấu hiệu breakout chưa được duy trì; vùng 77.000 vẫn là mốc tiếp theo cần theo dõi.
 
 ## Cách đưa vào landing
 
-Đây là đề xuất biên tập, không phải thay đổi thiết kế đã triển khai.
+Đây là contract nội dung và presentation cho browser-window demo đã triển khai.
 
-- Tiêu đề: **Từ câu hỏi thị trường đến nhận định có cơ sở.**
-- Dòng dẫn: **Kết nối dữ liệu, đối chiếu tín hiệu trái chiều và biết khi nào cần thay đổi nhận định.**
-- Trật tự nội dung: nhãn Demo → câu hỏi → bốn bước phương pháp → kết luận nổi bật → phân tích đầy đủ → câu hỏi tiếp nối.
+- Tiêu đề conversation lấy từ prompt và được truncate trên một dòng trong header.
+- Trật tự nội dung: câu hỏi → user bubble → quy trình tạm thời → heading phản biện → bảng OHLC → evidence trail → kịch bản → câu hỏi tiếp nối.
 - Ưu tiên cho người xem đọc được câu hỏi, phương pháp và kết luận ngay; dành phần bên dưới cho các luận cứ và bảng kịch bản. Không thu nhỏ chữ để nhét toàn bộ báo cáo vào một khung thấp.
-- Bản tĩnh có thể hiển thị toàn bộ transcript. Nếu cần thu gọn, đề xuất riêng control “Đọc phân tích đầy đủ”; không dùng animation như điều kiện để nội dung xuất hiện.
+- Bản tĩnh hiển thị toàn bộ transcript; bản animated mô phỏng gõ, di chuyển con trỏ tới nút gửi, click submit, response reveal và scroll-to-latest.
 - D1–D4 có bảng dữ liệu mẫu đi kèm, tránh tạo cảm giác AI trích dẫn nguồn thật nhưng không có nguồn để kiểm tra.
-- Animation hiện tại là DOM simulation theo clock cố định: câu hỏi → tổng hợp → đối chiếu → kết luận → kịch bản. Mỗi trạng thái có nhãn `DEMO`; không hứa backend đang truy vấn bốn nguồn hay đang stream token.
+- Animation hiện tại là DOM simulation theo clock cố định: gõ câu hỏi trong composer → submit → tổng hợp → đối chiếu → kết luận → kịch bản. Mỗi trạng thái có nhãn `DEMO`; không hứa backend đang truy vấn bốn nguồn hay đang stream token.
 - Bản tiếng Anh khi triển khai phải giữ nguyên con số, kỳ thời gian, điều kiện và mức chắc chắn của bản đã duyệt.
 
 ## Tiêu chí nội dung trước khi triển khai

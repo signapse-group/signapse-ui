@@ -43,7 +43,7 @@ export function LandingScheduledTelegramDemo({
   const x = useMotionValue(0)
   const y = useMotionValue(0)
   const scale = useMotionValue(1)
-  const opacity = useMotionValue(0)
+  const opacity = useMotionValue(1)
   const canPlay = active && isInView && pageVisible && !prefersReducedMotion
 
   useEffect(() => {
@@ -67,8 +67,11 @@ export function LandingScheduledTelegramDemo({
     let hasPosition = false
     const measure = () => {
       const bounds = window.getBoundingClientRect()
-      const entry = { x: bounds.width - 30, y: bounds.height - 30 }
-      targets.set("entry", entry)
+      const center = {
+        x: (bounds.width - 24) / 2,
+        y: (bounds.height - 24) / 2,
+      }
+      targets.set("center", center)
       window
         .querySelectorAll<HTMLElement>("[data-cursor-target]")
         .forEach((element) => {
@@ -79,13 +82,17 @@ export function LandingScheduledTelegramDemo({
           })
         })
       if (!hasPosition && bounds.width > 0 && bounds.height > 0) {
-        x.set(entry.x)
-        y.set(entry.y)
+        x.set(center.x)
+        y.set(center.y)
         hasPosition = true
       }
     }
     // Menus stay laid out while hidden so their target coordinates are stable.
     measure()
+    if (!canPlay) {
+      opacity.set(1)
+      return
+    }
     const observer = new ResizeObserver(measure)
     observer.observe(window)
     window
@@ -109,15 +116,18 @@ export function LandingScheduledTelegramDemo({
           )
         }
         const cursor = getTelegramDemoCursor(seconds)
-        const from = targets.get(cursor.from)
-        const to = targets.get(cursor.to)
+        let from = targets.get(cursor.from)
+        let to = targets.get(cursor.to)
+        if (!from || !to) {
+          measure()
+          from = targets.get(cursor.from)
+          to = targets.get(cursor.to)
+        }
         if (from && to) {
           x.set(from.x + (to.x - from.x) * cursor.progress)
           y.set(from.y + (to.y - from.y) * cursor.progress)
-          opacity.set(cursor.opacity)
-        } else {
-          opacity.set(0)
         }
+        opacity.set(cursor.opacity)
         scale.set(cursor.scale)
       },
     })
@@ -125,7 +135,7 @@ export function LandingScheduledTelegramDemo({
     return () => {
       playback.stop()
       observer.disconnect()
-      opacity.set(0)
+      opacity.set(1)
     }
   }, [canPlay, locale, prefersReducedMotion, progressRef, x, y, scale, opacity])
 

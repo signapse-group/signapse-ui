@@ -252,7 +252,7 @@ AI market intelligence và trading automation cho những người cần hiểu 
 | 5 năng lực nền tảng | `landing.product` hiện có 4 tính năng | Thay/ mở rộng cấu trúc, thêm Strategy coding                                                                   |
 | 4 nhóm đối tượng    | Chưa có                               | Thêm section                                                                                                   |
 | Workflow 4 bước     | `landing.analysisFlow` hiện có 3 bước | Thay copy và mở rộng cấu trúc                                                                                  |
-| Showcase            | Product captures và Telegram card      | Dùng bốn feature tabs trên shared stage; Graph/Chart static, AI text-first, Scheduled Telegram dùng Motion    |
+| Showcase            | Product captures và Telegram card      | Dùng bốn feature tabs trên shared stage; Graph/Chart product surface, AI browser conversation, Scheduled Telegram dùng Motion |
 | Tích hợp AI         | `landing.trust`                       | Thay section cũ bằng logo rail chuyển động chậm cho 6 provider                                                  |
 | CTA + form demo     | `landing.finalCta` hiện chỉ có CTA    | Thêm form và luồng xử lý production                                                                            |
 | Footer mở rộng      | `landing.footer`                      | Thay copy và mở rộng link/pháp lý                                                                              |

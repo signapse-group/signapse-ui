@@ -392,6 +392,7 @@ function y(value: number) {
 const CANDLE_GAP = 8
 const LATEST_CANDLE_X = 480
 const PLOT_LEFT = 10
+const CURSOR_MOVE_DURATION = 0.35
 const candleX = (index: number) =>
   LATEST_CANDLE_X + (index - ANNOTATION_INDEX) * CANDLE_GAP
 
@@ -471,6 +472,17 @@ export function LandingMarketChartDemo({
   const trackOffset = -outcomeCount * CANDLE_GAP
   const markerX = (candleX(ANNOTATION_INDEX) + trackOffset) / 7.2
   const markerY = (y(candles[ANNOTATION_INDEX].high) - 12) / 4.2
+  const cursorFraction = Math.max(
+    0,
+    Math.min(1, (visibleSeconds - timing.cursorSelect) / CURSOR_MOVE_DURATION)
+  )
+  const cursorProgress =
+    cursorFraction * cursorFraction * (3 - 2 * cursorFraction)
+  const cursorX = 50 + (markerX - 50) * cursorProgress
+  const cursorY = 50 + (markerY - 50) * cursorProgress
+  const cursorClicking =
+    visibleSeconds >= timing.cursorSelect + CURSOR_MOVE_DURATION &&
+    visibleSeconds < timing.cursorSelect + CURSOR_MOVE_DURATION + 0.2
   const tickTime = getMarketChartTickTime(visibleSeconds)
   const liveClose =
     candles[ANNOTATION_INDEX].close + Math.sin(tickTime * 1.35) * 42
@@ -690,15 +702,14 @@ export function LandingMarketChartDemo({
           </span>
         ) : null}
 
-        {at >= timing.cursorSelect && at < timing.detailOpen ? (
-          <span
-            className={styles.marketCursor}
-            style={{ left: `${markerX}%`, top: `${markerY}%` }}
-            aria-hidden="true"
-          >
-            <MousePointer2Icon fill="currentColor" />
-          </span>
-        ) : null}
+        <span
+          className={styles.marketCursor}
+          data-clicking={cursorClicking}
+          style={{ left: `${cursorX}%`, top: `${cursorY}%` }}
+          aria-hidden="true"
+        >
+          <MousePointer2Icon fill="currentColor" />
+        </span>
 
         {detailOpen ? (
           <aside
