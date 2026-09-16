@@ -128,7 +128,7 @@ export function LandingFeatureShowcase({
   const marketProgressRef = useRef<SVGCircleElement>(null)
   const aiProgressRef = useRef<SVGCircleElement>(null)
   const [activeFeature, setActiveFeature] =
-    useState<ShowcaseFeature>("scheduled-telegram")
+    useState<ShowcaseFeature>("knowledge-graph")
   const [TelegramDemo, setTelegramDemo] =
     useState<ComponentType<TelegramDemoProps> | null>(null)
   const [KnowledgeGraphDemo, setKnowledgeGraphDemo] =
@@ -219,88 +219,87 @@ export function LandingFeatureShowcase({
 
   return (
     <div ref={rootRef} className={styles.showcase} data-feature-showcase>
-      <div
-        aria-label={labels.tabListLabel}
-        className={styles.tabList}
-        role="tablist"
-        aria-orientation="vertical"
-      >
-        {features.map((feature, index) => {
-          const active = feature.id === activeFeature
+      <div className={styles.showcaseSidebar}>
+        <div className={styles.showcaseIntro}>
+          <p className={styles.showcaseEyebrow}>{labels.eyebrow}</p>
+          <h2 id="landing-showcase-heading" className={styles.showcaseHeading}>
+            {labels.heading}
+          </h2>
+          <p className={styles.showcaseDescription}>{labels.body}</p>
+        </div>
 
-          return (
-            <button
-              key={feature.id}
-              ref={(element) => {
-                tabRefs.current[index] = element
-              }}
-              id={`${baseId}-${feature.id}-tab`}
-              type="button"
-              role="tab"
-              aria-controls={panelId}
-              aria-selected={active}
-              tabIndex={active ? 0 : -1}
-              data-feature-selector={feature.id}
-              className={styles.tab}
-              onClick={() => selectFeature(feature.id)}
-              onKeyDown={handleTabKeyDown}
-            >
-              <span className={styles.tabIndex} aria-hidden="true">
-                {String(index + 1).padStart(2, "0")}
-              </span>
-              <span className={styles.tabCopy}>
-                <span className={styles.tabHeading}>
-                  <span className={styles.tabLabel}>{feature.label}</span>
-                  <svg
-                    className={styles.demoProgress}
-                    viewBox="0 0 24 24"
-                    aria-hidden="true"
-                    data-active={active}
-                  >
-                    <circle
-                      cx="12"
-                      cy="12"
-                      r="9"
-                      className={styles.demoProgressTrack}
-                    />
-                    <circle
-                      ref={
-                        feature.id === "knowledge-graph"
-                          ? graphProgressRef
-                          : feature.id === "market-chart"
-                            ? marketProgressRef
-                            : feature.id === "ai-conversation"
-                              ? aiProgressRef
-                              : telegramProgressRef
-                      }
-                      cx="12"
-                      cy="12"
-                      r="9"
-                      pathLength="100"
-                      strokeDasharray="100"
-                      strokeDashoffset="100"
-                    />
-                  </svg>
+        <div
+          aria-label={labels.tabListLabel}
+          className={styles.tabList}
+          role="tablist"
+          aria-orientation="vertical"
+        >
+          {features.map((feature, index) => {
+            const active = feature.id === activeFeature
+            const progressRef =
+              feature.id === "knowledge-graph"
+                ? graphProgressRef
+                : feature.id === "market-chart"
+                  ? marketProgressRef
+                  : feature.id === "ai-conversation"
+                    ? aiProgressRef
+                    : telegramProgressRef
+
+            return (
+              <button
+                key={feature.id}
+                ref={(element) => {
+                  tabRefs.current[index] = element
+                }}
+                id={`${baseId}-${feature.id}-tab`}
+                type="button"
+                role="tab"
+                aria-controls={panelId}
+                aria-selected={active}
+                tabIndex={active ? 0 : -1}
+                data-feature-selector={feature.id}
+                className={styles.tab}
+                onClick={() => selectFeature(feature.id)}
+                onKeyDown={handleTabKeyDown}
+              >
+                <span className={styles.tabIndex} aria-hidden="true">
+                  {active ? (
+                    <svg className={styles.demoProgress} viewBox="0 0 24 24">
+                      <circle
+                        cx="12"
+                        cy="12"
+                        r="9"
+                        className={styles.demoProgressTrack}
+                      />
+                      <circle
+                        ref={progressRef}
+                        cx="12"
+                        cy="12"
+                        r="9"
+                        pathLength="100"
+                        strokeDasharray="100"
+                        strokeDashoffset="100"
+                      />
+                    </svg>
+                  ) : (
+                    String(index + 1).padStart(2, "0")
+                  )}
                 </span>
-                {active ? (
-                  <span className={styles.tabDetail}>
-                    <span className={styles.tabTitle}>{feature.title}</span>
-                    <span className={styles.tabBody}>{feature.body}</span>
-                    <span className={styles.demoCaption}>
-                      {feature.id === "knowledge-graph"
-                        ? labels.knowledgeGraph.demoLabel
-                        : feature.id === "market-chart"
-                          ? labels.marketChart.demoLabel
-                          : feature.id === "ai-conversation"
-                            ? labels.aiConversation.demoLabel
-                            : labels.telegram.demoLabel}
-                    </span>
+                <span className={styles.tabCopy}>
+                  <span className={styles.tabHeading}>
+                    <span className={styles.tabLabel}>{feature.label}</span>
                   </span>
-                ) : null}
-              </span>
-            </button>
-          )
-        })}
+                  {active ? (
+                    <span className={styles.tabDetail}>
+                      <span className={styles.tabTitle}>{feature.title}</span>
+                      <span className={styles.tabBody}>{feature.body}</span>
+                    </span>
+                  ) : null}
+                </span>
+              </button>
+            )
+          })}
+        </div>
       </div>
 
       <div

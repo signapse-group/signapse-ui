@@ -299,7 +299,8 @@ test.describe("P0 public landing", () => {
     const telegramTab = showcase.getByRole("tab", {
       name: /Scheduled Telegram/,
     })
-    const telegramDemo = showcase.locator('[data-demo-renderer="motion"]')
+    await telegramTab.click()
+    const telegramDemo = showcase.locator("[data-telegram-demo-playback]")
     await expect(telegramDemo).toBeVisible({ timeout: 8000 })
     await expect(telegramDemo).toHaveAttribute("data-demo-mode", "automatic")
     await expect(telegramDemo.locator("[inert]")).toHaveCount(1)
@@ -360,6 +361,142 @@ test.describe("P0 public landing", () => {
       "start"
     )
     await expect(showcase).not.toContainText(/delivered|read receipt/i)
+  })
+
+  test("keeps the AI conversation prompt and submitted message visible across loops", async ({
+    page,
+  }) => {
+    await page.goto("/en")
+    const showcase = page.locator('[data-landing-section="showcase"]')
+    await showcase.scrollIntoViewIfNeeded()
+    await showcase.getByRole("tab", { name: "Knowledge Graph" }).click()
+    await showcase.getByRole("tab", { name: "AI Conversation" }).click()
+
+    const demo = showcase.locator("[data-ai-conversation-demo]")
+    const composer = demo.locator("textarea")
+    await expect(composer).toBeVisible()
+    const composerMetrics = await composer.evaluate((textarea) => {
+      const style = getComputedStyle(textarea)
+      const fourTextLines = Number.parseFloat(style.lineHeight) * 4
+      return {
+        clientHeight: textarea.clientHeight,
+        fourTextLines,
+        scrollHeight: textarea.scrollHeight,
+      }
+    })
+    expect(
+      composerMetrics.scrollHeight <= composerMetrics.clientHeight &&
+        composerMetrics.clientHeight >= composerMetrics.fourTextLines
+    ).toBe(true)
+
+    await expect(demo).toHaveAttribute(
+      "data-ai-conversation-state",
+      "crossCheck",
+      { timeout: 12_000 }
+    )
+    await expect(demo.locator("[data-ai-thinking]")).toHaveAttribute(
+      "data-visible",
+      "true"
+    )
+    await expect(demo.locator("[data-ai-response]")).toHaveAttribute(
+      "data-visible",
+      "false"
+    )
+    await expect(demo).toHaveAttribute("data-ai-conversation-state", "answer", {
+      timeout: 8_000,
+    })
+    await expect(demo.locator("[data-ai-thinking]")).toHaveAttribute(
+      "data-visible",
+      "false"
+    )
+    await expect(demo.locator("[data-ai-response]")).toHaveAttribute(
+      "data-streaming",
+      "true"
+    )
+    await expect(demo.locator("[data-ai-follow-up-thinking]")).toHaveAttribute(
+      "data-visible",
+      "true",
+      { timeout: 10_000 }
+    )
+    await expect(demo.locator("[data-ai-follow-up-user]")).toHaveAttribute(
+      "data-visible",
+      "true"
+    )
+    await expect(demo).toHaveAttribute(
+      "data-ai-conversation-state",
+      "followUpAnswer",
+      { timeout: 8_000 }
+    )
+    await expect(demo.locator("[data-ai-follow-up-thinking]")).toHaveAttribute(
+      "data-visible",
+      "false"
+    )
+    await expect(demo.locator("[data-ai-follow-up-response]")).toHaveAttribute(
+      "data-streaming",
+      "true"
+    )
+
+    await expect(demo).toHaveAttribute(
+      "data-ai-conversation-state",
+      "complete",
+      {
+        timeout: 8_000,
+      }
+    )
+    await expect(demo).toHaveAttribute(
+      "data-ai-conversation-state",
+      "welcome",
+      {
+        timeout: 8_000,
+      }
+    )
+    await expect(demo).toHaveAttribute(
+      "data-ai-conversation-state",
+      "submitted",
+      {
+        timeout: 10_000,
+      }
+    )
+
+    const submittedMessageIsVisible = await demo
+      .locator("[data-ai-user-message]")
+      .evaluate((message) => {
+        const viewport = message.parentElement
+        if (!viewport) return false
+        const messageRect = message.getBoundingClientRect()
+        const viewportRect = viewport.getBoundingClientRect()
+        return (
+          messageRect.top >= viewportRect.top &&
+          messageRect.bottom <= viewportRect.bottom
+        )
+      })
+    expect(submittedMessageIsVisible).toBe(true)
+  })
+
+  test("keeps the second AI conversation question fully visible", async ({
+    page,
+  }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" })
+    await page.goto("/en")
+    const showcase = page.locator('[data-landing-section="showcase"]')
+    await showcase.scrollIntoViewIfNeeded()
+    await showcase.getByRole("tab", { name: "AI Conversation" }).click()
+
+    const followUp = showcase.locator("[data-ai-follow-up-user]")
+    await expect(followUp).toBeVisible()
+    const metrics = await followUp.evaluate((message) => {
+      const style = getComputedStyle(message)
+      return {
+        clientHeight: message.clientHeight,
+        paddingBottom: Number.parseFloat(style.paddingBottom),
+        paddingTop: Number.parseFloat(style.paddingTop),
+        scrollHeight: message.scrollHeight,
+      }
+    })
+
+    expect(metrics.clientHeight).toBeGreaterThanOrEqual(metrics.scrollHeight)
+    expect(metrics.paddingTop).toBeGreaterThan(0)
+    expect(metrics.paddingBottom).toBeGreaterThan(0)
   })
 
   test("keeps a static final Telegram illustration with reduced motion", async ({

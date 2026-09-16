@@ -119,13 +119,24 @@ describe("localized landing composition", () => {
     )
     expect(html).toContain(
       locale === "vi"
-        ? "Phân tích BTC trong 7 ngày qua."
-        : "Analyze BTC over the last 7 days."
+        ? "Vì sao XAUUSD tăng gần đây?"
+        : "Why has XAUUSD risen recently?"
+    )
+    expect(html).toContain(locale === "vi" ? "Tín hiệu chính" : "Key signals")
+    expect(html).toContain("XAUUSD")
+    expect(html).toContain(
+      locale === "vi"
+        ? "Kết nối sự kiện, tài sản và tin tức trong một ngữ cảnh."
+        : "Connect events, assets, and news in one market context."
     )
     expect(html).toContain(
-      locale === "vi" ? "Dấu vết bằng chứng" : "Evidence trail"
+      locale === "vi" ? "Giải pháp doanh nghiệp" : "Enterprise solutions"
     )
-    expect(html).toContain("BTC")
+    expect(html).toContain(locale === "vi" ? "Sắp ra mắt" : "Coming soon")
+    expect(html).not.toContain(locale === "vi" ? ">Bảng giá<" : ">Pricing<")
+    expect(html).not.toContain(
+      locale === "vi" ? ">Bot giao dịch<" : ">Trading bot<"
+    )
     expect(html).toContain('data-ai-conversation-state="complete"')
     expect(html).toContain('role="log"')
     expect(html).toContain(
@@ -138,19 +149,23 @@ describe("localized landing composition", () => {
         ? 'placeholder="Đặt câu hỏi tiếp theo…"'
         : 'placeholder="Ask a follow-up question…"'
     )
-    expect(html).toContain(locale === "vi" ? "Ngày (2026)" : "Date (2026)")
+    expect(html).toContain(
+      locale === "vi"
+        ? "Trong 24–72 giờ tới, tôi nên theo dõi điều gì?"
+        : "What should I watch over the next 24–72 hours?"
+    )
     expect(html).toContain("inert")
     expect(html).toMatch(/<textarea[^>]*disabled/)
     expect((html.match(/role="tab"/g) ?? []).length).toBe(4)
     expect(html).toContain('data-feature-selector="scheduled-telegram"')
     expect(html).toMatch(
-      /aria-selected="true"[^>]*data-feature-selector="scheduled-telegram"/
+      /aria-selected="true"[^>]*data-feature-selector="knowledge-graph"/
     )
-    expect(html).toContain('data-feature-stage="scheduled-telegram"')
+    expect(html).toContain('data-feature-stage="knowledge-graph"')
     expect(html).toContain('data-demo-mode="automatic"')
     expect(html).toContain('data-demo-renderer="static"')
     expect(html).toContain('data-telegram-demo-state="preview"')
-    expect(html).toContain("DEMO")
+    expect(html).not.toContain(">DEMO<")
     expect(html).toContain("Market Desk")
     expect(html).toContain("XAU/USD")
     expect(html).toContain("Asia/Bangkok")
@@ -177,13 +192,16 @@ describe("localized landing composition", () => {
     expect(html).toContain('<figcaption class="sr-only">')
   })
 
-  it("renders the localized demo form for anonymous visitors", () => {
+  it("renders a minimal email request action for anonymous visitors", () => {
     const html = renderLanding("vi", false)
 
-    expect(html).toContain("Họ và tên")
-    expect(html).toContain("Email công việc")
-    expect(html).toContain("Nhu cầu chính")
-    expect(html).toContain("Đăng ký xem demo")
+    expect(html).toContain("Yêu cầu truy cập")
+    expect(
+      html.includes("Mở ứng dụng email để bắt đầu trao đổi với Signapse.")
+    ).toBe(true)
+    expect(html).not.toContain("Họ và tên")
+    expect(html).not.toContain("Email công việc")
+    expect(html).not.toContain("Nhu cầu chính")
     expect(html).not.toContain("Bản demo tĩnh")
   })
 })

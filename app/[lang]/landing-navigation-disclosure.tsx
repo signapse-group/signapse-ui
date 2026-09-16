@@ -2,7 +2,19 @@
 
 import { useEffect, useRef, type ComponentProps } from "react"
 
-export function LandingNavigationDisclosure(props: ComponentProps<"details">) {
+type LandingNavigationDisclosureProps = ComponentProps<"details"> & {
+  openOnHover?: boolean
+}
+
+export function LandingNavigationDisclosure({
+  onBlur,
+  onClick,
+  onKeyDown,
+  onPointerEnter,
+  onPointerLeave,
+  openOnHover = false,
+  ...props
+}: LandingNavigationDisclosureProps) {
   const ref = useRef<HTMLDetailsElement>(null)
 
   useEffect(() => {
@@ -22,6 +34,8 @@ export function LandingNavigationDisclosure(props: ComponentProps<"details">) {
       {...props}
       ref={ref}
       onKeyDown={(event) => {
+        onKeyDown?.(event)
+
         if (event.key === "Escape" && event.currentTarget.open) {
           event.preventDefault()
           event.currentTarget.open = false
@@ -29,12 +43,33 @@ export function LandingNavigationDisclosure(props: ComponentProps<"details">) {
         }
       }}
       onBlur={(event) => {
+        onBlur?.(event)
+
         if (!event.currentTarget.contains(event.relatedTarget)) {
           event.currentTarget.open = false
         }
       }}
       onClick={(event) => {
+        onClick?.(event)
+
         if (event.target instanceof Element && event.target.closest("a")) {
+          event.currentTarget.open = false
+        }
+      }}
+      onPointerEnter={(event) => {
+        onPointerEnter?.(event)
+
+        if (openOnHover) {
+          event.currentTarget.open = true
+        }
+      }}
+      onPointerLeave={(event) => {
+        onPointerLeave?.(event)
+
+        if (
+          openOnHover &&
+          !event.currentTarget.contains(document.activeElement)
+        ) {
           event.currentTarget.open = false
         }
       }}

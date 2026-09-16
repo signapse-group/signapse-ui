@@ -71,7 +71,7 @@ export function createLandingAccessModel(
     headerSecondary: isAuthenticated ? null : signIn,
     heroPrimary: isAuthenticated ? dashboard : bookDemo,
     heroSecondary: journey,
-    finalCta: isAuthenticated ? dashboard : bookDemo,
+    finalCta: isAuthenticated ? dashboard : requestAccess,
     footerAppEntry: isAuthenticated ? dashboard : signIn,
     footerRequestAccess: {
       ...requestAccess,

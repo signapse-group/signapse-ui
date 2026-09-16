@@ -80,13 +80,25 @@ export function LandingAiConversationDemo({
     if (!active || !transcript) return
 
     const animationFrame = window.requestAnimationFrame(() => {
+      if (
+        visibleFrame.phase === "welcome" ||
+        visibleFrame.phase === "typing" ||
+        visibleFrame.phase === "submitted"
+      ) {
+        transcript.scrollTo({ top: 0, behavior: "auto" })
+        return
+      }
+
       transcript.scrollTo({
         top: transcript.scrollHeight,
-        behavior: prefersReducedMotion ? "auto" : "smooth",
+        behavior:
+          prefersReducedMotion || visibleFrame.phase === "answer"
+            ? "auto"
+            : "smooth",
       })
     })
     return () => window.cancelAnimationFrame(animationFrame)
-  }, [active, prefersReducedMotion, visibleFrame.phase])
+  }, [active, prefersReducedMotion, visibleFrame.phase, visibleSeconds])
 
   return (
     <div

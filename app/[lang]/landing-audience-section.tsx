@@ -1,10 +1,17 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 
 import type { Dictionary } from "@/app/lib/i18n/dictionary-types"
 import { LandingAudienceFigure } from "./landing-audience-figure"
 import styles from "./landing-page.module.css"
+
+const AUDIENCE_IDS = [
+  "audience-trader",
+  "audience-analyst",
+  "audience-strategy-developer",
+  "audience-team-fund",
+] as const
 
 export function LandingAudienceSection({
   dictionary,
@@ -13,16 +20,45 @@ export function LandingAudienceSection({
 }) {
   const t = dictionary.landing.audiences
   const audiences = [
-    { label: t.traderLabel, title: t.traderTitle, body: t.traderBody },
-    { label: t.analystLabel, title: t.analystTitle, body: t.analystBody },
     {
+      id: AUDIENCE_IDS[0],
+      label: t.traderLabel,
+      title: t.traderTitle,
+      body: t.traderBody,
+    },
+    {
+      id: AUDIENCE_IDS[1],
+      label: t.analystLabel,
+      title: t.analystTitle,
+      body: t.analystBody,
+    },
+    {
+      id: AUDIENCE_IDS[2],
       label: t.developerLabel,
       title: t.developerTitle,
       body: t.developerBody,
     },
-    { label: t.teamLabel, title: t.teamTitle, body: t.teamBody },
+    {
+      id: AUDIENCE_IDS[3],
+      label: t.teamLabel,
+      title: t.teamTitle,
+      body: t.teamBody,
+    },
   ]
   const [activeIndex, setActiveIndex] = useState(0)
+
+  useEffect(() => {
+    function selectHashAudience() {
+      const index = AUDIENCE_IDS.findIndex(
+        (audienceId) => `#${audienceId}` === window.location.hash
+      )
+      if (index >= 0) setActiveIndex(index)
+    }
+
+    selectHashAudience()
+    window.addEventListener("hashchange", selectHashAudience)
+    return () => window.removeEventListener("hashchange", selectHashAudience)
+  }, [])
 
   return (
     <section
@@ -62,6 +98,7 @@ export function LandingAudienceSection({
                   }}
                 >
                   <button
+                    id={audience.id}
                     type="button"
                     aria-pressed={isActive}
                     data-audience-option={index + 1}

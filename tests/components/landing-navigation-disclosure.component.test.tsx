@@ -30,3 +30,19 @@ it("dismisses navigation on Escape, outside interaction and link selection", () 
   fireEvent.click(link)
   expect(details.open).toBe(false)
 })
+
+it("opens and dismisses a hover-enabled disclosure", () => {
+  const { container } = render(
+    <LandingNavigationDisclosure openOnHover>
+      <summary>Product</summary>
+      <a href="#product">Overview</a>
+    </LandingNavigationDisclosure>
+  )
+  const details = container.querySelector("details")!
+
+  fireEvent.pointerEnter(details)
+  expect(details.open).toBe(true)
+
+  fireEvent.pointerLeave(details)
+  expect(details.open).toBe(false)
+})

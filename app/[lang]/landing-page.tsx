@@ -22,10 +22,8 @@ import {
 import { LandingOhlcvBackground } from "./landing-ohlcv-background"
 import {
   createLandingAccessModel,
-  REQUEST_ACCESS_EMAIL,
   type LandingAccessAction,
 } from "./landing-access"
-import { LandingDemoForm } from "./landing-demo-form"
 import styles from "./landing-page.module.css"
 import { LandingAudienceSection } from "./landing-audience-section"
 import { LandingCapabilityFlowReveal } from "./landing-capability-flow-reveal"
@@ -50,6 +48,142 @@ type LandingActionButtonProps = {
   size?: "default" | "lg"
   variant?: "default" | "ghost" | "outline" | "secondary"
   showArrow?: boolean
+}
+
+type HeaderMenuItemModel = {
+  description: string
+  href?: string
+  label: string
+  placeholder?: boolean
+}
+
+type HeaderMenuGroupModel = {
+  id: string
+  label: string
+  items: HeaderMenuItemModel[]
+}
+
+function HeaderMenuItem({
+  item,
+  comingSoonLabel,
+  mobile = false,
+}: {
+  item: HeaderMenuItemModel
+  comingSoonLabel: string
+  mobile?: boolean
+}) {
+  const content = (
+    <>
+      <span className={styles.megaMenuItemHeading}>
+        <span>{item.label}</span>
+        {item.placeholder ? (
+          <span className={styles.megaMenuPlaceholder}>{comingSoonLabel}</span>
+        ) : null}
+      </span>
+      <span className={styles.megaMenuItemDescription}>{item.description}</span>
+    </>
+  )
+
+  if (!item.href || item.placeholder) {
+    return (
+      <div
+        className={`${styles.megaMenuItem} ${mobile ? styles.mobileMegaMenuItem : ""}`}
+        aria-disabled="true"
+      >
+        {content}
+      </div>
+    )
+  }
+
+  return (
+    <a
+      href={item.href}
+      className={`${styles.megaMenuItem} ${mobile ? styles.mobileMegaMenuItem : ""}`}
+    >
+      {content}
+    </a>
+  )
+}
+
+function DesktopMegaMenu({
+  groups,
+  label,
+  comingSoonLabel,
+}: {
+  groups: HeaderMenuGroupModel[]
+  label: string
+  comingSoonLabel: string
+}) {
+  return (
+    <LandingNavigationDisclosure
+      className={styles.megaMenuDisclosure}
+      name="landing-desktop-menu"
+      openOnHover
+    >
+      <summary
+        className={`${styles.headerNavItem} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}
+      >
+        {label}
+        <ChevronDownIcon aria-hidden="true" className="size-4" />
+      </summary>
+      <div className={styles.megaMenuPanel}>
+        {groups.map((group) => (
+          <section key={group.id} className={styles.megaMenuGroup}>
+            <p className={styles.megaMenuGroupLabel}>{group.label}</p>
+            <ul className={styles.megaMenuList}>
+              {group.items.map((item) => (
+                <li key={item.label}>
+                  <HeaderMenuItem
+                    item={item}
+                    comingSoonLabel={comingSoonLabel}
+                  />
+                </li>
+              ))}
+            </ul>
+          </section>
+        ))}
+      </div>
+    </LandingNavigationDisclosure>
+  )
+}
+
+function MobileMegaMenu({
+  groups,
+  label,
+  comingSoonLabel,
+}: {
+  groups: HeaderMenuGroupModel[]
+  label: string
+  comingSoonLabel: string
+}) {
+  return (
+    <LandingNavigationDisclosure
+      className={styles.mobileMenuGroup}
+      name="landing-mobile-menu-group"
+    >
+      <summary className={styles.mobileMenuGroupTrigger}>
+        {label}
+        <ChevronDownIcon aria-hidden="true" />
+      </summary>
+      <div className={styles.mobileMenuGroupContent}>
+        {groups.map((group) => (
+          <section key={group.id}>
+            <p className={styles.mobileMenuGroupLabel}>{group.label}</p>
+            <div className={styles.mobileMenuItems}>
+              {group.items.map((item) => (
+                <HeaderMenuItem
+                  key={item.label}
+                  item={item}
+                  comingSoonLabel={comingSoonLabel}
+                  mobile
+                />
+              ))}
+            </div>
+          </section>
+        ))}
+      </div>
+    </LandingNavigationDisclosure>
+  )
 }
 
 export function LandingPage({
@@ -99,13 +233,160 @@ function LandingHeader({
   locale: AppLocale
 }) {
   const t = dictionary.landing
-  const sectionLinks = [
-    { href: "#product", label: t.nav.overview },
-    { href: "#knowledge-graph", label: t.nav.knowledgeGraph },
-    { href: "#live-charts", label: t.nav.liveCharts },
-    { href: "#ai-assistant", label: t.nav.aiAssistant },
-    { href: "#telegram", label: t.nav.telegram },
-    { href: "#how-it-works", label: t.nav.flow },
+  const productGroups: HeaderMenuGroupModel[] = [
+    {
+      id: "analysis",
+      label: t.nav.analysisGroup,
+      items: [
+        {
+          href: "#knowledge-graph",
+          label: t.nav.knowledgeGraph,
+          description: t.nav.knowledgeGraphDescription,
+        },
+        {
+          href: "#live-charts",
+          label: t.nav.liveCharts,
+          description: t.nav.liveChartsDescription,
+        },
+      ],
+    },
+    {
+      id: "assistant",
+      label: t.nav.assistantGroup,
+      items: [
+        {
+          href: "#ai-assistant",
+          label: t.nav.aiAssistant,
+          description: t.nav.aiAssistantDescription,
+        },
+        {
+          href: "#strategy-coding",
+          label: t.nav.strategyBuilder,
+          description: t.nav.strategyBuilderDescription,
+        },
+      ],
+    },
+    {
+      id: "automation",
+      label: t.nav.automationGroup,
+      items: [
+        {
+          href: "#telegram",
+          label: t.nav.telegram,
+          description: t.nav.telegramDescription,
+        },
+        {
+          href: "#how-it-works",
+          label: t.nav.flow,
+          description: t.nav.exploreDemoDescription,
+        },
+      ],
+    },
+  ]
+  const solutionGroups: HeaderMenuGroupModel[] = [
+    {
+      id: "individuals",
+      label: t.nav.solutions,
+      items: [
+        {
+          href: "#audience-trader",
+          label: t.nav.trader,
+          description: t.nav.traderDescription,
+        },
+        {
+          href: "#audience-analyst",
+          label: t.nav.analyst,
+          description: t.nav.analystDescription,
+        },
+      ],
+    },
+    {
+      id: "organizations",
+      label: t.nav.solutions,
+      items: [
+        {
+          href: "#audience-strategy-developer",
+          label: t.nav.strategyDeveloper,
+          description: t.nav.strategyDeveloperDescription,
+        },
+        {
+          href: "#audience-team-fund",
+          label: t.nav.teamsAndFunds,
+          description: t.nav.teamsAndFundsDescription,
+        },
+      ],
+    },
+    {
+      id: "explore",
+      label: t.nav.exploreGroup,
+      items: [
+        {
+          href: "#showcase",
+          label: t.nav.exploreDemo,
+          description: t.nav.exploreDemoDescription,
+        },
+        {
+          href: "#access",
+          label: t.nav.discussNeeds,
+          description: t.nav.discussNeedsDescription,
+        },
+        {
+          label: t.nav.enterpriseSolutions,
+          description: t.nav.enterpriseSolutionsDescription,
+          placeholder: true,
+        },
+      ],
+    },
+  ]
+  const resourceGroups: HeaderMenuGroupModel[] = [
+    {
+      id: "getting-started",
+      label: t.nav.gettingStartedGroup,
+      items: [
+        {
+          label: t.nav.userGuide,
+          description: t.nav.userGuideDescription,
+          placeholder: true,
+        },
+        {
+          label: t.nav.helpCenter,
+          description: t.nav.helpCenterDescription,
+          placeholder: true,
+        },
+      ],
+    },
+    {
+      id: "insights",
+      label: t.nav.exploreGroup,
+      items: [
+        {
+          label: t.nav.blogInsights,
+          description: t.nav.blogInsightsDescription,
+          placeholder: true,
+        },
+        {
+          label: t.nav.productUpdates,
+          description: t.nav.productUpdatesDescription,
+          placeholder: true,
+        },
+      ],
+    },
+    {
+      id: "connect",
+      label: t.nav.connectGroup,
+      items: [
+        {
+          label: t.nav.developers,
+          description: t.nav.developersDescription,
+          placeholder: true,
+        },
+        {
+          label: t.nav.aboutSignapse,
+          description: t.nav.aboutSignapseDescription,
+          placeholder: true,
+        },
+      ],
+    },
   ]
 
   return (
@@ -139,31 +420,26 @@ function LandingHeader({
           aria-label={t.accessibility.headerNavigation}
           className="hidden items-center justify-center gap-2 text-sm text-muted-foreground xl:flex"
         >
-          <LandingNavigationDisclosure className="group relative">
-            <summary
-              className={`${styles.headerNavItem} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}
-            >
-              {t.nav.product}
-              <ChevronDownIcon
-                aria-hidden="true"
-                className="size-4 group-open:rotate-180"
-              />
-            </summary>
-            <ul className="absolute top-[calc(100%+0.5rem)] right-0 z-20 flex w-64 flex-col gap-1 rounded-lg border border-border bg-background p-2 shadow-lg">
-              {sectionLinks.map((link) => (
-                <li key={link.href}>
-                  <a href={link.href} className={styles.headerMenuItem}>
-                    {link.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </LandingNavigationDisclosure>
+          <DesktopMegaMenu
+            label={t.nav.product}
+            groups={productGroups}
+            comingSoonLabel={t.nav.comingSoon}
+          />
+          <DesktopMegaMenu
+            label={t.nav.solutions}
+            groups={solutionGroups}
+            comingSoonLabel={t.nav.comingSoon}
+          />
+          <DesktopMegaMenu
+            label={t.nav.resources}
+            groups={resourceGroups}
+            comingSoonLabel={t.nav.comingSoon}
+          />
           <a href="#how-it-works" className={styles.headerNavItem}>
             {t.nav.flow}
           </a>
           <a href="#access" className={styles.headerNavItem}>
-            {t.nav.access}
+            {t.nav.contact}
           </a>
         </nav>
 
@@ -238,20 +514,26 @@ function LandingHeader({
                 aria-label={t.accessibility.headerNavigation}
                 className="flex flex-col gap-1"
               >
-                <p className="px-3 py-2 text-xs font-semibold text-muted-foreground">
-                  {t.nav.product}
-                </p>
-                {sectionLinks.map((link) => (
-                  <a
-                    key={link.href}
-                    href={link.href}
-                    className={styles.headerMenuItem}
-                  >
-                    {link.label}
-                  </a>
-                ))}
+                <MobileMegaMenu
+                  label={t.nav.product}
+                  groups={productGroups}
+                  comingSoonLabel={t.nav.comingSoon}
+                />
+                <MobileMegaMenu
+                  label={t.nav.solutions}
+                  groups={solutionGroups}
+                  comingSoonLabel={t.nav.comingSoon}
+                />
+                <MobileMegaMenu
+                  label={t.nav.resources}
+                  groups={resourceGroups}
+                  comingSoonLabel={t.nav.comingSoon}
+                />
+                <a href="#how-it-works" className={styles.headerMenuItem}>
+                  {t.nav.flow}
+                </a>
                 <a href="#access" className={styles.headerMenuItem}>
-                  {t.nav.access}
+                  {t.nav.contact}
                 </a>
               </nav>
               {access.headerSecondary ? (
@@ -339,7 +621,7 @@ function HeroSection({
               fallback: t.hero.contextFigureFallback,
             }}
           />
-          <dl className="grid gap-4 border-t border-border pt-5 sm:grid-cols-2 lg:grid-cols-1">
+          <dl className="grid gap-4 pt-5 sm:grid-cols-2 lg:grid-cols-1">
             <ProofPoint
               title={t.hero.proofOneTitle}
               body={t.hero.proofOneBody}
@@ -445,10 +727,10 @@ function AnalysisFlow({ dictionary }: { dictionary: Dictionary }) {
       aria-labelledby="landing-flow-heading"
       className={`${styles.lightSurface} border-b border-border/80 bg-background`}
     >
-      <div className="mx-auto grid w-full max-w-7xl gap-12 px-4 py-16 sm:px-6 sm:py-24 lg:grid-cols-[minmax(0,0.82fr)_minmax(0,1.18fr)] lg:px-8">
+      <div className="mx-auto grid w-full max-w-[100rem] gap-12 px-4 py-16 sm:px-6 sm:py-24 lg:grid-cols-[minmax(0,0.82fr)_minmax(0,1.18fr)] lg:px-8">
         <div className="flex min-w-0 flex-col gap-8">
           <div className="flex max-w-3xl flex-col gap-5">
-            <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+            <p className="text-xs font-semibold tracking-[0.18em] text-chart-1 uppercase">
               {t.eyebrow}
             </p>
             <h2
@@ -460,7 +742,7 @@ function AnalysisFlow({ dictionary }: { dictionary: Dictionary }) {
             <p className="leading-7 text-muted-foreground">{t.body}</p>
           </div>
           <aside className={`${styles.landingPanel} flex flex-col gap-4`}>
-            <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+            <p className="text-xs font-semibold tracking-[0.18em] text-chart-1 uppercase">
               {t.loopEyebrow}
             </p>
             <h3 className="text-2xl leading-tight font-semibold">
@@ -487,11 +769,11 @@ function AnalysisFlow({ dictionary }: { dictionary: Dictionary }) {
           </aside>
         </div>
 
-        <ol className="min-w-0 border-t border-border">
+        <ol className="min-w-0">
           {steps.map((step, index) => (
             <li
               key={step.title}
-              className="grid min-w-0 grid-cols-[3rem_minmax(0,1fr)] gap-4 border-b border-border py-6"
+              className={`${styles.analysisStep} grid min-w-0 grid-cols-[3rem_minmax(0,1fr)] gap-4 py-6`}
             >
               <span className="font-mono text-xs text-muted-foreground tabular-nums">
                 {String(index + 1).padStart(2, "0")}
@@ -572,9 +854,9 @@ function ProductStory({ dictionary }: { dictionary: Dictionary }) {
       aria-labelledby="landing-product-heading"
       className={`${styles.lightSurface} border-b border-border/80 bg-background`}
     >
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-12 px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
+      <div className="mx-auto flex w-full max-w-[100rem] flex-col gap-12 px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
         <div className="flex max-w-5xl flex-col gap-5">
-          <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+          <p className="text-xs font-semibold tracking-[0.18em] text-chart-1 uppercase">
             {t.eyebrow}
           </p>
           <h2
@@ -657,24 +939,13 @@ function ShowcaseSection({
 
   return (
     <section
+      id="showcase"
       data-landing-section="showcase"
       data-landing-surface="light"
       aria-labelledby="landing-showcase-heading"
       className={`${styles.lightSurface} border-b border-border/80 bg-background`}
     >
-      <div className="mx-auto flex w-full max-w-[100rem] flex-col gap-12 px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
-        <div className="flex max-w-3xl flex-col gap-5">
-          <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
-            {t.eyebrow}
-          </p>
-          <h2
-            id="landing-showcase-heading"
-            className={`${styles.landingDisplayHeading} text-3xl leading-tight sm:text-4xl`}
-          >
-            {t.heading}
-          </h2>
-          <p className="leading-7 text-muted-foreground">{t.body}</p>
-        </div>
+      <div className="mx-auto w-full max-w-[100rem] px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
         <LandingFeatureShowcase
           locale={locale}
           labels={t}
@@ -720,9 +991,9 @@ function ProviderIntegrations({ dictionary }: { dictionary: Dictionary }) {
       aria-labelledby="landing-provider-heading"
       className={`${styles.lightSurface} border-b border-border/80 bg-background`}
     >
-      <div className="mx-auto flex w-full max-w-7xl flex-col items-center gap-10 px-4 py-16 text-center sm:px-6 sm:py-24 lg:px-8">
+      <div className="mx-auto flex w-full max-w-[100rem] flex-col items-center gap-10 px-4 py-16 text-center sm:px-6 sm:py-24 lg:px-8">
         <div className="flex max-w-3xl flex-col items-center gap-5">
-          <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+          <p className="text-xs font-semibold tracking-[0.18em] text-chart-1 uppercase">
             {t.eyebrow}
           </p>
           <h2
@@ -757,7 +1028,7 @@ function FinalAccessCta({
       aria-labelledby="landing-access-heading"
       className={`${styles.darkSurface} border-b border-border/80 bg-background`}
     >
-      <div className="mx-auto grid w-full max-w-7xl gap-12 px-4 py-20 sm:px-6 sm:py-28 lg:grid-cols-[minmax(0,1fr)_minmax(22rem,0.8fr)] lg:items-center lg:px-8">
+      <div className="mx-auto flex w-full max-w-[100rem] px-4 py-20 sm:px-6 sm:py-28 lg:px-8">
         <div className="flex max-w-3xl flex-col items-start gap-6">
           <p className="text-xs font-semibold tracking-[0.18em] text-chart-1 uppercase">
             {t.accessLabel}
@@ -769,17 +1040,17 @@ function FinalAccessCta({
             {t.heading}
           </h2>
           <p className="max-w-2xl leading-7 text-muted-foreground">{t.body}</p>
-          {access.finalCta.kind === "internal" ? (
-            <LandingActionButton
-              action={access.finalCta}
-              className={styles.sectionAction}
-              size="lg"
-            />
+          <LandingActionButton
+            action={access.finalCta}
+            className={styles.sectionAction}
+            size="lg"
+          />
+          {access.finalCta.kind === "email" ? (
+            <p className="text-sm leading-6 text-muted-foreground">
+              {t.emailNote}
+            </p>
           ) : null}
         </div>
-        {access.finalCta.kind === "email" ? (
-          <LandingDemoForm email={REQUEST_ACCESS_EMAIL} labels={t} />
-        ) : null}
       </div>
     </section>
   )
