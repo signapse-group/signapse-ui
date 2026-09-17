@@ -4,6 +4,7 @@ import { withLocalePath } from "@/app/lib/i18n/routing"
 
 export const REQUEST_ACCESS_EMAIL = "access@signapse.cloud"
 export const REQUEST_ACCESS_HREF = `mailto:${REQUEST_ACCESS_EMAIL}?subject=Signapse%20access%20request`
+export const ACCESS_SECTION_HREF = "#access"
 export const HERO_JOURNEY_HREF = "#product"
 
 type LandingActionKind = "email" | "internal" | "anchor"
@@ -22,12 +23,10 @@ export type LandingAccessModel = {
   heroSecondary: LandingAccessAction
   finalCta: LandingAccessAction
   footerAppEntry: LandingAccessAction
-  footerRequestAccess: LandingAccessAction
 }
 
 type LandingAccessCopy = {
   cta: Dictionary["landing"]["cta"]
-  footer: Pick<Dictionary["landing"]["footer"], "requestAccessEmail">
 }
 
 export function createLandingAccessModel(
@@ -42,8 +41,8 @@ export function createLandingAccessModel(
     ariaLabel: copy.cta.requestAccessAria,
   }
   const bookDemo: LandingAccessAction = {
-    href: REQUEST_ACCESS_HREF,
-    kind: "email",
+    href: ACCESS_SECTION_HREF,
+    kind: "anchor",
     label: copy.cta.bookDemo,
     ariaLabel: copy.cta.bookDemoAria,
   }
@@ -67,15 +66,11 @@ export function createLandingAccessModel(
   }
 
   return {
-    headerPrimary: isAuthenticated ? dashboard : requestAccess,
+    headerPrimary: isAuthenticated ? dashboard : bookDemo,
     headerSecondary: isAuthenticated ? null : signIn,
     heroPrimary: isAuthenticated ? dashboard : bookDemo,
     heroSecondary: journey,
     finalCta: isAuthenticated ? dashboard : requestAccess,
     footerAppEntry: isAuthenticated ? dashboard : signIn,
-    footerRequestAccess: {
-      ...requestAccess,
-      label: copy.footer.requestAccessEmail,
-    },
   }
 }

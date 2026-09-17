@@ -7,6 +7,7 @@ vi.mock("@/app/[lang]/landing-locale-links", () => ({
       {labels.vi} / {labels.en}
     </nav>
   ),
+  LandingLocaleMenu: () => <button type="button" aria-label="locale menu" />,
 }))
 
 import { LandingPage } from "@/app/[lang]/landing-page"
@@ -195,10 +196,11 @@ describe("localized landing composition", () => {
   it("renders a minimal email request action for anonymous visitors", () => {
     const html = renderLanding("vi", false)
 
-    expect(html).toContain("Yêu cầu truy cập")
+    expect(html).toContain("Liên hệ demo")
     expect(
       html.includes("Mở ứng dụng email để bắt đầu trao đổi với Signapse.")
     ).toBe(true)
+    expect((html.match(/href="mailto:/g) ?? []).length).toBe(1)
     expect(html).not.toContain("Họ và tên")
     expect(html).not.toContain("Email công việc")
     expect(html).not.toContain("Nhu cầu chính")

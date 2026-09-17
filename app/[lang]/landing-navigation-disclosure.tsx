@@ -16,6 +16,14 @@ export function LandingNavigationDisclosure({
   ...props
 }: LandingNavigationDisclosureProps) {
   const ref = useRef<HTMLDetailsElement>(null)
+  const dismissTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  function clearDismissTimeout() {
+    if (dismissTimeoutRef.current !== null) {
+      clearTimeout(dismissTimeoutRef.current)
+      dismissTimeoutRef.current = null
+    }
+  }
 
   useEffect(() => {
     function dismiss(event: PointerEvent) {
@@ -26,7 +34,10 @@ export function LandingNavigationDisclosure({
     }
 
     document.addEventListener("pointerdown", dismiss)
-    return () => document.removeEventListener("pointerdown", dismiss)
+    return () => {
+      document.removeEventListener("pointerdown", dismiss)
+      clearDismissTimeout()
+    }
   }, [])
 
   return (
@@ -60,6 +71,7 @@ export function LandingNavigationDisclosure({
         onPointerEnter?.(event)
 
         if (openOnHover) {
+          clearDismissTimeout()
           event.currentTarget.open = true
         }
       }}
@@ -70,7 +82,12 @@ export function LandingNavigationDisclosure({
           openOnHover &&
           !event.currentTarget.contains(document.activeElement)
         ) {
-          event.currentTarget.open = false
+          const details = event.currentTarget
+          clearDismissTimeout()
+          dismissTimeoutRef.current = setTimeout(() => {
+            details.open = false
+            dismissTimeoutRef.current = null
+          }, 150)
         }
       }}
     />

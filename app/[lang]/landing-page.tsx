@@ -7,6 +7,7 @@ import {
   CalendarClockIcon,
   ChevronDownIcon,
   Code2Icon,
+  Globe2Icon,
   LineChartIcon,
   MenuIcon,
   NetworkIcon,
@@ -31,7 +32,7 @@ import { LandingContextFigure } from "./landing-context-figure"
 import { LandingFeatureShowcase } from "./landing-feature-showcase"
 import { LandingHeaderShell } from "./landing-header-shell"
 import { LandingProviderMarquee } from "./landing-provider-marquee"
-import { LandingLocaleLinks } from "./landing-locale-links"
+import { LandingLocaleLinks, LandingLocaleMenu } from "./landing-locale-links"
 import { LandingNavigationDisclosure } from "./landing-navigation-disclosure"
 import { Logo } from "@/components/logo"
 import { buttonVariants } from "@/components/ui/button"
@@ -444,16 +445,28 @@ function LandingHeader({
         </nav>
 
         <div className="ml-auto flex items-center gap-1 sm:gap-2">
-          <div className="hidden sm:block">
+          {access.headerSecondary ? (
+            <div className="hidden sm:block">
+              <LandingActionButton
+                action={access.headerSecondary}
+                className={styles.headerAction}
+                variant="ghost"
+                showArrow={false}
+              />
+            </div>
+          ) : null}
+          <LandingActionButton
+            action={access.headerPrimary}
+            className={styles.headerAction}
+            size="lg"
+          />
+          <div className="hidden xl:block">
             <Suspense
               fallback={
-                <LandingLocaleLinksFallback
-                  locale={locale}
-                  labels={t.localeControl}
-                />
+                <LandingLocaleMenuFallback label={t.localeControl.label} />
               }
             >
-              <LandingLocaleLinks
+              <LandingLocaleMenu
                 currentLocale={locale}
                 labels={{
                   group: t.localeControl.label,
@@ -463,22 +476,6 @@ function LandingHeader({
               />
             </Suspense>
           </div>
-
-          {access.headerSecondary ? (
-            <div className="hidden sm:block">
-              <LandingActionButton
-                action={access.headerSecondary}
-                className={`${styles.headerAction} ${styles.headerSecondaryAction}`}
-                size="lg"
-                variant="ghost"
-              />
-            </div>
-          ) : null}
-          <LandingActionButton
-            action={access.headerPrimary}
-            className={styles.headerAction}
-            size="lg"
-          />
 
           <LandingNavigationDisclosure
             className="relative xl:hidden"
@@ -491,7 +488,7 @@ function LandingHeader({
               <MenuIcon aria-hidden="true" className="size-5" />
             </summary>
             <div className="absolute top-[calc(100%+0.5rem)] right-0 z-20 flex max-h-[calc(100dvh-6rem)] w-[min(19rem,calc(100vw-2rem))] flex-col gap-3 overflow-y-auto border border-border bg-background p-3 shadow-lg">
-              <div className="border-b border-border pb-3 sm:hidden">
+              <div className="border-b border-border pb-3">
                 <Suspense
                   fallback={
                     <LandingLocaleLinksFallback
@@ -539,9 +536,9 @@ function LandingHeader({
               {access.headerSecondary ? (
                 <LandingActionButton
                   action={access.headerSecondary}
-                  className={`${styles.headerAction} ${styles.headerSecondaryAction} w-full`}
-                  size="lg"
-                  variant="outline"
+                  className={`${styles.headerAction} w-full`}
+                  variant="ghost"
+                  showArrow={false}
                 />
               ) : null}
             </div>
@@ -600,7 +597,7 @@ function HeroSection({
               action={access.heroSecondary}
               className={`${styles.sectionAction} w-full sm:w-auto`}
               size="lg"
-              variant="outline"
+              variant="ghost"
               showArrow={false}
             />
           </div>
@@ -914,9 +911,8 @@ function CapabilityCard({ capability }: { capability: ProductCapability }) {
         </p>
       </div>
 
-      <p className="mt-auto flex items-center gap-1.5 pt-6 text-xs font-semibold text-chart-1">
+      <p className="mt-auto pt-6 text-xs font-medium text-muted-foreground">
         {capability.linkLabel}
-        <ArrowRightIcon aria-hidden="true" className="size-3" />
       </p>
     </article>
   )
@@ -1028,8 +1024,8 @@ function FinalAccessCta({
       aria-labelledby="landing-access-heading"
       className={`${styles.darkSurface} border-b border-border/80 bg-background`}
     >
-      <div className="mx-auto flex w-full max-w-[100rem] px-4 py-20 sm:px-6 sm:py-28 lg:px-8">
-        <div className="flex max-w-3xl flex-col items-start gap-6">
+      <div className="mx-auto flex w-full max-w-[100rem] justify-center px-4 py-20 sm:px-6 sm:py-28 lg:px-8">
+        <div className="flex max-w-3xl flex-col items-center gap-6 text-center">
           <p className="text-xs font-semibold tracking-[0.18em] text-chart-1 uppercase">
             {t.accessLabel}
           </p>
@@ -1146,13 +1142,9 @@ function LandingFooter({
             action={access.footerAppEntry}
             className="text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           />
-          <a
-            href={access.footerRequestAccess.href}
-            aria-label={t.footer.requestAccessEmailLabel}
-            className="font-mono text-xs text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-          >
-            {access.footerRequestAccess.label}
-          </a>
+          <span className="font-mono text-xs text-muted-foreground">
+            {t.footer.requestAccessEmail}
+          </span>
           <a
             href="#how-it-works"
             className="text-muted-foreground hover:text-foreground"
@@ -1245,7 +1237,7 @@ function LandingLocaleLinksFallback({
   return (
     <nav
       aria-label={labels.label}
-      className="flex items-center gap-1 text-xs text-muted-foreground"
+      className="flex shrink-0 items-center gap-1 text-xs whitespace-nowrap text-muted-foreground"
     >
       <Link
         href={withLocalePath("/", "vi")}
@@ -1267,5 +1259,16 @@ function LandingLocaleLinksFallback({
         {labels.english}
       </Link>
     </nav>
+  )
+}
+
+function LandingLocaleMenuFallback({ label }: { label: string }) {
+  return (
+    <span
+      aria-label={label}
+      className={`${styles.localeMenuTrigger} pointer-events-none`}
+    >
+      <Globe2Icon data-icon="inline-start" aria-hidden="true" />
+    </span>
   )
 }

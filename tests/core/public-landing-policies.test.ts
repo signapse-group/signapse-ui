@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import {
+  ACCESS_SECTION_HREF,
   HERO_JOURNEY_HREF,
   REQUEST_ACCESS_HREF,
   createLandingAccessModel,
@@ -92,16 +93,15 @@ describe("landing showcase claim policy", () => {
 })
 
 describe("landing access model", () => {
-  it("uses the locked anonymous destinations", () => {
+  it("routes anonymous demo CTAs to the access section and keeps mail on the final CTA", () => {
     const model = createLandingAccessModel("vi", false, accessCopy)
 
-    expect(model.headerPrimary.href).toBe(REQUEST_ACCESS_HREF)
+    expect(model.headerPrimary.href).toBe(ACCESS_SECTION_HREF)
     expect(model.headerSecondary?.href).toBe("/vi/sign-in")
-    expect(model.heroPrimary.href).toBe(REQUEST_ACCESS_HREF)
+    expect(model.heroPrimary.href).toBe(ACCESS_SECTION_HREF)
     expect(model.heroSecondary.href).toBe(HERO_JOURNEY_HREF)
     expect(model.finalCta.href).toBe(REQUEST_ACCESS_HREF)
     expect(model.footerAppEntry.href).toBe("/vi/sign-in")
-    expect(model.footerRequestAccess.label).toBe("access@signapse.cloud")
   })
 
   it("uses localized dashboard destinations for authenticated visitors", () => {

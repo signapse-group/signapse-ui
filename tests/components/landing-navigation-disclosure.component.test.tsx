@@ -1,9 +1,11 @@
 // @vitest-environment jsdom
 
 import { fireEvent, render, screen } from "@testing-library/react"
-import { expect, it } from "vitest"
+import { afterEach, expect, it, vi } from "vitest"
 
 import { LandingNavigationDisclosure } from "@/app/[lang]/landing-navigation-disclosure"
+
+afterEach(() => vi.useRealTimers())
 
 it("dismisses navigation on Escape, outside interaction and link selection", () => {
   const { container } = render(
@@ -32,6 +34,7 @@ it("dismisses navigation on Escape, outside interaction and link selection", () 
 })
 
 it("opens and dismisses a hover-enabled disclosure", () => {
+  vi.useFakeTimers()
   const { container } = render(
     <LandingNavigationDisclosure openOnHover>
       <summary>Product</summary>
@@ -44,5 +47,7 @@ it("opens and dismisses a hover-enabled disclosure", () => {
   expect(details.open).toBe(true)
 
   fireEvent.pointerLeave(details)
+  expect(details.open).toBe(true)
+  vi.advanceTimersByTime(150)
   expect(details.open).toBe(false)
 })

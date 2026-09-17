@@ -103,10 +103,7 @@ test.describe("P0 public landing", () => {
           .locator('a[href="#product"]')
       ).toBeVisible()
       await expect(page.getByText("access@signapse.cloud")).toBeVisible()
-      await expect(page.locator('a[href^="mailto:"]').first()).toHaveAttribute(
-        "href",
-        "mailto:access@signapse.cloud?subject=Signapse%20access%20request"
-      )
+      await expect(page.locator('a[href^="mailto:"]')).toHaveCount(0)
 
       const figure = page.locator('[data-landing-visual="context-figure"]')
       await expect(figure.locator("figcaption")).toHaveClass(/sr-only/)
@@ -125,18 +122,14 @@ test.describe("P0 public landing", () => {
     page,
   }) => {
     await page.goto("/vi?source=hero#knowledge-graph")
-    await page
-      .getByRole("link", { name: "English", exact: true })
-      .first()
-      .click()
+    await page.locator("[data-locale-menu-trigger]").click()
+    await page.getByRole("link", { name: "English", exact: true }).click()
     await expect(page).toHaveURL(/\/en\?source=hero#knowledge-graph$/)
     await expect(page.locator("html")).toHaveAttribute("lang", "en")
 
     await page.goto("/en?source=footer#workspace-ai")
-    await page
-      .getByRole("link", { name: "Tiếng Việt", exact: true })
-      .first()
-      .click()
+    await page.locator("[data-locale-menu-trigger]").click()
+    await page.getByRole("link", { name: "Tiếng Việt", exact: true }).click()
     await expect(page).toHaveURL(/\/vi\?source=footer$/)
   })
 
@@ -581,7 +574,7 @@ test.describe("P0 public landing", () => {
       page.getByRole("link", { name: "Mở bảng điều khiển Signapse" }).first()
     ).toBeVisible()
 
-    const summary = page.locator("[data-mobile-menu] summary")
+    const summary = page.locator("[data-mobile-menu] > summary")
     await summary.focus()
     await expect(summary).toBeFocused()
     await summary.press("Enter")
@@ -595,6 +588,37 @@ test.describe("P0 public landing", () => {
     const box = await summary.boundingBox()
     expect(box?.width).toBeGreaterThanOrEqual(44)
     expect(box?.height).toBeGreaterThanOrEqual(44)
+  })
+
+  test("keeps desktop navigation open while moving into its panel", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await page.goto("/en")
+
+    const disclosure = page
+      .locator('details[name="landing-desktop-menu"]')
+      .first()
+    const trigger = disclosure.locator("summary")
+    const panelLink = disclosure.getByRole("link").first()
+
+    await trigger.hover()
+    await expect(disclosure).toHaveAttribute("open", "")
+
+    const triggerBox = await trigger.boundingBox()
+    const panelBox = await disclosure.locator("div").first().boundingBox()
+    expect(triggerBox).not.toBeNull()
+    expect(panelBox).not.toBeNull()
+
+    await page.mouse.move(
+      triggerBox!.x + triggerBox!.width / 2,
+      (triggerBox!.y + triggerBox!.height + panelBox!.y) / 2
+    )
+    await expect(disclosure).toHaveAttribute("open", "")
+
+    await panelLink.hover()
+    await expect(panelLink).toBeVisible()
+    await expect(disclosure).toHaveAttribute("open", "")
   })
 
   test("has no serious landing axe violations or page overflow at target widths", async ({

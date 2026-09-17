@@ -1,10 +1,13 @@
 "use client"
 
+import { Globe2Icon } from "lucide-react"
 import { type MouseEvent, useEffect, useState } from "react"
 import { usePathname, useSearchParams } from "next/navigation"
 
 import type { AppLocale } from "@/app/lib/i18n/config"
 import { replacePathLocale } from "@/app/lib/i18n/routing"
+import styles from "./landing-page.module.css"
+import { LandingNavigationDisclosure } from "./landing-navigation-disclosure"
 
 const SUPPORTED_LANDING_HASHES = new Set([
   "top",
@@ -26,6 +29,8 @@ type LandingLocaleLinksProps = {
     en: string
   }
 }
+
+type LandingLocaleMenuProps = LandingLocaleLinksProps
 
 function getSupportedHash(): string {
   if (typeof window === "undefined") return ""
@@ -52,39 +57,23 @@ export function LandingLocaleLinks({
   currentLocale,
   labels,
 }: LandingLocaleLinksProps) {
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
-  const [hash, setHash] = useState("")
+  const { buildHref, hash, navigateToLocale } = useLandingLocaleNavigation()
 
-  useEffect(() => {
-    const updateHash = () => setHash(getSupportedHash())
-    updateHash()
-    window.addEventListener("hashchange", updateHash)
-
-    return () => window.removeEventListener("hashchange", updateHash)
-  }, [])
-
-  const query = searchParams.toString()
-  const buildHref = (locale: AppLocale) =>
-    buildLandingLocaleHref(pathname ?? "/", query, hash, locale)
   const handleLocaleClick = (
     locale: AppLocale,
     event: MouseEvent<HTMLAnchorElement>
   ) => {
-    if (hash) return
     const currentHash = getSupportedHash()
-    if (!currentHash) return
+    if (hash || !currentHash) return
 
     event.preventDefault()
-    window.location.assign(
-      buildLandingLocaleHref(pathname ?? "/", query, currentHash, locale)
-    )
+    navigateToLocale(locale)
   }
 
   return (
     <nav
       aria-label={labels.group}
-      className="flex items-center gap-1 text-xs text-muted-foreground"
+      className="flex shrink-0 items-center gap-1 text-xs whitespace-nowrap text-muted-foreground"
       data-locale-links
     >
       <a
@@ -114,4 +103,68 @@ export function LandingLocaleLinks({
       </a>
     </nav>
   )
+}
+
+export function LandingLocaleMenu({
+  currentLocale,
+  labels,
+}: LandingLocaleMenuProps) {
+  const { buildHref } = useLandingLocaleNavigation()
+
+  return (
+    <LandingNavigationDisclosure className={styles.localeMenu}>
+      <summary
+        data-locale-menu-trigger
+        aria-label={labels.group}
+        className={`${styles.localeMenuTrigger} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}
+      >
+        <Globe2Icon data-icon="inline-start" aria-hidden="true" />
+      </summary>
+      <nav aria-label={labels.group} className={styles.localeMenuPanel}>
+        <a
+          href={buildHref("vi")}
+          lang="vi"
+          hrefLang="vi"
+          aria-current={currentLocale === "vi" ? "page" : undefined}
+          className={styles.localeMenuItem}
+        >
+          {labels.vi}
+        </a>
+        <a
+          href={buildHref("en")}
+          lang="en"
+          hrefLang="en"
+          aria-current={currentLocale === "en" ? "page" : undefined}
+          className={styles.localeMenuItem}
+        >
+          {labels.en}
+        </a>
+      </nav>
+    </LandingNavigationDisclosure>
+  )
+}
+
+function useLandingLocaleNavigation() {
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const [hash, setHash] = useState("")
+
+  useEffect(() => {
+    const updateHash = () => setHash(getSupportedHash())
+    updateHash()
+    window.addEventListener("hashchange", updateHash)
+
+    return () => window.removeEventListener("hashchange", updateHash)
+  }, [])
+
+  const query = searchParams.toString()
+  const buildHref = (locale: AppLocale) =>
+    buildLandingLocaleHref(pathname ?? "/", query, hash, locale)
+  const navigateToLocale = (locale: AppLocale) => {
+    window.location.assign(
+      buildLandingLocaleHref(pathname ?? "/", query, getSupportedHash(), locale)
+    )
+  }
+
+  return { buildHref, hash, navigateToLocale }
 }

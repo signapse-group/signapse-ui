@@ -8,7 +8,7 @@
   --landing-navy-surface: #08232e;
   --landing-mint: #12d6b1;
   --landing-mint-strong: #006f66;
-  --landing-off-white: #f2f1ed;
+  --landing-off-white: #ffffff;
   --landing-muted: #a6c4bf;
   --landing-boundary: #3c6a70;
   --landing-light-muted-surface: #e7e6e0;
@@ -147,16 +147,6 @@
   border-radius: var(--landing-control-radius);
 }
 
-.headerSecondaryAction {
-  background: var(--muted);
-  color: var(--foreground);
-}
-
-.headerSecondaryAction:hover {
-  background: color-mix(in oklab, var(--muted), var(--foreground) 6%);
-  color: var(--foreground);
-}
-
 .headerMenuTrigger {
   display: flex;
   min-height: var(--landing-control-height);
@@ -182,6 +172,71 @@
 .headerMenuItem:focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 3px;
+}
+
+.localeMenu {
+  position: relative;
+}
+
+.localeMenuTrigger {
+  display: flex;
+  min-height: var(--landing-control-height);
+  min-width: var(--landing-control-height);
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: var(--landing-control-radius);
+  color: var(--foreground);
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease;
+}
+
+.localeMenuTrigger:hover,
+.localeMenu[open] > .localeMenuTrigger {
+  background: var(--muted);
+}
+
+.localeMenuTrigger:focus-visible,
+.localeMenuItem:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 3px;
+}
+
+.localeMenuPanel {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  display: grid;
+  min-width: 10rem;
+  overflow: hidden;
+  border-radius: var(--landing-card-radius);
+  background: color-mix(in oklab, var(--background) 97%, transparent);
+  padding: 0.375rem;
+  box-shadow: 0 1.25rem 3rem
+    color-mix(in oklab, var(--foreground) 14%, transparent);
+  -webkit-backdrop-filter: blur(18px) saturate(130%);
+  backdrop-filter: blur(18px) saturate(130%);
+}
+
+.localeMenuItem {
+  display: flex;
+  min-height: var(--landing-control-height);
+  align-items: center;
+  border-radius: var(--landing-control-radius);
+  padding: 0.5rem 0.75rem;
+  color: var(--foreground);
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.localeMenuItem:hover,
+.localeMenuItem[aria-current="page"] {
+  background: var(--muted);
 }
 
 .headerMenuItem {
