@@ -93,16 +93,21 @@ app/[lang]/(main)/[feature]/
 - For each finding, identify file/line, behavioral or UX risk, and the minimal recommended fix.
 - If there are no findings, say that clearly and mention residual risk or checks not run.
 
-## Agent skills
+## Agent Workflow adoption
 
-### Issue tracker
+This repository adopts `agent-workflow` version `0.1.0` from marketplace `signapse-workflow` as its default workflow. At the start of every new session and before workflow-dependent action, load the installed `agent-workflow:workflow` skill (`$workflow` in the skill picker), read its shared policy, and compare the installed manifest version with this declaration. Resolve resources from the installed skill location, never a hardcoded cache path. Report missing or mismatched versions and continue only independent valid work.
 
-Issues are tracked as local Markdown files under `.scratch/<feature>/`. See `docs/agents/issue-tracker.md`.
+- Planning repository for Epic/Story and backend execution: `https://github.com/signapse-group/signapse`.
+- Frontend Task/Bug execution repository: `https://github.com/signapse-group/signapse-ui` (the old `dgminhtam/signapse-ui` remote redirects here).
+- GitHub Project: `https://github.com/orgs/signapse-group/projects/1`, owner `signapse-group`, number `1`. Resolve IDs and verify access, native issue types, relationships, and status fields before mutation.
+- Use the plugin's native GitHub issue workflow and `to-ticket` entrypoint. Do not create new local `.scratch` tickets, apply legacy triage labels, or require OpenSpec phases. Existing local documents remain historical/reference material, not a parallel lifecycle store.
+- The remaining legacy recipes `ask-matt`, `to-tickets`, `triage`, `handoff`, `wayfinder`, and `setup-matt-pocock-skills` are not workflow entrypoints. Their routing, labels, automatic work selection, local tracker, and completion conventions must not override this adoption or the plugin. Use the plugin's planning/execution/review skills instead.
+- Focused checks: `pnpm exec vitest run <test-file>` for behavior under test; use targeted lint/typecheck or contract checks as appropriate to the change.
+- Completion checks for application changes: `pnpm test:quality`, the existing aggregate of lint, typecheck, Vitest, API contract checks, build, and Chromium browser tests. Documentation-only changes require relevant content/link/format checks and review, not the application suite.
+- PR CI: workflow `P0 quality`, job `p0`, in `.github/workflows/p0-quality.yml` runs `pnpm test:quality`. Verify current required checks/rules at handoff; an existing workflow is not proof that branch protection enforces it.
+- Test seams keep participating FE components, state, routing, and API mapping real. Mock external HTTP/backend boundaries as appropriate; fixture-mode tests do not establish live backend delivery or real authorization.
+- FE delivery defaults to human-reviewed merge when the assigned contract has no additional delivery condition; use `Closes` in that case. Use `Refs` when the contract requires post-merge acceptance. Human owns merge and acceptance; do not inherit the BE deployment requirement. Epic/Story completion remains human-owned.
+- For API integration, link the producer's exact API contract and require its delivery evidence. `docs/APIMAPPING.md` is the local mapping reference; mocked API responses do not prove BE handoff.
+- Domain documentation uses `CONTEXT.md` and `docs/adr/` in this repository. Read relevant existing content and create documents lazily for accepted terms/decisions using the plugin's domain guidance.
 
-### Triage labels
-
-This repo uses the default canonical triage label vocabulary. See `docs/agents/triage-labels.md`.
-
-### Domain docs
-
-This repo uses a single-context domain documentation layout. See `docs/agents/domain.md`.
+Shared policy and issue templates live only in the plugin. Keep FE architecture, UI/i18n rules, scoped instructions, and application verification standards in this repository. Do not copy plugin skills back into `.agents/skills`.
