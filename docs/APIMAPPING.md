@@ -2,7 +2,7 @@
 
 Tài liệu này ánh xạ OpenAPI backend dev tại `https://dev-api.signapse.cloud/v3/api-docs` tới các điểm tích hợp frontend hiện tại của repo.
 
-Xác minh lần cuối: ngày 26 tháng 8 năm 2026
+Xác minh lần cuối: ngày 18 tháng 9 năm 2026
 
 ## Cấu hình cơ sở
 
@@ -549,13 +549,12 @@ Ghi chu:
 
 Ghi chu:
 
-- Probe authoritative dev OpenAPI ngày 26/08/2026 (`https://dev-api.signapse.cloud/v3/api-docs`, OpenAPI `3.1.0`, 97 paths, 179 schemas) xác nhận đủ 11 feedback operations và không có hard path/method/auth/transport/response-family contradiction. OpenAPI vẫn thiếu hoặc biểu diễn khái quát filter grammar, request conditionality, success status detail, requiredness/nullability, lifecycle, screenshot constraints và error examples; effective runtime semantics được ghi trong ledger này và các gap không chặn activation theo gate đã thống nhất.
-- `FeedbackSubmissionRequest` bat buoc `type`, `title`, `description`, `expectedOutcome`; `type` gom `BUG` / `IDEA`. Do dai: title `5..150`, description `20..5000`, expected outcome `10..3000`, reproduction steps tuy chon `0..5000`.
-- `clientContext` tuy chon va co cac field `pagePath`, `appVersion`, `browserName`, `browserVersion`, `osName`, `osVersion`, `locale`, `observedTime`; effective runtime contract coi cac field la optional va ap dung privacy/format boundary.
+- Probe authoritative dev OpenAPI ngày 18/09/2026 (`https://dev-api.signapse.cloud/v3/api-docs`, OpenAPI `3.1.0`, 101 paths, 182 schemas) xác nhận đủ 11 feedback operations và không có hard path/method/auth/transport/response-family contradiction. OpenAPI vẫn thiếu hoặc biểu diễn khái quát filter grammar, request conditionality, success status detail, requiredness/nullability, lifecycle, screenshot constraints và error examples; effective runtime semantics được ghi trong ledger này và các gap không chặn activation theo gate đã thống nhất.
+- `FeedbackSubmissionRequest` chỉ yêu cầu `content`, tối đa `5000` ký tự; effective runtime contract trim và từ chối nội dung trống. `clientContext` tùy chọn, strict, gồm `pagePath`, `appVersion`, `browserName`, `browserVersion`, `osName`, `osVersion`, `locale`. Contract không còn nhận `type`, `title`, `description`, `expectedOutcome`, `reproductionSteps` hoặc `observedTime`.
 - `FeedbackReviewRequest` bat buoc `reviewMessage` dai `10..1000`; runtime Promote yeu cau them `githubIssueUrl`, runtime Dismiss omit field nay, du OpenAPI van publish schema dung chung.
-- Status response gom `PENDING_REVIEW`, `PROMOTED`, `DISMISSED`. Detail co them `description`, `expectedOutcome`, `reproductionSteps`, `clientContext`, `screenshot`, `reviewMessage`, `githubIssueNumber`, va `reporter`; list item chi gom metadata co ban va screenshot metadata.
+- Status response gom `PENDING_REVIEW`, `PROMOTED`, `DISMISSED`. List/detail dùng `content`; detail có thêm `clientContext`, `screenshot`, `reviewMessage`, `githubIssueNumber`, và `reporter`; không còn các field nội dung chuyên biệt của contract cũ.
 - Cac response schema feedback khong co mang `required` va cung khong publish nullable ro rang. Frontend khong nen suy dien field bat buoc hoac nullable ngoai nhung gi live contract xac nhan.
-- `SpecificationFeedbackSubmission` hien la schema rong, nen filter field/operator chua duoc mo ta trong OpenAPI. Effective runtime query dùng `$filter`, `page`, `size`, `sort` thay cho object `specification` / `pageable`.
+- `SpecificationFeedbackSubmission` hiện là schema rỗng, nên filter field/operator chưa được mô tả trong OpenAPI. Effective runtime query dùng `$filter`, `page`, `size`, `sort` thay cho object `specification` / `pageable`; filter text feedback dùng field `content`.
 - OpenAPI chi publish response `200` cho cac operation nay, khong mo ta error response, state transition guard, ownership failure, gioi han/kieu MIME screenshot, hoac lifecycle cho withdraw/promote/dismiss/erase. Effective runtime semantics được ghi trong ledger này; day la documentation gaps, khong phai hard contract blockers.
 
 ### 25. Webhook

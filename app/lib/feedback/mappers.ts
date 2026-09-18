@@ -19,7 +19,6 @@ export interface FeedbackTechnicalContextViewModel {
   osName?: string
   osVersion?: string
   locale?: string
-  observedAt?: string
 }
 
 export interface FeedbackSenderViewModel {
@@ -31,8 +30,7 @@ export interface FeedbackSenderViewModel {
 
 export interface FeedbackListItemViewModel {
   id: string
-  type: FeedbackListResponse["type"]
-  title: string
+  content: string
   status: FeedbackListResponse["status"]
   createdAt: string
   updatedAt: string
@@ -40,9 +38,6 @@ export interface FeedbackListItemViewModel {
 }
 
 export interface FeedbackDetailViewModel extends FeedbackListItemViewModel {
-  description: string
-  expectedOutcome: string
-  reproductionSteps?: string
   clientContext: FeedbackTechnicalContextViewModel | null
   reviewMessage: string | null
   githubIssueNumber?: number
@@ -62,7 +57,7 @@ function mapScreenshot(
 }
 
 function mapContext(
-  context: FeedbackClientContextResponse | null
+  context: FeedbackClientContextResponse | null | undefined
 ): FeedbackTechnicalContextViewModel | null {
   if (!context) return null
 
@@ -74,7 +69,6 @@ function mapContext(
     osName: context.osName ?? undefined,
     osVersion: context.osVersion ?? undefined,
     locale: context.locale ?? undefined,
-    observedAt: context.observedTime ?? undefined,
   }
 }
 
@@ -100,8 +94,7 @@ export function mapFeedbackListItem(
 ): FeedbackListItemViewModel {
   return {
     id: String(response.id),
-    type: response.type,
-    title: response.title,
+    content: response.content,
     status: response.status,
     createdAt: response.createdDate,
     updatedAt: response.lastModifiedDate,
@@ -114,11 +107,8 @@ export function mapFeedbackDetail(
 ): FeedbackDetailViewModel {
   return {
     ...mapFeedbackListItem(response),
-    description: response.description,
-    expectedOutcome: response.expectedOutcome,
-    reproductionSteps: response.reproductionSteps ?? undefined,
     clientContext: mapContext(response.clientContext),
-    reviewMessage: response.reviewMessage,
+    reviewMessage: response.reviewMessage ?? null,
     githubIssueNumber: response.githubIssueNumber ?? undefined,
     sender: mapReporter(response.reporter),
   }

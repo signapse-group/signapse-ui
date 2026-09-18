@@ -7,7 +7,6 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import {
   FEEDBACK_MODERATION_PAGE_SIZE_OPTIONS,
   FEEDBACK_STATUSES,
-  FEEDBACK_TYPES,
 } from "@/app/lib/feedback/definitions"
 import type { FeedbackListItemViewModel } from "@/app/lib/feedback/mappers"
 import {
@@ -58,7 +57,6 @@ import {
 import {
   FeedbackScreenshotView,
   FeedbackStatusBadge,
-  FeedbackTypeBadge,
 } from "../feedback/feedback-presentation"
 
 interface FeedbackQueuePageProps {
@@ -116,9 +114,7 @@ export function FeedbackQueuePage({
     updateQuery({ search: searchValue.trim() || null, page: "1" })
   }
 
-  const hasFilters = Boolean(
-    query.search || query.type || query.status !== "PENDING_REVIEW"
-  )
+  const hasFilters = Boolean(query.search || query.status !== "PENDING_REVIEW")
 
   return (
     <div className="flex min-w-0 flex-col gap-6">
@@ -160,36 +156,6 @@ export function FeedbackQueuePage({
           </form>
         </AppListToolbarLeading>
         <AppListToolbarTrailing>
-          <Select
-            value={query.type ?? "ALL"}
-            onValueChange={(value) =>
-              updateQuery({ type: value === "ALL" ? null : value, page: "1" })
-            }
-            items={[
-              { value: "ALL", label: t.queueAllTypes },
-              ...FEEDBACK_TYPES.map((type) => ({
-                value: type,
-                label: t.types[type],
-              })),
-            ]}
-          >
-            <SelectTrigger
-              aria-label={t.queueTypeLabel}
-              className="w-full sm:w-[150px]"
-            >
-              <SelectValue placeholder={t.queueAllTypes} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectItem value="ALL">{t.queueAllTypes}</SelectItem>
-                {FEEDBACK_TYPES.map((type) => (
-                  <SelectItem key={type} value={type}>
-                    {t.types[type]}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
           <Select
             value={query.status}
             onValueChange={(value) =>
@@ -267,7 +233,6 @@ export function FeedbackQueuePage({
             hasFilters
               ? updateQuery({
                   search: null,
-                  type: null,
                   status: null,
                   sort: null,
                   page: "1",
@@ -288,9 +253,6 @@ export function FeedbackQueuePage({
             <Table>
               <TableHeader>
                 <AppListTableHeaderRow>
-                  <AppListTableHead className="w-24">
-                    {t.queueType}
-                  </AppListTableHead>
                   <AppListTableHead>{t.queueTitle}</AppListTableHead>
                   <AppListTableHead className="w-48">
                     {t.queueStatus}
@@ -306,9 +268,6 @@ export function FeedbackQueuePage({
               <TableBody>
                 {records.map((record) => (
                   <TableRow key={record.id}>
-                    <TableCell className="align-top">
-                      <FeedbackTypeBadge type={record.type} />
-                    </TableCell>
                     <TableCell className="max-w-0 align-top whitespace-normal">
                       <Link
                         href={{
@@ -317,7 +276,7 @@ export function FeedbackQueuePage({
                         }}
                         className="line-clamp-2 font-medium break-words text-foreground hover:underline"
                       >
-                        {record.title}
+                        {record.content}
                       </Link>
                     </TableCell>
                     <TableCell className="align-top">

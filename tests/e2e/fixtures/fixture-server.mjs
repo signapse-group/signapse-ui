@@ -73,8 +73,7 @@ const FEEDBACK_SCREENSHOT_BYTES = Buffer.from(
 
 function feedbackRecord(
   id,
-  type,
-  title,
+  content,
   status = "PENDING_REVIEW",
   options = {}
 ) {
@@ -88,22 +87,11 @@ function feedbackRecord(
   return {
     id,
     ownerId: options.ownerId ?? FEEDBACK_OWNER_ID,
-    type,
-    title,
-    description:
-      options.description ??
-      "The feedback description is long enough for the API contract.",
-    expectedOutcome:
-      options.expectedOutcome ??
-      "The expected outcome is explicit and actionable.",
-    reproductionSteps:
-      type === "BUG"
-        ? options.reproductionSteps ?? "1. Open the affected screen."
-        : undefined,
+    content,
     clientContext:
       options.clientContext === false
         ? null
-        : {
+        : options.clientContext ?? {
             pagePath: "/vi/dashboard",
             appVersion: "web",
             browserName: "Chrome",
@@ -111,9 +99,6 @@ function feedbackRecord(
             osName: "Windows",
             osVersion: "11",
             locale: "vi",
-            ...(type === "BUG"
-              ? { observedTime: "2026-01-15T08:00:00.000Z" }
-              : {}),
           },
     screenshot,
     status,
@@ -130,8 +115,7 @@ function feedbackRecord(
 function feedbackListItem(record) {
   return {
     id: record.id,
-    type: record.type,
-    title: record.title,
+    content: record.content,
     status: record.status,
     createdDate: record.createdDate,
     lastModifiedDate: record.lastModifiedDate,
@@ -151,12 +135,12 @@ function feedbackDetail(record, moderation = false) {
 
 function feedbackRecords() {
   return [
-    feedbackRecord(1, "BUG", "Biểu đồ không giữ bộ lọc sau khi đổi ngôn ngữ", "PENDING_REVIEW", { screenshot: true, createdDate: "2026-01-15T08:00:00.000Z" }),
-    feedbackRecord(2, "IDEA", "Thêm bộ lọc tài sản yêu thích", "PROMOTED", { githubIssueNumber: 123, clientContext: false, createdDate: "2026-01-14T08:00:00.000Z", reviewMessage: "Đã chuyển xử lý để nhóm sản phẩm xem xét." }),
-    feedbackRecord(3, "BUG", "Thông báo lỗi thiếu hướng dẫn", "DISMISSED", { clientContext: false, createdDate: "2026-01-13T08:00:00.000Z", reviewMessage: "Không phù hợp với phạm vi hiện tại." }),
-    feedbackRecord(4, "IDEA", "Cải thiện trang tổng quan", "PENDING_REVIEW", { ownerId: 9010, createdDate: "2026-01-12T08:00:00.000Z" }),
-    feedbackRecord(5, "BUG", "Ảnh chụp màn hình không hiển thị", "PENDING_REVIEW", { screenshot: true, createdDate: "2026-01-11T08:00:00.000Z" }),
-    feedbackRecord(6, "BUG", "Tín hiệu thị trường cần thêm ngữ cảnh", "PENDING_REVIEW", { screenshot: true, createdDate: "2026-01-10T08:00:00.000Z" }),
+    feedbackRecord(1, "Biểu đồ không giữ bộ lọc sau khi đổi ngôn ngữ", "PENDING_REVIEW", { screenshot: true, createdDate: "2026-01-15T08:00:00.000Z" }),
+    feedbackRecord(2, "Thêm bộ lọc tài sản yêu thích", "PROMOTED", { githubIssueNumber: 123, clientContext: false, createdDate: "2026-01-14T08:00:00.000Z", reviewMessage: "Đã chuyển xử lý để nhóm sản phẩm xem xét." }),
+    feedbackRecord(3, "Thông báo lỗi thiếu hướng dẫn", "DISMISSED", { clientContext: false, createdDate: "2026-01-13T08:00:00.000Z", reviewMessage: "Không phù hợp với phạm vi hiện tại." }),
+    feedbackRecord(4, "Cải thiện trang tổng quan", "PENDING_REVIEW", { ownerId: 9010, createdDate: "2026-01-12T08:00:00.000Z" }),
+    feedbackRecord(5, "Ảnh chụp màn hình không hiển thị", "PENDING_REVIEW", { screenshot: true, createdDate: "2026-01-11T08:00:00.000Z" }),
+    feedbackRecord(6, "Tín hiệu thị trường cần thêm ngữ cảnh", "PENDING_REVIEW", { screenshot: true, createdDate: "2026-01-10T08:00:00.000Z" }),
   ]
 }
 
@@ -898,24 +882,37 @@ function feedbackRouteResult(state, method, pathname, url, body) {
   if (method === "POST" && pathname === "/me/feedback-submissions") {
     const parsed = multipartSubmission(body)
     const submission = parsed?.submission
-    if (!submission || !["BUG", "IDEA"].includes(submission.type)) {
+    const submissionKeys = submission && typeof submission === "object"
+      ? Object.keys(submission)
+      : []
+    if (
+      !submission ||
+      typeof submission.content !== "string" ||
+      submission.content.trim().length === 0 ||
+      submission.content.trim().length > 5000 ||
+      submissionKeys.some((key) => !["content", "clientContext"].includes(key))
+    ) {
       return { __status: 400, payload: errorPayload("Invalid feedback submission", "FIXTURE_VALIDATION") }
     }
-    if (
-      submission.type === "IDEA" &&
-      (submission.reproductionSteps || submission.clientContext?.observedTime)
-    ) {
-      return { __status: 400, payload: errorPayload("Invalid conditional feedback fields", "FIXTURE_VALIDATION") }
+    if (submission.clientContext && typeof submission.clientContext === "object") {
+      const contextKeys = Object.keys(submission.clientContext)
+      if (contextKeys.some((key) => ![
+        "pagePath",
+        "appVersion",
+        "browserName",
+        "browserVersion",
+        "osName",
+        "osVersion",
+        "locale",
+      ].includes(key))) {
+        return { __status: 400, payload: errorPayload("Invalid feedback context", "FIXTURE_VALIDATION") }
+      }
     }
     const created = feedbackRecord(
       state.nextIds.feedback++,
-      submission.type,
-      submission.title,
+      submission.content.trim(),
       "PENDING_REVIEW",
       {
-        description: submission.description,
-        expectedOutcome: submission.expectedOutcome,
-        reproductionSteps: submission.reproductionSteps,
         clientContext: submission.clientContext ?? false,
         screenshot: Boolean(parsed?.hasScreenshot),
       }

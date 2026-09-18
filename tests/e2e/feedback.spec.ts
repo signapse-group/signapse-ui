@@ -5,7 +5,7 @@ import { expect, test } from "./fixtures"
 test.describe("P0 feedback HTTP integration", () => {
   test.setTimeout(90_000)
 
-  test("opens compose, validates conditional fields, and keeps a dirty draft", async ({
+  test("opens compose, validates content, and keeps a dirty draft", async ({
     page,
   }) => {
     await page.goto("/vi/feedback")
@@ -20,15 +20,15 @@ test.describe("P0 feedback HTTP integration", () => {
     expect(axe.violations.filter((item) => item.impact === "serious" || item.impact === "critical")).toEqual([])
 
     await dialog.getByRole("button", { name: "Gửi phản hồi", exact: true }).click()
-    await expect(dialog.getByText("Vui lòng nhập tiêu đề.")).toBeVisible()
-    await expect(dialog.locator("#feedback-title")).toBeFocused()
+    await expect(dialog.getByText("Vui lòng nhập nội dung phản hồi.")).toBeVisible()
+    await expect(dialog.locator("#feedback-content")).toBeFocused()
 
-    await dialog.locator("#feedback-title").fill("Ý tưởng đủ dài")
-    await dialog.locator("#feedback-description").fill("Mô tả đủ dài để kiểm tra biểu mẫu API.")
-    await dialog.locator("#feedback-expected-outcome").fill("Kết quả rõ ràng hơn.")
-    await dialog.getByRole("combobox", { name: "Loại phản hồi" }).click()
-    await page.getByRole("option", { name: "Ý tưởng", exact: true }).click()
+    await expect(dialog.locator("#feedback-type")).toHaveCount(0)
+    await expect(dialog.locator("#feedback-title")).toHaveCount(0)
+    await expect(dialog.locator("#feedback-description")).toHaveCount(0)
+    await expect(dialog.locator("#feedback-expected-outcome")).toHaveCount(0)
     await expect(dialog.locator("#feedback-reproduction-steps")).toHaveCount(0)
+    await dialog.locator("#feedback-content").fill("Ý tưởng đủ dài để kiểm tra biểu mẫu.")
 
     await dialog.locator("#feedback-screenshot").setInputFiles({
       name: "invalid.webp",
@@ -53,22 +53,20 @@ test.describe("P0 feedback HTTP integration", () => {
     await page.goto("/vi/feedback")
     await page.getByRole("button", { name: "Gửi phản hồi", exact: true }).last().click()
     const dialog = page.getByRole("dialog").first()
-    await dialog.locator("#feedback-title").fill("Phản hồi HTTP mới đủ dài")
-    await dialog.locator("#feedback-description").fill("Nội dung phản hồi mới đủ dài để kiểm tra multipart.")
-    await dialog.locator("#feedback-expected-outcome").fill("Kết quả mới xuất hiện trong danh sách.")
+    await dialog.locator("#feedback-content").fill("Nội dung phản hồi mới đủ dài để kiểm tra multipart.")
     await fixture.setFeedbackScenario("mutation-failure", "compose")
     await dialog.getByRole("button", { name: "Gửi phản hồi", exact: true }).click()
     await expect(page.getByText("Không thể gửi phản hồi. Bản nháp vẫn được giữ lại.")).toBeVisible()
-    await expect(dialog.locator("#feedback-title")).toHaveValue("Phản hồi HTTP mới đủ dài")
+    await expect(dialog.locator("#feedback-content")).toHaveValue("Nội dung phản hồi mới đủ dài để kiểm tra multipart.")
     await fixture.setFeedbackScenario("success", "compose")
     await dialog.getByRole("button", { name: "Gửi phản hồi", exact: true }).click()
     await expect(page.getByText("Đã gửi phản hồi.")).toBeVisible()
-    await expect(page.getByRole("link", { name: "Phản hồi HTTP mới đủ dài", exact: true }).first()).toBeVisible()
+    await expect(page.getByRole("link", { name: "Nội dung phản hồi mới đủ dài để kiểm tra multipart.", exact: true }).first()).toBeVisible()
   })
 
   test("loads personal detail and withdraws a pending submission", async ({ page }) => {
     await page.goto("/vi/feedback/1")
-    await expect(page.locator("h1")).toContainText("Biểu đồ")
+    await expect(page.locator("h1")).toHaveText("Chi tiết phản hồi")
     await expect(page.getByRole("complementary").getByText("Chờ xem xét", { exact: true })).toBeVisible()
     await page.getByRole("button", { name: "Rút phản hồi", exact: true }).click()
     await page.getByRole("alertdialog").getByRole("button", { name: "Rút phản hồi", exact: true }).click()
@@ -87,8 +85,8 @@ test.describe("P0 feedback HTTP integration", () => {
     await fixture.setPermissions(["feedback:read", "feedback:review", "feedback:delete"])
     await page.goto("/vi/feedback-submissions?status=PENDING_REVIEW&sort=createdDate_desc&page=1&size=10")
     await expect(page.locator("h1")).toHaveText("Phản hồi người dùng")
-    await page.getByRole("textbox", { name: "Tìm trong tiêu đề phản hồi" }).fill("Biểu đồ")
-    await page.getByRole("button", { name: "Tìm trong tiêu đề phản hồi", exact: true }).click()
+    await page.getByRole("textbox", { name: "Tìm trong nội dung phản hồi" }).fill("Biểu đồ")
+    await page.getByRole("button", { name: "Tìm trong nội dung phản hồi", exact: true }).click()
     await expect(page).toHaveURL(/search=Bi%E1%BB%83u(?:%20|\+)%C4%91%E1%BB%93/)
     await expect(page.getByRole("link", { name: /Biểu đồ không giữ bộ lọc/ })).toHaveAttribute(
       "href",
