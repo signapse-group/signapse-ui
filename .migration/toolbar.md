@@ -11,10 +11,9 @@
 - `components/ui/list-toolbar-button.tsx` uses Base pressed state for the primary action and composes the secondary menu trigger as a sibling Toolbar button.
 - `components/ui/emoji-toolbar-button.tsx` and `components/ui/callout-node.tsx` use a trigger-render adapter so Toolbar and non-Toolbar emoji controls both keep the supported Popover composition.
 - `package.json` and `pnpm-lock.yaml` no longer declare `@radix-ui/react-toolbar`; `pnpm.cmd install --lockfile-only --offline` completed successfully.
-- `openspec/specs/base-ui-plate-toolbar-migration/spec.md` now records the accepted Base UI Toolbar capability, and `openspec/specs/plate-editor-overlay-composition/spec.md` no longer records the Toolbar as an excluded Radix dependency.
 - Confirmed the leftover scan is clean for the migrated source and dependency files: `rg -n "@radix-ui/react-toolbar|ToolbarToggleGroup|ToolbarToggleItem" components package.json pnpm-lock.yaml` returns no matches.
 - Targeted ESLint passed for all changed Toolbar and emoji/callout files. The full `pnpm.cmd lint` run remains blocked only by seven pre-existing errors and unrelated warnings outside this migration.
-- Final deterministic checks passed: `pnpm.cmd typecheck` and `openspec.cmd validate migrate-toolbar-to-base-ui --strict --no-interactive`.
+- Final deterministic check passed: `pnpm.cmd typecheck`.
 
 ## Left alone
 

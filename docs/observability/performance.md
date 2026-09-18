@@ -63,7 +63,7 @@ After the Preview privacy gate, enable Production tracing at a cost-appropriate 
 - record whether backend spans continued the propagated trace context;
 - rank optimization candidates by request volume, tail latency, and journey importance.
 
-The baseline is an operational follow-up, not an implementation/archive gate. Create separate optimization proposals after evidence identifies the bottleneck; this change does not alter caching, fetching, rendering, or backend behavior.
+The baseline is an operational follow-up, not an implementation completion gate. Create separate optimization tasks after evidence identifies the bottleneck; this work does not alter caching, fetching, rendering, or backend behavior.
 
 ## Rollback
 
@@ -89,5 +89,4 @@ Deterministic verification results:
 - `pnpm lint`: passed with zero errors; existing non-blocking warnings remain.
 - `pnpm typecheck`: passed.
 - `pnpm build`: passed, including production compilation, TypeScript, page generation, and the client-bundle server-SDK search above.
-- `openspec validate add-performance-observability --strict`: passed.
 - Repo-wide `pnpm test`: all 25 files and 119 tests passed. Existing async UI tests now wait for portal data and transition-controlled actions to become ready, and Vitest uses at most four workers to keep the jsdom interaction suites stable under load.

@@ -6,14 +6,14 @@ Ngày: 2026-09-16. Trạng thái: nội dung đã được triển khai vào sta
 
 Mục tiêu: thay phần giới thiệu AI chung chung bằng một hội thoại phân tích có yêu cầu rõ ràng, tổng hợp nhiều lớp thông tin, đối chiếu tín hiệu trái chiều và kết luận có điều kiện. Hoàn thành khi có transcript đầy đủ, bộ dữ liệu demo nhất quán, nguồn nghiên cứu và cách đưa nội dung vào stage.
 
-Giả định: dùng BTC làm tài sản dễ nhận diện; nội dung tiếng Việt là bản gốc để duyệt. Không thay đổi backend, không xác nhận tích hợp nguồn dữ liệu mới và không thay đổi OpenSpec.
+Giả định: dùng BTC làm tài sản dễ nhận diện; nội dung tiếng Việt là bản gốc để duyệt. Không thay đổi backend hoặc xác nhận tích hợp nguồn dữ liệu mới.
 
 Kịch bản khuyến nghị: **“BTC đang tăng: lực mua thực hay đòn bẩy?”** Câu hỏi này cho AI cơ hội giải thích chất lượng của một đợt tăng, thay vì chỉ liệt kê chỉ báo hoặc dự đoán giá.
 
 ## Cơ sở nghiên cứu
 
 - [CONTEXT.md](../../CONTEXT.md): AI sử dụng ngữ cảnh Market Knowledge Graph; không hứa tự nhận node/chart đang chọn hoặc luôn có đầy đủ nguồn.
-- [Spec hội thoại](../../openspec/specs/ai-assistant-market-conversations/spec.md): hỗ trợ hội thoại và câu hỏi tiếp nối; request hiện đồng bộ, không token streaming.
+- Runtime hội thoại hỗ trợ câu hỏi tiếp nối; request hiện đồng bộ, không token streaming.
 - [LANDING.md](LANDING.md): AI stage dùng browser-window text-first simulation; server-rendered/static fallback vẫn giữ transcript đầy đủ.
 - [Dictionary hiện tại](../../app/lib/i18n/dictionaries/vi.ts): phần AI Conversation mới có title, context và history, chưa chứng minh chất lượng một câu trả lời.
 - [Coinbase candles](https://docs.cdp.coinbase.com/api-reference/exchange-api/rest-api/products/get-product-candles): cung cấp OHLCV theo khoảng thời gian; dữ liệu có thể thiếu ở khoảng không có giao dịch. Hữu ích cho thiết kế lớp giá/khối lượng, không chứng minh Signapse đã kết nối Coinbase.
@@ -104,4 +104,4 @@ Snapshot có một công bố CPI sau 18 giờ. Kết quả chưa xuất hiện,
 - Có tín hiệu ủng hộ, tín hiệu phản biện, sự kiện sắp tới, ba kịch bản và điều kiện vô hiệu.
 - Mọi con số đều nằm trong snapshot giả lập; không gắn ngày hiện tại hoặc nhãn live.
 - Không hứa nguồn/integration, tốc độ, độ chính xác hay khả năng backend chưa được xác nhận.
-- Nội dung đã được đưa vào dictionary English/Vietnamese, proof component và model timeline; backend và spec hiện hành không thay đổi.
+- Nội dung đã được đưa vào dictionary English/Vietnamese, proof component và model timeline; backend contract hiện hành không thay đổi.

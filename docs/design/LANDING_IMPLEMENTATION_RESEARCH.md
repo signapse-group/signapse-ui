@@ -1,6 +1,6 @@
 # Landing Implementation Research
 
-> Trạng thái: nghiên cứu chuẩn bị proposal, chưa triển khai application code
+> Trạng thái: nghiên cứu chuẩn bị implementation, chưa triển khai application code
 >
 > Ngày kiểm chứng: 2026-08-23
 >
@@ -12,9 +12,9 @@
 
 ## Kết luận điều hành
 
-Landing đã đủ rõ về product story để chuyển sang OpenSpec proposal, nhưng chưa nên đi thẳng vào implementation.
+Landing đã đủ rõ về product story để tạo task triển khai, nhưng chưa nên đi thẳng vào implementation.
 
-Nguồn chuẩn hiện tại là `docs/design/LANDING.md`, không phải `docs/design/plan-landing.md`, landing runtime hiện có hay `openspec/specs/public-landing-page/spec.md`. Chính `LANDING.md` xác lập authority này và nói rõ spec landing hiện hành là known drift cần được thay bằng `MODIFIED`/`REMOVED` trước implementation (`docs/design/LANDING.md:7-20`).
+Nguồn chuẩn hiện tại là `docs/design/LANDING.md`, không phải `docs/design/plan-landing.md`, landing runtime hiện có hay `docs/APIMAPPING.md`. Runtime và `docs/APIMAPPING.md` vẫn phải được đối chiếu để xác nhận capability trước implementation.
 
 Hướng implementation an toàn nhất là:
 
@@ -41,20 +41,20 @@ Không có product capture nào dưới `public/images/landing/`; runtime hiện
 
 Bốn điều chi phối implementation và release:
 
-1. Tạo OpenSpec change thay contract landing cũ; hiện `openspec list --json` không có change landing đang hoạt động.
+1. Tạo một Agent Workflow Task có contract và completion criteria rõ ràng cho landing.
 2. Sửa public-route contract vì production Clerk mode vẫn protect `/vi` và `/en` (`proxy.ts:53-77`).
-3. Topology đã chốt thành hai OpenSpec change: landing được test public `noindex` tại `dev.signapse.cloud`; change cutover riêng mới thay coming-soon tại `signapse.cloud`, bật indexability và giữ immutable rollback deployment trong bảy ngày (`docs/adr/0005-stage-public-landing-before-apex-cutover.md`).
-4. Signapse Product Owner phải xác nhận mailbox `access@signapse.cloud` đã provision, nhận mail ngoài và có owner theo dõi trước apex cutover; gate này không chặn merge/archive landing implementation (`docs/design/LANDING.md:285-293`).
+3. Topology đã chốt thành hai deliverable: landing được test public `noindex` tại `dev.signapse.cloud`; task cutover riêng mới thay coming-soon tại `signapse.cloud`, bật indexability và giữ immutable rollback deployment trong bảy ngày (`docs/adr/0005-stage-public-landing-before-apex-cutover.md`).
+4. Signapse Product Owner phải xác nhận mailbox `access@signapse.cloud` đã provision, nhận mail ngoài và có owner theo dõi trước apex cutover; gate này không chặn merge landing implementation (`docs/design/LANDING.md:285-293`).
 
 ## 1. Authority: plan cũ và source of truth
 
 ### Thứ tự tin cậy nên dùng
 
 1. Runtime frontend là bằng chứng cao nhất rằng một public claim có surface người dùng thật.
-2. OpenSpec capability specs và `docs/APIMAPPING.md` mô tả contract, nhưng phải đối chiếu source khi chúng mâu thuẫn.
+2. `docs/APIMAPPING.md` mô tả API contract, nhưng phải đối chiếu source khi chúng mâu thuẫn.
 3. `docs/design/LANDING.md` khóa positioning, copy, CTA, composition, claim boundary và media policy.
 4. `docs/design/DESIGN.md` vẫn sở hữu semantic tokens, Geist, shadcn chrome, theme parity và accessibility; landing chỉ override các rule dashboard-scoped được liệt kê rõ (`docs/design/LANDING.md:7-18`, `docs/design/DESIGN.md:1-5`).
-5. `docs/design/plan-landing.md` là discovery input lịch sử, không phải implementation contract.
+5. `docs/design/plan-landing.md` là discovery input lịch sử, không phải contract triển khai.
 
 ### Những điểm trong plan đã bị canonical doc thay thế
 
@@ -74,7 +74,7 @@ Các path kiểu `D:/Development/...` và câu “working tree vẫn sạch” t
 ### Route và auth
 
 - Landing đã ở đúng route ngoài `(main)` và do đó không render dashboard shell (`app/[lang]/page.tsx:54-90`).
-- Tuy nhiên public behavior chưa tồn tại trong production Clerk mode: `isPublicRoute` chỉ chứa sign-in, còn mọi path khác đều chạy `auth.protect()` (`proxy.ts:53-77`). Requirement locale root public đã có trong OpenSpec (`openspec/specs/nextjs-locale-routing/spec.md:99-109`), nên đây là runtime/spec mismatch.
+- Tuy nhiên public behavior chưa tồn tại trong production Clerk mode: `isPublicRoute` chỉ chứa sign-in, còn mọi path khác đều chạy `auth.protect()` (`proxy.ts:53-77`). Đây là mismatch giữa runtime và thiết kế landing.
 - Fixture mode bỏ qua Clerk protection và dev-auth mode cũng bỏ `auth.protect()` (`proxy.ts:49-50`, `proxy.ts:66-67`). Đồng thời page coi dev-auth mode là authenticated (`app/[lang]/page.tsx:61-64`). Vì vậy chỉ mở landing trong fixture/dev-auth không chứng minh anonymous production path hoạt động.
 - `auth()` trong Server Component là seam phù hợp để render CTA theo session; Clerk yêu cầu `clerkMiddleware()`/proxy vẫn phải match route ngay cả khi route đó public. Official Clerk docs xác nhận `auth()` chỉ chạy server-side và cần Clerk middleware được cấu hình: [Clerk `auth()` reference](https://clerk.com/docs/reference/nextjs/app-router/auth).
 - Official Clerk docs hiện đánh dấu `createRouteMatcher()` là deprecated và khuyên dùng native path matching cho non-auth path logic: [Clerk middleware reference](https://clerk.com/docs/reference/nextjs/clerk-middleware). Landing change không nên mở rộng thành migration toàn bộ auth architecture, nhưng nên tránh thêm public roots vào một abstraction đã deprecated.
@@ -100,49 +100,37 @@ Khuyến nghị seam: thay `createRouteMatcher` hiện tại bằng một predic
 
 | Surface                              | Kết luận                                                                                                                                                            | Primary evidence                                                                                                                                                                                                                                                                                             | Boundary phải giữ khi viết/capture                                                                                                                                |
 | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Active workspace + tracked assets    | **Đã kiểm chứng.** Runtime/domain chỉ có một tracked-asset list cho active workspace; không có named/grouped watchlists.                                            | `openspec/specs/workspace-watchlist-management/spec.md:4-16`, `openspec/specs/workspace-watchlist-management/spec.md:120-129`; API đã tích hợp GET/bulk add/delete (`docs/APIMAPPING.md:493-500`).                                                                                                           | Không nói shared/team workspace, watchlist groups hoặc AI evidence boundary.                                                                                      |
-| Chart asset selection                | **Đã kiểm chứng.** Chart lấy selector từ watchlist và resolve bằng `assetId`.                                                                                       | `openspec/specs/market-chart-candle-workbench/spec.md:21-55`; runtime load watchlist rồi pass vào workbench (`app/[lang]/(main)/market-charts/page.tsx:46-64`).                                                                                                                                              | Không nói arbitrary symbol charting.                                                                                                                              |
-| Historical candles                   | **Đã kiểm chứng.** Candle response, empty/error distinction và no synthetic fallback đều có contract.                                                               | `openspec/specs/market-chart-candle-workbench/spec.md:57-99`, `openspec/specs/market-chart-candle-workbench/spec.md:124-152`; API ledger (`docs/APIMAPPING.md:202-205`, `docs/APIMAPPING.md:223-243`).                                                                                                       | “Historical candles” là chắc chắn về surface, không phải cam kết provider luôn có data.                                                                           |
-| Event annotation + economic calendar | **Đã kiểm chứng.** Hai layer được fetch/render riêng cho displayed candle interval.                                                                                 | `docs/APIMAPPING.md:203-205`, `docs/APIMAPPING.md:225-241`; calendar spec (`openspec/specs/market-chart-economic-calendar-events/spec.md:87-125`).                                                                                                                                                           | Luôn dùng qualifier “khi dữ liệu khả dụng”; không biến temporal proximity thành causation.                                                                        |
-| Live quote/partial candle            | **Đã kiểm chứng.** SSE có snapshot/price/candle/status/error; UI model có `DISCONNECTED`, `STALE`, `MARKET_CLOSED`.                                                 | `openspec/specs/market-chart-live-sse-stream/spec.md:6-52`; `app/lib/market-charts/definitions.ts:210-219`; `docs/APIMAPPING.md:205`, `docs/APIMAPPING.md:228-230`.                                                                                                                                          | Chỉ dùng “live” cho chart data và giữ failure/stale/closed qualifier. Không nói realtime intelligence toàn hệ thống.                                              |
+| Active workspace + tracked assets    | **Đã kiểm chứng.** Runtime/domain chỉ có một tracked-asset list cho active workspace; không có named/grouped watchlists.                                            | `app/[lang]/(main)/workspaces/`; chart load watchlist tại `app/[lang]/(main)/market-charts/page.tsx:46-64`; API đã tích hợp GET/bulk add/delete (`docs/APIMAPPING.md:493-500`).                                             | Không nói shared/team workspace, watchlist groups hoặc AI evidence boundary.                                                                                      |
+| Chart asset selection                | **Đã kiểm chứng.** Chart lấy selector từ watchlist và resolve bằng `assetId`.                                                                                       | `docs/APIMAPPING.md`; runtime load watchlist rồi pass vào workbench (`app/[lang]/(main)/market-charts/page.tsx:46-64`).                                                                                                                                              | Không nói arbitrary symbol charting.                                                                                                                              |
+| Historical candles                   | **Đã kiểm chứng.** Candle response, empty/error distinction và no synthetic fallback đều có contract.                                                               | `app/[lang]/(main)/market-charts/market-chart-workbench.tsx`; API ledger (`docs/APIMAPPING.md:202-205`, `docs/APIMAPPING.md:223-243`).                                                                                       | “Historical candles” là chắc chắn về surface, không phải cam kết provider luôn có data.                                                                           |
+| Event annotation + economic calendar | **Đã kiểm chứng.** Hai layer được fetch/render riêng cho displayed candle interval.                                                                                 | `app/[lang]/(main)/market-charts/market-chart-workbench.tsx`; API ledger (`docs/APIMAPPING.md:203-205`, `docs/APIMAPPING.md:225-241`).                                                                                                                         | Luôn dùng qualifier “khi dữ liệu khả dụng”; không biến temporal proximity thành causation.                                                                        |
+| Live quote/partial candle            | **Đã kiểm chứng.** SSE có snapshot/price/candle/status/error; UI model có `DISCONNECTED`, `STALE`, `MARKET_CLOSED`.                                                 | `docs/APIMAPPING.md`; `app/lib/market-charts/definitions.ts:210-219`; `docs/APIMAPPING.md:205`, `docs/APIMAPPING.md:228-230`.                                                                                                                                          | Chỉ dùng “live” cho chart data và giữ failure/stale/closed qualifier. Không nói realtime intelligence toàn hệ thống.                                              |
 | Hot annotation preview               | **Đã kiểm chứng theo runtime.** Popup hiển thị event time, title/summary, primary predicted direction và optional evaluated outcome; title mở event quick detail.   | `app/[lang]/(main)/market-charts/market-chart-workbench.tsx:1962-2067`, `app/[lang]/(main)/market-charts/market-chart-workbench.tsx:2215-2348`.                                                                                                                                                              | Đây là concise preview; không claim reasoning/evidence reader trong popup. `observedAt` không phải outcome.                                                       |
 | Event detail reaction + evidence     | **Đã kiểm chứng.** Detail render evidence trước reactions; evidence có article/source/link, reaction có asset/direction/horizon/confidence/reasoning/recorded time. | `app/[lang]/(main)/events/[id]/page.tsx:356-509`, `app/[lang]/(main)/events/[id]/page.tsx:511-575`; DTO (`app/lib/events/definitions.ts:72-100`); API ledger (`docs/APIMAPPING.md:187-196`).                                                                                                                 | Evidence/reaction optional. Event detail không có evaluated return/outcome.                                                                                       |
 | Connected Market Graph               | **Đã kiểm chứng.** Node kinds đúng bốn loại; edge kinds đúng bốn relation; theme chỉ là metadata.                                                                   | `app/lib/graph-view/definitions.ts:5-35`, `app/lib/graph-view/definitions.ts:67-128`; graph route fetch không nhận workspace/watchlist filter (`app/[lang]/(main)/graph-view/page.tsx:51-54`); API ledger (`docs/APIMAPPING.md:288-301`).                                                                    | Không claim Theme/warm-episode node, workspace slice hoặc narrative detail route.                                                                                 |
-| AI Assistant conversation            | **Đã kiểm chứng.** Conversation/history persisted theo active workspace, follow-up action trả cả turn đồng bộ, UI text-only.                                        | `openspec/specs/ai-assistant-market-conversations/spec.md:6-23`, `openspec/specs/ai-assistant-market-conversations/spec.md:44-99`; runtime submission awaits one response (`components/market-conversation-assistant/market-conversation-assistant.tsx:441-535`); API ledger (`docs/APIMAPPING.md:249-282`). | Không claim token streaming, evidence sheet, attachment, analysis workbench hoặc usable Telegram delivery. Character reveal sau response không phải token stream. |
+| AI Assistant conversation            | **Đã kiểm chứng.** Conversation/history persisted theo active workspace, follow-up action trả cả turn đồng bộ, UI text-only.                                        | Runtime submission awaits one response (`components/market-conversation-assistant/market-conversation-assistant.tsx:441-535`); API ledger (`docs/APIMAPPING.md:249-282`).                                                                    | Không claim token streaming, evidence sheet, attachment, analysis workbench hoặc usable Telegram delivery. Character reveal sau response không phải token stream. |
 | Narratives                           | **An toàn khi chỉ nói trong Graph chapter.** Narrative node/edges có runtime; chưa có narrative list/detail route.                                                  | `docs/APIMAPPING.md:284-320`; `app/lib/graph-view/definitions.ts:5-11`.                                                                                                                                                                                                                                      | Không quảng bá dedicated narrative workspace/management. Dashboard có summary module, nhưng locked landing story không cần mở rộng sang đó.                       |
 | Trading outcome/prediction           | **Phải cấm.** Runtime có optional evaluated outcome cho annotation, nhưng đó không chứng minh forecast performance hoặc trading advice.                             | Outcome DTO (`docs/APIMAPPING.md:235-236`); landing global claim rules (`docs/design/LANDING.md:128-135`).                                                                                                                                                                                                   | Không nói win rate, accuracy, P&L, signal, entry/stop/target, auto execution hoặc guaranteed cause.                                                               |
 
 ### Hai drift không được để claim review bỏ qua
 
-1. `market-chart-annotation-popup-surface` tự mâu thuẫn: concise-preview requirement cấm reasoning/evidence/detail blocks (`openspec/specs/market-chart-annotation-popup-surface/spec.md:32-59`) nhưng requirement sau lại nói popup render confidence/evidence/detail-link data (`openspec/specs/market-chart-annotation-popup-surface/spec.md:138-148`). Runtime hiện khớp concise preview, nên claim matrix trong `LANDING.md` là đúng. Landing proposal không cần sửa capability spec này, nhưng capture/copy review phải dùng runtime, không trích dòng 144 riêng lẻ.
+1. Nội dung annotation trong tài liệu cũ từng tự mâu thuẫn giữa concise preview và rich detail. Runtime hiện khớp concise preview, nên claim matrix trong `LANDING.md` là đúng; capture/copy review phải dùng runtime và `docs/APIMAPPING.md`.
 2. `docs/APIMAPPING.md` có summary stale: dòng 41/574 nói dashboard chưa parse/render `marketNarratives`, trong khi source đã parse và render (`app/lib/dashboard/definitions.ts:151-173`, `app/[lang]/(main)/dashboard/page.tsx:254-272`). Dòng 49 nói còn route `market-query`, nhưng section canonical nói route đó đã bị gỡ (`docs/APIMAPPING.md:249-282`). Các drift này không làm invalid ba landing chapters, nhưng cho thấy APIMAPPING không thể được dùng mà không đối chiếu runtime.
 
-## 4. OpenSpec work cần có trước implementation
+## 4. Contract cần khóa trước implementation
 
-`openspec list --json` tại thời điểm nghiên cứu chỉ có hai change hoàn tất (`fix-fullscreen-overlay-portals`, `simplify-quick-detail-header`); không có active landing change.
-
-### Contract cũ cần thay
-
-Current `public-landing-page` spec vẫn yêu cầu:
-
-- Chart Annotation + Market Query + Knowledge Graph là ba primary pillars (`openspec/specs/public-landing-page/spec.md:6-12`).
-- Hero phải có synthetic workspace mock (`openspec/specs/public-landing-page/spec.md:14-20`).
-- Data pipeline và workspace personalization (`openspec/specs/public-landing-page/spec.md:22-31`).
-- Anonymous secondary CTA là Sign in một cách tổng quát (`openspec/specs/public-landing-page/spec.md:67-78`), trong khi canonical CTA matrix khóa Hero secondary thành `#how-it-works` và giữ Sign in ở Header/Footer (`docs/design/LANDING.md:274-283`).
-- Khi chưa có screenshot thì vẫn render illustrative preview (`openspec/specs/public-landing-page/spec.md:90-99`), trái media policy text-first.
-
-Landing proposal phải dùng `MODIFIED`/`REMOVED`, không thêm một lớp “V3” bên cạnh những requirement này (`docs/design/LANDING.md:507-512`).
+Agent Workflow Task phải dùng `docs/design/LANDING.md` làm contract UI chính và không tạo một lớp requirement cạnh tranh. CTA matrix khóa Hero secondary thành `#how-it-works`, giữ Sign in ở Header/Footer và giữ media policy text-first khi chưa có screenshot được duyệt.
 
 ### Localization contract đang mâu thuẫn
 
-`product-localization` vẫn yêu cầu cookie `signapse_locale` và selector mutation cookie (`openspec/specs/product-localization/spec.md:6-35`), trong khi `nextjs-locale-routing` yêu cầu locale prefix làm source of truth, switch bằng route và không dùng cookie (`openspec/specs/nextjs-locale-routing/spec.md:65-97`). Runtime hiện theo route locale (`app/lib/i18n/routing.ts:11-38`, `app/lib/i18n/dictionaries.ts:1-18`).
+Tài liệu localization cũ từng yêu cầu cookie `signapse_locale`, trong khi runtime dùng locale prefix làm source of truth và switch bằng route (`app/lib/i18n/routing.ts:11-38`, `app/lib/i18n/dictionaries.ts:1-18`).
 
-Proposal phải xử lý drift này bằng delta `product-localization` hoặc xác định rõ spec mới nào remove requirement cookie cũ. Không được implement landing locale switch theo hai contract trái nhau.
+Task phải xử lý drift này theo runtime route-locale hiện tại. Không được implement landing locale switch theo hai contract trái nhau.
 
-### Capability map đề xuất cho change
+### Capability map đề xuất cho task
 
 ```text
-public-landing-page
+landing runtime
 ├── localized public root + no dashboard shell
 ├── canonical eight-section editorial story
 ├── three product chapters + strict claim qualifiers
@@ -151,13 +139,13 @@ public-landing-page
 ├── responsive + WCAG 2.2 AA behaviors
 └── localized metadata/canonical/alternates
 
-product-localization
+locale routing
 ├── dictionary parity for all landing visible/assistive copy
 ├── route-locale links, no locale cookie
 └── locale switch preserves query + supported hash
 ```
 
-`nextjs-locale-routing` đã có requirement locale root public đúng (`openspec/specs/nextjs-locale-routing/spec.md:99-109`); task implementation cần làm runtime tuân spec thay vì tạo requirement trùng.
+Task implementation cần làm runtime tuân thiết kế locale root public thay vì tạo requirement trùng.
 
 ## 5. Implementation seams và quyết định khuyến nghị
 
@@ -174,7 +162,7 @@ app/lib/i18n/dictionaries/en.ts
 proxy.ts
 components/logo.tsx                            # chỉ khi chọn narrow prop fix
 tests/...                                      # targeted contract/browser checks
-openspec/changes/rebuild-public-landing-page/...
+the implementation task
 ```
 
 Route-specific components phải ở cạnh route, Server Components là default và chỉ dùng client boundary khi browser state bắt buộc (`components/AGENTS.override.md:7-13`). Không nên tách mỗi section thành một file nhỏ; một `landing-sections.tsx` có các named sections sẽ giữ story dễ đọc mà không tạo nhiều shallow modules.
@@ -198,7 +186,7 @@ Route-specific components phải ở cạnh route, Server Components là default
 - Dùng locked title/description cho từng locale (`docs/design/LANDING.md:446-455`).
 - `alternates.canonical` phải là locale URL tương ứng; `alternates.languages` phải có cả `vi` và `en`.
 - Next.js yêu cầu `metadataBase` nếu dùng URL metadata relative và sẽ build-error nếu thiếu. Official example: [Next.js metadataBase and alternates](https://nextjs.org/docs/app/api-reference/functions/generate-metadata).
-- Topology đã chốt: implementation change phục vụ landing public `noindex` tại `dev.signapse.cloud`; cutover change riêng mới chuyển canonical/indexable origin sang `signapse.cloud`, redirect `www` về apex và retire coming-soon source/spec. Explicit server-side configuration sở hữu origin/indexability; hostname inference bị cấm (`docs/adr/0005-stage-public-landing-before-apex-cutover.md`).
+- Topology đã chốt: task implementation phục vụ landing public `noindex` tại `dev.signapse.cloud`; task cutover riêng mới chuyển canonical/indexable origin sang `signapse.cloud`, redirect `www` về apex và retire coming-soon source. Explicit server-side configuration sở hữu origin/indexability; hostname inference bị cấm (`docs/adr/0005-stage-public-landing-before-apex-cutover.md`).
 - Không thêm sitemap/robots/manifest vào scope chỉ vì chúng là Next metadata conventions; acceptance hiện chỉ khóa page metadata, canonical/alternate và approved OG image.
 
 ### Image/performance
@@ -226,35 +214,34 @@ Route-specific components phải ở cạnh route, Server Components là default
 
 | Mức                           | Item                                                                               | Trạng thái / khuyến nghị                                                                                                   |
 | ----------------------------- | ---------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| Block implementation workflow | Không có active landing OpenSpec change; current spec contradict canonical design. | Tạo proposal trước code.                                                                                                   |
+| Block implementation workflow | Chưa có Agent Workflow Task cho landing.                                      | Tạo task có contract và completion criteria trước code.                                                                    |
 | Block functional acceptance   | Production proxy protect locale roots.                                             | Đổi explicit public path predicate, giữ default-deny cho phần còn lại.                                                     |
-| Resolved topology decision    | `coming-soon-site` giữ apex trong lúc landing được test tại `dev.signapse.cloud`.  | Tách landing implementation và apex cutover thành hai OpenSpec change; cutover mới retire coming-soon và bật indexability. |
-| Cutover-only release gate     | Chưa có bằng chứng mailbox request-access hoạt động/được theo dõi.                 | Signapse Product Owner xác nhận trước apex cutover; không chặn merge/archive implementation change.                        |
+| Resolved topology decision    | `coming-soon-site` giữ apex trong lúc landing được test tại `dev.signapse.cloud`.  | Tách landing implementation và apex cutover thành hai task; cutover mới retire coming-soon và bật indexability.            |
+| Cutover-only release gate     | Chưa có bằng chứng mailbox request-access hoạt động/được theo dõi.                 | Signapse Product Owner xác nhận trước apex cutover; không chặn merge implementation task.                                  |
 | Resolved by policy            | Chưa có approved product capture.                                                  | Implement text-first; không blocker.                                                                                       |
 | Scope decision                | Có nên migrate toàn bộ Clerk protection khỏi proxy theo docs mới?                  | Không trong landing. Chỉ dùng native matching để bỏ deprecated `createRouteMatcher`; security migration là change riêng.   |
 | Scope decision                | Có nên sửa `Logo`?                                                                 | Chỉ narrow fix cho accessible duplication/image preload nếu cần; không redesign shared logo.                               |
-| Documentation debt            | APIMAPPING summary và annotation spec có internal drift.                           | Không chặn landing nếu claim review dùng runtime; ghi issue/change riêng nếu muốn đồng bộ canonical docs.                  |
+| Documentation debt            | APIMAPPING summary và runtime annotation có drift.                                 | Không chặn landing nếu claim review dùng runtime; ghi task riêng nếu muốn đồng bộ canonical docs.                          |
 
 ## 7. Verification plan
 
-### Codex-runnable, nên là checklist archive-blocking
+### Codex-runnable completion checks
 
-1. `openspec validate "rebuild-public-landing-page"` (hoặc change name đã duyệt).
-2. `pnpm lint`, `pnpm typecheck`, `pnpm build`.
-3. Targeted proxy/unit tests:
+1. `pnpm lint`, `pnpm typecheck`, `pnpm build`.
+2. Targeted proxy/unit tests:
    - `/vi`, `/en`, `/vi/sign-in/*`, `/en/sign-in/*` public.
    - `/vi/dashboard`, `/en/dashboard`, representative `(main)` route và `/api/*` vẫn protected.
    - Locale redirect `/` và unprefixed page path vẫn giữ behavior.
    - Có thể dùng Next.js proxy testing utilities; official docs cung cấp `unstable_doesProxyMatch` và response helpers: [Next.js Proxy testing](https://nextjs.org/docs/app/api-reference/file-conventions/proxy#unit-testing-experimental).
-4. Targeted browser tests cho cả VI/EN:
+3. Targeted browser tests cho cả VI/EN:
    - đúng một H1, locked copy và eight-section order;
    - CTA destinations theo fixture-authenticated state;
    - locale switch giữ query + supported hash, bỏ unsupported hash;
    - skip link, nav disclosure, keyboard order và visible focus;
    - no horizontal overflow tại 375/768/1024/1440 và zoom 200%;
    - axe scan cho WCAG issues có thể tự động phát hiện.
-5. Metadata assertions trên HTML build/server: localized title/description, preview `noindex` + dev canonical, apex indexable canonical/alternates, fail-closed invalid configuration, và hai localized brand-only Open Graph cards.
-6. Static search xác nhận:
+4. Metadata assertions trên HTML build/server: localized title/description, preview `noindex` + dev canonical, apex indexable canonical/alternates, fail-closed invalid configuration, và hai localized brand-only Open Graph cards.
+5. Static search xác nhận:
    - không còn old landing component/key names `ProblemSection`, `PillarsSection`, `PipelineSection`, `PersonalizationSection`, `ProductPreview`, `MiniGraph`;
    - không còn landing claim `Market Query`, workspace graph slice, Theme node, watchlist evidence boundary, team/shared workspace, fake `82%`/evidence `8`;
    - không có runtime import từ `docs/design/*` hoặc unapproved `public/images/landing/*`.
@@ -265,15 +252,14 @@ ADR của repo cũng xác định P0 không chứng minh authorization và Clerk
 
 ### Baseline đã chạy trong research
 
-- `openspec validate --all --strict --no-interactive --json`: **fail baseline**, 149/151 item pass. Hai lỗi có sẵn, không liên quan landing: `dashboard-ui-prototype` thiếu scenario cho 12 requirements và `workspace-overview-narrative-preview` không có requirement. Change landing phải pass targeted strict validation; không được nhận hoặc báo cáo repo-wide `--all` là xanh nếu hai debt này chưa được xử lý.
 - `pnpm typecheck`: pass.
 - `pnpm lint`: pass với 0 error và 22 warning có sẵn.
 - `pnpm test -- --runInBand`: pass 25 test files / 119 tests; chưa có test landing.
 - `git diff --no-index --check /dev/null docs/design/LANDING_IMPLEMENTATION_RESEARCH.md`: pass (exit code `1` là expected vì đây là file mới).
 
-Các baseline command chỉ kiểm tra trạng thái trước implementation; chúng không thay verification checklist của change.
+Các baseline command chỉ kiểm tra trạng thái trước implementation; chúng không thay completion checks của task.
 
-### User-owned manual/release QA, không nên là archive-blocking checkbox
+### User-owned manual/release QA
 
 - Xác nhận mailbox, external delivery và operational owner.
 - Nếu thêm capture: kiểm từng locale theo toàn bộ privacy/licensing/crop checklist (`docs/design/LANDING.md:323-339`).
@@ -283,11 +269,11 @@ Các baseline command chỉ kiểm tra trạng thái trước implementation; ch
 
 ## 8. Definition of ready cho implementation
 
-Change có thể chuyển từ explore/proposal sang apply khi:
+Task có thể chuyển sang implementation khi:
 
-- Proposal đã thay contract landing cũ bằng `MODIFIED`/`REMOVED` và resolve cookie-locale conflict.
-- Landing implementation và apex cutover là hai change riêng; preview origin là `dev.signapse.cloud`, indexable origin sau cutover là `signapse.cloud`.
-- Text-first là media mode đã chốt cho release đầu; hai localized brand-only Open Graph cards vẫn thuộc implementation change.
+- Task dùng `docs/design/LANDING.md` làm contract và resolve cookie-locale conflict.
+- Landing implementation và apex cutover là hai task riêng; preview origin là `dev.signapse.cloud`, indexable origin sau cutover là `signapse.cloud`.
+- Text-first là media mode đã chốt cho release đầu; hai localized brand-only Open Graph cards vẫn thuộc implementation task.
 - Signapse Product Owner là landing release owner; mailbox proof là cutover-only gate.
 - Tasks map trực tiếp vào route/auth, dictionaries, page sections, locale switch, metadata, accessibility và tests; không thêm backend form, CRM, analytics event, testimonial, pricing hoặc product capability mới.
 

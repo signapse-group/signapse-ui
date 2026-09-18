@@ -30,10 +30,10 @@ Ngày nghiên cứu: 2026-09-09. Trạng thái: đề xuất để thảo luận
 | [Proxy](../proxy.ts) và [public-path](../app/lib/public-landing/public-path.ts) hiện chỉ miễn bảo vệ cho locale root và sign-in | Thêm route help chưa đủ để có docs công khai; cần bổ sung ngoại lệ đường dẫn hẹp, có kiểm tra |
 | [ADR-0005](adr/0005-stage-public-landing-before-apex-cutover.md) tách triển khai landing khỏi cutover apex | Không tự coi `signapse.cloud` đã là host ứng dụng; dùng origin của môi trường hiện hành |
 | Thư mục `docs/` chứa API mapping, ADR, design và research | Giữ tài liệu nội bộ tách rõ khỏi nguồn bài công khai |
-| [CONTEXT.md](../CONTEXT.md) và [spec AI conversation](../openspec/specs/ai-assistant-market-conversations/spec.md) mô tả hội thoại theo workspace | Bài AI cần giải thích workspace, lịch sử và giới hạn; không hứa tự nhận ngữ cảnh chart/node đang chọn |
-| [Spec Telegram](../openspec/specs/telegram-configuration-ui/spec.md) và domain glossary mô tả nhiều quyền, điểm nhận, lịch và ngôn ngữ | Cần tách việc nhận thông báo khỏi việc cấu hình hạ tầng Telegram |
+| [CONTEXT.md](../CONTEXT.md) và runtime AI conversation mô tả hội thoại theo workspace | Bài AI cần giải thích workspace, lịch sử và giới hạn; không hứa tự nhận ngữ cảnh chart/node đang chọn |
+| Runtime Telegram và domain glossary mô tả nhiều quyền, điểm nhận, lịch và ngôn ngữ | Cần tách việc nhận thông báo khỏi việc cấu hình hạ tầng Telegram |
 
-CodeGraph không có công cụ callable trong phiên nghiên cứu này, nên đã dùng file nguồn, cấu hình, domain docs và OpenSpec để khảo sát. Đây không phải kiểm tra nghiệm thu hệ thống đang chạy. Sự tồn tại của route/spec không chứng minh tính năng đã được bật ở production; cần đối chiếu bản phát hành trước khi xuất bản từng bài. Feedback đặc biệt có phân biệt implementation/activation trong [ADR-0009](adr/0009-separate-feedback-implementation-and-activation-gates.md).
+CodeGraph không có công cụ callable trong phiên nghiên cứu này, nên đã dùng file nguồn, cấu hình và domain docs để khảo sát. Đây không phải kiểm tra nghiệm thu hệ thống đang chạy. Sự tồn tại của route hoặc tài liệu không chứng minh tính năng đã được bật ở production; cần đối chiếu bản phát hành trước khi xuất bản từng bài. Feedback đặc biệt có phân biệt implementation/activation trong [ADR-0009](adr/0009-separate-feedback-implementation-and-activation-gates.md).
 
 ## 3. Căn cứ tổ chức tài liệu
 
@@ -95,7 +95,7 @@ app/lib/user-docs/
 | User Guide | Người dùng cuối | `docs/user`, xuất bản tại `/help` |
 | Hướng dẫn cấu hình dành cho người có quyền | Người quản lý workspace/Telegram | Nhóm nâng cao trong User Guide nếu nội dung có thể công khai |
 | Runbook vận hành, hạ tầng, xử lý sự cố nội bộ | Đội kỹ thuật/vận hành | Tài liệu nội bộ hiện hành, không đưa vào help |
-| API contract, mapping, ADR, OpenSpec | Kỹ thuật | Giữ cấu trúc hiện tại |
+| API contract, mapping và ADR | Kỹ thuật | Giữ cấu trúc hiện tại |
 | Developer Guide cho tích hợp ngoài | Người dùng API | Làm riêng khi có nhu cầu đã xác nhận; không đưa token/API làm bài nhập môn |
 
 ## 5. Chọn cách triển khai
@@ -325,7 +325,7 @@ Thêm 5 bài P1 khi các tính năng tương ứng sẵn sàng, sửa dựa trê
 - Test ranh giới public/protected, slug không hợp lệ, kết quả search không dấu và việc loại nội dung không xuất bản.
 - Kiểm tra output build có bài/ảnh cần thiết, không có tài liệu nội bộ trong bundle/index public.
 - Chạy lint, typecheck và build thích hợp; kiểm tra accessibility tự động bằng hạ tầng repo khi khả dụng.
-- Theo scope triển khai, đọc các instruction/skill tương ứng; theo OpenSpec flow của repo trước khi thực hiện thay đổi sản phẩm.
+- Theo scope triển khai, đọc các instruction/skill tương ứng và tuân thủ Agent Workflow trước khi thực hiện thay đổi sản phẩm.
 
 User-owned manual QA, ghi chú không phải checkbox chặn archive: người chưa biết ứng dụng thử hoàn thành một tác vụ với bài; product xác nhận hành vi/quyền trên môi trường thật; review ảnh công khai, VI/EN và mobile. Phân biệt việc hoàn tất engineering với quyết định phát hành public.
 

@@ -7,7 +7,7 @@ This document is the active repo-wide instruction file for Codex when working in
 - When the user asks about architecture, execution flow, bugs, refactors, impact review, or where code should be changed, prefer CodeGraph before manually opening files or running `rg`.
 - Use `codegraph_context` as the default entry point for questions like "how does X work", bug investigation, or identifying related entry points.
 - Use `codegraph_trace` when the task needs the path from symbol/interaction A to B, `codegraph_impact` before refactors, `codegraph_search` for fast symbol lookup, and `codegraph_explore` to gather several related symbols/files in one pass.
-- Fall back to `rg`, direct file reads, or other tools only when CodeGraph lacks an index, returns insufficient context, or the task requires content outside symbols such as dictionaries, CSS, Markdown, config, or OpenSpec docs.
+- Fall back to `rg`, direct file reads, or other tools only when CodeGraph lacks an index, returns insufficient context, or the task requires content outside symbols such as dictionaries, CSS, Markdown, or config.
 
 ## Scoped Instructions And Skills
 
@@ -17,13 +17,13 @@ This document is the active repo-wide instruction file for Codex when working in
 - Before implementing or reviewing any user-visible UI or interaction under `app/[lang]/**` or `components/**`, read both `components/AGENTS.override.md` and `docs/design/DESIGN.md`; DESIGN is the source of truth for UI/UX conventions.
 - When a task spans multiple domains, read every applicable scoped instruction file.
 - Scoped instructions extend this file; the more specific instruction wins when guidance conflicts.
-- `.agents/skills` holds detailed recipes. When a task touches one of the domains below, read the corresponding skill before implementation or review.
+- Agent Workflow plugin version `0.1.0` owns planning, execution, review, issue, and delivery policy. Load `$workflow` at the start of each session; `.agents/skills` holds only repository-specific or otherwise non-overlapping recipes.
+- When a task touches one of the domains below, read the corresponding repository skill before implementation or review.
 - `shadcn`: adding, fixing, composing shadcn components, wrappers, CLI, docs, presets, and styling rules.
 - `hydration-mismatch`: investigating hydration mismatch on Radix/shadcn overlays.
 - `frontend-design`: redesign, UI polish, dashboards/workbenches, or new layouts that need visual direction.
 - `accessibility`: keyboard, focus, screen reader, semantic markup, dialog/form accessibility.
 - `api-mapping-sync`: when the live dev OpenAPI contract, `docs/APIMAPPING.md`, or backend APIs change.
-- OpenSpec flow: use `openspec-explore` → `openspec-grill-with-docs` → `openspec-to-spec` → `openspec-propose` → `openspec-sync-specs` → `openspec-apply-change` → `openspec-archive-change` in order.
 
 ## Commands
 
@@ -62,10 +62,9 @@ app/[lang]/(main)/[feature]/
 - Before non-trivial changes, lock scope with the goal, assumptions, non-goals, and completion criteria.
 - Prefer the simplest solution that satisfies the requirement; do not add abstractions, config, or fallbacks without a clear need.
 - Make surgical edits: only change directly related files, follow existing style, and do not clean up unrelated code.
-- When replacing a library/vendor UI or chart engine, the migration must remove old unused sources completely: dependency, imports/types/helpers, adapters, attribution/vendor copy, active OpenSpec/docs references, and temporary dead components.
+- When replacing a library/vendor UI or chart engine, the migration must remove old unused sources completely: dependency, imports/types/helpers, adapters, attribution/vendor copy, active documentation references, and temporary dead components.
 - When editing Markdown, TS, or TSX, keep UTF-8 and avoid whole-file rewrites through commands that may change encoding/newlines. Prefer `apply_patch`; if a script/bulk edit is unavoidable, keep it narrow, encoding-aware, and check the diff/readability afterwards.
-- Finish agent-owned work with appropriate verification such as lint, typecheck, OpenSpec validation, static search, or deterministic review; if verification cannot run, state why.
-- When creating/updating OpenSpec `tasks.md`, the default verification checklist should include only checks Codex can run from the repo. Do not add smoke/browser/visual/manual/auth/backend-data QA as archive-blocking checkboxes unless the user explicitly asks; when needed, record them as non-checkbox notes such as `User-owned manual QA`.
+- Finish agent-owned work with appropriate verification such as lint, typecheck, tests, static search, or deterministic review; if verification cannot run, state why.
 
 ## I18n And Locale Routing
 

@@ -3,7 +3,7 @@
 - Loại tài liệu: Research note
 - Độc giả chính: Frontend, product, QA
 - Phạm vi: Bài học từ `vietdungiitb/vnbrokerchart` có thể áp dụng cho market chart của Signapse
-- Không phải là: Đề xuất thay chart engine, migration plan, hay OpenSpec change đã được phê duyệt
+- Không phải là: Đề xuất thay chart engine, migration plan, hay task triển khai đã được phê duyệt
 - Ngày nghiên cứu: 2026-05-28
 
 ## Nguồn Tham Khảo
@@ -166,7 +166,7 @@ Học từ `vnbrokerchart`:
 - Pane/series có id ổn định.
 - Default panes được normalize khi stored layout cũ thiếu field mới.
 
-Cần OpenSpec riêng vì chạm UI state, local persistence và khả năng migrate schema.
+Cần một task riêng vì chạm UI state, local persistence và khả năng migrate schema.
 
 ### 2. Replay Quanh Event/News
 
@@ -272,7 +272,7 @@ Lý do:
 
 ## Hướng Đề Xuất Nếu Muốn Biến Thành Change
 
-Có thể tách thành các OpenSpec change độc lập, theo thứ tự rủi ro tăng dần:
+Có thể tách thành các task độc lập, theo thứ tự rủi ro tăng dần:
 
 1. `harden-market-chart-helper-tests`
    - Thêm tests cho annotation grouping, candle merge, lazy-history request helpers và drawing overlay mapping.
@@ -298,4 +298,4 @@ Có thể tách thành các OpenSpec change độc lập, theo thứ tự rủi 
 
 Điểm đáng học nhất từ `vnbrokerchart` là kỷ luật kiến trúc: chart data có SSOT, pane/series có descriptor, drawing có state machine, replay là domain class, và core logic được test độc lập React.
 
-Với Signapse, đường đi tốt nhất là giữ KLineChart, nhưng đẩy dần logic domain ra khỏi canvas adapter và thêm deterministic tests. Các tính năng lớn hơn như layout presets, replay event và persisted drawings nên đi qua OpenSpec riêng.
+Với Signapse, đường đi tốt nhất là giữ KLineChart, nhưng đẩy dần logic domain ra khỏi canvas adapter và thêm deterministic tests. Các tính năng lớn hơn như layout presets, replay event và persisted drawings nên đi qua task riêng.

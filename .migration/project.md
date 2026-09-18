@@ -21,7 +21,7 @@
 - Kept required app-level extensions for overlay portal containers and editor/chart Popover anchors. `PopoverAnchor` now uses Base `useRender` for ref composition rather than `React.cloneElement`.
 - Removed the standalone `radix-ui` and `vaul` packages from `package.json` and `pnpm-lock.yaml`; the documented `@radix-ui/react-toolbar` exception was subsequently removed by the dedicated Plate/editor Toolbar follow-up below.
 - Follow-up `migrate-toolbar-to-base-ui` (2026-08-19) migrated the custom Plate/editor Toolbar to Base UI Toolbar and Toggle primitives, declared fixed/floating/table orientations, converted popup composition, split-list controls, and preserved the font-size input exception. Its direct Radix Toolbar dependency was removed from the manifest and lockfile.
-- Follow-up verification passed: `pnpm test` (12 test files, 44 tests), `pnpm typecheck`, production build, focused ESLint for the changed P0 tests, strict OpenSpec validation, and `git diff --check`. The full `pnpm lint` command remains blocked by unrelated pre-existing errors in search/editor/mobile-hook files; no formatter was run.
+- Follow-up verification passed: `pnpm test` (12 test files, 44 tests), `pnpm typecheck`, production build, focused ESLint for the changed P0 tests, and `git diff --check`. The full `pnpm lint` command remains blocked by unrelated pre-existing errors in search/editor/mobile-hook files; no formatter was run.
 - The Select controlled-value regression harness reproduced the Base UI warning for `undefined → string` and passed for `null → string`; the affected consumer sweep now has no `Select` value fallback to `undefined`.
 - The shadcn Base UI dry-run/diff path was verified against `base-nova` without writing files or using `--overwrite`.
 

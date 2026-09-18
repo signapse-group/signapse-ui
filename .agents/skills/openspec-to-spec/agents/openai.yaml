@@ -1,6 +1,0 @@
-interface:
-  display_name: "OpenSpec To Spec"
-  short_description: "Synthesize a proposal-ready OpenSpec brief"
-  default_prompt: "Use $openspec-to-spec to turn our explored and grilled conversation into a proposal-ready spec."
-policy:
-  allow_implicit_invocation: false

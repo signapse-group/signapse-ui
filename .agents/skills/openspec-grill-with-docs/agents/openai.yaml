@@ -1,6 +1,0 @@
-interface:
-  display_name: "OpenSpec Grill with Docs"
-  short_description: "Grill an OpenSpec design and write docs"
-  default_prompt: "Use $openspec-grill-with-docs to sharpen the explored OpenSpec change and capture its domain decisions."
-policy:
-  allow_implicit_invocation: false

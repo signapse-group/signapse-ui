@@ -1,6 +1,6 @@
 # Market Chart: TradingView Calendar Research
 
-- Type: Research note; exploration only, not an approved OpenSpec change.
+- Type: Research note; exploration only, not an approved implementation task.
 - Audience: Product, frontend, QA.
 - Researched: 2026-09-07.
 - Scope: TradingView's first-party economic calendar behavior and implications for Signapse upcoming-event visibility.
@@ -44,7 +44,7 @@ The practical split is therefore:
 - Chart overlay: query or filter events for the chart's visible time range; only attach an event to a candle when the chart has a valid time coordinate for it.
 - Future visibility: if Signapse wants a marker beyond the latest candle, it needs either a real future-time scale/canvas margin or a separate upcoming-event lane/list. Merely sending a later `to` to the calendar endpoint cannot create a chart coordinate by itself.
 
-Signapse's current specification explicitly restricts calendar fetching to the displayed candle interval and keeps future events without matching candles in the quick list instead of extending the chart. Changing this requires revisiting that contract rather than merely increasing an implementation constant. [Current calendar spec](../openspec/specs/market-chart-economic-calendar-events/spec.md)
+The current implementation restricts calendar fetching to the displayed candle interval and keeps future events without matching candles in the quick list instead of extending the chart. Changing this requires revisiting that behavior rather than merely increasing an implementation constant.
 
 ## Agreed Requirements
 
@@ -69,4 +69,4 @@ Acceptance examples:
 - Selecting 24 hours filters the upcoming list and next-event summary without hiding a loaded future chart marker two days ahead.
 - A calendar fetch failure is distinguishable from no matching scheduled events and does not prevent viewing loaded price candles. Seven-day query coverage is not presented as a guarantee that the provider has supplied every future announcement.
 
-Technical facts to resolve before implementation: the backend's supported future coverage, the meaning and precedence of required `time` versus optional `scheduledAt`, and its publication-status semantics. These are contract investigations, not user preference questions. Existing specifications define AVAILABLE as published, but do not define an overdue timeout. No new ADR is warranted for these reversible presentation choices.
+Technical facts to resolve before implementation: the backend's supported future coverage, the meaning and precedence of required `time` versus optional `scheduledAt`, and its publication-status semantics. These are contract investigations, not user preference questions. Current API mapping defines AVAILABLE as published, but does not define an overdue timeout. No new ADR is warranted for these reversible presentation choices.

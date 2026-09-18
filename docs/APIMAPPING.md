@@ -52,7 +52,7 @@ Xác minh lần cuối: ngày 26 tháng 8 năm 2026
 - Surface workspace dùng chuẩn `set-current`, đồng thời `WorkspaceResponse` dùng field có nghĩa `currentWorkspace`.
 - `roles` và `permissions` hiện đã có action và UI frontend, không còn ở trạng thái "chưa triển khai".
 - Snapshot mới thêm surface `telegram` gồm bot connections, destinations, feature settings, market analysis schedules, và webhook Telegram.
-- Live contract ngày 25/8 thêm surface `feedback` gồm luồng user tự gửi/xem/rút feedback và luồng quản trị đọc, promote, dismiss, tải screenshot, hoặc xóa. Frontend đã tích hợp authenticated actions, screenshot proxy, permission-aware navigation, và HTTP fixture parity trong `integrate-feedback-api`; live OpenAPI structural verification pass, còn semantic documentation gaps được BE giải thích trong change.
+- Live contract ngày 25/8 thêm surface `feedback` gồm luồng user tự gửi/xem/rút feedback và luồng quản trị đọc, promote, dismiss, tải screenshot, hoặc xóa. Frontend đã tích hợp authenticated actions, screenshot proxy, permission-aware navigation và HTTP fixture parity; live OpenAPI structural verification pass, còn effective runtime semantics được ghi trực tiếp trong mục feedback bên dưới.
 - Snapshot ngày 14/8 giản lược quản trị bot và destination Telegram: bỏ `PATCH /telegram/bot-connections/{id}` và `PATCH /telegram/destinations/{id}`; `CreateTelegramBotConnectionRequest` chỉ còn field bắt buộc `botToken`. Bản build dev đã khôi phục `POST /telegram/destinations/{destinationId}/test-message` với response `204 No Content`.
 - Snapshot mới thêm credential sub-resource cho `ai-provider-configs` để quản lý nhiều API key theo từng provider config mà không expose full key.
 - Snapshot mới tiếp tục giản lược `ai-provider-configs`: config request/response không còn `name` và top-level `model`; credential dùng field `model` thay cho `label`.
@@ -535,12 +535,12 @@ Ghi chu:
 
 | Phuong thuc | Endpoint backend                                | operationId   | Tich hop frontend | Trang thai       | Ghi chu |
 | ----------- | ----------------------------------------------- | ------------- | ----------------- | ---------------- | ------- |
-| GET         | `/me/feedback-submissions`                      | `list`        | `getPersonalFeedback`               | Da tich hop  | Danh sach feedback cua user hien tai; auth `active-user`; runtime query `$filter/page/size/sort` duoc BE clarification xac nhan, OpenAPI van publish `specification/pageable`. |
+| GET         | `/me/feedback-submissions`                      | `list`        | `getPersonalFeedback`               | Da tich hop  | Danh sach feedback cua user hien tai; auth `active-user`; effective runtime query dùng `$filter/page/size/sort`, trong khi OpenAPI vẫn publish `specification/pageable`. |
 | POST        | `/me/feedback-submissions`                      | `create`      | `createFeedbackSubmission`          | Da tich hop  | Multipart `submission` bat buoc va `screenshot` binary tuy chon; auth `active-user`; tra `FeedbackDetailResponse`. |
 | GET         | `/me/feedback-submissions/{id}`                 | `get_1`       | `getPersonalFeedbackDetail`         | Da tich hop  | Doc detail thuoc user hien tai; auth `active-user`, cross-owner `404`. |
 | DELETE      | `/me/feedback-submissions/{id}`                 | `withdraw`    | `withdrawFeedbackSubmission`        | Da tich hop  | Rut submission cua user; runtime `204`, live OpenAPI publish `200` empty-body gap duoc BE giai thich. |
 | GET         | `/me/feedback-submissions/{id}/screenshot`      | `screenshot`  | `GET /api/feedback/personal/{id}/screenshot` | Da tich hop | Screenshot proxy scope personal; PNG/JPEG inline, private no-store, nosniff. |
-| GET         | `/feedback-submissions`                         | `list_1`      | `getModerationFeedback`              | Da tich hop  | Danh sach quan tri; permission `feedback:read`; runtime filter/sort duoc BE clarification xac nhan. |
+| GET         | `/feedback-submissions`                         | `list_1`      | `getModerationFeedback`              | Da tich hop  | Danh sach quan tri; permission `feedback:read`; effective runtime contract hỗ trợ filter/sort. |
 | GET         | `/feedback-submissions/{id}`                    | `get_2`       | `getModerationFeedbackDetail`        | Da tich hop  | Detail quan tri; permission `feedback:read`; reporter chi moderation. |
 | POST        | `/feedback-submissions/{id}/promote`            | `promote`     | `promoteFeedbackSubmission`          | Da tich hop  | Promote request co `reviewMessage` + `githubIssueUrl`; permission `feedback:review`; tra detail da cap nhat. |
 | POST        | `/feedback-submissions/{id}/dismiss`            | `dismiss`     | `dismissFeedbackSubmission`          | Da tich hop  | Dismiss request chi co `reviewMessage`; permission `feedback:review`; tra detail da cap nhat. |
@@ -549,14 +549,14 @@ Ghi chu:
 
 Ghi chu:
 
-- Probe authoritative dev OpenAPI ngày 26/08/2026 (`https://dev-api.signapse.cloud/v3/api-docs`, OpenAPI `3.1.0`, 97 paths, 179 schemas) xác nhận đủ 11 feedback operations và không có hard path/method/auth/transport/response-family contradiction. OpenAPI vẫn thiếu hoặc biểu diễn khái quát filter grammar, request conditionality, success status detail, requiredness/nullability, lifecycle, screenshot constraints, và error examples; các gap này được BE giải thích trong `openspec/changes/integrate-feedback-api/backend-clarification.md` và không chặn activation theo gate đã thống nhất.
+- Probe authoritative dev OpenAPI ngày 26/08/2026 (`https://dev-api.signapse.cloud/v3/api-docs`, OpenAPI `3.1.0`, 97 paths, 179 schemas) xác nhận đủ 11 feedback operations và không có hard path/method/auth/transport/response-family contradiction. OpenAPI vẫn thiếu hoặc biểu diễn khái quát filter grammar, request conditionality, success status detail, requiredness/nullability, lifecycle, screenshot constraints và error examples; effective runtime semantics được ghi trong ledger này và các gap không chặn activation theo gate đã thống nhất.
 - `FeedbackSubmissionRequest` bat buoc `type`, `title`, `description`, `expectedOutcome`; `type` gom `BUG` / `IDEA`. Do dai: title `5..150`, description `20..5000`, expected outcome `10..3000`, reproduction steps tuy chon `0..5000`.
-- `clientContext` tuy chon va co cac field `pagePath`, `appVersion`, `browserName`, `browserVersion`, `osName`, `osVersion`, `locale`, `observedTime`; BE clarification xac nhan cac field deu optional va co privacy/format boundary.
+- `clientContext` tuy chon va co cac field `pagePath`, `appVersion`, `browserName`, `browserVersion`, `osName`, `osVersion`, `locale`, `observedTime`; effective runtime contract coi cac field la optional va ap dung privacy/format boundary.
 - `FeedbackReviewRequest` bat buoc `reviewMessage` dai `10..1000`; runtime Promote yeu cau them `githubIssueUrl`, runtime Dismiss omit field nay, du OpenAPI van publish schema dung chung.
 - Status response gom `PENDING_REVIEW`, `PROMOTED`, `DISMISSED`. Detail co them `description`, `expectedOutcome`, `reproductionSteps`, `clientContext`, `screenshot`, `reviewMessage`, `githubIssueNumber`, va `reporter`; list item chi gom metadata co ban va screenshot metadata.
 - Cac response schema feedback khong co mang `required` va cung khong publish nullable ro rang. Frontend khong nen suy dien field bat buoc hoac nullable ngoai nhung gi live contract xac nhan.
-- `SpecificationFeedbackSubmission` hien la schema rong, nen filter field/operator chua duoc mo ta trong OpenAPI. BE clarification xac nhan effective runtime query; FE dung `$filter`, `page`, `size`, `sort` thay cho object `specification` / `pageable`.
-- OpenAPI chi publish response `200` cho cac operation nay, khong mo ta error response, state transition guard, ownership failure, gioi han/kieu MIME screenshot, hoac lifecycle cho withdraw/promote/dismiss/erase. Runtime semantics duoc BE clarification xac nhan; day la documentation gaps, khong phai hard contract blockers.
+- `SpecificationFeedbackSubmission` hien la schema rong, nen filter field/operator chua duoc mo ta trong OpenAPI. Effective runtime query dùng `$filter`, `page`, `size`, `sort` thay cho object `specification` / `pageable`.
+- OpenAPI chi publish response `200` cho cac operation nay, khong mo ta error response, state transition guard, ownership failure, gioi han/kieu MIME screenshot, hoac lifecycle cho withdraw/promote/dismiss/erase. Effective runtime semantics được ghi trong ledger này; day la documentation gaps, khong phai hard contract blockers.
 
 ### 25. Webhook
 
@@ -701,7 +701,7 @@ type ActionResult<T = void> =
 ## Cac diem lech contract da biet
 
 - List/search runtime cua frontend dang dung `$filter/page/size/sort`, trong khi OpenAPI tiep tuc mo ta `specification/pageable` o nhieu list endpoint.
-- `feedback`: live contract co 11 operation tren 8 path va FE da tich hop definitions, runtime validation, authenticated actions, permission constants, submission/moderation surface, navigation, i18n, HTTP fixture, va scope-specific screenshot proxy. OpenAPI van sparse o filter grammar, requiredness/nullability, screenshot transport, error/status-transition semantics va ownership guard; BE clarification la semantic runtime contract cho cac diem nay.
+- `feedback`: live contract co 11 operation tren 8 path va FE da tich hop definitions, runtime validation, authenticated actions, permission constants, submission/moderation surface, navigation, i18n, HTTP fixture, va scope-specific screenshot proxy. OpenAPI van sparse o filter grammar, requiredness/nullability, screenshot transport, error/status-transition semantics va ownership guard; effective runtime semantics cho cac diem nay duoc ghi trong muc feedback cua ledger.
 - Frontend da migrate route canon sang `/news-outlets*` va `/news-articles*`; `/sources*`, `/news-sources*`, va `/source-documents*` chi con redirect compatibility.
 - `news articles`: `linkedEvents[]` da co `eventStatus` enum moi theo enrichment lifecycle va khong con `eventEnrichmentStatus`; FE giu field trong DTO nhung detail va quick detail khong render linked-event UI hoac event navigation.
 - `events`: backend gate enrich/market reaction operators bang `news-article:analyze`; FE events da gate bang permission canon nay truoc va chi giu `source-document:analyze` nhu alias compatibility tam thoi.

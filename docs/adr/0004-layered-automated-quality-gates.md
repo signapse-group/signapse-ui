@@ -11,7 +11,7 @@ Signapse will use GitHub Actions to make deterministic Vitest coverage and Chrom
 - Test traffic and data must never target development or production systems.
 - P0 is delivered within Signapse UI as a secret-free PR lane; P1 is a cross-system dependency for the disposable backend, Clerk tenant, and external canary.
 - P0 exposes a runnable browser-test command to agents and developers; the separate P1 command fails closed with a clear missing-environment error rather than silently skipping integration coverage.
-- Future OpenSpec work is split into a P0 UI/browser-test foundation change followed by a P1 authenticated-quality-canary change.
+- Future work is split into a P0 UI/browser-test foundation task followed by a P1 authenticated-quality-canary task.
 - A browser fixture backend is required because server-rendered actions call the backend independently of browser request interception.
 - Fixture behavior is contract-first: backend OpenAPI is canonical, with `docs/APIMAPPING.md` as the UI ledger, and contract drift must fail rather than silently diverge.
 - The required PR journeys cover the app shell/workspace, a canonical list, Personal Notes, Telegram configuration and scheduled asset analysis, market-chart controls/SSE, and representative destructive and failure states; they do not duplicate authentication integration checks.
@@ -23,7 +23,7 @@ Signapse will use GitHub Actions to make deterministic Vitest coverage and Chrom
 - The initial Test message canary succeeds only when the P1 backend test environment records a traceable Telegram-accepted delivery audit; it does not claim that a recipient read the message.
 - The canary runs through the Telegram operator browser workflow before it reads the test-only delivery audit; it therefore covers UI, authorization, server action, backend, and Telegram acceptance together.
 - The normal Test message endpoint remains `204 No Content`. A network-restricted test-only delivery-audit query, keyed by `testRunId`, reports destination, operation, timestamp, and `TELEGRAM_ACCEPTED`, `FAILED`, or `UNKNOWN` status; only `TELEGRAM_ACCEPTED` passes the canary.
-- The completed Test message restoration change must be synced and archived before test automation treats that behavior as the main-spec contract.
+- The completed Test message restoration task must be merged before test automation treats that behavior as the current contract.
 - All test data is synthetic. Clerk, backend, and Telegram credentials are protected GitHub Environment secrets and are unavailable to fork pull requests.
 - A designated release/provisioning owner configures external test resources and protected GitHub settings; repository automation must not create or expose credentials.
 - A failed PR lane blocks merge. A failed pre-release canary blocks release unless the release owner records a third-party-outage waiver; nightly failures alert that owner.

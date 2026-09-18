@@ -1,6 +1,6 @@
 # Nghiên cứu nền hero Graphify cho Signapse
 
-- Loại: ghi chú nghiên cứu; chưa phải OpenSpec được phê duyệt hay thay đổi production.
+- Loại: ghi chú nghiên cứu; chưa phải task được phê duyệt hay thay đổi production.
 - Ngày: 2026-09-09.
 - Mục tiêu: chuyển cảm giác chiều sâu của hero [Graphify](https://graphify.com/) sang ngôn ngữ thị trường với ký hiệu OHLCV.
 - Phạm vi đã chốt: public landing hero hiện tại, không phải nền dashboard hay trang đăng nhập.
@@ -15,7 +15,7 @@ Kết luận từ quan sát: chiều sâu của trường ký hiệu đến từ
 
 Hero hiện có hai cột: nội dung/CTA bên trái và `LandingContextFigure` cùng hai proof point bên phải. Section đã có `relative overflow-hidden`, phù hợp đặt một lớp nền tuyệt đối phía sau nội dung. Điểm gắn hẹp là `HeroSection` trong [landing-page.tsx](../app/[lang]/landing-page.tsx), bắt đầu tại dòng 248; lớp nền được sở hữu bởi `.heroSection` trong [landing-page.module.css](../app/[lang]/landing-page.module.css). Nền hiện tại chỉ là hai linear gradient tạo grid 72px, còn copy/visual có entrance animation 420ms.
 
-Landing đã có figure Three.js tương tác chuyển giữa knowledge graph và price action/candles. Renderer được dynamic import, có xử lý reduced motion, visibility và tài nguyên WebGL. Vì vậy nền mới phải được đánh giá cùng figure hiện tại: hai chuyển động rõ cùng lúc sẽ cạnh tranh với headline và CTA. Nguồn: [landing-context-figure.tsx](../app/[lang]/landing-context-figure.tsx), [ADR-0010](adr/0010-use-progressive-webgl-for-landing-context-figure.md), [public landing spec](../openspec/specs/public-landing-page/spec.md).
+Landing đã có figure Three.js tương tác chuyển giữa knowledge graph và price action/candles. Renderer được dynamic import, có xử lý reduced motion, visibility và tài nguyên WebGL. Vì vậy nền mới phải được đánh giá cùng figure hiện tại: hai chuyển động rõ cùng lúc sẽ cạnh tranh với headline và CTA. Nguồn: [landing-context-figure.tsx](../app/[lang]/landing-context-figure.tsx) và [ADR-0010](adr/0010-use-progressive-webgl-for-landing-context-figure.md).
 
 Palette landing cố định navy/mint, độc lập theme dashboard; `.landingRoot` sở hữu token riêng và `.darkSurface` được hero sử dụng. ADR-0011 thay thế theme-parity guidance dành riêng cho landing. Không cần đổi global tokens hoặc Nova wrappers để tạo nền này. Nguồn: [ADR-0011](adr/0011-fixed-branded-public-landing-composition.md), [landing-page.module.css](../app/[lang]/landing-page.module.css).
 
@@ -43,33 +43,33 @@ Nếu chuyển động mang lại giá trị sau thử nghiệm, giới hạn �
 
 Cơ sở platform: CSS mask có thể dùng gradient để điều khiển vùng hiển thị; media query reduced motion nhận lựa chọn giảm chuyển động của người dùng. Nguồn: [MDN mask-image](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/mask-image), [MDN prefers-reduced-motion](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/At-rules/@media/prefers-reduced-motion).
 
-Một component route-local nếu JSX nền đủ lớn, một phần CSS Module và một điểm gắn tại hero là phạm vi dự kiến. Không sửa figure Three.js hiện hữu chỉ để chứa background; nếu muốn thay figure bằng nền mới thì đó là thay đổi scope và phải cập nhật contract riêng. [Public landing spec](../openspec/specs/public-landing-page/spec.md) hiện yêu cầu figure không có visible control chrome, có interaction và motion phù hợp; nền mới không được âm thầm xóa các behavior đó.
+Một component route-local nếu JSX nền đủ lớn, một phần CSS Module và một điểm gắn tại hero là phạm vi dự kiến. Không sửa figure Three.js hiện hữu chỉ để chứa background; nếu muốn thay figure bằng nền mới thì đó là thay đổi scope và phải cập nhật contract riêng. Figure hiện tại không có visible control chrome, có interaction và motion phù hợp; nền mới không được âm thầm xóa các behavior đó.
 
 ## Kế hoạch triển khai đã chốt
 
-Không tạo OpenSpec proposal mới. Thay đổi được thực hiện trực tiếp trên runtime và các tài liệu chuẩn hiện có theo thứ tự sau:
+Thay đổi được thực hiện trực tiếp trên runtime và các tài liệu chuẩn hiện có theo thứ tự sau:
 
 1. Cập nhật contract landing trước khi sửa runtime:
    - [LANDING.md](design/LANDING.md): cho phép một trường glyph `O/H/L/C/V` route-local trong Hero, xác định đây là texture trừu tượng thứ cấp và giữ nguyên lệnh cấm ticker, giá, phần trăm, BUY/SELL, tín hiệu hoặc candlestick wallpaper có thể bị hiểu là dữ liệu thị trường.
-   - [public landing spec](../openspec/specs/public-landing-page/spec.md): thêm requirement có thể kiểm chứng cho decorative OHLCV depth field — render ở cả `/vi` và `/en`, nằm sau nội dung/figure, không thêm copy/control/accessible semantics, không tạo overflow và không thay đổi figure contract.
+   - Ghi rõ requirement có thể kiểm chứng cho decorative OHLCV depth field trong tài liệu này: render ở cả `/vi` và `/en`, nằm sau nội dung/figure, không thêm copy/control/accessible semantics, không tạo overflow và không thay đổi figure contract.
 2. Tạo `app/[lang]/landing-ohlcv-background.tsx` dưới dạng Server Component route-local. Component render một SVG inline duy nhất với vị trí cố định, chỉ dùng glyph `O`, `H`, `L`, `C`, `V` ở một số scale/opacity; không fetch dữ liệu, không dùng random runtime, không có `use client`, ticker, số giá hoặc candle giả. Root decoration dùng `aria-hidden="true"`, SVG dùng `focusable="false"`, toàn bộ lớp dùng `pointer-events: none`.
 3. Gắn component làm child đầu tiên của `HeroSection` trong [landing-page.tsx](../app/[lang]/landing-page.tsx). Content grid hiện tại được đưa lên stacking layer phía trên; headline, CTA, trust note, proof points và `LandingContextFigure` giữ nguyên DOM order và behavior.
 4. Thay grid 72px hiện tại trong [landing-page.module.css](../app/[lang]/landing-page.module.css) bằng treatment nhiều lớp: ambient navy/mint gradient ở section, glyph far/near với opacity khác nhau, mask dọc ở mép Hero và radial clear zone quanh copy. Bản đầu hoàn toàn tĩnh; entrance animation hiện có của copy/figure không đổi. Breakpoint hẹp dùng mask rộng hơn và mật độ thấp hơn để copy vẫn sạch.
 5. Cập nhật [public landing component test](../tests/components/public-landing.component.test.tsx) để khóa một decorative field duy nhất, `aria-hidden` và không thêm interactive control. Mở rộng [landing E2E](../tests/e2e/landing.spec.ts) tại các test palette/responsive/accessibility hiện có để kiểm tra decoration xuất hiện ở cả locale, không tạo horizontal overflow ở 375px/200% và không làm thay đổi CTA hoặc figure interaction.
 6. Sau khi runtime ổn định, cập nhật trạng thái/kết quả thực tế trong ghi chú này, gồm lựa chọn mật độ, mask và kết quả kiểm chứng. Không sửa `DESIGN.md`, ADR-0010/0011, dictionary, global theme tokens, `components/ui`, `package.json` hoặc figure Three.js vì các owner đó không đổi.
 
-Completion criteria: background đọc ra là OHLCV ở mức quan sát thứ hai sau headline, không cạnh tranh với figure, không gây hiểu nhầm là dữ liệu live, không thêm client JavaScript/dependency, không làm đổi layout hoặc accessibility contract. Chạy lint, typecheck, component test landing và Playwright landing spec; visual QA ở 375/768/1024/1440px, zoom 200%, light/dark system preference và reduced motion được ghi dưới dạng user-owned QA, không phải archive-blocking checkbox.
+Completion criteria: background đọc ra là OHLCV ở mức quan sát thứ hai sau headline, không cạnh tranh với figure, không gây hiểu nhầm là dữ liệu live, không thêm client JavaScript/dependency, không làm đổi layout hoặc accessibility contract. Chạy lint, typecheck, component test landing và Playwright landing tests; visual QA ở 375/768/1024/1440px, zoom 200%, light/dark system preference và reduced motion được ghi dưới dạng user-owned QA.
 
 ## Ràng buộc và cách xác minh khi triển khai
 
 [DESIGN.md](design/DESIGN.md) ưu tiên nền tinh tế, typography rõ, Geist/Geist Mono, không trang trí nặng gây xao nhãng. Yêu cầu của người dùng mở phạm vi nghiên cứu hero; không suy rộng thành nền cho admin screens. [Accessibility skill](../.agents/skills/accessibility/SKILL.md) yêu cầu reduced motion và giữ khả năng đọc, focus, target size.
 
-Kiểm tra Codex có thể chạy khi có implementation: lint, typecheck và landing component tests liên quan; xác minh decoration không thêm role/control, không đổi copy/CTA/route hoặc figure contract. Review responsive cần xét 375/768/1024/1440px và zoom 200% theo spec, cùng trạng thái reduced motion. Motion liên tục nếu được chọn cần đánh giá yêu cầu dừng/ẩn và chi phí khi tab ẩn hoặc hero ngoài viewport, thay vì chỉ thêm animation vô hạn.
+Kiểm tra Codex có thể chạy khi có implementation: lint, typecheck và landing component tests liên quan; xác minh decoration không thêm role/control, không đổi copy/CTA/route hoặc figure contract. Review responsive cần xét 375/768/1024/1440px và zoom 200% theo design contract, cùng trạng thái reduced motion. Motion liên tục nếu được chọn cần đánh giá yêu cầu dừng/ẩn và chi phí khi tab ẩn hoặc hero ngoài viewport, thay vì chỉ thêm animation vô hạn.
 
-User-owned visual QA: cảm giác chiều sâu, độ nhiễu sau headline, cạnh tranh với figure, và trải nghiệm GPU/mobile thực tế. Đây là ghi chú QA, không phải checkbox chặn archive.
+User-owned visual QA: cảm giác chiều sâu, độ nhiễu sau headline, cạnh tranh với figure, và trải nghiệm GPU/mobile thực tế.
 
 ## Giới hạn nghiên cứu
 
 Chưa triển khai production và chưa đo bundle/frame time cho phương án mới. Mật độ, cỡ glyph, opacity và mask của Signapse cần thử trực quan trong hero thật; thông số của Graphify chỉ mô tả source được quan sát, không phải giá trị tối ưu cho Signapse. Bản đầu đã chốt nền tĩnh; drift/parallax nằm ngoài phạm vi cho tới khi có yêu cầu mới và bằng chứng bản tĩnh chưa đạt mục tiêu.
 
-Xác minh cho ghi chú này: đọc CodeGraph/source, scoped instructions, DESIGN và spec liên quan; kiểm tra nội dung Markdown/UTF-8. Chỉ thêm tài liệu nên không chạy runtime tests.
+Xác minh cho ghi chú này: đọc CodeGraph/source, scoped instructions và DESIGN liên quan; kiểm tra nội dung Markdown/UTF-8. Chỉ thêm tài liệu nên không chạy runtime tests.
