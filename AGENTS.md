@@ -89,7 +89,7 @@ app/[lang]/(main)/[feature]/
 
 ## Agent Workflow adoption
 
-This repository adopts `agent-workflow` version `0.2.0` from marketplace `signapse-workflow` as its default workflow. At the start of every new session and before workflow-dependent action, load the installed `agent-workflow:workflow` skill (`$workflow` in the skill picker), read its shared policy, and compare the installed manifest version with this declaration. Resolve resources from the installed skill location, never a hardcoded cache path. Report missing or mismatched versions and continue only independent valid work.
+This repository adopts `agent-workflow` from marketplace `signapse-workflow` as its default workflow. At the start of every new session and before workflow-dependent action, load the installed `agent-workflow:workflow` skill (`$workflow` in the skill picker) and read its shared policy. Resolve resources from the installed skill location, never a hardcoded cache path. If the plugin is unavailable or required repository configuration is missing, report the blocked portion and continue independent valid work.
 
 - Planning repository for Epic/Story and backend execution: `https://github.com/signapse-group/signapse`.
 - Frontend Task/Bug execution repository: `https://github.com/signapse-group/signapse-ui`.
