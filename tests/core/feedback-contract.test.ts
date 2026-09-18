@@ -7,7 +7,10 @@ import {
   feedbackPageResponseSchema,
   feedbackSubmissionSchema,
 } from "@/app/lib/feedback/definitions"
-import { mapFeedbackDetail, mapFeedbackListItem } from "@/app/lib/feedback/mappers"
+import {
+  mapFeedbackDetail,
+  mapFeedbackListItem,
+} from "@/app/lib/feedback/mappers"
 import { normalizeFeedbackError } from "@/app/lib/feedback/errors"
 import { validateFeedbackScreenshot } from "@/app/lib/feedback/validation"
 import {
@@ -79,8 +82,9 @@ describe("feedback runtime contract", () => {
       status: listItem.status,
       createdDate: listItem.createdDate,
       lastModifiedDate: listItem.lastModifiedDate,
+      screenshot: null,
     })
-    expect(sparseDetail.success).toBe(true)
+    expect(sparseDetail.success).toBe(false)
   })
 
   it("rejects malformed core response fields", () => {
@@ -139,14 +143,14 @@ describe("feedback query contract", () => {
     expect(
       parseFeedbackModerationQuery({
         search: "  chart  ",
-        status: "PROMOTED",
+        status: "REVIEWED",
         sort: "createdDate_asc",
         page: "3",
         size: "50",
       })
     ).toEqual({
       search: "chart",
-      status: "PROMOTED",
+      status: "REVIEWED",
       sort: "createdDate_asc",
       page: 3,
       size: 50,
@@ -195,7 +199,6 @@ describe("feedback response mappers", () => {
         pagePath: "/en/dashboard",
       },
       reviewMessage: "Queued for implementation.",
-      githubIssueNumber: 123,
       reporter: {
         id: 7,
         email: "reporter@example.com",
@@ -211,7 +214,6 @@ describe("feedback response mappers", () => {
       clientContext: {
         pagePath: "/en/dashboard",
       },
-      githubIssueNumber: 123,
       sender: { id: "7", displayName: "Ada Lovelace" },
     })
   })
@@ -227,11 +229,13 @@ describe("feedback error normalization", () => {
     [502, undefined, "upstream"],
     [500, undefined, "server"],
   ] as const)("maps HTTP %s to %s", (status, code, kind) => {
-    expect(normalizeFeedbackError({ status, code }, "Try again")).toMatchObject({
-      status,
-      kind,
-      message: "Try again",
-    })
+    expect(normalizeFeedbackError({ status, code }, "Try again")).toMatchObject(
+      {
+        status,
+        kind,
+        message: "Try again",
+      }
+    )
   })
 
   it("recognizes lifecycle codes without exposing backend copy", () => {

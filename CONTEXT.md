@@ -75,31 +75,27 @@ _Avoid_: Mailbox owner, deployment operator
 ## Feedback
 
 **Feedback submission (Phản hồi)**:
-A bug report or idea submitted by an authenticated user for review, optionally with a screenshot and technical context.
+A freeform message submitted by an authenticated user for review, optionally with a screenshot and technical context.
 _Avoid_: Ticket, yêu cầu hỗ trợ, phiếu phản hồi
 
-**Promoted feedback (Phản hồi đã chuyển xử lý)**:
-A reviewed feedback submission selected for follow-up handling; this outcome does not by itself promise implementation.
+**Reviewed feedback (Phản hồi đã xem xét)**:
+A feedback submission that has completed the one-way review transition and has an immutable user-visible review message. Review does not promise implementation or any internal follow-up work.
 _Avoid_: Phản hồi đã chấp nhận, công việc đã cam kết
-
-**Dismissed feedback (Phản hồi không tiếp nhận)**:
-A reviewed feedback submission not selected for follow-up handling; it is a review outcome, not deletion or user withdrawal.
-_Avoid_: Phản hồi đã xóa, phản hồi đã rút
 
 **Withdrawn feedback (Phản hồi đã rút)**:
 A feedback submission retracted by its feedback sender and no longer accessible. Withdrawal is an outcome, not a persisted feedback status, and is distinct from administrative deletion.
 _Avoid_: Phản hồi không tiếp nhận, phản hồi đã xóa
 
 **Pending feedback (Phản hồi chờ xem xét)**:
-A feedback submission awaiting its first review outcome.
+A feedback submission that has been received and is awaiting its one-way review transition.
 _Avoid_: Phản hồi mới, ticket mở
 
 **Administrative feedback deletion (Xóa phản hồi)**:
-The irreversible removal of an existing feedback submission by an authorized administrator, regardless of review outcome; it is distinct from sender withdrawal and reviewer dismissal.
-_Avoid_: Rút phản hồi, không tiếp nhận, lưu trữ phản hồi
+The irreversible removal of an existing feedback submission by an authorized administrator, regardless of whether it is pending or reviewed; it is distinct from sender withdrawal.
+_Avoid_: Rút phản hồi, lưu trữ phản hồi
 
 **Feedback review message (Kết quả xem xét)**:
-A user-visible explanation sent by a reviewer when a feedback submission is moved to follow-up handling or not accepted.
+A user-visible explanation sent by a reviewer when a feedback submission moves from pending to reviewed. The message is immutable after the transition.
 _Avoid_: Ghi chú nội bộ, admin note, private review note
 
 **Feedback sender (Người gửi phản hồi)**:
@@ -111,16 +107,12 @@ Whether a feedback submission may currently be withdrawn, reviewed, or administr
 _Avoid_: Backend capability flag, guaranteed mutation success
 
 **Feedback technical context (Thông tin kỹ thuật của phản hồi)**:
-Optional diagnostic metadata knowingly attached by the feedback sender, limited to the page path without query or fragment, application version, identified browser and operating system, locale, and bug observation time. It excludes page content, form data, raw user-agent, IP address, and device identifiers.
+Optional diagnostic metadata knowingly attached by the feedback sender, limited to the page path without query or fragment, application version, identified browser and operating system, and locale. It excludes page content, form data, observation time, raw user-agent, IP address, and device identifiers.
 _Avoid_: Tracking data, page snapshot, telemetry payload
 
 **Feedback screenshot (Ảnh chụp phản hồi)**:
 A single manually selected PNG or JPEG image of at most 5 MiB and 25 megapixels attached to a feedback submission.
 _Avoid_: Automatic capture, attachment, document upload
-
-**Promoted feedback issue reference (Tham chiếu issue của phản hồi đã chuyển xử lý)**:
-A positive GitHub issue number parsed from the configured-repository Issue URL supplied during promotion. It is moderation-only reference data and does not mean Signapse created the issue or promised implementation.
-_Avoid_: Automatic GitHub issue, implementation commitment, personal feedback link
 
 ## Telegram
 

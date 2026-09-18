@@ -1,4 +1,5 @@
 import { getModerationFeedback } from "@/app/api/feedback/action"
+import { getFeedbackErrorStatus } from "@/app/lib/feedback/errors"
 import { FEEDBACK_READ_PERMISSION } from "@/app/lib/feedback/permissions"
 import { mapFeedbackListItem } from "@/app/lib/feedback/mappers"
 import { parseFeedbackModerationQuery } from "@/app/lib/feedback/query"
@@ -29,10 +30,20 @@ export default async function FeedbackSubmissionsPage({
 
   const query = parseFeedbackModerationQuery(await searchParams)
   let response: Awaited<ReturnType<typeof getModerationFeedback>> | null = null
+  let initialError: string | undefined
+  let initialErrorTitle: string | undefined
   try {
     response = await getModerationFeedback(query)
-  } catch {
+  } catch (error: unknown) {
     response = null
+    const status = getFeedbackErrorStatus(error)
+    const accessDenied = status === 401 || status === 403
+    initialError = accessDenied
+      ? dictionary.feedback.readDenied
+      : dictionary.feedback.queueErrorDescription
+    initialErrorTitle = accessDenied
+      ? dictionary.feedback.detailAccessDeniedTitle
+      : undefined
   }
 
   return (
@@ -45,9 +56,8 @@ export default async function FeedbackSubmissionsPage({
             }
           : null
       }
-      initialError={
-        response ? undefined : dictionary.feedback.queueErrorDescription
-      }
+      initialError={response ? undefined : initialError}
+      initialErrorTitle={response ? undefined : initialErrorTitle}
     />
   )
 }

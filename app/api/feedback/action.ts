@@ -4,17 +4,14 @@ import { revalidatePath } from "next/cache"
 
 import { fetchAuthenticated } from "@/app/api/auth/action"
 import type { BackendApiError } from "@/app/api/auth/action"
-import type {
-  Page,
-} from "@/app/lib/definitions"
+import type { Page } from "@/app/lib/definitions"
 import { getServerDictionary } from "@/app/lib/i18n/server"
 import {
   FEEDBACK_MAX_SCREENSHOT_BYTES,
   feedbackDetailResponseSchema,
-  feedbackDismissSchema,
   feedbackListResponseSchema,
   feedbackPageResponseSchema,
-  feedbackPromoteSchema,
+  feedbackReviewSchema,
   feedbackSubmissionSchema,
   type FeedbackActionResult,
   type FeedbackDetailResponse,
@@ -195,37 +192,12 @@ export async function withdrawFeedback(
   }
 }
 
-export async function promoteFeedback(
-  id: number,
-  input: { reviewMessage: string; githubIssueUrl: string }
-): Promise<FeedbackActionResult<FeedbackDetailResponse>> {
-  const dictionary = await getServerDictionary()
-  const parsed = feedbackPromoteSchema.safeParse(input)
-  if (!parsed.success) {
-    return { success: false, error: dictionary.feedback.reviewError }
-  }
-
-  try {
-    assertPositiveId(id)
-    const value = await fetchAuthenticated<unknown>(
-      `/feedback-submissions/${id}/promote`,
-      { method: "POST", body: JSON.stringify(parsed.data) }
-    )
-    const data = parseDetailResponse(value)
-    revalidatePath("/feedback-submissions")
-    revalidatePath(`/feedback-submissions/${id}`)
-    return { success: true, data }
-  } catch (error: unknown) {
-    return getFailure(error, dictionary.feedback.reviewError)
-  }
-}
-
-export async function dismissFeedback(
+export async function reviewFeedback(
   id: number,
   input: { reviewMessage: string }
 ): Promise<FeedbackActionResult<FeedbackDetailResponse>> {
   const dictionary = await getServerDictionary()
-  const parsed = feedbackDismissSchema.safeParse(input)
+  const parsed = feedbackReviewSchema.safeParse(input)
   if (!parsed.success) {
     return { success: false, error: dictionary.feedback.reviewError }
   }
@@ -233,7 +205,7 @@ export async function dismissFeedback(
   try {
     assertPositiveId(id)
     const value = await fetchAuthenticated<unknown>(
-      `/feedback-submissions/${id}/dismiss`,
+      `/feedback-submissions/${id}/review`,
       { method: "POST", body: JSON.stringify(parsed.data) }
     )
     const data = parseDetailResponse(value)

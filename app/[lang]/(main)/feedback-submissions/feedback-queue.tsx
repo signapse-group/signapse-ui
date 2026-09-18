@@ -69,11 +69,13 @@ interface FeedbackQueuePageProps {
     numberOfElements: number
   } | null
   initialError?: string
+  initialErrorTitle?: string
 }
 
 export function FeedbackQueuePage({
   initialPage,
   initialError,
+  initialErrorTitle,
 }: FeedbackQueuePageProps) {
   const { dictionary, formatDateTime } = useLocalization()
   const t = dictionary.feedback
@@ -143,6 +145,7 @@ export function FeedbackQueuePage({
               />
               <Input
                 id="feedback-queue-search"
+                type="search"
                 value={searchValue}
                 onChange={(event) => setSearchValue(event.target.value)}
                 placeholder={t.queueSearchPlaceholder}
@@ -217,7 +220,7 @@ export function FeedbackQueuePage({
 
       {initialError ? (
         <QueueEmptyState
-          title={t.queueErrorTitle}
+          title={initialErrorTitle ?? t.queueErrorTitle}
           description={initialError}
           actionLabel={t.queueRetry}
           onAction={() => router.refresh()}

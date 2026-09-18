@@ -44,7 +44,7 @@ type FixtureController = {
       | "storage-failure"
       | "server-failure"
       | "malformed",
-    kind?: "feedback" | "compose" | "withdraw" | "promote" | "dismiss" | "erase"
+    kind?: "feedback" | "compose" | "withdraw" | "review" | "erase"
   ): Promise<void>
   setPermissions(permissions: string[]): Promise<void>
 }

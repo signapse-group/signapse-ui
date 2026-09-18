@@ -105,9 +105,6 @@ function feedbackRecord(
     createdDate: options.createdDate ?? NOW,
     lastModifiedDate: options.lastModifiedDate ?? NOW,
     reviewMessage: options.reviewMessage ?? null,
-    ...(status === "PROMOTED" && options.githubIssueNumber
-      ? { githubIssueNumber: options.githubIssueNumber }
-      : {}),
     reporter: FEEDBACK_OWNER,
   }
 }
@@ -128,7 +125,6 @@ function feedbackDetail(record, moderation = false) {
   if (!moderation) {
     delete detail.ownerId
     delete detail.reporter
-    delete detail.githubIssueNumber
   }
   return detail
 }
@@ -136,8 +132,8 @@ function feedbackDetail(record, moderation = false) {
 function feedbackRecords() {
   return [
     feedbackRecord(1, "Biểu đồ không giữ bộ lọc sau khi đổi ngôn ngữ", "PENDING_REVIEW", { screenshot: true, createdDate: "2026-01-15T08:00:00.000Z" }),
-    feedbackRecord(2, "Thêm bộ lọc tài sản yêu thích", "PROMOTED", { githubIssueNumber: 123, clientContext: false, createdDate: "2026-01-14T08:00:00.000Z", reviewMessage: "Đã chuyển xử lý để nhóm sản phẩm xem xét." }),
-    feedbackRecord(3, "Thông báo lỗi thiếu hướng dẫn", "DISMISSED", { clientContext: false, createdDate: "2026-01-13T08:00:00.000Z", reviewMessage: "Không phù hợp với phạm vi hiện tại." }),
+    feedbackRecord(2, "Thêm bộ lọc tài sản yêu thích", "REVIEWED", { clientContext: false, createdDate: "2026-01-14T08:00:00.000Z", reviewMessage: "Đã xem xét phản hồi của bạn." }),
+    feedbackRecord(3, "Thông báo lỗi thiếu hướng dẫn", "REVIEWED", { clientContext: false, createdDate: "2026-01-13T08:00:00.000Z", reviewMessage: "Đã xem xét phản hồi của bạn." }),
     feedbackRecord(4, "Cải thiện trang tổng quan", "PENDING_REVIEW", { ownerId: 9010, createdDate: "2026-01-12T08:00:00.000Z" }),
     feedbackRecord(5, "Ảnh chụp màn hình không hiển thị", "PENDING_REVIEW", { screenshot: true, createdDate: "2026-01-11T08:00:00.000Z" }),
     feedbackRecord(6, "Tín hiệu thị trường cần thêm ngữ cảnh", "PENDING_REVIEW", { screenshot: true, createdDate: "2026-01-10T08:00:00.000Z" }),
@@ -796,11 +792,8 @@ function feedbackScenarioFor(state, method, pathname) {
   if (pathname.startsWith("/me/feedback-submissions/") && method === "DELETE") {
     return state.feedbackScenarios.withdraw ?? state.feedbackScenarios.feedback
   }
-  if (pathname.endsWith("/promote")) {
-    return state.feedbackScenarios.promote ?? state.feedbackScenarios.feedback
-  }
-  if (pathname.endsWith("/dismiss")) {
-    return state.feedbackScenarios.dismiss ?? state.feedbackScenarios.feedback
+  if (pathname.endsWith("/review")) {
+    return state.feedbackScenarios.review ?? state.feedbackScenarios.feedback
   }
   if (pathname.startsWith("/feedback-submissions/") && method === "DELETE") {
     return state.feedbackScenarios.erase ?? state.feedbackScenarios.feedback
@@ -841,15 +834,12 @@ function feedbackRouteResult(state, method, pathname, url, body) {
   const moderationDetailMatch = pathname.match(/^\/feedback-submissions\/(\d+)$/)
   const personalScreenshotMatch = pathname.match(/^\/me\/feedback-submissions\/(\d+)\/screenshot$/)
   const moderationScreenshotMatch = pathname.match(/^\/feedback-submissions\/(\d+)\/screenshot$/)
-  const promoteMatch = pathname.match(/^\/feedback-submissions\/(\d+)\/promote$/)
-  const dismissMatch = pathname.match(/^\/feedback-submissions\/(\d+)\/dismiss$/)
+  const reviewMatch = pathname.match(/^\/feedback-submissions\/(\d+)\/review$/)
   const scenario = feedbackScenarioFor(state, method, pathname) ?? "success"
   const kind = pathname.startsWith("/me/") && method === "DELETE"
     ? "withdraw"
-    : pathname.endsWith("/promote")
-      ? "promote"
-      : pathname.endsWith("/dismiss")
-        ? "dismiss"
+    : pathname.endsWith("/review")
+      ? "review"
         : pathname.startsWith("/feedback-submissions/") && method === "DELETE"
           ? "erase"
           : "feedback"
@@ -863,7 +853,7 @@ function feedbackRouteResult(state, method, pathname, url, body) {
   if (scenarioError) return scenarioError
 
   const moderationPath = pathname.startsWith("/feedback-submissions")
-  if (moderationPath && pathname !== "/feedback-submissions" && !hasFixturePermission(state, pathname.endsWith("/promote") || pathname.endsWith("/dismiss") ? "feedback:review" : pathname.endsWith("/screenshot") || method === "GET" ? "feedback:read" : "feedback:delete")) {
+  if (moderationPath && pathname !== "/feedback-submissions" && !hasFixturePermission(state, pathname.endsWith("/review") ? "feedback:review" : pathname.endsWith("/screenshot") || method === "GET" ? "feedback:read" : "feedback:delete")) {
     return { __status: 403, payload: errorPayload("Feedback permission denied", "FORBIDDEN") }
   }
   if (moderationPath && pathname === "/feedback-submissions" && !hasFixturePermission(state, "feedback:read")) {
@@ -954,30 +944,26 @@ function feedbackRouteResult(state, method, pathname, url, body) {
     }
     return feedbackDetail(existing, true)
   }
-  if (promoteMatch || dismissMatch) {
-    const id = Number((promoteMatch ?? dismissMatch)[1])
+  if (reviewMatch) {
+    const id = Number(reviewMatch[1])
     const existing = state.feedback.find((item) => item.id === id)
     if (!existing) return { __status: 404, payload: errorPayload("Feedback not found", "NOT_FOUND") }
     if (existing.status !== "PENDING_REVIEW") {
       return { __status: 409, payload: errorPayload("Feedback already reviewed", "FEEDBACK_ALREADY_REVIEWED") }
     }
     const parsedBody = body && !body.__multipart ? body : {}
-    if (promoteMatch) {
-      if (
-        typeof parsedBody.githubIssueUrl !== "string" ||
-        !/^https:\/\/github\.com\/signapse\/signapse\/issues\/\d+$/.test(
-          parsedBody.githubIssueUrl
-        )
-      ) {
-        return { __status: 400, payload: errorPayload("Invalid GitHub Issue URL", "FIXTURE_VALIDATION") }
-      }
-    } else if (parsedBody.githubIssueUrl !== undefined) {
-      return { __status: 400, payload: errorPayload("Dismiss does not accept a GitHub Issue URL", "FIXTURE_VALIDATION") }
+    if (
+      !parsedBody ||
+      typeof parsedBody.reviewMessage !== "string" ||
+      parsedBody.reviewMessage.trim().length === 0 ||
+      parsedBody.reviewMessage.trim().length > 1000 ||
+      Object.keys(parsedBody).some((key) => key !== "reviewMessage")
+    ) {
+      return { __status: 400, payload: errorPayload("Invalid review message", "FIXTURE_VALIDATION") }
     }
-    existing.status = promoteMatch ? "PROMOTED" : "DISMISSED"
-    existing.reviewMessage = parsedBody.reviewMessage ?? null
+    existing.status = "REVIEWED"
+    existing.reviewMessage = parsedBody.reviewMessage.trim()
     existing.lastModifiedDate = NOW
-    if (promoteMatch) existing.githubIssueNumber = 123
     return feedbackDetail(existing, true)
   }
   return null
