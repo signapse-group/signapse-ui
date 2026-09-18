@@ -2,9 +2,6 @@ import type { AppLocale } from "@/app/lib/i18n/config"
 import type { Dictionary } from "@/app/lib/i18n/dictionary-types"
 import { z } from "zod"
 
-export const FEEDBACK_TYPES = ["BUG", "IDEA"] as const
-export type FeedbackType = (typeof FEEDBACK_TYPES)[number]
-
 export const FEEDBACK_STATUSES = [
   "PENDING_REVIEW",
   "PROMOTED",
@@ -12,21 +9,17 @@ export const FEEDBACK_STATUSES = [
 ] as const
 export type FeedbackStatus = (typeof FEEDBACK_STATUSES)[number]
 
+export const FEEDBACK_MAX_CONTENT_LENGTH = 5_000
 export const FEEDBACK_MAX_SCREENSHOT_BYTES = 5 * 1024 * 1024
 export const FEEDBACK_MAX_SCREENSHOT_PIXELS = 25_000_000
 export const FEEDBACK_PAGE_SIZE = 10
 export const FEEDBACK_MODERATION_PAGE_SIZE_OPTIONS = [10, 20, 50, 100] as const
 
-export const feedbackTypeSchema = z.enum(FEEDBACK_TYPES)
 export const feedbackStatusSchema = z.enum(FEEDBACK_STATUSES)
 
 export const feedbackSubmissionSchema = z
   .object({
-    type: feedbackTypeSchema,
-    title: z.string().trim().min(5).max(150),
-    description: z.string().trim().min(20).max(5000),
-    expectedOutcome: z.string().trim().min(10).max(3000),
-    reproductionSteps: z.string().trim().max(5000).optional(),
+    content: z.string().trim().min(1).max(FEEDBACK_MAX_CONTENT_LENGTH),
     clientContext: z
       .object({
         pagePath: z.string().trim().max(500).optional(),
@@ -36,29 +29,12 @@ export const feedbackSubmissionSchema = z
         osName: z.string().trim().max(100).optional(),
         osVersion: z.string().trim().max(100).optional(),
         locale: z.string().trim().max(20).optional(),
-        observedTime: z.string().datetime().optional(),
       })
       .strict()
       .nullable()
       .optional(),
   })
-  .superRefine((value, context) => {
-    if (value.type === "IDEA" && value.reproductionSteps) {
-      context.addIssue({
-        code: "custom",
-        path: ["reproductionSteps"],
-        message: "reproductionSteps is only supported for BUG feedback",
-      })
-    }
-
-    if (value.type === "IDEA" && value.clientContext?.observedTime) {
-      context.addIssue({
-        code: "custom",
-        path: ["clientContext", "observedTime"],
-        message: "observedTime is only supported for BUG feedback",
-      })
-    }
-  })
+  .strict()
 
 export const feedbackReviewMessageSchema = z.string().trim().min(10).max(1000)
 
@@ -85,7 +61,6 @@ export interface FeedbackClientContextResponse {
   osName?: string | null
   osVersion?: string | null
   locale?: string | null
-  observedTime?: string | null
 }
 
 export interface FeedbackReporterResponse {
@@ -98,20 +73,16 @@ export interface FeedbackReporterResponse {
 
 export interface FeedbackListResponse {
   id: number
-  type: FeedbackType
-  title: string
+  content: string
   status: FeedbackStatus
   createdDate: string
   lastModifiedDate: string
-  screenshot: FeedbackScreenshotMetadata | null
+  screenshot?: FeedbackScreenshotMetadata | null
 }
 
 export interface FeedbackDetailResponse extends FeedbackListResponse {
-  description: string
-  expectedOutcome: string
-  reproductionSteps?: string | null
-  clientContext: FeedbackClientContextResponse | null
-  reviewMessage: string | null
+  clientContext?: FeedbackClientContextResponse | null
+  reviewMessage?: string | null
   githubIssueNumber?: number | null
   reporter?: FeedbackReporterResponse | null
 }
@@ -187,29 +158,24 @@ const feedbackClientContextResponseSchema = z
     osName: z.string().nullable().optional(),
     osVersion: z.string().nullable().optional(),
     locale: z.string().nullable().optional(),
-    observedTime: z.string().datetime().nullable().optional(),
   })
   .passthrough()
 
 export const feedbackListResponseSchema = z
   .object({
     id: z.number().int().positive(),
-    type: feedbackTypeSchema,
-    title: z.string(),
+    content: z.string(),
     status: feedbackStatusSchema,
     createdDate: z.string().datetime(),
     lastModifiedDate: z.string().datetime(),
-    screenshot: feedbackScreenshotMetadataSchema.nullable(),
+    screenshot: feedbackScreenshotMetadataSchema.nullable().optional(),
   })
   .passthrough()
 
 export const feedbackDetailResponseSchema = feedbackListResponseSchema
   .extend({
-    description: z.string(),
-    expectedOutcome: z.string(),
-    reproductionSteps: z.string().nullable().optional(),
-    clientContext: feedbackClientContextResponseSchema.nullable(),
-    reviewMessage: z.string().nullable(),
+    clientContext: feedbackClientContextResponseSchema.nullable().optional(),
+    reviewMessage: z.string().nullable().optional(),
     githubIssueNumber: z.number().int().positive().nullable().optional(),
     reporter: z
       .object({
@@ -260,14 +226,6 @@ export interface FeedbackTechnicalContext {
   browser: string
   operatingSystem: string
   locale: AppLocale
-  observedAt: string
-}
-
-export function getFeedbackTypeLabel(
-  type: FeedbackType,
-  dictionary: Dictionary
-): string {
-  return dictionary.feedback.types[type]
 }
 
 export function getFeedbackStatusLabel(
@@ -282,12 +240,6 @@ export function getFeedbackStatusDescription(
   dictionary: Dictionary
 ): string {
   return dictionary.feedback.statusDescriptions[status]
-}
-
-export function isFeedbackType(
-  value: string | null | undefined
-): value is FeedbackType {
-  return value !== null && FEEDBACK_TYPES.includes(value as FeedbackType)
 }
 
 export function isFeedbackStatus(

@@ -34,7 +34,6 @@ import {
 import {
   FeedbackScreenshotView,
   FeedbackStatusBadge,
-  FeedbackTypeBadge,
 } from "./feedback-presentation"
 
 interface FeedbackListPageProps {
@@ -61,7 +60,8 @@ export function FeedbackListPage({
   const page = Math.max(1, Number(searchParams.get("page")) || 1)
   const records = initialPage?.content ?? []
   const totalPages = Math.max(1, initialPage?.totalPages ?? 1)
-  const hasNoPageResults = Boolean(initialPage) && records.length === 0 && page > 1
+  const hasNoPageResults =
+    Boolean(initialPage) && records.length === 0 && page > 1
 
   function openCompose() {
     setComposeOpen(true)
@@ -120,10 +120,7 @@ export function FeedbackListPage({
               <TableHeader>
                 <AppListTableHeaderRow>
                   <AppListTableHead>
-                    {dictionary.feedback.titleColumn}
-                  </AppListTableHead>
-                  <AppListTableHead className="w-28">
-                    {dictionary.feedback.typeColumn}
+                    {dictionary.feedback.contentColumn}
                   </AppListTableHead>
                   <AppListTableHead className="w-48">
                     {dictionary.feedback.statusColumn}
@@ -144,11 +141,8 @@ export function FeedbackListPage({
                         href={`/feedback/${record.id}`}
                         className="line-clamp-2 font-medium break-words text-foreground hover:underline"
                       >
-                        {record.title}
+                        {record.content}
                       </Link>
-                    </TableCell>
-                    <TableCell className="align-top">
-                      <FeedbackTypeBadge type={record.type} />
                     </TableCell>
                     <TableCell className="align-top">
                       <FeedbackStatusBadge status={record.status} />

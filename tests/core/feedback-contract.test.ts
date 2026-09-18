@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import {
+  FEEDBACK_MAX_CONTENT_LENGTH,
   feedbackDetailResponseSchema,
   feedbackListResponseSchema,
   feedbackPageResponseSchema,
@@ -16,8 +17,7 @@ import {
 
 const listItem = {
   id: 42,
-  type: "BUG" as const,
-  title: "Chart does not refresh",
+  content: "The chart does not refresh after changing the selected asset.",
   status: "PENDING_REVIEW" as const,
   createdDate: "2026-08-25T09:00:00.000Z",
   lastModifiedDate: "2026-08-25T09:05:00.000Z",
@@ -36,9 +36,6 @@ describe("feedback runtime contract", () => {
     })
     const detail = feedbackDetailResponseSchema.safeParse({
       ...listItem,
-      description: "The chart stays stale after changing the selected asset.",
-      expectedOutcome: "The chart should refresh with the newly selected asset.",
-      reproductionSteps: "1. Open the chart.\n2. Change the asset.",
       clientContext: {
         pagePath: "/en/dashboard",
         appVersion: "1.2.3",
@@ -47,7 +44,6 @@ describe("feedback runtime contract", () => {
         osName: "Windows",
         osVersion: "11",
         locale: "en",
-        observedTime: "2026-08-25T09:04:00.000Z",
       },
       reviewMessage: null,
       reporter: null,
@@ -76,6 +72,15 @@ describe("feedback runtime contract", () => {
     expect(list.success).toBe(true)
     expect(detail.success).toBe(true)
     expect(page.success).toBe(true)
+
+    const sparseDetail = feedbackDetailResponseSchema.safeParse({
+      id: listItem.id,
+      content: listItem.content,
+      status: listItem.status,
+      createdDate: listItem.createdDate,
+      lastModifiedDate: listItem.lastModifiedDate,
+    })
+    expect(sparseDetail.success).toBe(true)
   })
 
   it("rejects malformed core response fields", () => {
@@ -93,32 +98,36 @@ describe("feedback runtime contract", () => {
     ).toBe(false)
   })
 
-  it("enforces BUG-only reproduction and observed time fields", () => {
-    const common = {
-      title: "A valid feedback title",
-      description: "This description is long enough for the contract.",
-      expectedOutcome: "The expected outcome is explicit and actionable.",
+  it("validates trimmed content and rejects blank, oversized, and legacy fields", () => {
+    const parsed = feedbackSubmissionSchema.safeParse({
+      content: "  A valid feedback message.  ",
+      clientContext: { pagePath: "/en/dashboard" },
+    })
+    expect(parsed.success).toBe(true)
+    if (parsed.success) {
+      expect(parsed.data).toEqual({
+        content: "A valid feedback message.",
+        clientContext: { pagePath: "/en/dashboard" },
+      })
     }
 
+    expect(feedbackSubmissionSchema.safeParse({ content: "   " }).success).toBe(
+      false
+    )
     expect(
       feedbackSubmissionSchema.safeParse({
-        ...common,
-        type: "BUG",
-        reproductionSteps: "1. Reproduce the issue.",
-        clientContext: { observedTime: "2026-08-25T09:04:00.000Z" },
-      }).success
-    ).toBe(true)
-    expect(
-      feedbackSubmissionSchema.safeParse({
-        ...common,
-        type: "IDEA",
-        reproductionSteps: "This is not valid for an idea.",
+        content: "x".repeat(FEEDBACK_MAX_CONTENT_LENGTH + 1),
       }).success
     ).toBe(false)
     expect(
       feedbackSubmissionSchema.safeParse({
-        ...common,
-        type: "IDEA",
+        content: "A valid message",
+        title: "Legacy title",
+      }).success
+    ).toBe(false)
+    expect(
+      feedbackSubmissionSchema.safeParse({
+        content: "A valid message",
         clientContext: { observedTime: "2026-08-25T09:04:00.000Z" },
       }).success
     ).toBe(false)
@@ -130,7 +139,6 @@ describe("feedback query contract", () => {
     expect(
       parseFeedbackModerationQuery({
         search: "  chart  ",
-        type: "BUG",
         status: "PROMOTED",
         sort: "createdDate_asc",
         page: "3",
@@ -138,7 +146,6 @@ describe("feedback query contract", () => {
       })
     ).toEqual({
       search: "chart",
-      type: "BUG",
       status: "PROMOTED",
       sort: "createdDate_asc",
       page: 3,
@@ -157,7 +164,6 @@ describe("feedback query contract", () => {
   it("serializes OData filters, zero-based pages, and repeated sort params", () => {
     const serialized = serializeFeedbackModerationQuery({
       search: "O'Reilly",
-      type: "BUG",
       status: "PENDING_REVIEW",
       sort: "createdDate_desc",
       page: 2,
@@ -166,7 +172,7 @@ describe("feedback query contract", () => {
     const params = new URLSearchParams(serialized)
 
     expect(params.get("$filter")).toBe(
-      "containsIgnoreCase(title,'O''Reilly') and type eq BUG and status eq 'PENDING_REVIEW'"
+      "containsIgnoreCase(content,'O''Reilly') and status eq 'PENDING_REVIEW'"
     )
     expect(params.get("page")).toBe("1")
     expect(params.get("size")).toBe("20")
@@ -185,12 +191,8 @@ describe("feedback response mappers", () => {
 
     const mapped = mapFeedbackDetail({
       ...listItem,
-      description: "The chart stays stale after changing the selected asset.",
-      expectedOutcome: "The chart should refresh with the newly selected asset.",
-      reproductionSteps: null,
       clientContext: {
         pagePath: "/en/dashboard",
-        observedTime: "2026-08-25T09:04:00.000Z",
       },
       reviewMessage: "Queued for implementation.",
       githubIssueNumber: 123,
@@ -205,9 +207,9 @@ describe("feedback response mappers", () => {
 
     expect(mapped).toMatchObject({
       id: "42",
+      content: listItem.content,
       clientContext: {
         pagePath: "/en/dashboard",
-        observedAt: "2026-08-25T09:04:00.000Z",
       },
       githubIssueNumber: 123,
       sender: { id: "7", displayName: "Ada Lovelace" },

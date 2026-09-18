@@ -35,8 +35,7 @@ import {
 
 const listItem = {
   id: 42,
-  type: "BUG" as const,
-  title: "Chart does not refresh",
+  content: "The chart does not refresh after changing the selected asset.",
   status: "PENDING_REVIEW" as const,
   createdDate: "2026-08-25T09:00:00.000Z",
   lastModifiedDate: "2026-08-25T09:05:00.000Z",
@@ -64,9 +63,6 @@ const page = {
 
 const detail = {
   ...listItem,
-  description: "The chart stays stale after changing the selected asset.",
-  expectedOutcome: "The chart should refresh with the newly selected asset.",
-  reproductionSteps: "1. Open the chart.",
   clientContext: null,
   reviewMessage: null,
   reporter: null,
@@ -88,14 +84,13 @@ describe("Feedback authenticated actions", () => {
 
     await getModerationFeedback({
       search: "chart",
-      type: "BUG",
       status: "PENDING_REVIEW",
       sort: "createdDate_desc",
       page: 2,
       size: 20,
     })
     expect(fetchAuthenticated).toHaveBeenLastCalledWith(
-      "/feedback-submissions?%24filter=containsIgnoreCase%28title%2C%27chart%27%29+and+type+eq+BUG+and+status+eq+%27PENDING_REVIEW%27&page=1&size=20&sort=createdDate%2Cdesc&sort=id%2Cdesc"
+      "/feedback-submissions?%24filter=containsIgnoreCase%28content%2C%27chart%27%29+and+status+eq+%27PENDING_REVIEW%27&page=1&size=20&sort=createdDate%2Cdesc&sort=id%2Cdesc"
     )
   })
 
@@ -105,11 +100,7 @@ describe("Feedback authenticated actions", () => {
     formData.append(
       "submission",
       JSON.stringify({
-        type: "BUG",
-        title: "Chart does not refresh",
-        description: "The chart stays stale after changing the selected asset.",
-        expectedOutcome: "The chart should refresh with the selected asset.",
-        reproductionSteps: "1. Change the asset.",
+        content: "Chart does not refresh after changing the selected asset.",
         clientContext: { pagePath: "/en/dashboard" },
       })
     )
@@ -132,10 +123,33 @@ describe("Feedback authenticated actions", () => {
     expect(options.body).toBeInstanceOf(FormData)
     const body = options.body as FormData
     expect(body.get("screenshot")).toBeInstanceOf(File)
-    expect(JSON.parse(await (body.get("submission") as Blob).text())).toEqual(
-      expect.objectContaining({ type: "BUG" })
-    )
+    expect(JSON.parse(await (body.get("submission") as Blob).text())).toEqual({
+      content: "Chart does not refresh after changing the selected asset.",
+      clientContext: { pagePath: "/en/dashboard" },
+    })
     expect(revalidatePath).toHaveBeenCalledWith("/feedback")
+  })
+
+  it("omits optional context and screenshot parts when they are not selected", async () => {
+    vi.mocked(fetchAuthenticated).mockResolvedValue(detail)
+    const formData = new FormData()
+    formData.append(
+      "submission",
+      JSON.stringify({ content: "A feedback message without attachments." })
+    )
+
+    await expect(createFeedbackSubmission(formData)).resolves.toMatchObject({
+      success: true,
+    })
+    const [, options] = vi.mocked(fetchAuthenticated).mock.calls[0] as [
+      string,
+      RequestInit,
+    ]
+    const body = options.body as FormData
+    expect(JSON.parse(await (body.get("submission") as Blob).text())).toEqual({
+      content: "A feedback message without attachments.",
+    })
+    expect(body.get("screenshot")).toBeNull()
   })
 
   it("keeps Promote and Dismiss request bodies distinct", async () => {

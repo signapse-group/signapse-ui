@@ -3,7 +3,6 @@ import type { AppLocale } from "@/app/lib/i18n/config"
 import {
   FEEDBACK_MAX_SCREENSHOT_BYTES,
   FEEDBACK_MAX_SCREENSHOT_PIXELS,
-  type FeedbackType,
   type FeedbackTechnicalContext,
 } from "./definitions"
 
@@ -84,8 +83,7 @@ function operatingSystem(platform: string, userAgent: string): string {
 }
 
 export function getFeedbackTechnicalContext(
-  locale: AppLocale,
-  type: FeedbackType = "BUG"
+  locale: AppLocale
 ): FeedbackTechnicalContext {
   const userAgent = typeof navigator === "undefined" ? "" : navigator.userAgent
   const platform = typeof navigator === "undefined" ? "" : navigator.platform
@@ -98,13 +96,11 @@ export function getFeedbackTechnicalContext(
     browser: browserDetails(userAgent),
     operatingSystem: operatingSystem(platform, userAgent),
     locale,
-    observedAt: type === "BUG" ? new Date().toISOString() : "",
   }
 }
 
 export function toFeedbackSubmissionContext(
-  context: FeedbackTechnicalContext | undefined,
-  type: FeedbackType
+  context: FeedbackTechnicalContext | undefined
 ) {
   if (!context) return undefined
 
@@ -114,8 +110,5 @@ export function toFeedbackSubmissionContext(
     browserName: context.browser || undefined,
     osName: context.operatingSystem || undefined,
     locale: context.locale || undefined,
-    ...(type === "BUG" && context.observedAt
-      ? { observedTime: context.observedAt }
-      : {}),
   }
 }

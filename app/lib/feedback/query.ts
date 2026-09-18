@@ -1,12 +1,8 @@
-import type {
-  FeedbackStatus,
-  FeedbackType,
-} from "./definitions"
+import type { FeedbackStatus } from "./definitions"
 import {
   FEEDBACK_MODERATION_PAGE_SIZE_OPTIONS,
   FEEDBACK_PAGE_SIZE,
   isFeedbackStatus,
-  isFeedbackType,
 } from "./definitions"
 
 export const FEEDBACK_DEFAULT_SORT = "createdDate_desc"
@@ -18,7 +14,6 @@ export interface FeedbackPersonalQuery {
 
 export interface FeedbackModerationQuery {
   search: string
-  type: FeedbackType | null
   status: FeedbackStatus
   sort: "createdDate_asc" | "createdDate_desc"
   page: number
@@ -38,13 +33,11 @@ export function parseFeedbackModerationQuery(
       : firstValue(input[key])
   const requestedPage = Number(get("page"))
   const requestedSize = Number(get("size"))
-  const requestedType = get("type")
   const requestedStatus = get("status")
   const requestedSort = get("sort")
 
   return {
     search: (get("search") ?? "").trim(),
-    type: isFeedbackType(requestedType) ? requestedType : null,
     status: isFeedbackStatus(requestedStatus)
       ? requestedStatus
       : "PENDING_REVIEW",
@@ -71,11 +64,8 @@ export function buildFeedbackFilter(query: FeedbackModerationQuery): string {
   const filters: string[] = []
   if (query.search) {
     filters.push(
-      `containsIgnoreCase(title,'${escapeFilterValue(query.search)}')`
+      `containsIgnoreCase(content,'${escapeFilterValue(query.search)}')`
     )
-  }
-  if (query.type) {
-    filters.push(`type eq ${query.type}`)
   }
   if (query.status) {
     filters.push(`status eq '${query.status}'`)
@@ -118,7 +108,6 @@ export function serializeFeedbackModerationUrlQuery(
 ): string {
   const params = new URLSearchParams()
   if (query.search) params.set("search", query.search)
-  if (query.type) params.set("type", query.type)
   params.set("status", query.status)
   params.set("sort", query.sort)
   params.set("page", String(query.page))

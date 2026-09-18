@@ -67,7 +67,6 @@ import { Textarea } from "@/components/ui/textarea"
 import {
   FeedbackScreenshotView,
   FeedbackStatusBadge,
-  FeedbackTypeBadge,
 } from "./feedback-presentation"
 
 interface FeedbackDetailPageProps {
@@ -208,11 +207,10 @@ export function FeedbackDetailPage({
       <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <FeedbackTypeBadge type={record.type} />
             <FeedbackStatusBadge status={record.status} />
           </div>
           <h1 className="mt-3 max-w-5xl text-2xl leading-tight font-semibold tracking-tight break-words">
-            {record.title}
+            {t.detailTitle}
           </h1>
           <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
             {t.statusDescriptions[record.status]}
@@ -269,22 +267,9 @@ export function FeedbackDetailPage({
         <main className="flex min-w-0 flex-col gap-6">
           <section className="min-w-0 rounded-xl border bg-card p-5">
             <h2 className="text-base font-semibold">{t.detailContent}</h2>
-            <div className="mt-5 flex min-w-0 flex-col gap-5">
-              <DetailText
-                label={t.detailDescription}
-                value={record.description}
-              />
-              <DetailText
-                label={t.detailExpectedOutcome}
-                value={record.expectedOutcome}
-              />
-              {record.reproductionSteps ? (
-                <DetailText
-                  label={t.detailReproductionSteps}
-                  value={record.reproductionSteps}
-                />
-              ) : null}
-            </div>
+            <p className="mt-5 text-sm leading-6 break-words whitespace-pre-wrap text-foreground/90">
+              {record.content}
+            </p>
           </section>
 
           <section className="min-w-0 rounded-xl border bg-card p-5">
@@ -349,12 +334,6 @@ export function FeedbackDetailPage({
                   <MetaValue
                     label={t.technicalContextFields.locale}
                     value={record.clientContext.locale}
-                  />
-                ) : null}
-                {record.clientContext.observedAt ? (
-                  <MetaValue
-                    label={t.technicalContextFields.observedAt}
-                    value={record.clientContext.observedAt}
                   />
                 ) : null}
               </dl>
@@ -422,10 +401,6 @@ export function FeedbackDetailPage({
                 icon={CalendarClock}
                 label={t.updatedAt}
                 value={formatDateTime(record.updatedAt)}
-              />
-              <MetaValue
-                label={t.typeLabel}
-                value={dictionary.feedback.types[record.type]}
               />
               <MetaValue
                 label={t.accessibilityStatus}
@@ -537,17 +512,6 @@ export function FeedbackDetailPage({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
-  )
-}
-
-function DetailText({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="min-w-0">
-      <h3 className="text-sm font-semibold text-foreground">{label}</h3>
-      <p className="mt-2 text-sm leading-6 break-words whitespace-pre-wrap text-foreground/90">
-        {value}
-      </p>
     </div>
   )
 }
@@ -743,8 +707,8 @@ function FeedbackReviewDialog({
                 value={githubIssueUrl}
                 onChange={(event) => {
                   setGithubIssueUrl(event.target.value)
-                setError(null)
-                setErrorField(null)
+                  setError(null)
+                  setErrorField(null)
                 }}
                 placeholder={t.githubIssueUrlPlaceholder}
                 aria-invalid={errorField === "githubIssueUrl"}

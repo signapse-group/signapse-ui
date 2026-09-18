@@ -9,7 +9,7 @@ import {
   Image as ImageIcon,
 } from "lucide-react"
 
-import type { FeedbackStatus, FeedbackType } from "@/app/lib/feedback/definitions"
+import type { FeedbackStatus } from "@/app/lib/feedback/definitions"
 import type { FeedbackScreenshotViewModel } from "@/app/lib/feedback/mappers"
 import { useLocalization } from "@/app/lib/i18n/provider"
 import { Badge } from "@/components/ui/badge"
@@ -35,16 +35,6 @@ export function FeedbackStatusBadge({ status }: { status: FeedbackStatus }) {
     <Badge variant={variant} className="gap-1.5 whitespace-nowrap">
       <Icon className="size-3.5" aria-hidden="true" />
       {dictionary.feedback.statuses[status]}
-    </Badge>
-  )
-}
-
-export function FeedbackTypeBadge({ type }: { type: FeedbackType }) {
-  const { dictionary } = useLocalization()
-
-  return (
-    <Badge variant="outline" className="whitespace-nowrap">
-      {dictionary.feedback.types[type]}
     </Badge>
   )
 }

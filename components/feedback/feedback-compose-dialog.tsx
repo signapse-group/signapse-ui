@@ -7,10 +7,8 @@ import { toast } from "sonner"
 import { FileImage, FileQuestion, ImagePlus, X } from "lucide-react"
 
 import { createFeedbackSubmission } from "@/app/api/feedback/action"
-import type {
-  FeedbackTechnicalContext,
-  FeedbackType,
-} from "@/app/lib/feedback/definitions"
+import type { FeedbackTechnicalContext } from "@/app/lib/feedback/definitions"
+import { FEEDBACK_MAX_CONTENT_LENGTH } from "@/app/lib/feedback/definitions"
 import {
   getFeedbackTechnicalContext,
   toFeedbackSubmissionContext,
@@ -35,14 +33,6 @@ import {
   FieldLabel,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { Spinner } from "@/components/ui/spinner"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
@@ -53,11 +43,7 @@ interface FeedbackComposeDialogProps {
 }
 
 interface ComposeValues {
-  type: FeedbackType
-  title: string
-  description: string
-  expectedOutcome: string
-  reproductionSteps: string
+  content: string
 }
 
 interface SelectedScreenshot {
@@ -68,11 +54,7 @@ interface SelectedScreenshot {
 type ComposeField = keyof ComposeValues
 
 const initialValues: ComposeValues = {
-  type: "BUG",
-  title: "",
-  description: "",
-  expectedOutcome: "",
-  reproductionSteps: "",
+  content: "",
 }
 
 function formatFileSize(bytes: number, locale: "vi" | "en") {
@@ -124,26 +106,11 @@ export function FeedbackComposeDialog({
   const schema = React.useMemo(
     () =>
       z.object({
-        type: z.enum(["BUG", "IDEA"]),
-        title: z
+        content: z
           .string()
           .trim()
-          .min(1, t.titleRequired)
-          .min(5, t.titleTooShort)
-          .max(150, t.titleTooLong),
-        description: z
-          .string()
-          .trim()
-          .min(1, t.descriptionRequired)
-          .min(20, t.descriptionTooShort)
-          .max(5000, t.descriptionTooLong),
-        expectedOutcome: z
-          .string()
-          .trim()
-          .min(1, t.expectedOutcomeRequired)
-          .min(10, t.expectedOutcomeTooShort)
-          .max(3000, t.expectedOutcomeTooLong),
-        reproductionSteps: z.string().max(5000, t.reproductionStepsTooLong),
+          .min(1, t.contentRequired)
+          .max(FEEDBACK_MAX_CONTENT_LENGTH, t.contentTooLong),
       }),
     [t]
   )
@@ -173,13 +140,7 @@ export function FeedbackComposeDialog({
   }, [locale, open])
 
   const isDirty =
-    values.title.trim() !== "" ||
-    values.description.trim() !== "" ||
-    values.expectedOutcome.trim() !== "" ||
-    values.reproductionSteps.trim() !== "" ||
-    values.type !== initialValues.type ||
-    !includeContext ||
-    screenshot !== null
+    values.content.trim() !== "" || !includeContext || screenshot !== null
 
   function requestClose() {
     if (isSubmitting) {
@@ -237,20 +198,9 @@ export function FeedbackComposeDialog({
 
     setIsSubmitting(true)
     const submission = {
-      type: parsed.type,
-      title: parsed.title,
-      description: parsed.description,
-      expectedOutcome: parsed.expectedOutcome,
-      ...(parsed.type === "BUG" && parsed.reproductionSteps
-        ? { reproductionSteps: parsed.reproductionSteps }
-        : {}),
+      content: parsed.content,
       ...(includeContext && technicalContext
-        ? {
-            clientContext: toFeedbackSubmissionContext(
-              technicalContext,
-              parsed.type
-            ),
-          }
+        ? { clientContext: toFeedbackSubmissionContext(technicalContext) }
         : {}),
     }
     const request = new FormData()
@@ -261,26 +211,30 @@ export function FeedbackComposeDialog({
     if (screenshot) {
       request.append("screenshot", screenshot.file, screenshot.file.name)
     }
-    const result = await createFeedbackSubmission(request)
-    setIsSubmitting(false)
+    try {
+      const result = await createFeedbackSubmission(request)
+      if (!result.success) {
+        toast.error(localizeMessage(result.error, {}))
+        return
+      }
 
-    if (!result.success) {
-      toast.error(localizeMessage(result.error, {}))
-      return
+      toast.success(t.submitSuccess, {
+        action: {
+          label: t.viewHistoryAction,
+          onClick: () => router.push(historyPath),
+        },
+      })
+      setValues(initialValues)
+      setErrors({})
+      setScreenshot(null)
+      setScreenshotError(null)
+      onOpenChange(false)
+      router.push(`${historyPath}?page=1`)
+    } catch {
+      toast.error(t.submitError)
+    } finally {
+      setIsSubmitting(false)
     }
-
-    toast.success(t.submitSuccess, {
-      action: {
-        label: t.viewHistoryAction,
-        onClick: () => router.push(historyPath),
-      },
-    })
-    setValues(initialValues)
-    setErrors({})
-    setScreenshot(null)
-    setScreenshotError(null)
-    onOpenChange(false)
-    router.push(`${historyPath}?page=1`)
   }
 
   async function handleScreenshotChange(
@@ -357,150 +311,33 @@ export function FeedbackComposeDialog({
 
           <form onSubmit={handleSubmit} noValidate>
             <FieldGroup>
-              <Field data-invalid={Boolean(errors.type)}>
-                <FieldLabel htmlFor="feedback-type">{t.typeLabel}</FieldLabel>
-                <Select
-                  value={values.type}
-                  onValueChange={(value) =>
-                    updateValue("type", (value ?? "BUG") as FeedbackType)
-                  }
-                  items={[
-                    { value: "BUG", label: t.typeBug },
-                    { value: "IDEA", label: t.typeIdea },
-                  ]}
-                >
-                  <SelectTrigger
-                    id="feedback-type"
-                    ref={(element) => {
-                      fieldRefs.current.type = element
-                    }}
-                    aria-label={t.typeLabel}
-                    aria-invalid={Boolean(errors.type)}
-                  >
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      <SelectItem value="BUG">{t.typeBug}</SelectItem>
-                      <SelectItem value="IDEA">{t.typeIdea}</SelectItem>
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-                {renderError("type")}
-              </Field>
-
-              <Field data-invalid={Boolean(errors.title)}>
-                <FieldLabel htmlFor="feedback-title">{t.titleLabel}</FieldLabel>
-                <Input
-                  id="feedback-title"
-                  ref={(element) => {
-                    fieldRefs.current.title = element
-                  }}
-                  value={values.title}
-                  onChange={(event) => updateValue("title", event.target.value)}
-                  placeholder={t.titlePlaceholder}
-                  maxLength={150}
-                  aria-invalid={Boolean(errors.title)}
-                  aria-describedby={
-                    errors.title ? "feedback-title-error" : undefined
-                  }
-                />
-                {errors.title ? (
-                  <div id="feedback-title-error">{renderError("title")}</div>
-                ) : null}
-              </Field>
-
-              <Field data-invalid={Boolean(errors.description)}>
-                <FieldLabel htmlFor="feedback-description">
-                  {t.descriptionLabel}
+              <Field data-invalid={Boolean(errors.content)}>
+                <FieldLabel htmlFor="feedback-content">
+                  {t.contentLabel}
                 </FieldLabel>
                 <Textarea
-                  id="feedback-description"
+                  id="feedback-content"
                   ref={(element) => {
-                    fieldRefs.current.description = element
+                    fieldRefs.current.content = element
                   }}
-                  value={values.description}
+                  value={values.content}
                   onChange={(event) =>
-                    updateValue("description", event.target.value)
+                    updateValue("content", event.target.value)
                   }
-                  placeholder={t.descriptionPlaceholder}
-                  maxLength={5000}
-                  rows={5}
-                  aria-invalid={Boolean(errors.description)}
+                  placeholder={t.contentPlaceholder}
+                  maxLength={FEEDBACK_MAX_CONTENT_LENGTH}
+                  rows={8}
+                  aria-invalid={Boolean(errors.content)}
                   aria-describedby={
-                    errors.description
-                      ? "feedback-description-error"
-                      : undefined
+                    errors.content ? "feedback-content-error" : undefined
                   }
                 />
-                {errors.description ? (
-                  <div id="feedback-description-error">
-                    {renderError("description")}
+                {errors.content ? (
+                  <div id="feedback-content-error">
+                    {renderError("content")}
                   </div>
                 ) : null}
               </Field>
-
-              <Field data-invalid={Boolean(errors.expectedOutcome)}>
-                <FieldLabel htmlFor="feedback-expected-outcome">
-                  {t.expectedOutcomeLabel}
-                </FieldLabel>
-                <Textarea
-                  id="feedback-expected-outcome"
-                  ref={(element) => {
-                    fieldRefs.current.expectedOutcome = element
-                  }}
-                  value={values.expectedOutcome}
-                  onChange={(event) =>
-                    updateValue("expectedOutcome", event.target.value)
-                  }
-                  placeholder={t.expectedOutcomePlaceholder}
-                  maxLength={3000}
-                  rows={3}
-                  aria-invalid={Boolean(errors.expectedOutcome)}
-                  aria-describedby={
-                    errors.expectedOutcome
-                      ? "feedback-expected-outcome-error"
-                      : undefined
-                  }
-                />
-                {errors.expectedOutcome ? (
-                  <div id="feedback-expected-outcome-error">
-                    {renderError("expectedOutcome")}
-                  </div>
-                ) : null}
-              </Field>
-
-              {values.type === "BUG" ? (
-                <Field data-invalid={Boolean(errors.reproductionSteps)}>
-                  <FieldLabel htmlFor="feedback-reproduction-steps">
-                    {t.reproductionStepsLabel}
-                  </FieldLabel>
-                  <Textarea
-                    id="feedback-reproduction-steps"
-                    ref={(element) => {
-                      fieldRefs.current.reproductionSteps = element
-                    }}
-                    value={values.reproductionSteps}
-                    onChange={(event) =>
-                      updateValue("reproductionSteps", event.target.value)
-                    }
-                    placeholder={t.reproductionStepsPlaceholder}
-                    maxLength={5000}
-                    rows={4}
-                    aria-invalid={Boolean(errors.reproductionSteps)}
-                    aria-describedby={
-                      errors.reproductionSteps
-                        ? "feedback-reproduction-steps-error"
-                        : undefined
-                    }
-                  />
-                  {errors.reproductionSteps ? (
-                    <div id="feedback-reproduction-steps-error">
-                      {renderError("reproductionSteps")}
-                    </div>
-                  ) : null}
-                </Field>
-              ) : null}
 
               <Field className="rounded-lg border p-3">
                 <div className="flex items-start justify-between gap-4">
@@ -545,10 +382,6 @@ export function FeedbackComposeDialog({
                         label={t.technicalContextFields.locale}
                         value={technicalContext.locale}
                       />
-                      <ContextValue
-                        label={t.technicalContextFields.observedAt}
-                        value={technicalContext.observedAt}
-                      />
                     </dl>
                   </details>
                 ) : null}
@@ -573,6 +406,10 @@ export function FeedbackComposeDialog({
                     accept="image/png,image/jpeg"
                     className="sr-only"
                     onChange={handleScreenshotChange}
+                    aria-invalid={Boolean(screenshotError)}
+                    aria-describedby={
+                      screenshotError ? "feedback-screenshot-error" : undefined
+                    }
                   />
                   {!screenshot ? (
                     <span className="text-sm text-muted-foreground">
@@ -581,7 +418,9 @@ export function FeedbackComposeDialog({
                   ) : null}
                 </div>
                 {screenshotError ? (
-                  <FieldError>{screenshotError}</FieldError>
+                  <div id="feedback-screenshot-error">
+                    <FieldError>{screenshotError}</FieldError>
+                  </div>
                 ) : null}
                 {screenshot ? (
                   <div className="mt-3 flex flex-col gap-3 rounded-lg border bg-muted/20 p-3 sm:flex-row sm:items-start">
