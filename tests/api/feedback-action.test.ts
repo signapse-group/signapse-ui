@@ -26,10 +26,9 @@ import { revalidatePath } from "next/cache"
 import {
   createFeedbackSubmission,
   deleteFeedback,
-  dismissFeedback,
   getModerationFeedback,
   getPersonalFeedback,
-  promoteFeedback,
+  reviewFeedback,
   withdrawFeedback,
 } from "@/app/api/feedback/action"
 
@@ -152,36 +151,31 @@ describe("Feedback authenticated actions", () => {
     expect(body.get("screenshot")).toBeNull()
   })
 
-  it("keeps Promote and Dismiss request bodies distinct", async () => {
+  it("sends the single review request with only the review message", async () => {
     vi.mocked(fetchAuthenticated).mockResolvedValue(detail)
 
-    await promoteFeedback(42, {
-      reviewMessage: "Issue was created for engineering.",
-      githubIssueUrl: "https://github.com/signapse/signapse/issues/123",
+    await reviewFeedback(42, {
+      reviewMessage: "Thanks, we reviewed your feedback.",
     })
     expect(fetchAuthenticated).toHaveBeenLastCalledWith(
-      "/feedback-submissions/42/promote",
+      "/feedback-submissions/42/review",
       expect.objectContaining({
         method: "POST",
         body: JSON.stringify({
-          reviewMessage: "Issue was created for engineering.",
-          githubIssueUrl: "https://github.com/signapse/signapse/issues/123",
+          reviewMessage: "Thanks, we reviewed your feedback.",
         }),
       })
     )
+  })
 
-    await dismissFeedback(42, {
-      reviewMessage: "This does not fit the current product scope.",
-    })
-    expect(fetchAuthenticated).toHaveBeenLastCalledWith(
-      "/feedback-submissions/42/dismiss",
-      expect.objectContaining({
-        method: "POST",
-        body: JSON.stringify({
-          reviewMessage: "This does not fit the current product scope.",
-        }),
-      })
+  it("rejects blank or unknown review fields before the request", async () => {
+    await expect(reviewFeedback(42, { reviewMessage: "   " })).resolves.toEqual(
+      {
+        success: false,
+        error: "Review failed",
+      }
     )
+    expect(fetchAuthenticated).not.toHaveBeenCalled()
   })
 
   it("handles 204 deletion and preserves stable lifecycle codes without backend copy", async () => {
@@ -201,9 +195,8 @@ describe("Feedback authenticated actions", () => {
     })
     vi.mocked(fetchAuthenticated).mockRejectedValue(conflict)
     await expect(
-      promoteFeedback(42, {
-        reviewMessage: "Issue was created for engineering.",
-        githubIssueUrl: "https://github.com/signapse/signapse/issues/123",
+      reviewFeedback(42, {
+        reviewMessage: "Thanks, we reviewed your feedback.",
       })
     ).resolves.toEqual({
       success: false,

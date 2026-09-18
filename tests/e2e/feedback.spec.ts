@@ -67,14 +67,26 @@ test.describe("P0 feedback HTTP integration", () => {
   test("loads personal detail and withdraws a pending submission", async ({ page }) => {
     await page.goto("/vi/feedback/1")
     await expect(page.locator("h1")).toHaveText("Chi tiết phản hồi")
-    await expect(page.getByRole("complementary").getByText("Chờ xem xét", { exact: true })).toBeVisible()
+    await expect(page.getByRole("complementary").getByText("Đã tiếp nhận", { exact: true })).toBeVisible()
     await page.getByRole("button", { name: "Rút phản hồi", exact: true }).click()
     await page.getByRole("alertdialog").getByRole("button", { name: "Rút phản hồi", exact: true }).click()
     await expect(page).toHaveURL(/\/vi\/feedback$/)
     await expect(page.getByRole("link", { name: /Biểu đồ không giữ bộ lọc/ })).toHaveCount(0)
   })
 
-  test("uses server permissions, explicit queue filters, and required Promote URL", async ({
+  test("distinguishes missing and load failures in feedback details", async ({ page, fixture }) => {
+    await fixture.setFeedbackScenario("not-found")
+    await page.goto("/vi/feedback/1")
+    await expect(page.locator("h1")).toHaveText("Không tìm thấy phản hồi")
+    await expect(page.getByText("Phản hồi có thể đã được rút hoặc xóa.")).toBeVisible()
+
+    await fixture.setFeedbackScenario("server-failure")
+    await page.goto("/vi/feedback-submissions/1")
+    await expect(page.locator("h1")).toHaveText("Không thể tải phản hồi")
+    await expect(page.getByText("Hãy thử lại để tải thông tin mới nhất của phản hồi.")).toBeVisible()
+  })
+
+  test("uses server permissions, content filters, and one review message", async ({
     page,
     fixture,
   }) => {
@@ -85,7 +97,7 @@ test.describe("P0 feedback HTTP integration", () => {
     await fixture.setPermissions(["feedback:read", "feedback:review", "feedback:delete"])
     await page.goto("/vi/feedback-submissions?status=PENDING_REVIEW&sort=createdDate_desc&page=1&size=10")
     await expect(page.locator("h1")).toHaveText("Phản hồi người dùng")
-    await page.getByRole("textbox", { name: "Tìm trong nội dung phản hồi" }).fill("Biểu đồ")
+    await page.getByRole("searchbox", { name: "Tìm trong nội dung phản hồi" }).fill("Biểu đồ")
     await page.getByRole("button", { name: "Tìm trong nội dung phản hồi", exact: true }).click()
     await expect(page).toHaveURL(/search=Bi%E1%BB%83u(?:%20|\+)%C4%91%E1%BB%93/)
     await expect(page.getByRole("link", { name: /Biểu đồ không giữ bộ lọc/ })).toHaveAttribute(
@@ -97,18 +109,17 @@ test.describe("P0 feedback HTTP integration", () => {
     )
 
     await page.goto("/vi/feedback-submissions/1")
-    await page.getByRole("button", { name: "Chuyển xử lý", exact: true }).click()
-    const reviewDialog = page.getByRole("dialog").filter({ hasText: "Chuyển xử lý phản hồi này?" })
+    await page.getByRole("button", { name: "Xem xét phản hồi", exact: true }).click()
+    const reviewDialog = page.getByRole("dialog").filter({ hasText: "Xem xét phản hồi này?" })
     await reviewDialog.getByRole("button", { name: "Xác nhận xem xét", exact: true }).click()
     await expect(reviewDialog.getByText("Vui lòng nhập nội dung xem xét.")).toBeVisible()
-    await reviewDialog.locator("textarea").fill("Đã chuyển xử lý để nhóm sản phẩm xem xét.")
-    await reviewDialog.locator("input").fill("https://github.com/signapse/signapse/issues/123")
-    await fixture.setFeedbackScenario("server-failure", "promote")
+    await reviewDialog.locator("textarea").fill("Đã xem xét phản hồi của bạn.")
+    await fixture.setFeedbackScenario("server-failure", "review")
     await reviewDialog.getByRole("button", { name: "Xác nhận xem xét", exact: true }).click()
     await expect(reviewDialog.getByText("Không thể lưu kết quả xem xét. Hãy thử lại.")).toBeVisible()
-    await fixture.setFeedbackScenario("success", "promote")
+    await fixture.setFeedbackScenario("success", "review")
     await reviewDialog.getByRole("button", { name: "Xác nhận xem xét", exact: true }).click()
-    await expect(page.getByRole("complementary").getByText("Đã chuyển xử lý", { exact: true })).toBeVisible()
+    await expect(page.getByRole("complementary").getByText("Đã xem xét", { exact: true })).toBeVisible()
   })
 
   test("deletes any moderation status and isolates empty/error reads", async ({ page, fixture }) => {

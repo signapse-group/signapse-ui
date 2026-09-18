@@ -2,11 +2,7 @@ import type { AppLocale } from "@/app/lib/i18n/config"
 import type { Dictionary } from "@/app/lib/i18n/dictionary-types"
 import { z } from "zod"
 
-export const FEEDBACK_STATUSES = [
-  "PENDING_REVIEW",
-  "PROMOTED",
-  "DISMISSED",
-] as const
+export const FEEDBACK_STATUSES = ["PENDING_REVIEW", "REVIEWED"] as const
 export type FeedbackStatus = (typeof FEEDBACK_STATUSES)[number]
 
 export const FEEDBACK_MAX_CONTENT_LENGTH = 5_000
@@ -36,16 +32,13 @@ export const feedbackSubmissionSchema = z
   })
   .strict()
 
-export const feedbackReviewMessageSchema = z.string().trim().min(10).max(1000)
+export const feedbackReviewMessageSchema = z.string().trim().min(1).max(1000)
 
-export const feedbackPromoteSchema = z.object({
-  reviewMessage: feedbackReviewMessageSchema,
-  githubIssueUrl: z.string().trim().url(),
-})
-
-export const feedbackDismissSchema = z.object({
-  reviewMessage: feedbackReviewMessageSchema,
-})
+export const feedbackReviewSchema = z
+  .object({
+    reviewMessage: feedbackReviewMessageSchema,
+  })
+  .strict()
 
 export interface FeedbackScreenshotMetadata {
   id: number
@@ -77,13 +70,12 @@ export interface FeedbackListResponse {
   status: FeedbackStatus
   createdDate: string
   lastModifiedDate: string
-  screenshot?: FeedbackScreenshotMetadata | null
+  screenshot: FeedbackScreenshotMetadata | null
 }
 
 export interface FeedbackDetailResponse extends FeedbackListResponse {
-  clientContext?: FeedbackClientContextResponse | null
-  reviewMessage?: string | null
-  githubIssueNumber?: number | null
+  clientContext: FeedbackClientContextResponse | null
+  reviewMessage: string | null
   reporter?: FeedbackReporterResponse | null
 }
 
@@ -168,15 +160,14 @@ export const feedbackListResponseSchema = z
     status: feedbackStatusSchema,
     createdDate: z.string().datetime(),
     lastModifiedDate: z.string().datetime(),
-    screenshot: feedbackScreenshotMetadataSchema.nullable().optional(),
+    screenshot: feedbackScreenshotMetadataSchema.nullable(),
   })
   .passthrough()
 
 export const feedbackDetailResponseSchema = feedbackListResponseSchema
   .extend({
-    clientContext: feedbackClientContextResponseSchema.nullable().optional(),
-    reviewMessage: z.string().nullable().optional(),
-    githubIssueNumber: z.number().int().positive().nullable().optional(),
+    clientContext: feedbackClientContextResponseSchema.nullable(),
+    reviewMessage: z.string().nullable(),
     reporter: z
       .object({
         id: z.number().int().positive(),
@@ -194,13 +185,15 @@ export const feedbackDetailResponseSchema = feedbackListResponseSchema
 export const feedbackPageResponseSchema = z
   .object({
     content: z.array(feedbackListResponseSchema),
-    pageable: z.object({
-      pageNumber: z.number().int().nonnegative(),
-      pageSize: z.number().int().positive(),
-      offset: z.number().int().nonnegative(),
-      paged: z.boolean(),
-      unpaged: z.boolean(),
-    }).passthrough(),
+    pageable: z
+      .object({
+        pageNumber: z.number().int().nonnegative(),
+        pageSize: z.number().int().positive(),
+        offset: z.number().int().nonnegative(),
+        paged: z.boolean(),
+        unpaged: z.boolean(),
+      })
+      .passthrough(),
     last: z.boolean(),
     totalElements: z.number().int().nonnegative(),
     totalPages: z.number().int().nonnegative(),

@@ -46,11 +46,13 @@ interface FeedbackListPageProps {
     numberOfElements: number
   } | null
   initialError?: string
+  initialErrorTitle?: string
 }
 
 export function FeedbackListPage({
   initialPage,
   initialError,
+  initialErrorTitle,
 }: FeedbackListPageProps) {
   const { dictionary, formatDateTime } = useLocalization()
   const searchParams = useSearchParams()
@@ -90,7 +92,7 @@ export function FeedbackListPage({
 
       {initialError ? (
         <EmptyState
-          title={dictionary.feedback.historyErrorTitle}
+          title={initialErrorTitle ?? dictionary.feedback.historyErrorTitle}
           description={initialError}
           actionLabel={dictionary.feedback.historyRetry}
           onAction={retry}

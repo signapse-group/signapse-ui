@@ -20,8 +20,7 @@ import {
 
 import {
   deleteFeedback,
-  dismissFeedback,
-  promoteFeedback,
+  reviewFeedback,
   withdrawFeedback,
 } from "@/app/api/feedback/action"
 import {
@@ -54,13 +53,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import {
-  Field,
-  FieldDescription,
-  FieldError,
-  FieldLabel,
-} from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
+import { Field, FieldError, FieldLabel } from "@/components/ui/field"
 import { Spinner } from "@/components/ui/spinner"
 import { Textarea } from "@/components/ui/textarea"
 
@@ -74,6 +67,7 @@ interface FeedbackDetailPageProps {
   moderation?: boolean
   backHref?: string
   initialError?: string
+  initialErrorTitle?: string
 }
 
 export function FeedbackDetailPage({
@@ -81,6 +75,7 @@ export function FeedbackDetailPage({
   moderation = false,
   backHref: providedBackHref,
   initialError,
+  initialErrorTitle,
 }: FeedbackDetailPageProps) {
   const { dictionary, formatDateTime } = useLocalization()
   const t = dictionary.feedback
@@ -88,9 +83,7 @@ export function FeedbackDetailPage({
   const canRead = useHasPermission(FEEDBACK_READ_PERMISSION)
   const canReview = useHasPermission(FEEDBACK_REVIEW_PERMISSION)
   const canDelete = useHasPermission(FEEDBACK_DELETE_PERMISSION)
-  const [reviewKind, setReviewKind] = React.useState<
-    "promote" | "dismiss" | null
-  >(null)
+  const [reviewOpen, setReviewOpen] = React.useState(false)
   const [withdrawOpen, setWithdrawOpen] = React.useState(false)
   const [eraseOpen, setEraseOpen] = React.useState(false)
   const [isWithdrawing, setIsWithdrawing] = React.useState(false)
@@ -114,7 +107,9 @@ export function FeedbackDetailPage({
           <div className="flex size-12 items-center justify-center rounded-full bg-muted">
             <FileText className="size-6 text-muted-foreground" />
           </div>
-          <h1 className="text-xl font-semibold">{t.missingTitle}</h1>
+          <h1 className="text-xl font-semibold">
+            {initialErrorTitle ?? t.missingTitle}
+          </h1>
           <p className="text-sm text-muted-foreground">
             {initialError ?? t.missingDescription}
           </p>
@@ -132,14 +127,38 @@ export function FeedbackDetailPage({
 
   const backHref =
     providedBackHref ?? (moderation ? "/feedback-submissions" : "/feedback")
+  const isPendingReview = record.status === "PENDING_REVIEW"
+  const feedbackId = Number(record.id)
+  const showWithdraw = !moderation && isPendingReview
+  const showReview = moderation && canReview && isPendingReview
+  const showErase = moderation && canDelete
+
+  async function handleReview(reviewMessage: string) {
+    const result = await reviewFeedback(feedbackId, { reviewMessage })
+    if (!result.success) {
+      if (result.kind === "lifecycle-conflict" || result.status === 404) {
+        setReviewOpen(false)
+        toast.info(
+          result.kind === "lifecycle-conflict"
+            ? t.reviewStale
+            : t.missingDescription
+        )
+        router.refresh()
+      }
+      return result
+    }
+
+    toast.success(t.reviewSuccess)
+    setReviewOpen(false)
+    router.refresh()
+    return result
+  }
 
   async function handleWithdraw() {
-    if (!record || isWithdrawing) {
-      return
-    }
+    if (isWithdrawing) return
     setWithdrawError(null)
     setIsWithdrawing(true)
-    const result = await withdrawFeedback(Number(record.id))
+    const result = await withdrawFeedback(feedbackId)
     setIsWithdrawing(false)
     if (!result.success) {
       if (result.kind === "lifecycle-conflict" || result.status === 404) {
@@ -161,12 +180,10 @@ export function FeedbackDetailPage({
   }
 
   async function handleErase() {
-    if (!record || isErasing) {
-      return
-    }
+    if (isErasing) return
     setEraseError(null)
     setIsErasing(true)
-    const result = await deleteFeedback(Number(record.id))
+    const result = await deleteFeedback(feedbackId)
     setIsErasing(false)
     if (!result.success) {
       if (result.status === 404) {
@@ -182,12 +199,6 @@ export function FeedbackDetailPage({
     toast.success(t.eraseSuccess)
     router.push(backHref)
   }
-
-  const isPendingReview = record.status === "PENDING_REVIEW"
-  const showWithdraw = !moderation && isPendingReview
-  const showPromote = moderation && canReview && isPendingReview
-  const showDismiss = moderation && canReview && isPendingReview
-  const showErase = moderation && canDelete
 
   return (
     <div className="flex min-w-0 flex-col gap-6">
@@ -210,13 +221,13 @@ export function FeedbackDetailPage({
             <FeedbackStatusBadge status={record.status} />
           </div>
           <h1 className="mt-3 max-w-5xl text-2xl leading-tight font-semibold tracking-tight break-words">
-            {t.detailTitle}
+            {moderation ? t.moderationDetailTitle : t.detailTitle}
           </h1>
           <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
             {t.statusDescriptions[record.status]}
           </p>
         </div>
-        {showWithdraw || showPromote || showDismiss || showErase ? (
+        {showWithdraw || showReview || showErase ? (
           <div
             className="flex shrink-0 flex-wrap items-center gap-2 xl:max-w-sm xl:justify-end"
             aria-label={t.accessibilityActions}
@@ -232,20 +243,10 @@ export function FeedbackDetailPage({
                 {t.withdrawAction}
               </Button>
             ) : null}
-            {showPromote ? (
-              <Button type="button" onClick={() => setReviewKind("promote")}>
+            {showReview ? (
+              <Button type="button" onClick={() => setReviewOpen(true)}>
                 <CheckCircle2 data-icon="inline-start" />
-                {t.promoteAction}
-              </Button>
-            ) : null}
-            {showDismiss ? (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setReviewKind("dismiss")}
-              >
-                <CircleX data-icon="inline-start" />
-                {t.dismissAction}
+                {t.reviewAction}
               </Button>
             ) : null}
             {showErase ? (
@@ -367,9 +368,7 @@ export function FeedbackDetailPage({
 
         <aside className="flex min-w-0 flex-col gap-4">
           <section className="rounded-xl border bg-muted/20 p-5">
-            <h2 className="text-base font-semibold">
-              {moderation ? t.moderationContext : t.detailTitle}
-            </h2>
+            <h2 className="text-base font-semibold">{t.detailTitle}</h2>
             <dl className="mt-4 flex flex-col gap-4">
               {moderation ? (
                 <div className="flex items-start gap-3">
@@ -408,50 +407,26 @@ export function FeedbackDetailPage({
               />
             </dl>
           </section>
-
-          <section className="rounded-xl border bg-card p-5">
-            <h2 className="text-base font-semibold">{t.githubIssue}</h2>
-            {moderation && record.githubIssueNumber ? (
-              <p className="mt-3 text-sm font-medium text-foreground">
-                #{record.githubIssueNumber}
-              </p>
-            ) : (
-              <p className="mt-3 text-sm text-muted-foreground">
-                {t.noGithubIssue}
-              </p>
-            )}
-          </section>
         </aside>
       </div>
 
-      {reviewKind ? (
-        <FeedbackReviewDialog
-          record={record}
-          kind={reviewKind}
-          open
-          onOpenChange={(open) => {
-            if (!open) {
-              setReviewKind(null)
-            }
-          }}
-          onSubmit={async (input) =>
-            reviewKind === "promote"
-              ? promoteFeedback(Number(record.id), {
-                  reviewMessage: input.reviewMessage,
-                  githubIssueUrl: input.githubIssueUrl ?? "",
-                })
-              : dismissFeedback(Number(record.id), {
-                  reviewMessage: input.reviewMessage,
-                })
-          }
-        />
-      ) : null}
+      <FeedbackReviewDialog
+        record={record}
+        open={reviewOpen}
+        onOpenChange={setReviewOpen}
+        onSubmit={handleReview}
+      />
 
-      <AlertDialog open={withdrawOpen} onOpenChange={setWithdrawOpen}>
-        <AlertDialogContent>
+      <AlertDialog
+        open={withdrawOpen}
+        onOpenChange={(open) => {
+          if (!isWithdrawing) setWithdrawOpen(open)
+        }}
+      >
+        <AlertDialogContent size="sm">
           <AlertDialogHeader>
-            <AlertDialogMedia>
-              <ShieldAlert className="text-destructive" />
+            <AlertDialogMedia className="bg-destructive/10 text-destructive">
+              <ShieldAlert />
             </AlertDialogMedia>
             <AlertDialogTitle>{t.withdrawTitle}</AlertDialogTitle>
             <AlertDialogDescription>
@@ -471,7 +446,10 @@ export function FeedbackDetailPage({
               variant="destructive"
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               disabled={isWithdrawing}
-              onClick={handleWithdraw}
+              onClick={(event) => {
+                event.preventDefault()
+                void handleWithdraw()
+              }}
             >
               {isWithdrawing ? <Spinner data-icon="inline-start" /> : null}
               {isWithdrawing ? t.withdrawPending : t.withdrawConfirm}
@@ -480,11 +458,16 @@ export function FeedbackDetailPage({
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog open={eraseOpen} onOpenChange={setEraseOpen}>
-        <AlertDialogContent>
+      <AlertDialog
+        open={eraseOpen}
+        onOpenChange={(open) => {
+          if (!isErasing) setEraseOpen(open)
+        }}
+      >
+        <AlertDialogContent size="sm">
           <AlertDialogHeader>
-            <AlertDialogMedia>
-              <Trash2 className="text-destructive" />
+            <AlertDialogMedia className="bg-destructive/10 text-destructive">
+              <Trash2 />
             </AlertDialogMedia>
             <AlertDialogTitle>{t.eraseTitle}</AlertDialogTitle>
             <AlertDialogDescription>
@@ -504,7 +487,10 @@ export function FeedbackDetailPage({
               variant="destructive"
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               disabled={isErasing}
-              onClick={handleErase}
+              onClick={(event) => {
+                event.preventDefault()
+                void handleErase()
+              }}
             >
               {isErasing ? <Spinner data-icon="inline-start" /> : null}
               {isErasing ? t.erasePending : t.eraseConfirm}
@@ -543,19 +529,14 @@ function MetaValue({
 
 function FeedbackReviewDialog({
   record,
-  kind,
   open,
   onOpenChange,
   onSubmit,
 }: {
   record: FeedbackDetailViewModel
-  kind: "promote" | "dismiss"
   open: boolean
   onOpenChange: (open: boolean) => void
-  onSubmit: (input: {
-    reviewMessage: string
-    githubIssueUrl?: string
-  }) => Promise<{
+  onSubmit: (reviewMessage: string) => Promise<{
     success: boolean
     error?: string
     code?: string
@@ -565,93 +546,61 @@ function FeedbackReviewDialog({
 }) {
   const { dictionary } = useLocalization()
   const t = dictionary.feedback
-  const router = useRouter()
   const [message, setMessage] = React.useState("")
-  const [githubIssueUrl, setGithubIssueUrl] = React.useState("")
   const [error, setError] = React.useState<string | null>(null)
-  const [errorField, setErrorField] = React.useState<
-    "message" | "githubIssueUrl" | null
-  >(null)
   const [pending, setPending] = React.useState(false)
   const fieldRef = React.useRef<HTMLTextAreaElement>(null)
-  const githubUrlRef = React.useRef<HTMLInputElement>(null)
-  const isPromote = kind === "promote"
 
-  const schema = React.useMemo(() => {
-    const messageSchema = z
-      .string()
-      .trim()
-      .min(1, t.reviewMessageRequired)
-      .min(10, t.reviewMessageTooShort)
-      .max(1000, t.reviewMessageTooLong)
-    const urlSchema = isPromote
-      ? z
+  const schema = React.useMemo(
+    () =>
+      z.object({
+        message: z
           .string()
           .trim()
-          .min(1, t.githubIssueUrlRequired)
-          .url(t.githubIssueUrlInvalid)
-      : z.string().optional()
+          .min(1, t.reviewMessageRequired)
+          .max(1000, t.reviewMessageTooLong),
+      }),
+    [t]
+  )
 
-    return z.object({ message: messageSchema, githubIssueUrl: urlSchema })
-  }, [isPromote, t])
+  React.useEffect(() => {
+    if (!open) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMessage("")
+    setError(null)
+  }, [open, record.id])
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const parsed = schema.safeParse({ message, githubIssueUrl })
+    const parsed = schema.safeParse({ message })
     if (!parsed.success) {
-      const issue = parsed.error.issues[0]
-      setError(issue?.message ?? t.reviewMessageRequired)
-      setErrorField(
-        issue?.path[0] === "githubIssueUrl" ? "githubIssueUrl" : "message"
-      )
-      if (issue?.path[0] === "githubIssueUrl") {
-        githubUrlRef.current?.focus()
-      } else {
-        fieldRef.current?.focus()
-      }
+      setError(parsed.error.issues[0]?.message ?? t.reviewMessageRequired)
+      fieldRef.current?.focus()
       return
     }
+
     setError(null)
-    setErrorField(null)
     setPending(true)
-    const result = await onSubmit({
-      reviewMessage: parsed.data.message,
-      ...(isPromote ? { githubIssueUrl: parsed.data.githubIssueUrl } : {}),
-    })
+    const result = await onSubmit(parsed.data.message)
     setPending(false)
     if (!result.success) {
-      if (result.kind === "lifecycle-conflict" || result.status === 404) {
-        onOpenChange(false)
-        toast.info(
-          result.kind === "lifecycle-conflict"
-            ? t.reviewStale
-            : t.missingDescription
-        )
-        router.refresh()
-        return
-      }
-      const backendValidation = result.status === 400 && isPromote
-      setError(backendValidation ? t.githubIssueUrlRepository : t.reviewError)
-      setErrorField(backendValidation ? "githubIssueUrl" : "message")
-      return
+      if (result.kind === "lifecycle-conflict" || result.status === 404) return
+      setError(result.status === 403 ? t.reviewDenied : t.reviewError)
     }
-    toast.success(isPromote ? t.promoteSuccess : t.dismissSuccess)
-    onOpenChange(false)
-    router.refresh()
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        showCloseButton={false}
-        className="max-h-[calc(100vh-2rem)] overflow-y-auto sm:max-w-lg"
-      >
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!pending) onOpenChange(nextOpen)
+      }}
+    >
+      <DialogContent showCloseButton={false} className="sm:max-w-lg">
         <DialogHeader>
           <div className="flex items-start justify-between gap-4">
             <div className="flex min-w-0 flex-col gap-2">
-              <DialogTitle>
-                {isPromote ? t.promoteTitle : t.dismissTitle}
-              </DialogTitle>
+              <DialogTitle>{t.reviewTitle}</DialogTitle>
               <DialogDescription>{t.reviewDialogDescription}</DialogDescription>
             </div>
             <Button
@@ -666,7 +615,7 @@ function FeedbackReviewDialog({
           </div>
         </DialogHeader>
         <form onSubmit={submit} noValidate>
-          <Field data-invalid={errorField === "message"}>
+          <Field data-invalid={Boolean(error)}>
             <FieldLabel htmlFor={`feedback-review-message-${record.id}`}>
               {t.reviewMessageLabel}
             </FieldLabel>
@@ -677,55 +626,21 @@ function FeedbackReviewDialog({
               onChange={(event) => {
                 setMessage(event.target.value)
                 setError(null)
-                setErrorField(null)
               }}
               placeholder={t.reviewMessagePlaceholder}
               maxLength={1000}
               rows={5}
-              aria-invalid={errorField === "message"}
+              aria-invalid={Boolean(error)}
               aria-describedby={
                 error ? "feedback-review-message-error" : undefined
               }
             />
-            {error && errorField === "message" ? (
+            {error ? (
               <FieldError id="feedback-review-message-error">
                 {error}
               </FieldError>
             ) : null}
           </Field>
-          {isPromote ? (
-            <Field
-              className="mt-4"
-              data-invalid={errorField === "githubIssueUrl"}
-            >
-              <FieldLabel htmlFor={`feedback-review-github-${record.id}`}>
-                {t.githubIssueUrlLabel}
-              </FieldLabel>
-              <Input
-                id={`feedback-review-github-${record.id}`}
-                ref={githubUrlRef}
-                value={githubIssueUrl}
-                onChange={(event) => {
-                  setGithubIssueUrl(event.target.value)
-                  setError(null)
-                  setErrorField(null)
-                }}
-                placeholder={t.githubIssueUrlPlaceholder}
-                aria-invalid={errorField === "githubIssueUrl"}
-                aria-describedby={
-                  errorField === "githubIssueUrl"
-                    ? "feedback-review-github-error"
-                    : undefined
-                }
-              />
-              <FieldDescription>{t.githubIssueUrlRepository}</FieldDescription>
-              {error && errorField === "githubIssueUrl" ? (
-                <FieldError id="feedback-review-github-error">
-                  {error}
-                </FieldError>
-              ) : null}
-            </Field>
-          ) : null}
           <div className="mt-4 min-h-6" aria-live="polite">
             {pending ? (
               <span className="flex items-center gap-2 text-sm text-muted-foreground">

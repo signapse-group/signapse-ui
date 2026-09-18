@@ -40,7 +40,6 @@ export interface FeedbackListItemViewModel {
 export interface FeedbackDetailViewModel extends FeedbackListItemViewModel {
   clientContext: FeedbackTechnicalContextViewModel | null
   reviewMessage: string | null
-  githubIssueNumber?: number
   sender?: FeedbackSenderViewModel
 }
 
@@ -77,9 +76,7 @@ function mapReporter(
 ): FeedbackSenderViewModel | undefined {
   if (!reporter) return undefined
 
-  const name = [reporter.firstName, reporter.lastName]
-    .filter(Boolean)
-    .join(" ")
+  const name = [reporter.firstName, reporter.lastName].filter(Boolean).join(" ")
 
   return {
     id: String(reporter.id),
@@ -109,7 +106,6 @@ export function mapFeedbackDetail(
     ...mapFeedbackListItem(response),
     clientContext: mapContext(response.clientContext),
     reviewMessage: response.reviewMessage ?? null,
-    githubIssueNumber: response.githubIssueNumber ?? undefined,
     sender: mapReporter(response.reporter),
   }
 }

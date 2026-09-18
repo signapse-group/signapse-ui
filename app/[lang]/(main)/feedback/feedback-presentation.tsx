@@ -4,7 +4,6 @@ import * as React from "react"
 import {
   CircleCheck,
   CircleDashed,
-  CircleX,
   FileQuestion,
   Image as ImageIcon,
 } from "lucide-react"
@@ -17,19 +16,13 @@ import { Button } from "@/components/ui/button"
 
 const statusIcons: Record<FeedbackStatus, typeof CircleDashed> = {
   PENDING_REVIEW: CircleDashed,
-  PROMOTED: CircleCheck,
-  DISMISSED: CircleX,
+  REVIEWED: CircleCheck,
 }
 
 export function FeedbackStatusBadge({ status }: { status: FeedbackStatus }) {
   const { dictionary } = useLocalization()
   const Icon = statusIcons[status]
-  const variant =
-    status === "PROMOTED"
-      ? "default"
-      : status === "DISMISSED"
-        ? "secondary"
-        : "outline"
+  const variant = status === "REVIEWED" ? "default" : "outline"
 
   return (
     <Badge variant={variant} className="gap-1.5 whitespace-nowrap">
