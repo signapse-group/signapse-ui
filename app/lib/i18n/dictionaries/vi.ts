@@ -1320,7 +1320,6 @@ export const vi = {
     createdColumn: "Tạo lúc",
     statusFilterLabel: "Lọc theo trạng thái",
     allStatuses: "Tất cả trạng thái",
-
     actionsColumn: "Thao tác",
     detailTitle: "Chi tiết bài viết",
     detailDescription:
