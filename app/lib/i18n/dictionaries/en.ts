@@ -1317,7 +1317,8 @@ export const en: Dictionary = {
     titleDesc: "Title Z-A",
     titleColumn: "Title",
     statusColumn: "Status",
-    createdColumn: "Created",    statusFilterLabel: "Filter by status",
+    createdColumn: "Created",
+    statusFilterLabel: "Filter by status",
     allStatuses: "All statuses",
 
     actionsColumn: "Actions",
