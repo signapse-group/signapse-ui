@@ -1317,7 +1317,8 @@ export const vi = {
     titleDesc: "Tiêu đề Z-A",
     titleColumn: "Tiêu đề",
     statusColumn: "Trạng thái",
-    createdColumn: "Tạo lúc",    statusFilterLabel: "Lọc theo trạng thái",
+    createdColumn: "Tạo lúc",
+    statusFilterLabel: "Lọc theo trạng thái",
     allStatuses: "Tất cả trạng thái",
 
     actionsColumn: "Thao tác",
