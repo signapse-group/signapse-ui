@@ -1,14 +1,6 @@
 "use client"
 
-import {
-  Clock3,
-  Edit2,
-  Eye,
-  EyeOff,
-  FileText,
-  Plus,
-  Trash2,
-} from "lucide-react"
+import { Clock3, Edit2, Eye, FileText, Plus, Trash2 } from "lucide-react"
 import { LocalizedLink as Link } from "@/components/localized-link"
 import { useRouter } from "next/navigation"
 import { useState, useTransition } from "react"
@@ -114,7 +106,7 @@ export function BlogListPage({ blogPage }: BlogListProps) {
                 {dictionary.blogs.titleColumn}
               </AppListTableHead>
               <AppListTableHead className="w-32 text-center">
-                {dictionary.blogs.visibleColumn}
+                {dictionary.blogs.statusColumn}
               </AppListTableHead>
               <AppListTableHead className="w-40 text-center">
                 {dictionary.blogs.createdColumn}
@@ -145,15 +137,15 @@ export function BlogListPage({ blogPage }: BlogListProps) {
                     </div>
                   </TableCell>
                   <TableCell className="w-32 text-center">
-                    {blog.isVisible ? (
+                    {blog.status === "PUBLISHED" ? (
                       <Badge variant="default" className="gap-1">
                         <Eye />
-                        {dictionary.blogs.visible}
+                        {dictionary.blogs.statuses.PUBLISHED}
                       </Badge>
                     ) : (
                       <Badge variant="secondary" className="gap-1">
-                        <EyeOff />
-                        {dictionary.blogs.hidden}
+                        <FileText />
+                        {dictionary.blogs.statuses.DRAFT}
                       </Badge>
                     )}
                   </TableCell>

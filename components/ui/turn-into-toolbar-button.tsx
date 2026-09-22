@@ -25,6 +25,10 @@ import { KEYS } from "platejs"
 import { useEditorRef, useSelectionFragmentProp } from "platejs/react"
 
 import {
+  BLOG_EDITOR_ALLOWED_INSERT_VALUES,
+  useEditorMode,
+} from "@/components/editor/editor-mode"
+import {
   DropdownMenu,
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
@@ -137,7 +141,14 @@ export function TurnIntoToolbarButton(
   props: React.ComponentProps<typeof DropdownMenu>
 ) {
   const editor = useEditorRef()
+  const editorMode = useEditorMode()
   const [open, setOpen] = React.useState(false)
+  const visibleItems =
+    editorMode === "blog"
+      ? turnIntoItems.filter((item) =>
+          BLOG_EDITOR_ALLOWED_INSERT_VALUES.has(item.value)
+        )
+      : turnIntoItems
 
   const value = useSelectionFragmentProp({
     defaultValue: KEYS.p,
@@ -145,9 +156,9 @@ export function TurnIntoToolbarButton(
   })
   const selectedItem = React.useMemo(
     () =>
-      turnIntoItems.find((item) => item.value === (value ?? KEYS.p)) ??
-      turnIntoItems[0],
-    [value]
+      visibleItems.find((item) => item.value === (value ?? KEYS.p)) ??
+      visibleItems[0],
+    [value, visibleItems]
   )
 
   return (
@@ -177,7 +188,7 @@ export function TurnIntoToolbarButton(
           }}
           label="Turn into"
         >
-          {turnIntoItems.map(({ icon, label, value: itemValue }) => (
+          {visibleItems.map(({ icon, label, value: itemValue }) => (
             <DropdownMenuRadioItem key={itemValue} value={itemValue}>
               {icon}
               {label}
