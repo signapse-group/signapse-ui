@@ -1,11 +1,46 @@
 {
   "version": 1,
   "skills": {
+    "agent-execution-policy": {
+      "source": "signapse-group/signapse-symphony",
+      "ref": "main",
+      "sourceType": "github",
+      "skillPath": "workflow/skills/agent-execution-policy/SKILL.md",
+      "computedHash": "73abeed8f3c8f735651cb9ab18774d84098b1a81ec13daea34da76404260a2f4"
+    },
+    "code-review": {
+      "source": "signapse-group/signapse-symphony",
+      "ref": "main",
+      "sourceType": "github",
+      "skillPath": "workflow/skills/code-review/SKILL.md",
+      "computedHash": "1b39b88cce837c72ecf1946c04220d8d7799e16a6d04b21096a73893f774a011"
+    },
+    "codebase-design": {
+      "source": "signapse-group/signapse-symphony",
+      "ref": "main",
+      "sourceType": "github",
+      "skillPath": "workflow/skills/codebase-design/SKILL.md",
+      "computedHash": "6d9d51d8caa01633fd00cf87089c5618c982321f942ac69f62565dc001c6b22f"
+    },
+    "diagnosing-bugs": {
+      "source": "signapse-group/signapse-symphony",
+      "ref": "main",
+      "sourceType": "github",
+      "skillPath": "workflow/skills/diagnosing-bugs/SKILL.md",
+      "computedHash": "37f1359b0de0ba4acd0543b64e3def48357ed03748d646714a2b4003d3f07d61"
+    },
     "grill-me": {
       "source": "mattpocock/skills",
       "sourceType": "github",
       "skillPath": "skills/productivity/grill-me/SKILL.md",
       "computedHash": "7edd436132b43ea2973710f0c28a9879c9b0910651eb89a991a7e98cb6dbbacb"
+    },
+    "implement": {
+      "source": "signapse-group/signapse-symphony",
+      "ref": "main",
+      "sourceType": "github",
+      "skillPath": "workflow/skills/implement/SKILL.md",
+      "computedHash": "e4a0d06e67bc81a99766a50c68bc3eb6c1cc51f958f29aef904438be34e0c219"
     },
     "improve-codebase-architecture": {
       "source": "mattpocock/skills",
@@ -19,11 +54,32 @@
       "skillPath": "skills/migrate-radix-to-base/SKILL.md",
       "computedHash": "4fdc31bf287f674ba6bf91a648120f7b34cd7ef370f998f2cc116fed067789c5"
     },
+    "resolving-merge-conflicts": {
+      "source": "signapse-group/signapse-symphony",
+      "ref": "main",
+      "sourceType": "github",
+      "skillPath": "workflow/skills/resolving-merge-conflicts/SKILL.md",
+      "computedHash": "28aad6f8b1b7025abc8892fa8890f68fe1533499b28a565f416b159131d22fad"
+    },
+    "setup-workflow": {
+      "source": "signapse-group/signapse-symphony",
+      "ref": "main",
+      "sourceType": "github",
+      "skillPath": "workflow/skills/setup-workflow/SKILL.md",
+      "computedHash": "702b1a53a1b6b2691fdbb9af1bf807f47f38289b268e4cbc7bfdca9fb8c038c8"
+    },
     "shadcn": {
       "source": "shadcn/ui",
       "sourceType": "github",
       "skillPath": "skills/shadcn/SKILL.md",
       "computedHash": "4f78ff7cd3a4f637b6fe30dbbab4a80a19dd63fa62d9352bed461ccfdbcbbf43"
+    },
+    "tdd": {
+      "source": "signapse-group/signapse-symphony",
+      "ref": "main",
+      "sourceType": "github",
+      "skillPath": "workflow/skills/tdd/SKILL.md",
+      "computedHash": "8f14eae7d3447fcf3143768e4ce596a5ab106f1cca221434b6aeb0fd1aef23ec"
     },
     "teach": {
       "source": "mattpocock/skills",
