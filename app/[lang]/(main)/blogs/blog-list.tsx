@@ -2,7 +2,11 @@
 
 import { Clock3, Edit2, Eye, FileText, Plus, Trash2 } from "lucide-react"
 import { LocalizedLink as Link } from "@/components/localized-link"
-import { useRouter } from "next/navigation"
+import {
+  usePathname,
+  useRouter,
+  useSearchParams,
+} from "next/navigation"
 import { useState, useTransition } from "react"
 import { toast } from "sonner"
 
@@ -26,6 +30,14 @@ import {
 import { AppSelectPageSize } from "@/components/app-select-page-size"
 import { useHasPermission } from "@/components/permission-provider"
 import { SortSelect } from "@/components/sort-select"
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -61,6 +73,13 @@ interface BlogListProps {
 
 export function BlogListPage({ blogPage }: BlogListProps) {
   const { dictionary, formatDateTime } = useLocalization()
+  const searchParams = useSearchParams()
+  const detailQuery = searchParams.toString()
+  const currentPage = Number(searchParams.get("page")) || 1
+  const hasActiveFilters = Array.from(searchParams.keys()).some(
+    (key) => !["page", "size", "sort"].includes(key)
+  )
+  const hasNoResults = hasActiveFilters || currentPage > 1
   const blogs = blogPage.content
   const canCreateBlog = useHasPermission("blog:create")
   const canUpdateBlog = useHasPermission("blog:update")
@@ -79,6 +98,7 @@ export function BlogListPage({ blogPage }: BlogListProps) {
           <BlogSearch />
         </AppListToolbarLeading>
         <AppListToolbarTrailing>
+          <BlogStatusFilter />
           <SortSelect
             className="w-full sm:w-auto"
             options={[
@@ -126,7 +146,7 @@ export function BlogListPage({ blogPage }: BlogListProps) {
                   <TableCell className="align-top font-medium whitespace-normal text-foreground">
                     <div className="flex min-w-0 flex-col gap-1">
                       <Link
-                        href={`/blogs/${blog.id}`}
+                        href={getBlogDetailHref(blog.id, detailQuery)}
                         className="line-clamp-1 break-words"
                       >
                         {blog.title}
@@ -170,7 +190,7 @@ export function BlogListPage({ blogPage }: BlogListProps) {
                     <div className="flex items-center justify-center gap-2">
                       {canUpdateBlog ? (
                         <Link
-                          href={`/blogs/${blog.id}`}
+                          href={getBlogDetailHref(blog.id, detailQuery)}
                           className={buttonVariants({
                             variant: "ghost",
                             size: "icon",
@@ -196,9 +216,15 @@ export function BlogListPage({ blogPage }: BlogListProps) {
                   <EmptyMedia variant="icon">
                     <FileText />
                   </EmptyMedia>
-                  <EmptyTitle>{dictionary.blogs.emptyTitle}</EmptyTitle>
+                  <EmptyTitle>
+                    {hasNoResults
+                      ? dictionary.blogs.noResultsTitle
+                      : dictionary.blogs.emptyTitle}
+                  </EmptyTitle>
                   <EmptyDescription>
-                    {dictionary.blogs.emptyDescription}
+                    {hasNoResults
+                      ? dictionary.blogs.noResultsDescription
+                      : dictionary.blogs.emptyDescription}
                   </EmptyDescription>
                 </EmptyHeader>
               </AppListTableEmptyState>
@@ -273,4 +299,66 @@ function DeleteBlogButton({ id }: { id: number }) {
       </AlertDialogContent>
     </AlertDialog>
   )
+}
+
+
+const BLOG_STATUS_FILTER_KEY = "status[eq]"
+
+function BlogStatusFilter() {
+  const { dictionary } = useLocalization()
+  const pathname = usePathname()
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const [isPending, startTransition] = useTransition()
+  const currentStatus = searchParams.get(BLOG_STATUS_FILTER_KEY) ?? "ALL"
+
+  function handleStatusChange(value: string | null) {
+    const params = new URLSearchParams(searchParams)
+    if (!value || value === "ALL") {
+      params.delete(BLOG_STATUS_FILTER_KEY)
+    } else {
+      params.set(BLOG_STATUS_FILTER_KEY, value)
+    }
+    params.set("page", "1")
+
+    startTransition(() => {
+      router.push(`${pathname}?${params.toString()}`)
+    })
+  }
+
+  const options = [
+    { value: "ALL", label: dictionary.blogs.allStatuses },
+    { value: "DRAFT", label: dictionary.blogs.statuses.DRAFT },
+    { value: "PUBLISHED", label: dictionary.blogs.statuses.PUBLISHED },
+  ]
+
+  return (
+    <Select
+      items={options}
+      value={currentStatus}
+      onValueChange={handleStatusChange}
+      disabled={isPending}
+    >
+      <SelectTrigger
+        className="w-full sm:w-[170px]"
+        aria-label={dictionary.blogs.statusFilterLabel}
+        aria-busy={isPending}
+      >
+        <SelectValue placeholder={dictionary.blogs.allStatuses} />
+      </SelectTrigger>
+      <SelectContent align="end">
+        <SelectGroup>
+          {options.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectGroup>
+      </SelectContent>
+    </Select>
+  )
+}
+
+function getBlogDetailHref(id: number, query: string): string {
+  return query ? `/blogs/${id}?${query}` : `/blogs/${id}`
 }

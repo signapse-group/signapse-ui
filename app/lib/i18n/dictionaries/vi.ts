@@ -136,6 +136,8 @@ export const vi = {
     personalListLoading: "Đang tải phản hồi của bạn",
     contentColumn: "Nội dung",
     statusColumn: "Trạng thái",
+    statusFilterLabel: "Lọc theo trạng thái",
+    allStatuses: "Tất cả trạng thái",
     submittedColumn: "Đã gửi",
     screenshotColumn: "Ảnh chụp",
     screenshotPresent: "Có tệp",
@@ -1301,6 +1303,10 @@ export const vi = {
   },
   blogs: {
     readDenied: "Bạn không có quyền xem danh sách bài viết.",
+    view: "Xem bài viết",
+    noResultsTitle: "Không tìm thấy bài viết",
+    noResultsDescription:
+      "Không có bài viết nào khớp với điều kiện tìm kiếm hoặc lọc hiện tại.",
     createDenied: "Bạn không có quyền tạo bài viết.",
     updateDenied: "Bạn không có quyền chỉnh sửa bài viết.",
     createAction: "Tạo bài viết",
@@ -1315,6 +1321,15 @@ export const vi = {
     statusColumn: "Trạng thái",
     createdColumn: "Tạo lúc",
     actionsColumn: "Thao tác",
+    detailTitle: "Chi tiết bài viết",
+    detailDescription:
+      "Xem nội dung hiện hành và trạng thái của bài viết này.",
+    backToList: "Quay lại danh sách bài viết",
+    noShortDescription: "Bài viết chưa có mô tả ngắn.",
+    noContent: "Bài viết chưa có nội dung được lưu.",
+    createdAt: "Tạo lúc",
+    publishedAt: "Xuất bản",
+    lastModifiedAt: "Cập nhật gần nhất",
     edit: "Chỉnh sửa bài viết",
     emptyTitle: "Chưa có bài viết",
     emptyDescription: "Tạo bản nháp đầu tiên để bắt đầu soạn nội dung.",
@@ -1361,6 +1376,10 @@ export const vi = {
     statuses: {
       DRAFT: "Bản nháp",
       PUBLISHED: "Đã xuất bản",
+    },
+    statusDescriptions: {
+      DRAFT: "Bài viết hiện đang ở trạng thái bản nháp.",
+      PUBLISHED: "Bài viết hiện đang được xuất bản.",
     },
     draftDescription: "Bài viết mới được lưu ở trạng thái bản nháp.",
     publishedDescription:
