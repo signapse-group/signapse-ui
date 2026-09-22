@@ -1320,7 +1320,6 @@ export const en: Dictionary = {
     createdColumn: "Created",
     statusFilterLabel: "Filter by status",
     allStatuses: "All statuses",
-
     actionsColumn: "Actions",
     detailTitle: "Post details",
     detailDescription:
