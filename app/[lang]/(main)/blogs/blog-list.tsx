@@ -301,7 +301,6 @@ function DeleteBlogButton({ id }: { id: number }) {
   )
 }
 
-
 const BLOG_STATUS_FILTER_KEY = "status[eq]"
 
 function BlogStatusFilter() {
