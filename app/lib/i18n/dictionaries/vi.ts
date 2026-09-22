@@ -136,8 +136,6 @@ export const vi = {
     personalListLoading: "Đang tải phản hồi của bạn",
     contentColumn: "Nội dung",
     statusColumn: "Trạng thái",
-    statusFilterLabel: "Lọc theo trạng thái",
-    allStatuses: "Tất cả trạng thái",
     submittedColumn: "Đã gửi",
     screenshotColumn: "Ảnh chụp",
     screenshotPresent: "Có tệp",
@@ -1319,7 +1317,9 @@ export const vi = {
     titleDesc: "Tiêu đề Z-A",
     titleColumn: "Tiêu đề",
     statusColumn: "Trạng thái",
-    createdColumn: "Tạo lúc",
+    createdColumn: "Tạo lúc",    statusFilterLabel: "Lọc theo trạng thái",
+    allStatuses: "Tất cả trạng thái",
+
     actionsColumn: "Thao tác",
     detailTitle: "Chi tiết bài viết",
     detailDescription:
