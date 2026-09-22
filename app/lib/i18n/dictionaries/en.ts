@@ -139,8 +139,6 @@ export const en: Dictionary = {
     personalListLoading: "Loading your feedback",
     contentColumn: "Feedback",
     statusColumn: "Status",
-    statusFilterLabel: "Filter by status",
-    allStatuses: "All statuses",
     submittedColumn: "Submitted",
     screenshotColumn: "Screenshot",
     screenshotPresent: "Attached",
@@ -1319,7 +1317,9 @@ export const en: Dictionary = {
     titleDesc: "Title Z-A",
     titleColumn: "Title",
     statusColumn: "Status",
-    createdColumn: "Created",
+    createdColumn: "Created",    statusFilterLabel: "Filter by status",
+    allStatuses: "All statuses",
+
     actionsColumn: "Actions",
     detailTitle: "Post details",
     detailDescription:
