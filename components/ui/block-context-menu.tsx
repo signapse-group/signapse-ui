@@ -27,12 +27,14 @@ import {
   ContextMenuSubContentInOverlay as ContextMenuSubContent,
 } from "@/components/ui/context-menu-content-in-overlay"
 import { setBlockType } from "@/components/editor/transforms"
+import { useEditorMode } from "@/components/editor/editor-mode"
 import { useIsTouchDevice } from "@/hooks/use-is-touch-device"
 
 export function BlockContextMenu({ children }: { children: React.ReactNode }) {
   const { api, editor } = useEditorPlugin(BlockMenuPlugin)
   const isTouch = useIsTouchDevice()
   const readOnly = useEditorReadOnly()
+  const editorMode = useEditorMode()
   const openId = usePluginOption(BlockMenuPlugin, "openId")
   const isOpen = openId === BLOCK_CONTEXT_MENU_ID
 
@@ -140,11 +142,13 @@ export function BlockContextMenu({ children }: { children: React.ReactNode }) {
                 >
                   Blockquote
                 </ContextMenuItem>
-                <ContextMenuItem
-                  onClick={() => handleTurnInto(KEYS.codeDrawing)}
-                >
-                  Code Drawing
-                </ContextMenuItem>
+                {editorMode !== "blog" ? (
+                  <ContextMenuItem
+                    onClick={() => handleTurnInto(KEYS.codeDrawing)}
+                  >
+                    Code Drawing
+                  </ContextMenuItem>
+                ) : null}
               </ContextMenuSubContent>
             </ContextMenuSub>
           </ContextMenuGroup>

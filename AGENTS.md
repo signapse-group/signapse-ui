@@ -2,7 +2,7 @@
 
 This document is the active repo-wide instruction file for Codex when working in Signapse UI.
 
-When framework versions, the UI preset, CI, workflow plugin, or repository ownership change, refresh the affected facts and pointers here.
+When framework versions, the UI preset, CI, or repository ownership change, refresh the affected facts and pointers here.
 
 ## CodeGraph
 
@@ -19,7 +19,7 @@ When framework versions, the UI preset, CI, workflow plugin, or repository owner
 - For UI implementation or review under `app/[lang]/**` or `components/**`, read `components/AGENTS.override.md`. For changes to visual presentation, interaction, accessibility, or user-facing content, read the relevant sections of `docs/design/DESIGN.md`, the UI/UX source of truth.
 - When a task spans multiple domains, read every applicable scoped instruction file.
 - Scoped instructions extend this file; the more specific instruction wins when guidance conflicts.
-- Workflow bootstrap and FE configuration are defined under Agent Workflow adoption below; `.agents/skills` holds repository-specific or non-overlapping recipes.
+- `.agents/skills` holds repository-specific or non-overlapping recipes.
 - Load the corresponding repository skill when the change or review matches its trigger:
 - `shadcn`: adding, fixing, composing shadcn components, wrappers, CLI, docs, presets, and styling rules.
 - Overlay hydration mismatches: use the Hydration section in `components/AGENTS.override.md`.
@@ -86,21 +86,3 @@ app/[lang]/(main)/[feature]/
 - For UI reviews, use the detailed drift categories in DESIGN; also prioritize API contract hierarchy drift, unsafe destructive actions, and unchecked `any` where applicable.
 - For each finding, identify file/line, behavioral or UX risk, and the minimal recommended fix.
 - If there are no findings, say that clearly and mention residual risk or checks not run.
-
-## Agent Workflow adoption
-
-This repository adopts `agent-workflow` version `0.1.0` from marketplace `signapse-workflow` as its default workflow. At the start of every new session and before workflow-dependent action, load the installed `agent-workflow:workflow` skill (`$workflow` in the skill picker), read its shared policy, and compare the installed manifest version with this declaration. Resolve resources from the installed skill location, never a hardcoded cache path. Report missing or mismatched versions and continue only independent valid work.
-
-- Planning repository for Epic/Story and backend execution: `https://github.com/signapse-group/signapse`.
-- Frontend Task/Bug execution repository: `https://github.com/signapse-group/signapse-ui`.
-- GitHub Project: `https://github.com/orgs/signapse-group/projects/1`, owner `signapse-group`, number `1`. Resolve IDs and verify access, native issue types, relationships, and status fields before mutation.
-- Use the plugin's native GitHub issue workflow and `to-ticket` entrypoint; existing local planning documents are historical references.
-- Focused checks: `pnpm exec vitest run <test-file>` for behavior under test; use targeted lint/typecheck or contract checks as appropriate to the change.
-- Run local checks, fix failures caused by the requested change, and rerun affected checks without asking for approval at each step. `pnpm test:browser` uses the local backend fixture configured in `playwright.config.ts`; this authorization does not extend to production mutations or live integration checks outside the assigned scope.
-- Completion checks for application changes: `pnpm test:quality`, the existing aggregate of lint, typecheck, Vitest, API contract checks, build, and Chromium browser tests. Documentation-only changes require relevant content/link/format checks and review, not the application suite.
-- Test seams keep participating FE components, state, routing, and API mapping real. Mock external HTTP/backend boundaries as appropriate; fixture-mode tests do not establish live backend delivery or real authorization.
-- FE delivery defaults to human-reviewed merge with `Closes`; use `Refs` when the contract requires post-merge acceptance. BE deployment is not a default FE delivery condition.
-- API integration: `docs/APIMAPPING.md` is the local mapping reference; link the producer's exact API contract and delivery evidence.
-- Domain documentation uses `CONTEXT.md` and `docs/adr/` in this repository. Read relevant existing content and create documents lazily for accepted terms/decisions using the plugin's domain guidance.
-
-Shared policy and issue templates live only in the plugin. Keep FE architecture, UI/i18n rules, scoped instructions, and application verification standards in this repository. Do not copy plugin skills back into `.agents/skills`.

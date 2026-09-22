@@ -31,6 +31,10 @@ import {
   insertBlock,
   insertInlineElement,
 } from "@/components/editor/transforms"
+import {
+  BLOG_EDITOR_ALLOWED_INSERT_VALUES,
+  useEditorMode,
+} from "@/components/editor/editor-mode"
 
 import {
   InlineCombobox,
@@ -220,6 +224,18 @@ export function SlashInputElement(
   props: PlateElementProps<TComboboxInputElement>
 ) {
   const { editor, element } = props
+  const editorMode = useEditorMode()
+  const visibleGroups =
+    editorMode === "blog"
+      ? groups
+          .map((group) => ({
+            ...group,
+            items: group.items.filter((item) =>
+              BLOG_EDITOR_ALLOWED_INSERT_VALUES.has(item.value)
+            ),
+          }))
+          .filter((group) => group.items.length > 0)
+      : groups
 
   return (
     <PlateElement {...props} as="span">
@@ -229,7 +245,7 @@ export function SlashInputElement(
         <InlineComboboxContent>
           <InlineComboboxEmpty>No results</InlineComboboxEmpty>
 
-          {groups.map(({ group, items }) => (
+          {visibleGroups.map(({ group, items }) => (
             <InlineComboboxGroup key={group}>
               <InlineComboboxGroupLabel>{group}</InlineComboboxGroupLabel>
 

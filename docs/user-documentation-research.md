@@ -325,7 +325,7 @@ Thêm 5 bài P1 khi các tính năng tương ứng sẵn sàng, sửa dựa trê
 - Test ranh giới public/protected, slug không hợp lệ, kết quả search không dấu và việc loại nội dung không xuất bản.
 - Kiểm tra output build có bài/ảnh cần thiết, không có tài liệu nội bộ trong bundle/index public.
 - Chạy lint, typecheck và build thích hợp; kiểm tra accessibility tự động bằng hạ tầng repo khi khả dụng.
-- Theo scope triển khai, đọc các instruction/skill tương ứng và tuân thủ Agent Workflow trước khi thực hiện thay đổi sản phẩm.
+- Theo scope triển khai, đọc và tuân thủ các instruction/skill tương ứng trước khi thực hiện thay đổi sản phẩm.
 
 User-owned manual QA, ghi chú không phải checkbox chặn archive: người chưa biết ứng dụng thử hoàn thành một tác vụ với bài; product xác nhận hành vi/quyền trên môi trường thật; review ảnh công khai, VI/EN và mobile. Phân biệt việc hoàn tất engineering với quyết định phát hành public.
 

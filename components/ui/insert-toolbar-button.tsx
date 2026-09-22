@@ -33,6 +33,10 @@ import { KEYS } from "platejs"
 import { type PlateEditor, useEditorRef } from "platejs/react"
 
 import { useLocalization } from "@/app/lib/i18n/provider"
+import {
+  BLOG_EDITOR_ALLOWED_INSERT_VALUES,
+  useEditorMode,
+} from "@/components/editor/editor-mode"
 
 import {
   DropdownMenu,
@@ -62,10 +66,7 @@ type Item = {
 }
 
 type MediaNodeType =
-  | typeof KEYS.audio
-  | typeof KEYS.file
-  | typeof KEYS.img
-  | typeof KEYS.video
+  typeof KEYS.audio | typeof KEYS.file | typeof KEYS.img | typeof KEYS.video
 
 const groups: Group[] = [
   {
@@ -249,6 +250,7 @@ export function InsertToolbarButton(
   props: React.ComponentProps<typeof DropdownMenu>
 ) {
   const { dictionary } = useLocalization()
+  const editorMode = useEditorMode()
   const editor = useEditorRef()
   const media = dictionary.editor.media
   const mediaConfig: Record<MediaNodeType, { label: string; title: string }> = {
@@ -262,6 +264,17 @@ export function InsertToolbarButton(
   const [mediaNodeType, setMediaNodeType] = React.useState<MediaNodeType>(
     KEYS.img
   )
+  const visibleGroups =
+    editorMode === "blog"
+      ? groups
+          .map((group) => ({
+            ...group,
+            items: group.items.filter((item) =>
+              BLOG_EDITOR_ALLOWED_INSERT_VALUES.has(item.value)
+            ),
+          }))
+          .filter((group) => group.items.length > 0)
+      : groups
 
   return (
     <>
@@ -280,7 +293,7 @@ export function InsertToolbarButton(
           className="flex max-h-[500px] min-w-[180px] flex-col overflow-y-auto"
           align="start"
         >
-          {groups.map(({ group, items: nestedItems }) => (
+          {visibleGroups.map(({ group, items: nestedItems }) => (
             <ToolbarMenuGroup key={group} label={group}>
               {nestedItems.map(({ icon, label, value, onSelect }) => (
                 <DropdownMenuItem

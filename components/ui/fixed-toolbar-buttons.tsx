@@ -14,6 +14,7 @@ import {
 import { KEYS } from "platejs"
 import { useEditorReadOnly } from "platejs/react"
 
+import { useEditorMode } from "@/components/editor/editor-mode"
 import { AlignToolbarButton } from "./align-toolbar-button"
 import { EmojiToolbarButton } from "./emoji-toolbar-button"
 import { ExportToolbarButton } from "./export-toolbar-button"
@@ -39,6 +40,7 @@ import { TurnIntoToolbarButton } from "./turn-into-toolbar-button"
 
 export function FixedToolbarButtons() {
   const readOnly = useEditorReadOnly()
+  const editorMode = useEditorMode()
 
   if (readOnly) return null
 
@@ -55,7 +57,7 @@ export function FixedToolbarButtons() {
             <ArrowUpToLineIcon />
           </ExportToolbarButton>
 
-          <ImportToolbarButton />
+          {editorMode !== "blog" ? <ImportToolbarButton /> : null}
         </ToolbarGroup>
 
         <ToolbarGroup>

@@ -41,7 +41,7 @@ Không có product capture nào dưới `public/images/landing/`; runtime hiện
 
 Bốn điều chi phối implementation và release:
 
-1. Tạo một Agent Workflow Task có contract và completion criteria rõ ràng cho landing.
+1. Tạo một implementation Task có contract và completion criteria rõ ràng cho landing.
 2. Sửa public-route contract vì production Clerk mode vẫn protect `/vi` và `/en` (`proxy.ts:53-77`).
 3. Topology đã chốt thành hai deliverable: landing được test public `noindex` tại `dev.signapse.cloud`; task cutover riêng mới thay coming-soon tại `signapse.cloud`, bật indexability và giữ immutable rollback deployment trong bảy ngày (`docs/adr/0005-stage-public-landing-before-apex-cutover.md`).
 4. Signapse Product Owner phải xác nhận mailbox `access@signapse.cloud` đã provision, nhận mail ngoài và có owner theo dõi trước apex cutover; gate này không chặn merge landing implementation (`docs/design/LANDING.md:285-293`).
@@ -119,7 +119,7 @@ Khuyến nghị seam: thay `createRouteMatcher` hiện tại bằng một predic
 
 ## 4. Contract cần khóa trước implementation
 
-Agent Workflow Task phải dùng `docs/design/LANDING.md` làm contract UI chính và không tạo một lớp requirement cạnh tranh. CTA matrix khóa Hero secondary thành `#how-it-works`, giữ Sign in ở Header/Footer và giữ media policy text-first khi chưa có screenshot được duyệt.
+Implementation Task phải dùng `docs/design/LANDING.md` làm contract UI chính và không tạo một lớp requirement cạnh tranh. CTA matrix khóa Hero secondary thành `#how-it-works`, giữ Sign in ở Header/Footer và giữ media policy text-first khi chưa có screenshot được duyệt.
 
 ### Localization contract đang mâu thuẫn
 
@@ -214,7 +214,7 @@ Route-specific components phải ở cạnh route, Server Components là default
 
 | Mức                           | Item                                                                               | Trạng thái / khuyến nghị                                                                                                   |
 | ----------------------------- | ---------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| Block implementation workflow | Chưa có Agent Workflow Task cho landing.                                      | Tạo task có contract và completion criteria trước code.                                                                    |
+| Block implementation workflow | Chưa có implementation Task cho landing.                                      | Tạo task có contract và completion criteria trước code.                                                                    |
 | Block functional acceptance   | Production proxy protect locale roots.                                             | Đổi explicit public path predicate, giữ default-deny cho phần còn lại.                                                     |
 | Resolved topology decision    | `coming-soon-site` giữ apex trong lúc landing được test tại `dev.signapse.cloud`.  | Tách landing implementation và apex cutover thành hai task; cutover mới retire coming-soon và bật indexability.            |
 | Cutover-only release gate     | Chưa có bằng chứng mailbox request-access hoạt động/được theo dõi.                 | Signapse Product Owner xác nhận trước apex cutover; không chặn merge implementation task.                                  |
