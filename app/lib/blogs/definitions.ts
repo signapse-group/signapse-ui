@@ -279,7 +279,6 @@ export interface BlogPostListResponse {
   lastModifiedDate: string
 }
 
-
 const blogPostPageableSchema = z
   .object({
     pageNumber: z.number().int().nonnegative(),
