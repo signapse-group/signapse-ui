@@ -87,6 +87,13 @@
       "skillPath": "skills/productivity/teach/SKILL.md",
       "computedHash": "0c06821a21052b8a054f04c74223db2f1fb5868bbe0da76674d0892a872b3c56"
     },
+    "technical-design": {
+      "source": "signapse-group/signapse-symphony",
+      "ref": "main",
+      "sourceType": "github",
+      "skillPath": "workflow/skills/technical-design/SKILL.md",
+      "computedHash": "0bb9cee160c83032895aafd705148ff8d68ab4e6d652bf862fb98d56baa71315"
+    },
     "to-questionnaire": {
       "source": "mattpocock/skills",
       "sourceType": "github",
