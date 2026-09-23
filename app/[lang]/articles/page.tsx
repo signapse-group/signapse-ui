@@ -71,6 +71,8 @@ function ArticleCard({
 }: {
   article: BlogPostListResponse
   locale: AppLocale
+  publishedLabel: string
+  readLabel: string
 }) {
   const href = withLocalePath(`/articles/${article.slug}`, locale)
   const date = article.publishedAt ?? article.createdDate
@@ -82,7 +84,7 @@ function ArticleCard({
     >
       <div className="space-y-4">
         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">
-          Published
+          {publishedLabel}
         </p>
         <h2
           id={`article-${article.id}`}
@@ -117,7 +119,7 @@ function ArticleCard({
           href={href}
           className="shrink-0 rounded-md font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          Read article
+          {readLabel}
         </Link>
       </div>
     </article>
@@ -240,6 +242,8 @@ export default async function ArticlesPage({
                   key={article.id}
                   article={article}
                   locale={locale}
+                  publishedLabel={t.published}
+                  readLabel={t.readArticle}
                 />
               ))}
             </div>
