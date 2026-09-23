@@ -1,6 +1,10 @@
 "use server"
 
-import { fetchAuthenticated, type BackendApiError } from "@/app/api/auth/action"
+import {
+  fetchAuthenticated,
+  fetchPublic,
+  type BackendApiError,
+} from "@/app/api/auth/action"
 import { SearchParams, Page, ActionResult } from "@/app/lib/definitions"
 import { getServerDictionary } from "@/app/lib/i18n/server"
 import { queryParamsToString } from "@/app/lib/utils"
@@ -9,6 +13,9 @@ import {
   BlogPostListResponse,
   CreateBlogPostRequest,
   UpdateBlogPostRequest,
+  blogPageResponseSchema,
+  blogPostResponseSchema,
+  filterPublishedBlogPage,
   createBlogPostRequestSchema,
   updateBlogPostRequestSchema,
 } from "@/app/lib/blogs/definitions"
@@ -24,6 +31,38 @@ export async function getBlogs(
 
 export async function getBlogById(id: number): Promise<BlogPost> {
   return fetchAuthenticated<BlogPost>(`/blogs/${id}`)
+}
+
+export async function getPublicBlogs(
+  page: number,
+  size: number
+): Promise<Page<BlogPostListResponse>> {
+  const response = blogPageResponseSchema.parse(
+    await fetchPublic<unknown>(`/blogs/public?page=${page}&size=${size}`)
+  )
+
+  return filterPublishedBlogPage(response)
+}
+
+export class PublicBlogNotFoundError extends Error {
+  readonly status = 404
+
+  constructor() {
+    super("Public blog post unavailable")
+    this.name = "PublicBlogNotFoundError"
+  }
+}
+
+export async function getPublicBlogBySlug(slug: string): Promise<BlogPost> {
+  const response = blogPostResponseSchema.parse(
+    await fetchPublic<unknown>(`/blogs/public/${encodeURIComponent(slug)}`)
+  )
+
+  if (response.status !== "PUBLISHED") {
+    throw new PublicBlogNotFoundError()
+  }
+
+  return response
 }
 
 export async function createBlog(
