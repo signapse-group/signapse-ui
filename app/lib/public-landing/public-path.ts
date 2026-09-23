@@ -1,8 +1,9 @@
 import { isAppLocale } from "@/app/lib/i18n/config"
 
 /**
- * The public exception is deliberately narrow: locale roots and sign-in
- * descendants only. Every other pathname remains protected by default.
+ * The public exception covers locale roots, sign-in descendants, and the
+ * anonymous Articles reading experience. Every other pathname remains protected
+ * by default.
  */
 export function isPublicLandingPathname(pathname: string): boolean {
   const segments = pathname.split("/").filter(Boolean)
@@ -10,5 +11,9 @@ export function isPublicLandingPathname(pathname: string): boolean {
 
   if (!isAppLocale(locale)) return false
 
-  return segments.length === 1 || segments[1] === "sign-in"
+  return (
+    segments.length === 1 ||
+    segments[1] === "sign-in" ||
+    segments[1] === "articles"
+  )
 }
