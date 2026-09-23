@@ -25,7 +25,12 @@ vi.mock("next/cache", () => ({
 }))
 
 import { fetchAuthenticated } from "@/app/api/auth/action"
-import { createBlog, deleteBlog, updateBlog } from "@/app/api/blogs/action"
+import {
+  createBlog,
+  deleteBlog,
+  getBlogById,
+  updateBlog,
+} from "@/app/api/blogs/action"
 import type { CreateBlogPostRequest } from "@/app/lib/blogs/definitions"
 
 const content = [
@@ -62,6 +67,19 @@ const response = {
 }
 
 describe("Blog authoring actions", () => {
+  it("parses DRAFT/PUBLISHED lifecycle responses and rejects unknown statuses", async () => {
+    vi.mocked(fetchAuthenticated).mockResolvedValue(response)
+
+    await expect(getBlogById(response.id)).resolves.toEqual(response)
+
+    vi.mocked(fetchAuthenticated).mockResolvedValue({
+      ...response,
+      status: "VISIBLE",
+    })
+
+    await expect(getBlogById(response.id)).rejects.toThrow()
+  })
+
   beforeEach(() => {
     vi.mocked(fetchAuthenticated).mockReset()
   })
