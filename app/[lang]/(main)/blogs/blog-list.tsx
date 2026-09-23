@@ -6,7 +6,11 @@ import { useRouter } from "next/navigation"
 import { useState, useTransition } from "react"
 import { toast } from "sonner"
 
-import { deleteBlog } from "@/app/api/blogs/action"
+import {
+  deleteBlog,
+  publishBlog,
+  unpublishBlog,
+} from "@/app/api/blogs/action"
 import { BlogPostListResponse } from "@/app/lib/blogs/definitions"
 import { Page } from "@/app/lib/definitions"
 import { useLocalization } from "@/app/lib/i18n/provider"
@@ -53,6 +57,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 
+import { BlogPublicationControl } from "./blog-publication-control"
 import { BlogSearch } from "./blog-search"
 
 interface BlogListProps {
@@ -184,6 +189,12 @@ export function BlogListPage({ blogPage }: BlogListProps) {
                             {dictionary.blogs.edit}
                           </span>
                         </Link>
+                      ) : null}
+                      {canUpdateBlog ? (
+                        <BlogPublicationControl
+                          id={blog.id}
+                          status={blog.status}
+                        />
                       ) : null}
                       {canDeleteBlog ? <DeleteBlogButton id={blog.id} /> : null}
                     </div>

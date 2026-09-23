@@ -1303,6 +1303,30 @@ export const vi = {
     readDenied: "Bạn không có quyền xem danh sách bài viết.",
     createDenied: "Bạn không có quyền tạo bài viết.",
     updateDenied: "Bạn không có quyền chỉnh sửa bài viết.",
+    publish: "Xuất bản bài viết",
+    publishTitle: "Xuất bản bài viết này?",
+    publishDescription:
+      "Bài viết sẽ được cung cấp cho visitor. Bạn có thể gỡ xuất bản sau đó.",
+    publishPending: "Đang xuất bản...",
+    published: "Đã xuất bản bài viết.",
+    unpublish: "Gỡ xuất bản bài viết",
+    unpublishTitle: "Gỡ xuất bản bài viết này?",
+    unpublishDescription:
+      "Bài viết sẽ không còn được cung cấp cho visitor và sẽ trở lại bản nháp.",
+    unpublishPending: "Đang gỡ xuất bản...",
+    unpublished: "Đã gỡ xuất bản bài viết.",
+    publicationError:
+      "Không thể cập nhật trạng thái xuất bản. Vui lòng thử lại.",
+    publicationPermissionError:
+      "Bạn không có quyền xuất bản hoặc gỡ xuất bản bài viết.",
+    publicationValidationError:
+      "Bài viết chưa đáp ứng đủ điều kiện xuất bản.",
+    publicationMissingError:
+      "Bài viết không còn tồn tại. Vui lòng tải lại trang.",
+    publicationConflictError:
+      "Bài viết đã thay đổi trước khi thao tác hoàn tất. Vui lòng tải lại và thử lại.",
+    publicationServerError:
+      "Máy chủ không thể cập nhật trạng thái xuất bản. Vui lòng thử lại.",
     createAction: "Tạo bài viết",
     searchLabel: "Tìm bài viết",
     searchPending: "Đang tìm kiếm",
