@@ -6,11 +6,7 @@ import { useRouter } from "next/navigation"
 import { useState, useTransition } from "react"
 import { toast } from "sonner"
 
-import {
-  deleteBlog,
-  publishBlog,
-  unpublishBlog,
-} from "@/app/api/blogs/action"
+import { deleteBlog } from "@/app/api/blogs/action"
 import { BlogPostListResponse } from "@/app/lib/blogs/definitions"
 import { Page } from "@/app/lib/definitions"
 import { useLocalization } from "@/app/lib/i18n/provider"

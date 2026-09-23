@@ -2,13 +2,10 @@
 
 import { EyeOff, Send } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useState, useTransition } from "react"
+import { useState, useTransition, type MouseEvent } from "react"
 import { toast } from "sonner"
 
-import {
-  publishBlog,
-  unpublishBlog,
-} from "@/app/api/blogs/action"
+import { publishBlog, unpublishBlog } from "@/app/api/blogs/action"
 import type { BlogPostStatus } from "@/app/lib/blogs/definitions"
 import { useLocalization } from "@/app/lib/i18n/provider"
 import {
@@ -57,7 +54,7 @@ export function BlogPublicationControl({
     ? dictionary.blogs.unpublished
     : dictionary.blogs.published
 
-  function handleConfirm(event: React.MouseEvent<HTMLButtonElement>) {
+  function handleConfirm(event: MouseEvent<HTMLButtonElement>) {
     event.preventDefault()
     startTransition(async () => {
       const result = await (isPublished ? unpublishBlog : publishBlog)(id)
@@ -117,6 +114,7 @@ export function BlogPublicationControl({
             {dictionary.common.cancel}
           </AlertDialogCancel>
           <AlertDialogAction
+            type="button"
             onClick={handleConfirm}
             disabled={isPending}
           >
