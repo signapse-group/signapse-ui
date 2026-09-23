@@ -15,7 +15,7 @@ export function PublicArticlesShell({
   dictionary: Dictionary
   locale: AppLocale
 }) {
-  const t = dictionary.articles
+  const t = dictionary.publicArticles
 
   return (
     <div className="min-h-svh bg-background text-foreground">
