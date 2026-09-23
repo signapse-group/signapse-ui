@@ -1,4 +1,5 @@
 import type { Value } from "platejs"
+import type { Page } from "@/app/lib/definitions"
 import { z } from "zod"
 
 export const BLOG_CONTENT_SCHEMA_VERSION = 1
@@ -323,3 +324,22 @@ export const blogPageResponseSchema = z
     empty: z.boolean(),
   })
   .passthrough()
+
+export function isPublishedBlogPost(
+  post: Pick<BlogPostListResponse, "status">
+): boolean {
+  return post.status === "PUBLISHED"
+}
+
+export function filterPublishedBlogPage(
+  page: Page<BlogPostListResponse>
+): Page<BlogPostListResponse> {
+  const content = page.content.filter(isPublishedBlogPost)
+
+  return {
+    ...page,
+    content,
+    numberOfElements: content.length,
+    empty: content.length === 0,
+  }
+}

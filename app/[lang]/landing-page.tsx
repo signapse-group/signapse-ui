@@ -361,6 +361,11 @@ function LandingHeader({
       label: t.nav.exploreGroup,
       items: [
         {
+          href: withLocalePath("/articles", locale),
+          label: t.nav.articles,
+          description: t.nav.articlesDescription,
+        },
+        {
           label: t.nav.blogInsights,
           description: t.nav.blogInsightsDescription,
           placeholder: true,

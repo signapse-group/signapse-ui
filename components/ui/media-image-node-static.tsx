@@ -7,31 +7,39 @@ import { NodeApi } from "platejs"
 import { SlateElement } from "platejs/static"
 
 import { cn } from "@/lib/utils"
+import { ResilientImage } from "./resilient-image"
 
 export function ImageElementStatic(
-  props: SlateElementProps<TImageElement & TCaptionProps & TResizableProps>
+  props: SlateElementProps<TImageElement & TCaptionProps & TResizableProps> & {
+    fallbackLabel?: string
+  }
 ) {
+  const { fallbackLabel, ...slateProps } = props
   const { align = "center", caption, url, width } = props.element
+  const imageSrc =
+    url ??
+    ("src" in props.element && typeof props.element.src === "string"
+      ? props.element.src
+      : "")
+  const alt =
+    typeof props.attributes.alt === "string" ? props.attributes.alt : ""
 
   return (
-    <SlateElement {...props} className="py-2.5">
+    <SlateElement {...slateProps} className="py-2.5">
       <figure className="group relative m-0 inline-block" style={{ width }}>
         <div
           className="relative max-w-full min-w-[92px]"
           style={{ textAlign: align }}
         >
           <div>
-            <img
+            <ResilientImage
               className={cn(
                 "w-full max-w-full cursor-default object-cover px-0",
                 "rounded-sm"
               )}
-              alt={
-                typeof props.attributes.alt === "string"
-                  ? props.attributes.alt
-                  : ""
-              }
-              src={url}
+              alt={alt}
+              fallbackLabel={props.fallbackLabel ?? alt}
+              src={imageSrc}
             />
           </div>
           {caption && (
