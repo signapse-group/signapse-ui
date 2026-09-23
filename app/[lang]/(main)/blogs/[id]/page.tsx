@@ -9,45 +9,91 @@ import { AccessDenied } from "@/components/access-denied"
 import { AppFormShellSkeleton } from "@/components/app-form-shell"
 import { Skeleton } from "@/components/ui/skeleton"
 
+import { BlogDetailView } from "./blog-detail-view"
 import { UpdateBlogForm } from "./update-blog-form"
 
 interface PageProps {
   params: Promise<{
     id: string
   }>
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }
 
-export default async function EditBlogPage({ params }: PageProps) {
+export default async function EditBlogPage({
+  params,
+  searchParams,
+}: PageProps) {
   const permissions = await getCurrentPermissions()
   const dictionary = await getServerDictionary()
 
-  if (!hasPermission(permissions, "blog:update")) {
+  if (!hasPermission(permissions, "blog:read")) {
     return (
       <AccessDenied
-        description={dictionary.blogs.updateDenied}
-        permission="blog:update"
+        description={dictionary.blogs.readDenied}
+        permission="blog:read"
       />
     )
   }
 
   const { id } = await params
   const blogId = Number(id)
+  if (!Number.isInteger(blogId) || blogId <= 0) {
+    notFound()
+  }
+
+  const resolvedSearchParams = await searchParams
+  const returnTo = buildBlogListPath(resolvedSearchParams)
 
   return (
     <Suspense fallback={<UpdateBlogSkeleton />}>
-      <FetchBlogData id={blogId} />
+      <FetchBlogData
+        canUpdate={hasPermission(permissions, "blog:update")}
+        id={blogId}
+        returnTo={returnTo}
+      />
     </Suspense>
   )
 }
 
-async function FetchBlogData({ id }: { id: number }) {
+async function FetchBlogData({
+  canUpdate,
+  id,
+  returnTo,
+}: {
+  canUpdate: boolean
+  id: number
+  returnTo: string
+}) {
   const blog = await getBlogById(id)
 
   if (!blog) {
     notFound()
   }
 
-  return <UpdateBlogForm blog={blog} />
+  return canUpdate ? (
+    <UpdateBlogForm blog={blog} returnTo={returnTo} />
+  ) : (
+    <BlogDetailView blog={blog} returnTo={returnTo} />
+  )
+}
+
+function buildBlogListPath(
+  searchParams: { [key: string]: string | string[] | undefined }
+): string {
+  const query = new URLSearchParams()
+
+  for (const [key, value] of Object.entries(searchParams)) {
+    if (typeof value === "string") {
+      query.set(key, value)
+    } else if (Array.isArray(value)) {
+      for (const entry of value) {
+        query.append(key, entry)
+      }
+    }
+  }
+
+  const queryString = query.toString()
+  return queryString ? `/blogs?${queryString}` : "/blogs"
 }
 
 function UpdateBlogSkeleton() {

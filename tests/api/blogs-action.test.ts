@@ -34,6 +34,7 @@ import { fetchAuthenticated } from "@/app/api/auth/action"
 import {
   createBlog,
   deleteBlog,
+  getBlogById,
   publishBlog,
   unpublishBlog,
   updateBlog,
@@ -78,6 +79,19 @@ describe("Blog authoring actions", () => {
     vi.mocked(fetchAuthenticated).mockReset()
   })
 
+  it("parses DRAFT/PUBLISHED lifecycle responses and rejects unknown statuses", async () => {
+    vi.mocked(fetchAuthenticated).mockResolvedValue(response)
+
+    await expect(getBlogById(response.id)).resolves.toEqual(response)
+
+    vi.mocked(fetchAuthenticated).mockResolvedValue({
+      ...response,
+      status: "VISIBLE",
+    })
+
+    await expect(getBlogById(response.id)).rejects.toThrow()
+  })
+
   it("publishes and unpublishes through the lifecycle endpoints", async () => {
     vi.mocked(fetchAuthenticated)
       .mockResolvedValueOnce({ ...response, status: "PUBLISHED" })
@@ -106,7 +120,7 @@ describe("Blog authoring actions", () => {
 
   it("maps publication authorization and lifecycle failures to localized fallbacks", async () => {
     const failures = [
-      [403, "Blog permission denied"],
+      [403, "Publication permission denied"],
       [404, "Publication target missing"],
       [409, "Publication conflict"],
       [500, "Publication server failed"],

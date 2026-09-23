@@ -16,7 +16,10 @@ import {
 } from "@/app/lib/blogs/definitions"
 import type { Dictionary } from "@/app/lib/i18n/dictionary-types"
 import { useLocalization } from "@/app/lib/i18n/provider"
-import { useLocalizedPath } from "@/components/localized-link"
+import {
+  LocalizedLink,
+  useLocalizedPath,
+} from "@/components/localized-link"
 import {
   AppFormShell,
   AppFormShellBody,
@@ -28,7 +31,7 @@ import {
 } from "../blog-authoring-fields"
 import { BlogPublicationControl } from "../blog-publication-control"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { FieldError } from "@/components/ui/field"
 import { Spinner } from "@/components/ui/spinner"
 
@@ -59,12 +62,21 @@ export type UpdateBlogRequest = BlogAuthoringFormValues
 
 interface UpdateBlogFormProps {
   blog: BlogPost
+  returnTo?: string
 }
 
-export function UpdateBlogForm({ blog }: UpdateBlogFormProps) {
+export function UpdateBlogForm({
+  blog,
+  returnTo,
+}: UpdateBlogFormProps) {
   const router = useRouter()
   const { dictionary } = useLocalization()
   const blogsPath = useLocalizedPath("/blogs")
+  const returnQuery =
+    returnTo && returnTo.includes("?")
+      ? returnTo.slice(returnTo.indexOf("?"))
+      : ""
+  const localizedReturnPath = `${blogsPath}${returnQuery}`
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [contentEditorKey, setContentEditorKey] = useState(0)
   const updateBlogSchema = useMemo(
@@ -99,7 +111,7 @@ export function UpdateBlogForm({ blog }: UpdateBlogFormProps) {
 
     if (result.success) {
       toast.success(dictionary.blogs.updateSuccess)
-      router.push(blogsPath)
+      router.push(localizedReturnPath)
       router.refresh()
       return
     }
@@ -163,7 +175,13 @@ export function UpdateBlogForm({ blog }: UpdateBlogFormProps) {
         </AppFormShellBody>
 
         <AppFormShellFooter>
-          <div className="flex gap-4">
+          <div className="flex flex-wrap gap-4">
+            <LocalizedLink
+              href={returnTo ?? "/blogs"}
+              className={buttonVariants({ variant: "ghost" })}
+            >
+              {dictionary.blogs.backToList}
+            </LocalizedLink>
             <Button
               disabled={form.formState.isSubmitting || unsupportedContent}
               type="submit"
