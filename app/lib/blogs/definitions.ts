@@ -1,4 +1,5 @@
 import type { Value } from "platejs"
+import type { Page } from "@/app/lib/definitions"
 import { z } from "zod"
 
 export const BLOG_CONTENT_SCHEMA_VERSION = 1
@@ -276,4 +277,64 @@ export interface BlogPostListResponse {
   publishedAt: string | null
   createdDate: string
   lastModifiedDate: string
+}
+
+const blogPostPageableSchema = z
+  .object({
+    pageNumber: z.number().int().nonnegative(),
+    pageSize: z.number().int().positive(),
+    offset: z.number().int().nonnegative(),
+    paged: z.boolean(),
+    unpaged: z.boolean(),
+  })
+  .passthrough()
+
+export const blogPostListResponseSchema = z
+  .object({
+    id: z.number().int().positive(),
+    title: z.string(),
+    slug: z.string(),
+    shortDescription: z.string().nullable(),
+    status: z.enum(["DRAFT", "PUBLISHED"]),
+    publishedAt: z.string().nullable(),
+    createdDate: z.string(),
+    lastModifiedDate: z.string(),
+  })
+  .passthrough()
+
+export const blogPostResponseSchema = blogPostListResponseSchema
+  .extend({
+    content: blogContentSchema,
+    contentSchemaVersion: z.number().int().positive(),
+  })
+  .passthrough()
+
+export const blogPageResponseSchema = z
+  .object({
+    content: z.array(blogPostListResponseSchema),
+    pageable: blogPostPageableSchema,
+    last: z.boolean(),
+    totalElements: z.number().int().nonnegative(),
+    totalPages: z.number().int().nonnegative(),
+    size: z.number().int().positive(),
+    number: z.number().int().nonnegative(),
+    first: z.boolean(),
+    numberOfElements: z.number().int().nonnegative(),
+    empty: z.boolean(),
+  })
+  .passthrough()
+
+export function isPublishedBlogPost(
+  post: Pick<BlogPostListResponse, "status">
+): boolean {
+  return post.status === "PUBLISHED"
+}
+
+export function filterPublishedBlogPage(
+  page: Page<BlogPostListResponse>
+): Page<BlogPostListResponse> {
+  return {
+    ...page,
+    content: page.content.filter(isPublishedBlogPost),
+  }
 }
