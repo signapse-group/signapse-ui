@@ -8,7 +8,7 @@ import { PublicArticlesShell } from "../public-articles-shell"
 export default async function ArticleNotFound() {
   const locale = await getRequestLocale()
   const dictionary = await getDictionary(locale)
-  const t = dictionary.articles
+  const t = dictionary.publicArticles
 
   return (
     <PublicArticlesShell dictionary={dictionary} locale={locale}>
