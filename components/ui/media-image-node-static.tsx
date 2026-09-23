@@ -16,6 +16,11 @@ export function ImageElementStatic(
 ) {
   const { fallbackLabel, ...slateProps } = props
   const { align = "center", caption, url, width } = props.element
+  const imageSrc =
+    url ??
+    ("src" in props.element && typeof props.element.src === "string"
+      ? props.element.src
+      : "")
   const alt =
     typeof props.attributes.alt === "string" ? props.attributes.alt : ""
 
@@ -34,7 +39,7 @@ export function ImageElementStatic(
               )}
               alt={alt}
               fallbackLabel={props.fallbackLabel ?? alt}
-              src={url}
+              src={imageSrc}
             />
           </div>
           {caption && (
