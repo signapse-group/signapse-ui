@@ -65,8 +65,7 @@ export function PublicArticlesShell({
             <span aria-hidden="true" className="text-border">
               /
             </span>
-            <Link
-              {SUPPORTED_APP_LOCALES.map((targetLocale) => (
+            {SUPPORTED_APP_LOCALES.map((targetLocale) => (
                 <Link
                   key={targetLocale}
                   href={getLocalizedArticlesHref(targetLocale)}
