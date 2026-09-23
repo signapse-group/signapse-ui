@@ -20,7 +20,7 @@ export function ResilientImage({
   const [hasError, setHasError] = useState(false)
 
   if (hasError) {
-    const label = fallbackLabel || alt
+    const label = alt || fallbackLabel
 
     return (
       <div
@@ -31,7 +31,7 @@ export function ResilientImage({
         )}
         role={label ? "img" : undefined}
       >
-        {label}
+        {fallbackLabel}
       </div>
     )
   }
