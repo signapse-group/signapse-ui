@@ -1376,7 +1376,7 @@ export const vi = {
     errorDescription: "Không thể tải danh sách bài viết do lỗi kết nối nội bộ.",
     unexpectedError: "Đã có lỗi không mong muốn xảy ra. Vui lòng thử lại.",
   },
-  articles: {
+  publicArticles: {
     pageTitle: "Bài viết",
     pageDescription: "Đọc các bài viết mới nhất đã xuất bản từ Signapse.",
     navLabel: "Bài viết",
