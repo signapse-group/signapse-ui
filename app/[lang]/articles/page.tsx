@@ -206,7 +206,7 @@ export default async function ArticlesPage({
   const pageNumber = getPositiveInteger(query.page, 1, 10000)
   const pageSize = getPositiveInteger(query.size, 10, 100)
   const page = await getPublicBlogs(pageNumber - 1, pageSize)
-  const t = dictionary.articles
+  const t = dictionary.publicArticles
 
   return (
     <PublicArticlesShell dictionary={dictionary} locale={locale}>
