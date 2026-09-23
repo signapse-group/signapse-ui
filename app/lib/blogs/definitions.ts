@@ -4,7 +4,8 @@ import { z } from "zod"
 
 export const BLOG_CONTENT_SCHEMA_VERSION = 1
 
-export type BlogPostStatus = "DRAFT" | "PUBLISHED"
+export const BLOG_POST_STATUSES = ["DRAFT", "PUBLISHED"] as const
+export type BlogPostStatus = (typeof BLOG_POST_STATUSES)[number]
 
 const BLOG_SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 const BLOG_ROOT_NODE_TYPES = new Set([
@@ -295,7 +296,7 @@ export const blogPostListResponseSchema = z
     title: z.string(),
     slug: z.string(),
     shortDescription: z.string().nullable(),
-    status: z.enum(["DRAFT", "PUBLISHED"]),
+    status: z.enum(BLOG_POST_STATUSES),
     publishedAt: z.string().nullable(),
     createdDate: z.string(),
     lastModifiedDate: z.string(),
@@ -305,7 +306,7 @@ export const blogPostListResponseSchema = z
 export const blogPostResponseSchema = blogPostListResponseSchema
   .extend({
     content: blogContentSchema,
-    contentSchemaVersion: z.literal(BLOG_CONTENT_SCHEMA_VERSION),
+    contentSchemaVersion: z.number().int().positive(),
   })
   .passthrough()
 

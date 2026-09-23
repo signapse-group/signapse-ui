@@ -1304,8 +1304,34 @@ export const en: Dictionary = {
   },
   blogs: {
     readDenied: "You do not have permission to view the blog list.",
+    view: "View post",
+    noResultsTitle: "No posts found",
+    noResultsDescription: "No posts match the current search or filters.",
     createDenied: "You do not have permission to create posts.",
     updateDenied: "You do not have permission to edit posts.",
+    publish: "Publish post",
+    publishTitle: "Publish this post?",
+    publishDescription:
+      "The post will become available to visitors. You can unpublish it later.",
+    publishPending: "Publishing...",
+    published: "Post published.",
+    unpublish: "Unpublish post",
+    unpublishTitle: "Unpublish this post?",
+    unpublishDescription:
+      "The post will no longer be available to visitors and will return to draft.",
+    unpublishPending: "Unpublishing...",
+    unpublished: "Post unpublished.",
+    publicationError: "Could not update publication status. Try again.",
+    publicationPermissionError:
+      "You do not have permission to publish or unpublish posts.",
+    publicationValidationError:
+      "This post does not meet the publication requirements.",
+    publicationMissingError:
+      "This post is no longer available. Refresh the page.",
+    publicationConflictError:
+      "This post changed before the action completed. Refresh the page and try again.",
+    publicationServerError:
+      "The server could not update publication status. Try again.",
     createAction: "Create post",
     searchLabel: "Search posts",
     searchPending: "Searching",
@@ -1317,7 +1343,18 @@ export const en: Dictionary = {
     titleColumn: "Title",
     statusColumn: "Status",
     createdColumn: "Created",
+    statusFilterLabel: "Filter by status",
+    allStatuses: "All statuses",
     actionsColumn: "Actions",
+    detailTitle: "Post details",
+    detailDescription:
+      "Review the current content and publication status of this post.",
+    backToList: "Back to posts",
+    noShortDescription: "No short description.",
+    noContent: "This post has no saved content.",
+    createdAt: "Created",
+    publishedAt: "Published",
+    lastModifiedAt: "Last updated",
     edit: "Edit post",
     emptyTitle: "No posts yet",
     emptyDescription: "Create the first draft to start writing content.",
@@ -1366,6 +1403,10 @@ export const en: Dictionary = {
     statuses: {
       DRAFT: "Draft",
       PUBLISHED: "Published",
+    },
+    statusDescriptions: {
+      DRAFT: "This post is currently a draft.",
+      PUBLISHED: "This post is currently published.",
     },
     draftDescription: "New posts are saved as drafts.",
     publishedDescription: "Changes are saved to the current published post.",

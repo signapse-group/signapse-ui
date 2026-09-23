@@ -1303,8 +1303,36 @@ export const vi = {
   },
   blogs: {
     readDenied: "Bạn không có quyền xem danh sách bài viết.",
+    view: "Xem bài viết",
+    noResultsTitle: "Không tìm thấy bài viết",
+    noResultsDescription:
+      "Không có bài viết nào khớp với điều kiện tìm kiếm hoặc lọc hiện tại.",
     createDenied: "Bạn không có quyền tạo bài viết.",
     updateDenied: "Bạn không có quyền chỉnh sửa bài viết.",
+    publish: "Xuất bản bài viết",
+    publishTitle: "Xuất bản bài viết này?",
+    publishDescription:
+      "Bài viết sẽ được cung cấp cho visitor. Bạn có thể gỡ xuất bản sau đó.",
+    publishPending: "Đang xuất bản...",
+    published: "Đã xuất bản bài viết.",
+    unpublish: "Gỡ xuất bản bài viết",
+    unpublishTitle: "Gỡ xuất bản bài viết này?",
+    unpublishDescription:
+      "Bài viết sẽ không còn được cung cấp cho visitor và sẽ trở lại bản nháp.",
+    unpublishPending: "Đang gỡ xuất bản...",
+    unpublished: "Đã gỡ xuất bản bài viết.",
+    publicationError:
+      "Không thể cập nhật trạng thái xuất bản. Vui lòng thử lại.",
+    publicationPermissionError:
+      "Bạn không có quyền xuất bản hoặc gỡ xuất bản bài viết.",
+    publicationValidationError:
+      "Bài viết chưa đáp ứng đủ điều kiện xuất bản.",
+    publicationMissingError:
+      "Bài viết không còn tồn tại. Vui lòng tải lại trang.",
+    publicationConflictError:
+      "Bài viết đã thay đổi trước khi thao tác hoàn tất. Vui lòng tải lại và thử lại.",
+    publicationServerError:
+      "Máy chủ không thể cập nhật trạng thái xuất bản. Vui lòng thử lại.",
     createAction: "Tạo bài viết",
     searchLabel: "Tìm bài viết",
     searchPending: "Đang tìm kiếm",
@@ -1316,7 +1344,18 @@ export const vi = {
     titleColumn: "Tiêu đề",
     statusColumn: "Trạng thái",
     createdColumn: "Tạo lúc",
+    statusFilterLabel: "Lọc theo trạng thái",
+    allStatuses: "Tất cả trạng thái",
     actionsColumn: "Thao tác",
+    detailTitle: "Chi tiết bài viết",
+    detailDescription:
+      "Xem nội dung hiện hành và trạng thái của bài viết này.",
+    backToList: "Quay lại danh sách bài viết",
+    noShortDescription: "Bài viết chưa có mô tả ngắn.",
+    noContent: "Bài viết chưa có nội dung được lưu.",
+    createdAt: "Tạo lúc",
+    publishedAt: "Xuất bản",
+    lastModifiedAt: "Cập nhật gần nhất",
     edit: "Chỉnh sửa bài viết",
     emptyTitle: "Chưa có bài viết",
     emptyDescription: "Tạo bản nháp đầu tiên để bắt đầu soạn nội dung.",
@@ -1363,6 +1402,10 @@ export const vi = {
     statuses: {
       DRAFT: "Bản nháp",
       PUBLISHED: "Đã xuất bản",
+    },
+    statusDescriptions: {
+      DRAFT: "Bài viết hiện đang ở trạng thái bản nháp.",
+      PUBLISHED: "Bài viết hiện đang được xuất bản.",
     },
     draftDescription: "Bài viết mới được lưu ở trạng thái bản nháp.",
     publishedDescription:
