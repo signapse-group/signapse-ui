@@ -74,7 +74,7 @@ export default async function ArticleDetailPage({
 
   const locale = lang
   const dictionary = await getDictionary(locale)
-  const t = dictionary.articles
+  const t = dictionary.publicArticles
 
   let article
 
