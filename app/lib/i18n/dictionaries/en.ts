@@ -1384,7 +1384,7 @@ export const en: Dictionary = {
     pageDescription: "Read the latest published articles from Signapse.",
     navLabel: "Articles",
     backToLanding: "Back to Signapse",
-    languageLabel: "Article language",
+    navigationLabel: "Articles navigation",
     skipToContent: "Skip to article content",
     published: "Published",
     readArticle: "Read article",
