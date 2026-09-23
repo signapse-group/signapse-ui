@@ -14,12 +14,13 @@ export function ImageElementStatic(
     fallbackLabel?: string
   }
 ) {
+  const { fallbackLabel, ...slateProps } = props
   const { align = "center", caption, url, width } = props.element
   const alt =
     typeof props.attributes.alt === "string" ? props.attributes.alt : ""
 
   return (
-    <SlateElement {...props} className="py-2.5">
+    <SlateElement {...slateProps} className="py-2.5">
       <figure className="group relative m-0 inline-block" style={{ width }}>
         <div
           className="relative max-w-full min-w-[92px]"
