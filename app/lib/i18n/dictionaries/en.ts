@@ -1379,7 +1379,7 @@ export const en: Dictionary = {
       "Could not load the blog list because of an internal connection error.",
     unexpectedError: "An unexpected error occurred. Please try again.",
   },
-  articles: {
+  publicArticles: {
     pageTitle: "Articles",
     pageDescription: "Read the latest published articles from Signapse.",
     navLabel: "Articles",
