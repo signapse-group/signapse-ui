@@ -2,7 +2,7 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import { createStaticEditor, PlateStatic } from "platejs/static"
 
-import { getPublicBlogBySlug, PublicBlogNotFoundError } from "@/app/api/blogs/action"
+import { getPublicBlogBySlug } from "@/app/api/blogs/action"
 import { isBlogContent } from "@/app/lib/blogs/definitions"
 import { formatDateTime } from "@/app/lib/i18n/format"
 import { isAppLocale } from "@/app/lib/i18n/config"
@@ -17,10 +17,6 @@ type ArticleDetailPageProps = {
 }
 
 function isNotFoundError(error: unknown): boolean {
-  if (error instanceof PublicBlogNotFoundError) {
-    return true
-  }
-
   return (
     typeof error === "object" &&
     error !== null &&
