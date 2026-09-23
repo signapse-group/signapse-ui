@@ -1,7 +1,7 @@
 import Link from "next/link"
 import type { ReactNode } from "react"
 
-import type { AppLocale } from "@/app/lib/i18n/config"
+import { SUPPORTED_APP_LOCALES, type AppLocale } from "@/app/lib/i18n/config"
 import type { Dictionary } from "@/app/lib/i18n/dictionary-types"
 import { withLocalePath } from "@/app/lib/i18n/routing"
 import { Logo } from "@/components/logo"
@@ -10,12 +10,20 @@ export function PublicArticlesShell({
   children,
   dictionary,
   locale,
+  currentPath = "/articles",
+  currentQuery,
 }: {
   children: ReactNode
   dictionary: Dictionary
   locale: AppLocale
+  currentPath?: string
+  currentQuery?: string
 }) {
   const t = dictionary.publicArticles
+  const getLocalizedArticlesHref = (targetLocale: AppLocale) => {
+    const basePath = withLocalePath(currentPath, targetLocale)
+    return currentQuery ? basePath + "?" + currentQuery : basePath
+  }
 
   return (
     <div className="min-h-svh bg-background text-foreground">
@@ -58,19 +66,18 @@ export function PublicArticlesShell({
               /
             </span>
             <Link
-              href={withLocalePath("/articles", "vi")}
-              lang="vi"
-              className="rounded-md px-2 py-1.5 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              {dictionary.landing.localeControl.vietnamese}
-            </Link>
-            <Link
-              href={withLocalePath("/articles", "en")}
-              lang="en"
-              className="rounded-md px-2 py-1.5 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              {dictionary.landing.localeControl.english}
-            </Link>
+              {SUPPORTED_APP_LOCALES.map((targetLocale) => (
+                <Link
+                  key={targetLocale}
+                  href={getLocalizedArticlesHref(targetLocale)}
+                  lang={targetLocale}
+                  className="rounded-md px-2 py-1.5 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  {targetLocale === "vi"
+                    ? dictionary.landing.localeControl.vietnamese
+                    : dictionary.landing.localeControl.english}
+                </Link>
+              ))}
           </nav>
         </div>
       </header>
