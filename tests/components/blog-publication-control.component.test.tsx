@@ -119,9 +119,10 @@ describe("BlogPublicationControl", () => {
   })
 
   it("keeps controls pending and surfaces failures without success feedback", async () => {
-    let resolveAction: (value: never) => void = () => undefined
+    type PublicationResult = Awaited<ReturnType<typeof publishBlog>>
+    let resolveAction: (value: PublicationResult) => void = () => undefined
     vi.mocked(publishBlog).mockReturnValue(
-      new Promise((resolve) => {
+      new Promise<PublicationResult>((resolve) => {
         resolveAction = resolve
       })
     )
@@ -145,7 +146,7 @@ describe("BlogPublicationControl", () => {
     resolveAction({
       success: false,
       error: viDictionary.blogs.publicationConflictError,
-    } as never)
+    })
 
     await vi.waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
