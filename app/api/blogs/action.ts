@@ -44,7 +44,7 @@ export async function getPublicBlogs(
   return filterPublishedBlogPage(response)
 }
 
-export class PublicBlogNotFoundError extends Error {
+class PublicBlogNotFoundError extends Error {
   readonly status = 404
 
   constructor() {
