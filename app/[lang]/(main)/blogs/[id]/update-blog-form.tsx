@@ -29,6 +29,7 @@ import {
   BlogAuthoringFields,
   type BlogAuthoringFormValues,
 } from "../blog-authoring-fields"
+import { BlogPublicationControl } from "../blog-publication-control"
 import { Badge } from "@/components/ui/badge"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { FieldError } from "@/components/ui/field"
@@ -141,6 +142,7 @@ export function UpdateBlogForm({
             >
               {dictionary.blogs.statuses[blog.status]}
             </Badge>
+            <BlogPublicationControl id={blog.id} status={blog.status} />
             <span className="text-sm text-muted-foreground">
               {blog.status === "PUBLISHED"
                 ? dictionary.blogs.publishedDescription

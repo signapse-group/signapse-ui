@@ -65,6 +65,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 
+import { BlogPublicationControl } from "./blog-publication-control"
 import { BlogSearch } from "./blog-search"
 
 interface BlogListProps {
@@ -204,6 +205,12 @@ export function BlogListPage({ blogPage }: BlogListProps) {
                             {dictionary.blogs.edit}
                           </span>
                         </Link>
+                      ) : null}
+                      {canUpdateBlog ? (
+                        <BlogPublicationControl
+                          id={blog.id}
+                          status={blog.status}
+                        />
                       ) : null}
                       {canDeleteBlog ? <DeleteBlogButton id={blog.id} /> : null}
                     </div>

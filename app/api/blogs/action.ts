@@ -103,6 +103,14 @@ export async function updateBlog(
   }
 }
 
+export async function publishBlog(id: number): Promise<ActionResult<BlogPost>> {
+  return updateBlogPublication(id, "publish")
+}
+
+export async function unpublishBlog(id: number): Promise<ActionResult<BlogPost>> {
+  return updateBlogPublication(id, "unpublish")
+}
+
 export async function deleteBlog(id: number): Promise<ActionResult> {
   try {
     await fetchAuthenticated<void>(`/blogs/${id}`, {
@@ -121,6 +129,55 @@ export async function deleteBlog(id: number): Promise<ActionResult> {
       ),
     }
   }
+}
+
+async function updateBlogPublication(
+  id: number,
+  action: "publish" | "unpublish"
+): Promise<ActionResult<BlogPost>> {
+  const dictionary = await getServerDictionary()
+
+  try {
+    const blog = parseBlogPostResponse(
+      await fetchAuthenticated<unknown>(`/blogs/${id}/${action}`, {
+        method: "POST",
+      })
+    )
+    revalidatePath("/blogs")
+    revalidatePath(`/blogs/${id}`)
+    return { success: true, data: blog }
+  } catch (error: unknown) {
+    return {
+      success: false,
+      error: getBlogPublicationActionError(error, dictionary),
+    }
+  }
+}
+
+function getBlogPublicationActionError(
+  error: unknown,
+  dictionary: Awaited<ReturnType<typeof getServerDictionary>>
+): string {
+  if (!(error instanceof Error)) return dictionary.blogs.publicationError
+
+  const apiError = error as BackendApiError
+  if (apiError.status === 401 || apiError.status === 403) {
+    return dictionary.blogs.publicationPermissionError
+  }
+  if (apiError.status === 400) {
+    return error.message || dictionary.blogs.publicationValidationError
+  }
+  if (apiError.status === 404) {
+    return dictionary.blogs.publicationMissingError
+  }
+  if (apiError.status === 409) {
+    return dictionary.blogs.publicationConflictError
+  }
+  if (typeof apiError.status === "number" && apiError.status >= 500) {
+    return dictionary.blogs.publicationServerError
+  }
+
+  return dictionary.blogs.publicationError
 }
 
 function getBlogActionError(

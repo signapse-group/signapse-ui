@@ -8,6 +8,12 @@ const { testDictionary } = vi.hoisted(() => ({
       updateError: "Blog update failed",
       deleteError: "Blog delete failed",
       permissionError: "Blog permission denied",
+      publicationError: "Publication update failed",
+      publicationPermissionError: "Publication permission denied",
+      publicationValidationError: "Publication validation failed",
+      publicationMissingError: "Publication target missing",
+      publicationConflictError: "Publication conflict",
+      publicationServerError: "Publication server failed",
     },
   },
 }))
@@ -29,6 +35,8 @@ import {
   createBlog,
   deleteBlog,
   getBlogById,
+  publishBlog,
+  unpublishBlog,
   updateBlog,
 } from "@/app/api/blogs/action"
 import type { CreateBlogPostRequest } from "@/app/lib/blogs/definitions"
@@ -67,6 +75,10 @@ const response = {
 }
 
 describe("Blog authoring actions", () => {
+  beforeEach(() => {
+    vi.mocked(fetchAuthenticated).mockReset()
+  })
+
   it("parses DRAFT/PUBLISHED lifecycle responses and rejects unknown statuses", async () => {
     vi.mocked(fetchAuthenticated).mockResolvedValue(response)
 
@@ -80,8 +92,57 @@ describe("Blog authoring actions", () => {
     await expect(getBlogById(response.id)).rejects.toThrow()
   })
 
-  beforeEach(() => {
-    vi.mocked(fetchAuthenticated).mockReset()
+  it("publishes and unpublishes through the lifecycle endpoints", async () => {
+    vi.mocked(fetchAuthenticated)
+      .mockResolvedValueOnce({ ...response, status: "PUBLISHED" })
+      .mockResolvedValueOnce({ ...response, status: "DRAFT" })
+
+    await expect(publishBlog(response.id)).resolves.toEqual({
+      success: true,
+      data: { ...response, status: "PUBLISHED" },
+    })
+    expect(fetchAuthenticated).toHaveBeenNthCalledWith(
+      1,
+      `/blogs/${response.id}/publish`,
+      { method: "POST" }
+    )
+
+    await expect(unpublishBlog(response.id)).resolves.toEqual({
+      success: true,
+      data: { ...response, status: "DRAFT" },
+    })
+    expect(fetchAuthenticated).toHaveBeenNthCalledWith(
+      2,
+      `/blogs/${response.id}/unpublish`,
+      { method: "POST" }
+    )
+  })
+
+  it("maps publication authorization and lifecycle failures to localized fallbacks", async () => {
+    const failures = [
+      [403, "Publication permission denied"],
+      [404, "Publication target missing"],
+      [409, "Publication conflict"],
+      [500, "Publication server failed"],
+    ] as const
+
+    for (const [status, error] of failures) {
+      vi.mocked(fetchAuthenticated).mockRejectedValueOnce(
+        Object.assign(new Error("backend failure"), { status })
+      )
+      await expect(publishBlog(response.id)).resolves.toEqual({
+        success: false,
+        error,
+      })
+    }
+
+    vi.mocked(fetchAuthenticated).mockRejectedValueOnce(
+      Object.assign(new Error("Content is not publishable"), { status: 400 })
+    )
+    await expect(publishBlog(response.id)).resolves.toEqual({
+      success: false,
+      error: "Content is not publishable",
+    })
   })
 
   it("sends the structured draft contract without legacy visibility fields", async () => {
