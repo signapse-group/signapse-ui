@@ -30,7 +30,7 @@ function getPositiveInteger(
   return Math.min(parsed, maximum)
 }
 
-function getPageUrl(locale: AppLocale, page: number, size: number): string {
+function getPageQuery(page: number, size: number): string {
   const query = new URLSearchParams()
 
   if (page > 1) {
@@ -41,8 +41,12 @@ function getPageUrl(locale: AppLocale, page: number, size: number): string {
     query.set("size", String(size))
   }
 
+  return query.toString()
+}
+
+function getPageUrl(locale: AppLocale, page: number, size: number): string {
   const basePath = withLocalePath("/articles", locale)
-  const queryString = query.toString()
+  const queryString = getPageQuery(page, size)
 
   return queryString ? `${basePath}?${queryString}` : basePath
 }
@@ -172,7 +176,7 @@ function ArticlesPagination({
         </span>
       )}
       <span className="text-sm text-muted-foreground">
-        {page} / {totalPages}
+        {formatNumber(page, locale)} / {formatNumber(totalPages, locale)}
       </span>
       {page < totalPages ? (
         <Link href={nextHref} className={linkClassName}>
@@ -209,7 +213,11 @@ export default async function ArticlesPage({
   const t = dictionary.publicArticles
 
   return (
-    <PublicArticlesShell dictionary={dictionary} locale={locale}>
+    <PublicArticlesShell
+      dictionary={dictionary}
+      locale={locale}
+      currentQuery={getPageQuery(pageNumber, pageSize)}
+    >
       <section className="mx-auto w-full max-w-6xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8">
         <header className="max-w-3xl space-y-5">
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary">
