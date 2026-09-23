@@ -35,15 +35,15 @@ export default function ArticlesError({
           >
             <AlertCircle />
           </EmptyMedia>
-          <EmptyTitle>{dictionary.articles.loadErrorTitle}</EmptyTitle>
+          <EmptyTitle>{dictionary.publicArticles.loadErrorTitle}</EmptyTitle>
           <EmptyDescription>
-            {dictionary.articles.loadErrorDescription}
+            {dictionary.publicArticles.loadErrorDescription}
           </EmptyDescription>
         </EmptyHeader>
         <div className="mt-4 flex justify-center">
           <Button onClick={reset} variant="outline">
             <RefreshCcw data-icon="inline-start" />
-            {dictionary.articles.retry}
+            {dictionary.publicArticles.retry}
           </Button>
         </div>
       </Empty>
