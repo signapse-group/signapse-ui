@@ -68,6 +68,8 @@ function getResultsSummary(
 function ArticleCard({
   article,
   locale,
+  publishedLabel,
+  readLabel,
 }: {
   article: BlogPostListResponse
   locale: AppLocale
