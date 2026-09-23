@@ -46,7 +46,7 @@ export function PublicArticlesShell({
           </Link>
 
           <nav
-            aria-label={t.languageLabel}
+            aria-label={t.navigationLabel}
             className="flex items-center gap-1 text-sm"
           >
             <Link
