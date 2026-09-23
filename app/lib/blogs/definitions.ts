@@ -305,7 +305,7 @@ export const blogPostListResponseSchema = z
 export const blogPostResponseSchema = blogPostListResponseSchema
   .extend({
     content: blogContentSchema,
-    contentSchemaVersion: z.number().int().positive(),
+    contentSchemaVersion: z.literal(BLOG_CONTENT_SCHEMA_VERSION),
   })
   .passthrough()
 
@@ -333,8 +333,12 @@ export function isPublishedBlogPost(
 export function filterPublishedBlogPage(
   page: Page<BlogPostListResponse>
 ): Page<BlogPostListResponse> {
+  const content = page.content.filter(isPublishedBlogPost)
+
   return {
     ...page,
-    content: page.content.filter(isPublishedBlogPost),
+    content,
+    numberOfElements: content.length,
+    empty: content.length === 0,
   }
 }
