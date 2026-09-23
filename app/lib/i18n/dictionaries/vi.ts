@@ -1381,7 +1381,7 @@ export const vi = {
     pageDescription: "Đọc các bài viết mới nhất đã xuất bản từ Signapse.",
     navLabel: "Bài viết",
     backToLanding: "Về Signapse",
-    languageLabel: "Ngôn ngữ bài viết",
+    navigationLabel: "Điều hướng bài viết",
     skipToContent: "Bỏ qua điều hướng và tới nội dung bài viết",
     published: "Đã xuất bản",
     readArticle: "Đọc bài viết",
