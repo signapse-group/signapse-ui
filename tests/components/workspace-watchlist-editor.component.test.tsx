@@ -428,5 +428,8 @@ describe("WorkspaceWatchlistEditor dialog contract", () => {
     expect(onOpenChange).not.toHaveBeenCalledWith(false)
     expect(toastSuccess).not.toHaveBeenCalled()
     expect(toastError).toHaveBeenCalledWith("Watchlist quota exceeded")
+    expect(
+      screen.queryByRole("button", { name: viDictionary.common.retry })
+    ).not.toBeInTheDocument()
   })
 })

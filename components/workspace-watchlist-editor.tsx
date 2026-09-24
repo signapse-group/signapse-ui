@@ -456,15 +456,17 @@ export function WorkspaceWatchlistEditor({
                     className="flex items-center justify-between gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm"
                   >
                     <span className="text-destructive">{saveError}</span>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      disabled={isPending}
-                      onClick={handleSave}
-                    >
-                      {dictionary.common.retry}
-                    </Button>
+                    {isDirty ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={isPending}
+                        onClick={handleSave}
+                      >
+                        {dictionary.common.retry}
+                      </Button>
+                    ) : null}
                   </div>
                 ) : null}
               </>
