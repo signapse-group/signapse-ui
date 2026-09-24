@@ -71,6 +71,40 @@ export const vi = {
     breadcrumb: "Đường dẫn điều hướng",
     feedbackReview: "Duyệt phản hồi",
     apiAccessToken: "Token truy cập API",
+    account: "Tài khoản",
+    usageLimits: "Hạn mức sử dụng",
+  },
+  usageLimits: {
+    pageTitle: "Hạn mức sử dụng",
+    pageDescription:
+      "Xem mức sử dụng tài khoản và các hạn mức áp dụng cho workspace của bạn.",
+    workspaceTitle: "Workspace",
+    workspaceDescription:
+      "Các workspace bạn sở hữu trên tổng hạn mức của tài khoản.",
+    watchlistTitle: "Tài sản watchlist",
+    watchlistDescription:
+      "Tài sản riêng biệt đã lưu trong từng workspace trên hạn mức của workspace.",
+    aiTurnsTitle: "Lượt AI",
+    aiTurnsDescription:
+      "Lượt hội thoại AI hoàn tất trong tháng UTC hiện tại.",
+    activeSchedulesTitle: "Lịch đang hoạt động",
+    activeSchedulesDescription:
+      "Các lịch có trạng thái ACTIVE trong workspace của bạn.",
+    resetAt: "Cấp lại lúc",
+    periodStart: "Kỳ hiện tại",
+    utc: "UTC",
+    zeroUsage: "Chưa phát sinh sử dụng",
+    overLimit: "Vượt hạn mức",
+    workspaceIdColumn: "ID workspace",
+    usedColumn: "Đã dùng",
+    limitColumn: "Hạn mức",
+    noWorkspaces:
+      "Bạn chưa có workspace nào phát sinh sử dụng watchlist.",
+    invalidDate: "Không có thời điểm cấp lại",
+    loadErrorTitle: "Không thể tải hạn mức sử dụng",
+    loadErrorDescription:
+      "Không thể tải dữ liệu sử dụng. Dữ liệu không được thay thế bằng số 0.",
+    retry: "Thử lại",
   },
   feedback: {
     composeAction: "Gửi phản hồi",

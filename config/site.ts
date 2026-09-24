@@ -3,6 +3,7 @@ import {
   CalendarDays,
   ChartCandlestick,
   GalleryVerticalEnd,
+  Gauge,
   LayoutDashboard,
   MessageSquareWarning,
   Newspaper,
@@ -212,6 +213,18 @@ export function createSiteConfig(
             url: "/feedback-submissions",
             icon: MessageSquareWarning,
             permission: FEEDBACK_READ_PERMISSION,
+          },
+        ],
+      },
+      {
+        id: "account",
+        title: dictionary.navigation.account,
+        items: [
+          {
+            id: "usage-limits",
+            title: dictionary.navigation.usageLimits,
+            url: "/usage-limits",
+            icon: Gauge,
           },
         ],
       },

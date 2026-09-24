@@ -73,6 +73,38 @@ export const en: Dictionary = {
     breadcrumb: "Breadcrumb navigation",
     feedbackReview: "Feedback review",
     apiAccessToken: "API access token",
+    account: "Account",
+    usageLimits: "Usage limits",
+  },
+  usageLimits: {
+    pageTitle: "Usage limits",
+    pageDescription:
+      "Review your account usage and the limits that apply to your workspaces.",
+    workspaceTitle: "Workspaces",
+    workspaceDescription: "Workspaces you own out of your account limit.",
+    watchlistTitle: "Watchlist assets",
+    watchlistDescription:
+      "Distinct assets saved in each workspace, out of the workspace limit.",
+    aiTurnsTitle: "AI turns",
+    aiTurnsDescription:
+      "Completed AI conversation turns in the current UTC calendar month.",
+    activeSchedulesTitle: "Active schedules",
+    activeSchedulesDescription:
+      "Schedules with ACTIVE status across your workspaces.",
+    resetAt: "Resets at",
+    periodStart: "Current period",
+    utc: "UTC",
+    zeroUsage: "No usage yet",
+    overLimit: "Over limit",
+    workspaceIdColumn: "Workspace ID",
+    usedColumn: "Used",
+    limitColumn: "Limit",
+    noWorkspaces: "You do not have any workspaces with watchlist usage yet.",
+    invalidDate: "Reset time unavailable",
+    loadErrorTitle: "Unable to load usage limits",
+    loadErrorDescription:
+      "Usage data could not be loaded. Your usage has not been replaced with zero.",
+    retry: "Try again",
   },
   feedback: {
     composeAction: "Send feedback",
