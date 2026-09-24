@@ -600,6 +600,18 @@ Ghi chu:
 - `marketNarratives.errorCode` co the la `NARRATIVE_READ_REQUIRED`, `WATCHLIST_READ_REQUIRED`, `ASSET_READ_REQUIRED`, `UPSTREAM_TIMEOUT`, `UPSTREAM_UNAVAILABLE`, hoac `SUMMARY_UNAVAILABLE`; null khi metric `AVAILABLE` / `EMPTY`.
 - Tat ca field cua `DashboardSummaryResponse` va cac metric dashboard hien duoc danh dau required theo snapshot; cac field nullable van phai co mat trong payload. FE da parse/render `recentEvents` va `assetsInFocus`, nhung Zod schema chua khai bao required metric `marketNarratives`, nen field nay bi strip va chua den duoc dashboard chinh. Khong duoc coi `DENIED`/`ERROR` la count `0` hoac empty state.
 
+### API usage limits
+
+| Phuong thuc | Endpoint backend       | operationId                 | Tich hop frontend                          | Trang thai    | Ghi chu                                                                                                                                                                  |
+| ----------- | ---------------------- | --------------------------- | ------------------------------------------ | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| GET         | `/me/usage-limits`     | `getCurrentUserUsageLimits` | `getUsageLimits()` + `usage-limits/page.tsx` | Da tich hop   | Auth `active-user`; khong nhan user id. Tra ve usage/limit cua workspace, watchlist theo tung workspace, completed AI turns trong thang UTC va ACTIVE schedules. |
+
+Ghi chu:
+
+- Response frontend validate theo `UsageLimitsSummaryResponse`: `workspace`, `watchlist`, `conversationTurns` va `activeSchedules`; `resetAtUtc` duoc hien thi theo UTC, con `periodStartUtc` duoc validate trong payload.
+- Usage lon hon limit duoc giu nguyen de hien thi vuot muc. Payload thieu hoac sai schema bi coi la loi tai du lieu, khong fallback ve `0`; loi backend `401`/`403` va `ErrorBody` di qua authenticated transport.
+- Endpoint va schema da doi chieu voi producer-delivery comment cua GH-100 va OpenAPI dev hien tai; frontend khong gui user id, query hay request body.
+
 ## Nhom frontend khong nam trong snapshot API hien tai
 
 Nhung nhom duoi day van ton tai tren frontend, nhung khong xuat hien trong `docs/api_mapping.json` hien tai.
