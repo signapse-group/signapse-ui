@@ -12,6 +12,7 @@ import {
   SubmitMarketConversationMessageRequest,
   SubmitMarketConversationMessageResponse,
   getCreateMarketConversationSchema,
+  getSubmitMarketConversationIdempotencyKeySchema,
   getSubmitMarketConversationMessageSchema,
   marketConversationDetailResponseSchema,
   marketConversationMessagePageResponseSchema,
@@ -140,17 +141,23 @@ export async function getMarketConversationMessages(
 
 export async function submitMarketConversationMessage(
   conversationId: number,
-  request: SubmitMarketConversationMessageRequest
+  request: SubmitMarketConversationMessageRequest,
+  idempotencyKey: string
 ): Promise<ActionResult<SubmitMarketConversationMessageResponse>> {
   const dictionary = await getMarketConversationDictionary()
   const parsedRequest =
     getSubmitMarketConversationMessageSchema(dictionary).safeParse(request)
+  const parsedIdempotencyKey =
+    getSubmitMarketConversationIdempotencyKeySchema(dictionary).safeParse(
+      idempotencyKey
+    )
 
-  if (!parsedRequest.success) {
+  if (!parsedRequest.success || !parsedIdempotencyKey.success) {
     return {
       success: false,
       error:
-        parsedRequest.error.issues[0]?.message ||
+        parsedRequest.error?.issues[0]?.message ||
+        parsedIdempotencyKey.error?.issues[0]?.message ||
         dictionary.marketConversations.validationInvalid,
     }
   }
@@ -165,6 +172,9 @@ export async function submitMarketConversationMessage(
       {
         method: "POST",
         body: JSON.stringify(payload),
+        headers: {
+          "Idempotency-Key": parsedIdempotencyKey.data,
+        },
       }
     )
     const messageResult = parseOrThrow(

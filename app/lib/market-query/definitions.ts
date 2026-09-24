@@ -185,6 +185,18 @@ export function getSubmitMarketConversationMessageSchema(
   }) satisfies z.ZodType<SubmitMarketConversationMessageRequest>
 }
 
+export function getSubmitMarketConversationIdempotencyKeySchema(
+  dictionary: Dictionary
+) {
+  return (
+    z
+      .string()
+      .trim()
+      .min(1, dictionary.marketConversations.idempotencyKeyInvalid)
+      .max(255, dictionary.marketConversations.idempotencyKeyInvalid)
+  ) satisfies z.ZodType<string>
+}
+
 export const marketChatMessageResponseSchema = z.object({
   id: z.number().int(),
   role: z.enum(["USER", "ASSISTANT"]),
