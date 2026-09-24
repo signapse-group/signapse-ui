@@ -16,7 +16,7 @@ export default function UsageLimitsError({ reset }: { reset: () => void }) {
   const { dictionary } = useLocalization()
 
   return (
-    <Empty className="min-h-[360px] border">
+    <Empty className="min-h-[360px] border" role="alert">
       <EmptyHeader>
         <EmptyMedia
           variant="icon"

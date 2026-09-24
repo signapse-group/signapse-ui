@@ -207,6 +207,9 @@ function WatchlistUsageCard({
         ) : (
           <div className="overflow-x-auto">
             <Table>
+              <caption className="sr-only">
+                {dictionary.usageLimits.watchlistTitle}
+              </caption>
               <TableHeader>
                 <TableRow>
                   <TableHead>
