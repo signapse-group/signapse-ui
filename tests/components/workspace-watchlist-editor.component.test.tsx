@@ -318,6 +318,17 @@ describe("WorkspaceWatchlistEditor dialog contract", () => {
     )
     getAssets.mockResolvedValue(assetPage([replacement], 0, 1))
 
+    let finishRemoval: (() => void) | undefined
+    const removalFinished = new Promise<{
+      success: true
+      data: undefined
+    }>((resolve) => {
+      finishRemoval = () => resolve({ success: true, data: undefined })
+    })
+    removeAssetFromWorkspaceWatchlist.mockImplementationOnce(
+      () => removalFinished
+    )
+
     const onOpenChange = vi.fn()
     const user = userEvent.setup()
     renderEditor(onOpenChange)
@@ -341,6 +352,14 @@ describe("WorkspaceWatchlistEditor dialog contract", () => {
       screen.getByRole("button", { name: viDictionary.watchlist.saveList })
     )
 
+    await waitFor(() =>
+      expect(removeAssetFromWorkspaceWatchlist).toHaveBeenCalledWith(
+        replaced.id
+      )
+    )
+    expect(addAssetsToWorkspaceWatchlist).not.toHaveBeenCalled()
+
+    finishRemoval?.()
     await waitFor(() =>
       expect(addAssetsToWorkspaceWatchlist).toHaveBeenCalledWith({
         assetIds: [replacement.id],
