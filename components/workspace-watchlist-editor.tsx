@@ -45,6 +45,7 @@ import { Spinner } from "@/components/ui/spinner"
 import { AssetMultiSelectCombobox } from "./asset-multi-select-combobox"
 
 const WATCHLIST_BULK_ADD_LIMIT = 100
+const WATCHLIST_ASSET_LIMIT = 3
 const WATCHLIST_PAGE_SIZE = 200
 
 type DialogOpenChangeDetails = Parameters<
@@ -253,6 +254,11 @@ export function WorkspaceWatchlistEditor({
     onOpenChange(false)
   }
 
+  function handleSelectedAssetsChange(nextAssets: AssetListResponse[]) {
+    setSelectedAssets(nextAssets)
+    setSaveError(null)
+  }
+
   function handleSave() {
     if (!workspace || !canManageWorkspaceWatchlist || isPending) {
       return
@@ -274,68 +280,59 @@ export function WorkspaceWatchlistEditor({
       return
     }
 
+    if (selectedIds.size > WATCHLIST_ASSET_LIMIT) {
+      const message = formatMessage(dictionary.watchlist.limitExceeded, {
+        limit: WATCHLIST_ASSET_LIMIT,
+      })
+      setSaveError(message)
+      toast.error(message)
+      return
+    }
+
     setSaveError(null)
     startTransition(async () => {
-      const removeResults = await Promise.all(
-        assetsToRemove.map(async (asset) => {
+      let failureMessage: string | null = null
+
+      for (const asset of assetsToRemove) {
+        try {
+          const result = await removeAssetFromWorkspaceWatchlist(asset.id)
+          if (!result.success) {
+            failureMessage = result.error
+            break
+          }
+        } catch (error: unknown) {
+          failureMessage = getErrorMessage(
+            error,
+            dictionary.watchlist.removeError
+          )
+          break
+        }
+      }
+
+      if (!failureMessage) {
+        for (const assets of chunkAssets(assetsToAdd)) {
           try {
-            return {
-              asset,
-              result: await removeAssetFromWorkspaceWatchlist(asset.id),
+            const result = await addAssetsToWorkspaceWatchlist({
+              assetIds: assets.map((asset) => asset.id),
+            })
+            if (!result.success) {
+              failureMessage = result.error
+              break
             }
           } catch (error: unknown) {
-            return {
-              asset,
-              result: {
-                success: false as const,
-                error: getErrorMessage(error, dictionary.watchlist.removeError),
-              },
-            }
+            failureMessage = getErrorMessage(
+              error,
+              dictionary.watchlist.addError
+            )
+            break
           }
-        })
-      )
-      const addResults = await Promise.all(
-        chunkAssets(assetsToAdd).map(async (assets) => {
-          try {
-            return {
-              assets,
-              result: await addAssetsToWorkspaceWatchlist({
-                assetIds: assets.map((asset) => asset.id),
-              }),
-            }
-          } catch (error: unknown) {
-            return {
-              assets,
-              result: {
-                success: false as const,
-                error: getErrorMessage(error, dictionary.watchlist.addError),
-              },
-            }
-          }
-        })
-      )
+        }
+      }
 
-      const successfulRemoveIds = new Set(
-        removeResults
-          .filter(({ result }) => result.success)
-          .map(({ asset }) => asset.id)
-      )
-      const successfulAddAssets = addResults
-        .filter(({ result }) => result.success)
-        .flatMap(({ assets }) => assets)
-      const nextBaseline = mergeUniqueAssets(
-        initialAssets.filter((asset) => !successfulRemoveIds.has(asset.id)),
-        successfulAddAssets
-      )
-      const hasFailedOperation =
-        removeResults.some(({ result }) => !result.success) ||
-        addResults.some(({ result }) => !result.success)
-
-      setInitialAssets(nextBaseline)
-
-      if (hasFailedOperation) {
-        setSaveError(dictionary.watchlist.partialFailure)
-        toast.error(dictionary.watchlist.partialFailure)
+      if (failureMessage) {
+        await loadWorkspaceWatchlistState()
+        setSaveError(failureMessage)
+        toast.error(failureMessage)
         router.refresh()
         return
       }
@@ -448,7 +445,7 @@ export function WorkspaceWatchlistEditor({
                 ) : (
                   <AssetMultiSelectCombobox
                     selectedAssets={selectedAssets}
-                    onSelectedAssetsChange={setSelectedAssets}
+                    onSelectedAssetsChange={handleSelectedAssetsChange}
                     disabled={isPending || !!loadError}
                   />
                 )}
