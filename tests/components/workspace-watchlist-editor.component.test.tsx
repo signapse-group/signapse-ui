@@ -410,6 +410,4 @@ describe("WorkspaceWatchlistEditor dialog contract", () => {
     expect(toastSuccess).not.toHaveBeenCalled()
     expect(toastError).toHaveBeenCalledWith("Watchlist quota exceeded")
   })
-
-  })
 })
