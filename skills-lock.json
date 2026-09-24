@@ -6,7 +6,7 @@
       "ref": "main",
       "sourceType": "github",
       "skillPath": "workflow/skills/agent-execution-policy/SKILL.md",
-      "computedHash": "1cbf7d93490a3366a5c5aaf19e7d5c10ff7522acb3d3cd06ba1f9a7dd000cd93"
+      "computedHash": "d29048bbe392229df3d3e4fa68f3ff71bace35bb364628de77e0ea077365e732"
     },
     "code-review": {
       "source": "signapse-group/signapse-symphony",
@@ -40,7 +40,7 @@
       "ref": "main",
       "sourceType": "github",
       "skillPath": "workflow/skills/implement/SKILL.md",
-      "computedHash": "2113e074181da807db5d175f7de544d61c1e4111de67bdb93a89ddcdb55d65b7"
+      "computedHash": "6ba69d688dd2028389a62e4055c7e35606445e6254908a810c340990e0881ef6"
     },
     "improve-codebase-architecture": {
       "source": "mattpocock/skills",
