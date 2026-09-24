@@ -22,6 +22,7 @@ export const en: Dictionary = {
     delete: "Delete",
     search: "Search",
     reset: "Reset",
+    loading: "Loading usage limits",
     retry: "Try again",
     refresh: "Refresh",
     close: "Close",

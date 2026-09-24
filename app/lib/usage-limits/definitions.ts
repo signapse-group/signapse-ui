@@ -17,8 +17,8 @@ export const usageLimitsResponseSchema = z.object({
     workspaces: z.array(watchlistWorkspaceUsageSchema),
   }),
   conversationTurns: quotaSchema.extend({
-    periodStartUtc: z.string(),
-    resetAtUtc: z.string(),
+    periodStartUtc: z.string().datetime({ offset: false }),
+    resetAtUtc: z.string().datetime({ offset: false }),
   }),
   activeSchedules: quotaSchema,
 })

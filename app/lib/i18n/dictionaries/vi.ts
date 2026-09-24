@@ -20,6 +20,7 @@ export const vi = {
     delete: "Xóa",
     search: "Tìm kiếm",
     reset: "Đặt lại",
+    loading: "Đang tải hạn mức sử dụng",
     retry: "Thử lại",
     refresh: "Làm mới",
     close: "Đóng",
