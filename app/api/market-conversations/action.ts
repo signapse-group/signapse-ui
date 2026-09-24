@@ -140,7 +140,8 @@ export async function getMarketConversationMessages(
 
 export async function submitMarketConversationMessage(
   conversationId: number,
-  request: SubmitMarketConversationMessageRequest
+  request: SubmitMarketConversationMessageRequest,
+  idempotencyKey: string
 ): Promise<ActionResult<SubmitMarketConversationMessageResponse>> {
   const dictionary = await getMarketConversationDictionary()
   const parsedRequest =
@@ -165,6 +166,9 @@ export async function submitMarketConversationMessage(
       {
         method: "POST",
         body: JSON.stringify(payload),
+        headers: {
+          "Idempotency-Key": idempotencyKey,
+        },
       }
     )
     const messageResult = parseOrThrow(

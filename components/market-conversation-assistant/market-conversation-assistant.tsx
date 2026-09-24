@@ -109,6 +109,10 @@ import {
   type DemoConversationLabels,
 } from "./history-state"
 import { startAssistantSubmitMeasurement } from "./assistant-observability"
+import {
+  getMarketConversationSubmissionIdentity,
+  type MarketConversationSubmissionIdentity,
+} from "./submission-identity"
 
 const USER_PREVIEW_LIMIT = 72
 const ASSISTANT_PREVIEW_LIMIT = 160
@@ -182,6 +186,8 @@ export function MarketConversationAssistant({
   const [submissionError, setSubmissionError] = React.useState<string | null>(
     null
   )
+  const submissionIdentityRef =
+    React.useRef<MarketConversationSubmissionIdentity | null>(null)
   const [responseReveal, setResponseReveal] =
     React.useState<ResponseRevealState | null>(null)
   const [hasMoreMessages, setHasMoreMessages] = React.useState(false)
@@ -323,6 +329,7 @@ export function MarketConversationAssistant({
       setOlderMessagesError(null)
       setCreateError(null)
       setSubmissionError(null)
+      submissionIdentityRef.current = null
       setResponseReveal(null)
       setHasMoreMessages(false)
       setNextBeforeMessageId(null)
@@ -433,6 +440,7 @@ export function MarketConversationAssistant({
     setIsSubmitting(false)
     setCreateError(null)
     setSubmissionError(null)
+    submissionIdentityRef.current = null
     setResponseReveal(null)
     setHasMoreMessages(false)
     setNextBeforeMessageId(null)
@@ -446,6 +454,11 @@ export function MarketConversationAssistant({
     }
 
     const requestId = messagesRequestIdRef.current
+    const submissionIdentity = getMarketConversationSubmissionIdentity(
+      submissionIdentityRef.current,
+      message
+    )
+    submissionIdentityRef.current = submissionIdentity
     let conversation = selectedConversation
     const performanceMeasurement = startAssistantSubmitMeasurement(
       conversation ? "existing" : "new"
@@ -494,7 +507,8 @@ export function MarketConversationAssistant({
       setIsSubmitting(true)
       const submitResult = await submitMarketConversationMessage(
         activeConversation.id,
-        { message }
+        { message },
+        submissionIdentity.idempotencyKey
       )
 
       if (requestId !== messagesRequestIdRef.current) {
@@ -538,6 +552,7 @@ export function MarketConversationAssistant({
         ...current.filter((item) => item.id !== activeConversation.id),
       ])
       submissionSucceeded = true
+      submissionIdentityRef.current = null
     } catch (error) {
       if (requestId === messagesRequestIdRef.current) {
         performanceMeasurement.finish("error")
@@ -985,6 +1000,14 @@ export function MarketConversationAssistant({
                   />
                 </div>
                 <footer className="pt-2.5">
+                  {composerError ? (
+                    <div
+                      role="alert"
+                      className="px-3 pb-2 text-sm text-destructive"
+                    >
+                      {composerError}
+                    </div>
+                  ) : null}
                   <form
                     aria-label={labels.persistedComposerLabel}
                     aria-busy={isBusy}
@@ -1004,7 +1027,8 @@ export function MarketConversationAssistant({
                         disabled={composerDisabled}
                         onChange={(event) => {
                           setDraft(event.target.value)
-                          setCreateError(null)
+                          submissionIdentityRef.current = null
+                          setCreateError(null
                           setSubmissionError(null)
                         }}
                         onKeyDown={(event) => {
