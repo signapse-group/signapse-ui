@@ -73,6 +73,7 @@ export const en: Dictionary = {
     breadcrumb: "Breadcrumb navigation",
     feedbackReview: "Feedback review",
     apiAccessToken: "API access token",
+    usageLimits: "Usage limits",
   },
   feedback: {
     composeAction: "Send feedback",
@@ -481,6 +482,30 @@ export const en: Dictionary = {
     errorTitle: "Could not load account",
     errorDescription: "Please try again to load account information.",
     loadingLabel: "Loading account profile",
+  },
+  usageLimits: {
+    title: "Usage limits",
+    description:
+      "Review your current usage against the limits for your account and workspaces.",
+    workspaceTitle: "Workspaces",
+    workspaceDescription: "Workspaces created by your account.",
+    watchlistTitle: "Watchlist assets",
+    watchlistDescription: "Distinct assets saved in each workspace watchlist.",
+    conversationTurnsTitle: "AI turns",
+    conversationTurnsDescription: "Completed AI conversation turns this month.",
+    activeSchedulesTitle: "Active schedules",
+    activeSchedulesDescription: "Active schedules across your workspaces.",
+    resetAtLabel: "Resets",
+    perWorkspace: "Up to {limit} per workspace",
+    workspaceLabel: "Workspace {id}",
+    noWorkspaces: "No workspaces were returned for this account.",
+    overLimit: "Over limit",
+    invalidResetTime: "Reset time unavailable",
+    loadingLabel: "Loading usage limits",
+    responseInvalid: "Usage limits data could not be read.",
+    errorTitle: "Could not load usage limits",
+    errorDescription:
+      "Usage data is unavailable right now. Try again to load the current values.",
   },
   errors: {
     generic: "Something went wrong",

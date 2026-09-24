@@ -2,6 +2,7 @@ export const OBSERVABILITY_OPERATIONS = {
   authResolve: "signapse.auth.resolve",
   backendRequest: "signapse.backend.request",
   dashboardLoad: "signapse.dashboard.load",
+  usageLimitsLoad: "signapse.usage_limits.load",
   marketChartInitialLoad: "signapse.market_chart.initial_load",
   marketChartLiveConnect: "signapse.market_chart.live_connect",
   marketChartFirstLiveData: "signapse.market_chart.first_live_data",

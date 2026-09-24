@@ -77,6 +77,7 @@ test.describe("P0 sidebar navigation", () => {
       "Lịch kinh tế",
     ])
     expect((await groupItems(2).allTextContents()).map(firstLine)).toEqual([
+      "Giới hạn sử dụng",
       "Cấu hình hệ thống",
       "Người dùng & phân quyền",
       "Duyệt phản hồi",
@@ -291,7 +292,7 @@ test.describe("P0 sidebar navigation", () => {
       await sidebar
         .locator('[data-slot="sidebar-group-label"]')
         .allTextContents()
-    ).toEqual(["Phân tích", "Dữ liệu"])
+    ).toEqual(["Phân tích", "Dữ liệu", "Quản trị"])
     const newsGroup = page.getByRole("button", { name: "Tin tức", exact: true })
     await expect(newsGroup).toBeVisible()
     await newsGroup.click()
@@ -301,7 +302,9 @@ test.describe("P0 sidebar navigation", () => {
     await expect(
       page.getByRole("link", { name: "Nguồn tin", exact: true })
     ).toHaveCount(0)
-    await expect(page.getByText("Quản trị", { exact: true })).toHaveCount(0)
+    await expect(
+      page.getByText("Giới hạn sử dụng", { exact: true })
+    ).toBeVisible()
 
     await fixture.setPermissions([])
     await page.goto("/vi/dashboard")
@@ -309,12 +312,18 @@ test.describe("P0 sidebar navigation", () => {
       await sidebar
         .locator('[data-slot="sidebar-group-label"]')
         .allTextContents()
-    ).toEqual(["Phân tích"])
+    ).toEqual(["Phân tích", "Quản trị"])
     await expect(
       page
         .locator('[data-slot="sidebar"]')
         .first()
         .getByRole("link", { name: "Tổng quan", exact: true })
+    ).toBeVisible()
+    await expect(
+      page
+        .locator('[data-slot="sidebar"]')
+        .first()
+        .getByRole("link", { name: "Giới hạn sử dụng", exact: true })
     ).toBeVisible()
   })
 
