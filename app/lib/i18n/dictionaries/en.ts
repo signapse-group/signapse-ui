@@ -22,7 +22,6 @@ export const en: Dictionary = {
     delete: "Delete",
     search: "Search",
     reset: "Reset",
-    loading: "Loading usage limits",
     retry: "Try again",
     refresh: "Refresh",
     close: "Close",
@@ -78,6 +77,7 @@ export const en: Dictionary = {
     usageLimits: "Usage limits",
   },
   usageLimits: {
+    loading: "Loading usage limits",
     pageTitle: "Usage limits",
     pageDescription:
       "Review your account usage and the limits that apply to your workspaces.",

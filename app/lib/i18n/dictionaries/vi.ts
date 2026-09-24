@@ -20,7 +20,6 @@ export const vi = {
     delete: "Xóa",
     search: "Tìm kiếm",
     reset: "Đặt lại",
-    loading: "Đang tải hạn mức sử dụng",
     retry: "Thử lại",
     refresh: "Làm mới",
     close: "Đóng",
@@ -76,6 +75,7 @@ export const vi = {
     usageLimits: "Hạn mức sử dụng",
   },
   usageLimits: {
+    loading: "Đang tải hạn mức sử dụng",
     pageTitle: "Hạn mức sử dụng",
     pageDescription:
       "Xem mức sử dụng tài khoản và các hạn mức áp dụng cho workspace của bạn.",
