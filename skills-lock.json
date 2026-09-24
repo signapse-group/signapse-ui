@@ -6,14 +6,14 @@
       "ref": "main",
       "sourceType": "github",
       "skillPath": "workflow/skills/agent-execution-policy/SKILL.md",
-      "computedHash": "5ed0655a073d56c66dd694b6c504ff75941ad317cc262cec304ac5e043bf0053"
+      "computedHash": "1cbf7d93490a3366a5c5aaf19e7d5c10ff7522acb3d3cd06ba1f9a7dd000cd93"
     },
     "code-review": {
       "source": "signapse-group/signapse-symphony",
       "ref": "main",
       "sourceType": "github",
       "skillPath": "workflow/skills/code-review/SKILL.md",
-      "computedHash": "1b39b88cce837c72ecf1946c04220d8d7799e16a6d04b21096a73893f774a011"
+      "computedHash": "59efd7dc71676adab4299708e287dd57e5b54797f82f5d457280853750583229"
     },
     "codebase-design": {
       "source": "signapse-group/signapse-symphony",
@@ -40,7 +40,7 @@
       "ref": "main",
       "sourceType": "github",
       "skillPath": "workflow/skills/implement/SKILL.md",
-      "computedHash": "15e9920324a0030256aeded0443ca198227b9f0447fc4b49b4fd91dc09c07faf"
+      "computedHash": "2113e074181da807db5d175f7de544d61c1e4111de67bdb93a89ddcdb55d65b7"
     },
     "improve-codebase-architecture": {
       "source": "mattpocock/skills",
