@@ -74,11 +74,9 @@ Use this tracker lifecycle:
 
 This run authorizes implementation, verification, scoped commits, branch push, pull-request creation or
 update, required CI follow-up, and GitHub Project transitions from `Ready` to `In progress`, from
-`In progress` to `In review`, or from an active state to `Blocked` when the shared policy's blocker
-conditions are met. Continue from the existing workspace and pull request on later attempts.
-
-Move to `In review` only after `$implement`'s completion checks, independent review, pull-request
-evidence, and configured required CI are satisfied for the delivered revision.
+`In progress` to `In review` after the shared policy's handoff requirements are met, or
+from an active state to `Blocked` when the shared policy's blocker conditions are met. Continue
+from the existing workspace and pull request on later attempts.
 
 Do not merge, deploy, move the item to `Done`, change product requirements, or create additional work
 items unless the root `AGENTS.md` explicitly authorizes that action. Stop at the `In review` handoff,
