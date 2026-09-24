@@ -6,6 +6,7 @@ const { testDictionary } = vi.hoisted(() => ({
       messageRequired: "Message is required",
       validationInvalid: "Conversation request is invalid",
       responseInvalid: "Conversation response is invalid",
+      idempotencyKeyInvalid: "Conversation submission identity is invalid",
       submitError: "Message submission failed",
     },
   },
@@ -82,5 +83,31 @@ describe("market conversation submit action", () => {
       success: false,
       error: "Monthly AI conversation quota exceeded.",
     })
+  })
+
+  it("rejects an invalid idempotency key before making the backend request", async () => {
+    await expect(
+      submitMarketConversationMessage(42, { message: "Try again" }, " ")
+    ).resolves.toEqual({
+      success: false,
+      error: "Conversation submission identity is invalid",
+    })
+
+    expect(fetchAuthenticated).not.toHaveBeenCalled()
+  })
+
+  it("rejects an idempotency key longer than the backend contract allows", async () => {
+    await expect(
+      submitMarketConversationMessage(
+        42,
+        { message: "Try again" },
+        "k".repeat(256)
+      )
+    ).resolves.toEqual({
+      success: false,
+      error: "Conversation submission identity is invalid",
+    })
+
+    expect(fetchAuthenticated).not.toHaveBeenCalled()
   })
 })

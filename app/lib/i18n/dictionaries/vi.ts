@@ -2275,6 +2275,7 @@ export const vi = {
       "Hệ thống trả về dữ liệu hội thoại thị trường không đúng định dạng mong đợi.",
     titleRequired: "Vui lòng nhập tiêu đề hội thoại.",
     messageRequired: "Vui lòng nhập tin nhắn cần phân tích.",
+    idempotencyKeyInvalid: "Định danh lần gửi hội thoại không hợp lệ.",
     createError: "Chưa thể tạo hội thoại trong lúc này.",
     submitError: "Chưa thể gửi tin nhắn trong lúc này.",
     errorTitle: "Không thể tải hội thoại thị trường",

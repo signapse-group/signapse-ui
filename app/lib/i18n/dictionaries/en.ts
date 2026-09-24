@@ -2287,6 +2287,7 @@ export const en: Dictionary = {
       "The system returned market conversation data in an unexpected format.",
     titleRequired: "Enter a conversation title.",
     messageRequired: "Enter a message to analyze.",
+    idempotencyKeyInvalid: "The conversation submission identity is invalid.",
     createError: "Could not create the conversation right now.",
     submitError: "Could not submit the message right now.",
     errorTitle: "Could not load market conversations",
