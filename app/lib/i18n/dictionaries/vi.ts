@@ -548,6 +548,8 @@ export const vi = {
       "Tìm tài sản theo tên hoặc mã. Mọi thay đổi sẽ được đồng bộ với danh sách tài sản theo dõi của không gian làm việc hiện tại.",
     loadErrorTitle: "Không thể tải tài sản theo dõi hiện tại",
     loadErrorFallback: "Không thể tải tài sản theo dõi.",
+    limitExceeded:
+      "Lựa chọn tài sản theo dõi không được vượt quá {limit} tài sản.",
     addError: "Không thể thêm tài sản vào danh sách theo dõi.",
     removeError: "Không thể gỡ tài sản khỏi danh sách theo dõi.",
     noChanges: "Không có thay đổi để lưu.",
