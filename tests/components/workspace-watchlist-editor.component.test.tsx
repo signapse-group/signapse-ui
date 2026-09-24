@@ -271,57 +271,165 @@ describe("WorkspaceWatchlistEditor dialog contract", () => {
     expect(onOpenChange).not.toHaveBeenCalledWith(false)
   })
 
-  it("retries only failed save work after reconciling successful operations", async () => {
-    const removed = asset(1, "Bitcoin", "BTCUSD")
-    const kept = asset(2, "Ethereum", "ETHUSD")
-    const added = asset(3, "Litecoin", "LTCUSD")
+  it("blocks a save that would exceed the watchlist limit", async () => {
+    const first = asset(1, "Bitcoin", "BTCUSD")
+    const second = asset(2, "Ethereum", "ETHUSD")
+    const third = asset(3, "Litecoin", "LTCUSD")
+    const fourth = asset(4, "Solana", "SOLUSD")
     getWorkspaceWatchlistAssets.mockResolvedValue(
-      watchlistPage([removed, kept], 0, 1)
+      watchlistPage([first, second, third], 0, 1)
     )
-    getAssets.mockResolvedValue(assetPage([added], 0, 1))
-    addAssetsToWorkspaceWatchlist
-      .mockResolvedValueOnce({ success: false, error: "add failed" })
-      .mockResolvedValueOnce({
-        success: true,
-        data: { items: [], createdAssetIds: [added.id], existingAssetIds: [] },
-      })
+    getAssets.mockResolvedValue(assetPage([fourth], 0, 1))
 
+    const onOpenChange = vi.fn()
     const user = userEvent.setup()
-    renderEditor()
+    renderEditor(onOpenChange)
 
-    await screen.findByText(removed.symbol)
-    await user.click(
-      screen.getByRole("button", {
-        name: viDictionary.assets.removeSelected.replace(
-          "{symbol}",
-          kept.symbol
-        ),
-      })
-    )
+    await screen.findByText(third.symbol)
     const input = screen.getByRole("combobox")
     await user.click(input)
     await user.click(
-      await screen.findByRole("option", { name: /Litecoin.*LTCUSD/i })
+      await screen.findByRole("option", { name: /Solana.*SOLUSD/i })
     )
     await user.keyboard("{Escape}")
     await user.click(
       screen.getByRole("button", { name: viDictionary.watchlist.saveList })
     )
 
-    expect(
-      await screen.findByText(viDictionary.watchlist.partialFailure)
-    ).toBeVisible()
-    expect(removeAssetFromWorkspaceWatchlist).toHaveBeenCalledTimes(1)
-    expect(addAssetsToWorkspaceWatchlist).toHaveBeenCalledTimes(1)
-
-    const retry = screen.getByRole("button", {
-      name: viDictionary.common.retry,
-    })
-    await waitFor(() => expect(retry).toBeEnabled())
-    await user.click(retry)
-    await waitFor(() =>
-      expect(addAssetsToWorkspaceWatchlist).toHaveBeenCalledTimes(2)
+    const limitMessage = viDictionary.watchlist.limitExceeded.replace(
+      "{limit}",
+      "3"
     )
-    expect(removeAssetFromWorkspaceWatchlist).toHaveBeenCalledTimes(1)
+    expect(await screen.findByText(limitMessage)).toBeVisible()
+    expect(removeAssetFromWorkspaceWatchlist).not.toHaveBeenCalled()
+    expect(addAssetsToWorkspaceWatchlist).not.toHaveBeenCalled()
+    expect(onOpenChange).not.toHaveBeenCalledWith(false)
+    expect(toastError).toHaveBeenCalledWith(limitMessage)
+    expect(toastSuccess).not.toHaveBeenCalled()
+  })
+
+  it("replaces an asset at the limit by removing before adding", async () => {
+    const first = asset(1, "Bitcoin", "BTCUSD")
+    const second = asset(2, "Ethereum", "ETHUSD")
+    const replaced = asset(3, "Litecoin", "LTCUSD")
+    const replacement = asset(4, "Solana", "SOLUSD")
+    getWorkspaceWatchlistAssets.mockResolvedValue(
+      watchlistPage([first, second, replaced], 0, 1)
+    )
+    getAssets.mockResolvedValue(assetPage([replacement], 0, 1))
+
+    let finishRemoval: (() => void) | undefined
+    const removalFinished = new Promise<{
+      success: true
+      data: undefined
+    }>((resolve) => {
+      finishRemoval = () => resolve({ success: true, data: undefined })
+    })
+    removeAssetFromWorkspaceWatchlist.mockImplementationOnce(
+      () => removalFinished
+    )
+
+    const onOpenChange = vi.fn()
+    const user = userEvent.setup()
+    renderEditor(onOpenChange)
+
+    await screen.findByText(replaced.symbol)
+    await user.click(
+      screen.getByRole("button", {
+        name: viDictionary.assets.removeSelected.replace(
+          "{symbol}",
+          replaced.symbol
+        ),
+      })
+    )
+    const input = screen.getByRole("combobox")
+    await user.click(input)
+    await user.click(
+      await screen.findByRole("option", { name: /Solana.*SOLUSD/i })
+    )
+    await user.keyboard("{Escape}")
+    await user.click(
+      screen.getByRole("button", { name: viDictionary.watchlist.saveList })
+    )
+
+    await waitFor(() =>
+      expect(removeAssetFromWorkspaceWatchlist).toHaveBeenCalledWith(
+        replaced.id
+      )
+    )
+    expect(addAssetsToWorkspaceWatchlist).not.toHaveBeenCalled()
+
+    finishRemoval?.()
+    await waitFor(() =>
+      expect(addAssetsToWorkspaceWatchlist).toHaveBeenCalledWith({
+        assetIds: [replacement.id],
+      })
+    )
+    expect(removeAssetFromWorkspaceWatchlist).toHaveBeenCalledWith(
+      replaced.id
+    )
+    expect(
+      removeAssetFromWorkspaceWatchlist.mock.invocationCallOrder[0]
+    ).toBeLessThan(addAssetsToWorkspaceWatchlist.mock.invocationCallOrder[0])
+    expect(onOpenChange).toHaveBeenCalledWith(false)
+    expect(toastSuccess).toHaveBeenCalledWith(
+      viDictionary.watchlist.updated.replace("{name}", workspace.name)
+    )
+  })
+
+  it("reloads the actual watchlist after a backend quota rejection", async () => {
+    const first = asset(1, "Bitcoin", "BTCUSD")
+    const second = asset(2, "Ethereum", "ETHUSD")
+    const removed = asset(3, "Litecoin", "LTCUSD")
+    const selected = asset(4, "Solana", "SOLUSD")
+    const concurrent = asset(5, "Cardano", "ADAUSD")
+    getWorkspaceWatchlistAssets
+      .mockResolvedValueOnce(watchlistPage([first, second, removed], 0, 1))
+      .mockResolvedValueOnce(watchlistPage([first, second, concurrent], 0, 1))
+    getAssets.mockResolvedValue(assetPage([selected], 0, 1))
+    addAssetsToWorkspaceWatchlist.mockResolvedValue({
+      success: false,
+      error: "Watchlist quota exceeded",
+    })
+
+    const onOpenChange = vi.fn()
+    const user = userEvent.setup()
+    renderEditor(onOpenChange)
+
+    await screen.findByText(removed.symbol)
+    await user.click(
+      screen.getByRole("button", {
+        name: viDictionary.assets.removeSelected.replace(
+          "{symbol}",
+          removed.symbol
+        ),
+      })
+    )
+    const input = screen.getByRole("combobox")
+    await user.click(input)
+    await user.click(
+      await screen.findByRole("option", { name: /Solana.*SOLUSD/i })
+    )
+    await user.keyboard("{Escape}")
+    await user.click(
+      screen.getByRole("button", { name: viDictionary.watchlist.saveList })
+    )
+
+    expect(await screen.findByText("Watchlist quota exceeded")).toBeVisible()
+    expect(await screen.findByText(concurrent.symbol)).toBeVisible()
+    expect(
+      screen.queryByRole("button", {
+        name: viDictionary.assets.removeSelected.replace(
+          "{symbol}",
+          removed.symbol
+        ),
+      })
+    ).not.toBeInTheDocument()
+    expect(onOpenChange).not.toHaveBeenCalledWith(false)
+    expect(toastSuccess).not.toHaveBeenCalled()
+    expect(toastError).toHaveBeenCalledWith("Watchlist quota exceeded")
+    expect(
+      screen.queryByRole("button", { name: viDictionary.common.retry })
+    ).not.toBeInTheDocument()
   })
 })

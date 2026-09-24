@@ -577,6 +577,7 @@ export const en: Dictionary = {
       "Search assets by name or symbol. Changes sync with the tracked asset list of the current workspace.",
     loadErrorTitle: "Could not load current tracked assets",
     loadErrorFallback: "Could not load tracked assets.",
+    limitExceeded: "Your watchlist selection cannot exceed {limit} assets.",
     addError: "Could not add asset to the watchlist.",
     removeError: "Could not remove asset from the watchlist.",
     noChanges: "There are no changes to save.",
