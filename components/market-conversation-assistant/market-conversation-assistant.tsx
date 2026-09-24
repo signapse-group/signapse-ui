@@ -1028,7 +1028,7 @@ export function MarketConversationAssistant({
                         onChange={(event) => {
                           setDraft(event.target.value)
                           submissionIdentityRef.current = null
-                          setCreateError(null
+                          setCreateError(null)
                           setSubmissionError(null)
                         }}
                         onKeyDown={(event) => {
