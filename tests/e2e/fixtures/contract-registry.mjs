@@ -20,6 +20,7 @@ export const fixtureContracts = [
   { method: "GET", path: "/watchlists", mapping: "getWorkspaceWatchlistAssets", status: 200 },
   { method: "POST", path: "/watchlists/assets", mapping: "addAssetsToWorkspaceWatchlist", status: 200 },
   { method: "DELETE", path: "/watchlists/assets/{assetId}", mapping: "removeAssetFromWorkspaceWatchlist", status: 204 },
+  { method: "GET", path: "/blogs/{id}", mapping: "getBlogPost", status: 200 },
   { method: "GET", path: "/news-articles", mapping: "getNewsArticles", status: 200 },
   { method: "GET", path: "/news-articles/{id}", mapping: "getNewsArticleById", status: 200 },
   { method: "GET", path: "/events", mapping: "getEvents", status: 200 },

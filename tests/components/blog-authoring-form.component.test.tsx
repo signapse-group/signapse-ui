@@ -51,6 +51,7 @@ vi.mock("@/components/editor/plate-editor", () => ({
 import { createBlog, updateBlog } from "@/app/api/blogs/action"
 import { en } from "@/app/lib/i18n/dictionaries/en"
 import { LocalizationProvider } from "@/app/lib/i18n/provider"
+import { AppFormShellSkeleton } from "@/components/app-form-shell"
 import { CreateBlogForm } from "@/app/[lang]/(main)/blogs/create/create-blog-form"
 import { UpdateBlogForm } from "@/app/[lang]/(main)/blogs/[id]/update-blog-form"
 
@@ -124,6 +125,42 @@ describe("Blog authoring forms", () => {
     )
     expect(routerPush).toHaveBeenCalledWith("/en/blogs")
     expect(toastSuccess).toHaveBeenCalledWith(en.blogs.createSuccess)
+  })
+
+  it("keeps create and update on the shared non-shrinking form surface", () => {
+    const { unmount } = renderCreateForm()
+    const createShell = screen
+      .getByRole("heading", { name: en.blogs.createTitle })
+      .closest('[data-slot="app-form-shell"]')
+
+    expect(createShell).toHaveClass("mx-auto", "shrink-0")
+
+    unmount()
+    render(
+      <LocalizationProvider locale="en" dictionary={en}>
+        <UpdateBlogForm blog={publishedBlog} />
+      </LocalizationProvider>
+    )
+
+    const updateShell = screen
+      .getByRole("heading", { name: en.blogs.updateTitle })
+      .closest('[data-slot="app-form-shell"]')
+
+    expect(updateShell).toHaveClass("mx-auto", "shrink-0")
+  })
+
+  it("keeps the loading shell aligned with the authoring forms", () => {
+    render(
+      <AppFormShellSkeleton width="lg">
+        <div data-testid="blog-form-skeleton-content" />
+      </AppFormShellSkeleton>
+    )
+
+    const skeleton = screen
+      .getByTestId("blog-form-skeleton-content")
+      .closest('[data-slot="app-form-shell-skeleton"]')
+
+    expect(skeleton).toHaveClass("mx-auto", "shrink-0", "max-w-3xl")
   })
 
   it("keeps entered data and exposes a retryable save error", async () => {

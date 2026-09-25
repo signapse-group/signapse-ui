@@ -58,6 +58,21 @@ function note(id, title, text) {
   }
 }
 
+function blogPost(id) {
+  return {
+    id,
+    title: "Fixture article",
+    slug: "fixture-article",
+    shortDescription: "A fixture blog post for the authoring form.",
+    content: [{ type: "p", children: [{ text: "Original article body." }] }],
+    contentSchemaVersion: 1,
+    status: "DRAFT",
+    publishedAt: null,
+    createdDate: "2025-01-01T08:00:00.000Z",
+    lastModifiedDate: NOW,
+  }
+}
+
 const FEEDBACK_OWNER_ID = 9001
 const FEEDBACK_OWNER = {
   id: FEEDBACK_OWNER_ID,
@@ -980,6 +995,16 @@ function responseForRoute(state, method, pathname, url, body) {
       currentWorkspace: { id: 1, name: "Workspace Alpha" },
       mainImage: null,
       permissions: state.permissions,
+    }
+  }
+
+  const blogIdMatch = pathname.match(/^\/blogs\/(\d+)$/)
+  if (method === "GET" && blogIdMatch) {
+    const id = Number(blogIdMatch[1])
+    if (id === 71) return blogPost(id)
+    return {
+      __status: 404,
+      payload: errorPayload("Blog post not found", "NOT_FOUND"),
     }
   }
 
