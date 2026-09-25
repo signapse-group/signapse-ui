@@ -1442,6 +1442,17 @@ const server = createServer(async (request, response) => {
     return
   }
 
+  if (scenario === "full-then-empty" && method === "GET" && result && Array.isArray(result.candles)) {
+    const candleRequestCount = state.requests.filter((request) => request.path === "/market-charts/candles").length
+    if (candleRequestCount > 1) {
+      const anchor = url.searchParams.get("to") ?? result.to
+      sendJson(response, 200, { ...result, from: anchor, to: anchor, candles: [] })
+    } else {
+      sendJson(response, 200, result)
+    }
+    return
+  }
+
   if (scenario === "short-then-empty" && method === "GET" && result && Array.isArray(result.candles)) {
     const candleRequestCount = state.requests.filter(
       (request) => request.path === "/market-charts/candles"

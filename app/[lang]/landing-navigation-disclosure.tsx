@@ -87,7 +87,7 @@ export function LandingNavigationDisclosure({
           dismissTimeoutRef.current = setTimeout(() => {
             details.open = false
             dismissTimeoutRef.current = null
-          }, 150)
+          }, 500)
         }
       }}
     />

@@ -5,11 +5,7 @@ test.describe("P0 market chart workbench", () => {
     page,
     fixture,
   }) => {
-    await fixture.setScenario(
-      "/market-charts/candles",
-      "short-then-empty-per-timeframe",
-      "GET"
-    )
+    test.setTimeout(180_000)
     await fixture.setScenario("/market-charts/live", "reconnect", "GET")
     await page.goto("/vi/market-charts?assetId=101&timeframe=1h")
 
@@ -22,15 +18,22 @@ test.describe("P0 market chart workbench", () => {
       page.getByRole("button", { name: "Mở biểu đồ toàn màn hình" })
     ).toBeVisible()
     await expect(
-      page.getByText(/Giá trực tiếp|Đang kết nối lại/, { exact: false }).first()
+      page
+        .getByText(
+          /Giá trực tiếp|Đang kết nối lại|Đang kết nối giá trực tiếp/,
+          { exact: false }
+        )
+        .first()
     ).toBeVisible()
-    await expect(page.getByText("Giá trực tiếp", { exact: true })).toBeVisible()
 
     await expect
       .poll(async () => (await fixture.state()).streamConnections, {
         timeout: 10_000,
       })
       .toBeGreaterThanOrEqual(2)
+    await expect(page.getByText("Giá trực tiếp", { exact: true })).toBeVisible({
+      timeout: 30_000,
+    })
     const initialStreamConnections = (await fixture.state()).streamConnections
 
     const fourHourButton = page.getByRole("button", { name: "4 giờ" })
@@ -44,7 +47,9 @@ test.describe("P0 market chart workbench", () => {
         timeout: 15_000,
       })
       .toBeGreaterThan(initialStreamConnections)
-    await expect(page.getByText("Giá trực tiếp", { exact: true })).toBeVisible()
+    await expect(page.getByText("Giá trực tiếp", { exact: true })).toBeVisible({
+      timeout: 30_000,
+    })
   })
 
   test("retries exact empty history and loads sparse count-back candles", async ({

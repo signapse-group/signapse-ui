@@ -49,5 +49,7 @@ it("opens and dismisses a hover-enabled disclosure", () => {
   fireEvent.pointerLeave(details)
   expect(details.open).toBe(true)
   vi.advanceTimersByTime(150)
+  expect(details.open).toBe(true)
+  vi.advanceTimersByTime(350)
   expect(details.open).toBe(false)
 })

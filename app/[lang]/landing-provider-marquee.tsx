@@ -34,7 +34,12 @@ type LandingProviderMarqueeProps = {
 export function LandingProviderMarquee({ label }: LandingProviderMarqueeProps) {
   return (
     <div className={styles.providerRail}>
-      <div className={styles.providerMarquee}>
+      <div
+        className={styles.providerMarquee}
+        role="region"
+        tabIndex={0}
+        aria-label={label}
+      >
         <div className={styles.providerTrack}>
           {[false, true].map((isDuplicate) => (
             <ul

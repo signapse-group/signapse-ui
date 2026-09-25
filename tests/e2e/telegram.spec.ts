@@ -1,4 +1,4 @@
-import { expect, test } from "./fixtures"
+import { expect, test, waitForClientHandler } from "./fixtures"
 
 test.describe("P0 Telegram operations", () => {
   test("covers destination delivery states and destructive confirmation", async ({
@@ -7,8 +7,12 @@ test.describe("P0 Telegram operations", () => {
   }) => {
     await page.goto("/vi/telegram")
 
-    await expect(page.getByRole("heading", { name: "Hạ tầng Telegram" })).toBeVisible()
-    await expect(page.getByText("Fixture operations bot", { exact: true })).toBeVisible()
+    await expect(
+      page.getByRole("heading", { name: "Hạ tầng Telegram" })
+    ).toBeVisible()
+    await expect(
+      page.getByText("Fixture operations bot", { exact: true })
+    ).toBeVisible()
     await expect(
       page.getByRole("cell", { name: "Operations channel", exact: true })
     ).toBeVisible()
@@ -16,13 +20,18 @@ test.describe("P0 Telegram operations", () => {
       page.getByRole("listitem").filter({ hasText: "Disabled channel" }).first()
     ).toBeVisible()
     await expect(
-      page.locator('button[aria-disabled="true"]').filter({ hasText: "Gửi thử" })
+      page
+        .locator('button[aria-disabled="true"]')
+        .filter({ hasText: "Gửi thử" })
     ).toHaveCount(1)
 
-    const activeTestMessage = page.getByRole("button", {
-      name: "Gửi thử",
-      exact: true,
-    }).first()
+    const activeTestMessage = page
+      .getByRole("button", {
+        name: "Gửi thử",
+        exact: true,
+      })
+      .first()
+    await waitForClientHandler(activeTestMessage)
 
     await fixture.setScenario(
       "/telegram/destinations/21/test-message",
@@ -54,23 +63,33 @@ test.describe("P0 Telegram operations", () => {
     )
     await activeTestMessage.click()
     await expect(
-      page.getByText("Đã gửi tin nhắn thử tới Operations channel.", { exact: true })
+      page.getByText("Đã gửi tin nhắn thử tới Operations channel.", {
+        exact: true,
+      })
     ).toBeVisible()
 
     await page
       .getByRole("button", { name: "Thao tác điểm nhận", exact: true })
       .first()
       .click()
-    await page.getByRole("menuitem", { name: "Xóa điểm nhận", exact: true }).click()
+    await page
+      .getByRole("menuitem", { name: "Xóa điểm nhận", exact: true })
+      .click()
 
     const deleteDialog = page.getByRole("alertdialog")
     await expect(deleteDialog).toContainText("Xóa điểm nhận Telegram?")
     await deleteDialog.getByRole("button", { name: "Hủy", exact: true }).click()
     await expect(deleteDialog).toBeHidden()
 
-    await expect(page.getByText("Định tuyến tính năng", { exact: true })).toBeVisible()
-    await expect(page.getByText("Lịch gửi phân tích", { exact: true })).toBeVisible()
-    await expect(page.getByText("BTC morning analysis", { exact: true })).toBeVisible()
+    await expect(
+      page.getByText("Định tuyến tính năng", { exact: true })
+    ).toBeVisible()
+    await expect(
+      page.getByText("Lịch gửi phân tích", { exact: true })
+    ).toBeVisible()
+    await expect(
+      page.getByText("BTC morning analysis", { exact: true })
+    ).toBeVisible()
 
     const calendarRow = page
       .getByRole("row")
@@ -96,7 +115,9 @@ test.describe("P0 Telegram operations", () => {
         name: "Chọn ngôn ngữ đầu ra cho Cảnh báo tin thị trường",
       })
       .click()
-    await page.getByRole("option", { name: "English (en)", exact: true }).click()
+    await page
+      .getByRole("option", { name: "English (en)", exact: true })
+      .click()
     await expect(newsRow).toContainText("English (en)")
     await newsRow
       .getByRole("switch", {

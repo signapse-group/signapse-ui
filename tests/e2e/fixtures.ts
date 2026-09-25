@@ -1,7 +1,29 @@
 /* eslint-disable react-hooks/rules-of-hooks -- Playwright fixture use() is not a React hook. */
 import { randomUUID } from "node:crypto"
 
-import { expect, test as base } from "@playwright/test"
+import { expect, test as base, type Locator } from "@playwright/test"
+
+export async function waitForClientHandler(
+  locator: Locator,
+  handler: "onClick" | "onChange" = "onClick"
+) {
+  await expect
+    .poll(
+      () =>
+        locator.evaluate(
+          (element, handlerName) =>
+            Object.entries(element).some(
+              ([key, props]) =>
+                key.startsWith("__reactProps$") &&
+                typeof (props as Record<string, unknown>)[handlerName] ===
+                  "function"
+            ),
+          handler
+        ),
+      { timeout: 60_000 }
+    )
+    .toBe(true)
+}
 
 const fixtureBaseUrl = `http://127.0.0.1:${process.env.FIXTURE_PORT ?? "4100"}`
 const testRunCookie = "signapse_test_run_id"
@@ -15,6 +37,7 @@ type FixtureController = {
       | "empty"
       | "short"
       | "short-then-empty"
+      | "full-then-empty"
       | "short-then-empty-per-timeframe"
       | "validation-error"
       | "timeout"
