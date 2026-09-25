@@ -12,7 +12,7 @@ const widthClassName: Record<AppFormShellWidth, string> = {
 }
 
 const surfaceClassName: Record<AppFormShellSurface, string> = {
-  card: "mx-auto overflow-hidden rounded-xl border bg-card shadow-sm",
+  card: "mx-auto shrink-0 overflow-hidden rounded-xl border bg-card shadow-sm",
   plain: "mx-auto overflow-visible",
 }
 
