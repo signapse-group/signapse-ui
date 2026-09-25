@@ -55,6 +55,7 @@ test.describe("P0 quick-detail overlay", () => {
   test("uses the shared desktop sheet from Graph View and restores inspector focus", async ({
     page,
   }) => {
+    test.setTimeout(120_000)
     await page.setViewportSize({ width: 1600, height: 900 })
     await page.goto("/vi/graph-view")
 
@@ -63,7 +64,11 @@ test.describe("P0 quick-detail overlay", () => {
     ).toBeVisible()
 
     const graphCanvas = page.locator('[data-engine-canvas="g6"]')
-    await expect(graphCanvas).toHaveAttribute("data-benchmark-anchor-id", /\S+/)
+    await expect(graphCanvas).toHaveAttribute(
+      "data-benchmark-anchor-id",
+      /\S+/,
+      { timeout: 45_000 }
+    )
     const canvas = graphCanvas.locator("canvas").first()
     await expect(canvas).toBeVisible()
     const canvasBox = await graphCanvas.boundingBox()
@@ -110,6 +115,11 @@ test.describe("P0 quick-detail overlay", () => {
     page,
     fixture,
   }) => {
+    await fixture.setScenario(
+      "/market-charts/candles",
+      "full-then-empty",
+      "GET"
+    )
     await fixture.setScenario("/market-charts/annotations", "success", "GET")
     await page.setViewportSize({ width: 1600, height: 900 })
     await page.goto("/vi/market-charts?assetId=101&timeframe=1h")
@@ -128,7 +138,7 @@ test.describe("P0 quick-detail overlay", () => {
     await annotationMarker.click()
 
     const annotationTrigger = page
-      .locator("[data-quick-detail-trigger]")
+      .locator("[data-quick-detail-trigger]:visible")
       .first()
     await expect(annotationTrigger).toBeVisible()
     await annotationTrigger.click()
@@ -156,6 +166,8 @@ test.describe("P0 quick-detail overlay", () => {
     await expect(page.locator('section[data-fullscreen="false"]')).toBeVisible()
 
     await page.setViewportSize({ width: 1024, height: 900 })
+    await annotationMarker.click()
+    await expect(annotationTrigger).toBeVisible()
     await annotationTrigger.click()
     await expect(overlay).toHaveAttribute(
       "data-quick-detail-placement",

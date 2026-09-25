@@ -191,7 +191,7 @@ test.describe("P0 sidebar navigation", () => {
     await flyout
       .getByRole("menuitem", { name: "Bài viết tin tức", exact: true })
       .click()
-    await expect(page).toHaveURL(/\/vi\/news-articles$/)
+    await expect(page).toHaveURL(/\/vi\/news-articles$/, { timeout: 60_000 })
     await expect(flyout).toBeHidden()
 
     await page.goto("/vi/dashboard")

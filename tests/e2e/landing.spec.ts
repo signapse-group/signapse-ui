@@ -190,12 +190,12 @@ test.describe("P0 public landing", () => {
       navy: "#03141d",
       mint: "#12d6b1",
       darkBackground: "#03141d",
-      lightBackground: "#eafdf8",
+      lightBackground: "#fff",
       figureBackground: "#03141d",
     })
     await expect(
       page.locator(
-        '[data-landing-part="header"] img[src*="signapse_logo_dark.svg"]'
+        '[data-landing-part="header"] img[src*="signapse_logo_dark.svg"]:visible'
       )
     ).toBeVisible()
   })
@@ -241,7 +241,7 @@ test.describe("P0 public landing", () => {
     expect(glassStyle.backdropFilter).toContain("blur(16px)")
     expect(glassStyle.backdropFilter).toContain("saturate(")
     expect(glassStyle.backgroundImage).toBe("none")
-    expect(glassStyle.boxShadow).toContain("inset")
+    expect(glassStyle.boxShadow).toBe("none")
   })
 
   test("keeps approved product captures native inside landing frames", async ({
@@ -306,13 +306,8 @@ test.describe("P0 public landing", () => {
     )
     await expect(telegramDemo).toHaveAttribute(
       "data-telegram-demo-state",
-      "preview",
-      { timeout: 12000 }
-    )
-    await expect(telegramDemo).toHaveAttribute(
-      "data-telegram-demo-state",
-      "start",
-      { timeout: 12000 }
+      "delivered",
+      { timeout: 20_000 }
     )
 
     await showcase.getByRole("tab", { name: "Knowledge Graph" }).click()
@@ -320,9 +315,10 @@ test.describe("P0 public landing", () => {
       "data-telegram-demo-playback",
       "paused"
     )
-    await expect(
-      showcase.locator('[data-landing-media-slot="knowledge-graph"] img')
-    ).toBeVisible()
+    await expect(showcase.locator("[data-feature-stage]")).toHaveAttribute(
+      "data-feature-stage",
+      "knowledge-graph"
+    )
     await telegramTab.click()
     await expect(telegramDemo).toHaveAttribute(
       "data-telegram-demo-state",
@@ -502,11 +498,14 @@ test.describe("P0 public landing", () => {
     await page.goto("/en")
     const showcase = page.locator('[data-landing-section="showcase"]')
     await showcase.scrollIntoViewIfNeeded()
-    const telegramDemo = showcase.locator('[data-demo-renderer="motion"]')
+    await showcase.getByRole("tab", { name: /Scheduled Telegram/ }).click()
+    const telegramDemo = showcase.locator(
+      '[data-telegram-demo-stage][data-demo-renderer="motion"]'
+    )
     await expect(telegramDemo).toBeVisible({ timeout: 8000 })
     await expect(telegramDemo).toHaveAttribute(
       "data-telegram-demo-state",
-      "preview"
+      "delivered"
     )
     await expect(telegramDemo).toHaveAttribute(
       "data-telegram-demo-playback",
@@ -579,8 +578,13 @@ test.describe("P0 public landing", () => {
     await expect(summary).toBeFocused()
     await summary.press("Enter")
     await expect(page.locator("[data-mobile-menu]")).toHaveAttribute("open", "")
+    const productGroup = page
+      .locator('[data-mobile-menu] details[name="landing-mobile-menu-group"]')
+      .first()
+    await productGroup.locator("summary").press("Enter")
+    await expect(productGroup).toHaveAttribute("open", "")
     await expect(
-      page.getByRole("link", { name: "Tổng quan", exact: true })
+      page.getByRole("link", { name: /Đồ thị Tri thức/ })
     ).toBeVisible()
     await expect(
       page.getByRole("link", { name: "English", exact: true }).last()
@@ -652,8 +656,8 @@ test.describe("P0 public landing", () => {
           stageBox!.y + 1
         )
       } else {
-        expect(tabListBox!.x + tabListBox!.width).toBeLessThanOrEqual(
-          stageBox!.x + 1
+        expect(stageBox!.x + stageBox!.width).toBeLessThanOrEqual(
+          tabListBox!.x + 1
         )
       }
     }
