@@ -6,14 +6,14 @@
       "ref": "main",
       "sourceType": "github",
       "skillPath": "workflow/skills/agent-execution-policy/SKILL.md",
-      "computedHash": "d29048bbe392229df3d3e4fa68f3ff71bace35bb364628de77e0ea077365e732"
+      "computedHash": "251af5fd400d275dd24fe051d607d044a31c399f9b9d5a4e6af21331e89783da"
     },
     "code-review": {
       "source": "signapse-group/signapse-symphony",
       "ref": "main",
       "sourceType": "github",
       "skillPath": "workflow/skills/code-review/SKILL.md",
-      "computedHash": "59efd7dc71676adab4299708e287dd57e5b54797f82f5d457280853750583229"
+      "computedHash": "948897723157ea54921ebc6b7704dedb749eb19e0424fd5f74ea3eb977bef0cd"
     },
     "codebase-design": {
       "source": "signapse-group/signapse-symphony",
@@ -27,7 +27,7 @@
       "ref": "main",
       "sourceType": "github",
       "skillPath": "workflow/skills/diagnosing-bugs/SKILL.md",
-      "computedHash": "37f1359b0de0ba4acd0543b64e3def48357ed03748d646714a2b4003d3f07d61"
+      "computedHash": "cb17b6d23faf6016af85361b27efab4149444a611a624c0c30997ffcb067ec6b"
     },
     "grill-me": {
       "source": "mattpocock/skills",
@@ -40,7 +40,7 @@
       "ref": "main",
       "sourceType": "github",
       "skillPath": "workflow/skills/implement/SKILL.md",
-      "computedHash": "6ba69d688dd2028389a62e4055c7e35606445e6254908a810c340990e0881ef6"
+      "computedHash": "6e5394a14aa5751904ccd864d02fb1c5ed776e72c98a0db357aac1fbfbd3f60e"
     },
     "improve-codebase-architecture": {
       "source": "mattpocock/skills",
@@ -66,7 +66,7 @@
       "ref": "main",
       "sourceType": "github",
       "skillPath": "workflow/skills/setup-workflow/SKILL.md",
-      "computedHash": "482f420c5cb5e914bff2107ba926ccec5a5918370367125fba59032f92cd8bc0"
+      "computedHash": "9da141cdf81a9276e3e8620ea3e269fac1f9112cd59ca48dfcd1d578e6787e82"
     },
     "shadcn": {
       "source": "shadcn/ui",
@@ -79,7 +79,7 @@
       "ref": "main",
       "sourceType": "github",
       "skillPath": "workflow/skills/tdd/SKILL.md",
-      "computedHash": "8f14eae7d3447fcf3143768e4ce596a5ab106f1cca221434b6aeb0fd1aef23ec"
+      "computedHash": "371aa3f8938f361753d1e6b890a5684c936190b515dc3d257c67d063265c0ad0"
     },
     "teach": {
       "source": "mattpocock/skills",
@@ -92,7 +92,7 @@
       "ref": "main",
       "sourceType": "github",
       "skillPath": "workflow/skills/technical-design/SKILL.md",
-      "computedHash": "0bb9cee160c83032895aafd705148ff8d68ab4e6d652bf862fb98d56baa71315"
+      "computedHash": "56dde930f9210a461a04f2bd92aacd71c33835f5378fe1bb318eceb789f0a45e"
     },
     "to-questionnaire": {
       "source": "mattpocock/skills",

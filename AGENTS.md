@@ -13,7 +13,7 @@ When framework versions, the UI preset, CI, or repository ownership change, refr
 
 ## Scoped Instructions And Skills
 
-- `AGENTS.md` holds only repo-wide architecture, workflow, verification, and review policy.
+- `AGENTS.md` holds only repo-wide architecture, verification, and review policy.
 - Before implementing or reviewing `app/api/**`, read `app/api/AGENTS.override.md`.
 - Before implementing or reviewing `app/lib/**`, read `app/lib/AGENTS.override.md`.
 - For UI implementation or review under `app/[lang]/**` or `components/**`, read `components/AGENTS.override.md`. For changes to visual presentation, interaction, accessibility, or user-facing content, read the relevant sections of `docs/design/DESIGN.md`, the UI/UX source of truth.
@@ -86,17 +86,3 @@ app/[lang]/(main)/[feature]/
 - For UI reviews, use the detailed drift categories in DESIGN; also prioritize API contract hierarchy drift, unsafe destructive actions, and unchecked `any` where applicable.
 - For each finding, identify file/line, behavioral or UX risk, and the minimal recommended fix.
 - If there are no findings, say that clearly and mention residual risk or checks not run.
-
-## Agent Workflow
-
-This repository adopts the Agent Workflow execution skills.
-At the start of each new session, read `$agent-execution-policy` before workflow-dependent action.
-`WORKFLOW.md` is the Symphony runtime entrypoint for assigned work; repository instructions remain here.
-
-- Repository role and contract source: This repository is the Signapse Next.js frontend. The assigned GitHub issue is the accepted implementation contract. The live backend OpenAPI contract is canonical for API behavior, with `docs/APIMAPPING.md` as the frontend mapping ledger; `docs/design/DESIGN.md` is canonical for durable UI/UX rules.
-- Focused and completion checks: Run the narrowest relevant Vitest, contract, or Playwright checks during implementation. For code, build, runtime configuration, or behavior changes, complete `pnpm test:quality`. Documentation-only changes require relevant content, link, and formatting checks instead of the full application suite.
-- Required CI: No repository PR quality workflow or protected required check is currently configured. Do not treat the GitHub Pages deployment workflow as code-quality CI. When the PR quality lane specified by `docs/adr/0004-layered-automated-quality-gates.md` is enabled, its successful run for the delivered revision becomes required.
-- Delivery condition: A maintainer-reviewed merge into the default branch completes the assigned implementation issue; the Project's `Item closed` workflow moves it to `Done`. Product, preview, cutover, and deployment acceptance remain with their human owners and do not delay issue completion.
-- Human acceptance owner: Repository maintainers and pull-request reviewers own review and merge acceptance. The Signapse Product Owner or designated release owner retains any documented product, preview, cutover, or deployment acceptance.
-- Relevant architecture and contract locations: `app/[lang]`, `app/api`, `app/lib`, `components`, applicable scoped `AGENTS.override.md` files, `docs/APIMAPPING.md`, `docs/design/DESIGN.md`, `docs/adr`, and `docs/testing/browser-tests.md`.
-- Output language: Use Vietnamese for agent status and handoff communication. Preserve the surrounding repository language for code and documentation, and maintain both supported dictionary locales for user-facing copy.

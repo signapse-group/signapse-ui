@@ -45,8 +45,18 @@ This is follow-up attempt #{{ attempt }}. Resume the existing workspace, branch,
 do not restart completed investigation or verification unless later changes invalidated it.
 {% endif %}
 
-Read the root `AGENTS.md`, load `$agent-execution-policy`, and invoke `$implement` for this work item.
+Read repository instructions if present, load `$agent-execution-policy`, and invoke `$implement` for this work item.
 The work item is the accepted implementation contract for this unattended run.
+
+Repository execution context:
+
+- This repository is the Signapse Next.js frontend. The assigned GitHub issue is the implementation contract. The live backend OpenAPI contract is canonical for API behavior; `docs/APIMAPPING.md` is the frontend mapping ledger, and `docs/design/DESIGN.md` defines durable UI/UX rules.
+- Run the narrowest relevant Vitest, contract, or Playwright checks while implementing. For code, build, runtime configuration, or behavior changes, complete `pnpm test:quality`. Documentation-only changes require relevant content, link, and formatting checks.
+- No repository PR quality workflow or protected required check is currently configured. The GitHub Pages deployment workflow is not code-quality CI. When the PR quality lane in `docs/adr/0004-layered-automated-quality-gates.md` is enabled, require a successful run for the delivered revision.
+- A maintainer-reviewed merge into the default branch completes the issue; the Project's `Item closed` workflow moves it to `Done`. Product, preview, cutover, and deployment acceptance remain with their human owners and do not delay issue completion.
+- Repository maintainers and PR reviewers own review and merge acceptance. The Signapse Product Owner or designated release owner owns documented product, preview, cutover, or deployment acceptance.
+- Relevant sources: `app/[lang]`, `app/api`, `app/lib`, `components`, scoped `AGENTS.override.md` files, `docs/APIMAPPING.md`, `docs/design/DESIGN.md`, `docs/adr`, and `docs/testing/browser-tests.md`.
+- Use Vietnamese for status and handoff communication. Preserve repository language in code and documentation, and maintain both supported dictionary locales for user-facing copy.
 
 Issue context:
 
@@ -79,5 +89,5 @@ from an active state to `Blocked` when the shared policy's blocker conditions ar
 from the existing workspace and pull request on later attempts.
 
 Do not merge, deploy, move the item to `Done`, change product requirements, or create additional work
-items unless the root `AGENTS.md` explicitly authorizes that action. Stop at the `In review` handoff,
+items unless the human explicitly authorizes that action for this run. Stop at the `In review` handoff,
 `Done`, or a genuine external blocker with no meaningful independent work remaining.
