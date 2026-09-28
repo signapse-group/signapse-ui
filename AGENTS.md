@@ -17,6 +17,7 @@ When framework versions, the UI preset, CI, or repository ownership change, refr
 - Before implementing or reviewing `app/api/**`, read `app/api/AGENTS.override.md`.
 - Before implementing or reviewing `app/lib/**`, read `app/lib/AGENTS.override.md`.
 - For UI implementation or review under `app/[lang]/**` or `components/**`, read `components/AGENTS.override.md`. For changes to visual presentation, interaction, accessibility, or user-facing content, read the relevant sections of `docs/design/DESIGN.md`, the UI/UX source of truth.
+- If a UI task includes an approved reference attachment or link (such as a screenshot, Figma file, mockup, or video), inspect it before implementation and compare the rendered UI against it before handoff. Use the reference with `docs/design/DESIGN.md` as the visual contract; report any inaccessible or materially ambiguous reference before coding the affected UI.
 - When a task spans multiple domains, read every applicable scoped instruction file.
 - Scoped instructions extend this file; the more specific instruction wins when guidance conflicts.
 - `.agents/skills` holds repository-specific or non-overlapping recipes.
