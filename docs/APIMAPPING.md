@@ -2,7 +2,7 @@
 
 Tài liệu này ánh xạ OpenAPI backend dev tại `https://dev-api.signapse.cloud/v3/api-docs` tới các điểm tích hợp frontend hiện tại của repo.
 
-Xác minh lần cuối: ngày 22 tháng 9 năm 2026
+Xác minh lần cuối: ngày 28 tháng 9 năm 2026
 
 ## Cấu hình cơ sở
 
@@ -36,7 +36,7 @@ Xác minh lần cuối: ngày 22 tháng 9 năm 2026
 
 ## Tổng quan thay đổi lớn từ snapshot hiện tại
 
-- Snapshot backend hiện tại gồm `127` operation.
+- Snapshot backend hiện tại gồm `138` operation; đồng bộ live ngày 28/9/2026 thêm sáu operation SMTP tại `/smtp-configuration*`.
 - Lần đồng bộ live ngày 15/8/2026 xác nhận mapping cần bao phủ thêm `PATCH /me`, `GET /users`, `PATCH /users/{id}`, và `POST /script`; `UserResponse.preferredLanguage` là object `LanguageResponse` nullable, không phải ISO string.
 - Snapshot ngày 11/8 mở rộng `GET /dashboard/summary` thêm hai metric bắt buộc `assetsInFocus` và `marketNarratives`. Backend trả tối đa sáu tài sản và ba luận điểm theo thứ tự authoritative; frontend đã parse/render `recentEvents` và `assetsInFocus`, nhưng chưa parse hoặc render `marketNarratives`.
 - Backend đã chuyển domain nội dung canon từ `sources` / `source-documents` sang `news-outlets` / `news-articles`.
@@ -53,6 +53,7 @@ Xác minh lần cuối: ngày 22 tháng 9 năm 2026
 - `roles` và `permissions` hiện đã có action và UI frontend, không còn ở trạng thái "chưa triển khai".
 - Snapshot mới thêm surface `telegram` gồm bot connections, destinations, feature settings, market analysis schedules, và webhook Telegram.
 - Live contract ngày 25/8 thêm surface `feedback`; bản dev hiện đã publish lifecycle `PENDING_REVIEW`/`REVIEWED` với một endpoint review duy nhất. Frontend đã tích hợp authenticated actions, screenshot proxy, permission-aware navigation và HTTP fixture parity.
+- Live contract ngày 28/9 thêm quản lý cấu hình SMTP qua `GET/PUT/DELETE /smtp-configuration` và `POST /smtp-configuration/{test,enable,disable}`. Quyền đọc là `smtp-configuration:read`, mọi mutation cần `smtp-configuration:manage`; response không chứa password hoặc secret mã hóa.
 - Snapshot ngày 14/8 giản lược quản trị bot và destination Telegram: bỏ `PATCH /telegram/bot-connections/{id}` và `PATCH /telegram/destinations/{id}`; `CreateTelegramBotConnectionRequest` chỉ còn field bắt buộc `botToken`. Bản build dev đã khôi phục `POST /telegram/destinations/{destinationId}/test-message` với response `204 No Content`.
 - Snapshot mới thêm credential sub-resource cho `ai-provider-configs` để quản lý nhiều API key theo từng provider config mà không expose full key.
 - Snapshot mới tiếp tục giản lược `ai-provider-configs`: config request/response không còn `name` và top-level `model`; credential dùng field `model` thay cho `label`.
@@ -139,7 +140,7 @@ Day la domain noi dung canon cua snapshot backend hien tai.
 | GET         | `/news-articles/{id}`                       | `getNewsArticle`          | `getNewsArticleById(id)`                     | Da trien khai | FE detail va quick detail doc cung `sourceName` da snapshot trong provenance row.                                                    |
 | DELETE      | `/news-articles/{id}`                       | `deleteNewsArticle`       | `deleteNewsArticle(id)`                      | Da trien khai | Route canon va nut operator da doi naming sang `news-article`.                                                                       |
 | POST        | `/news-articles/{id}/derive-primary-event`  | `derivePrimaryEvent`      | `derivePrimaryEventFromNewsArticle(id)`      | Da trien khai | `NewsPrimaryEventDerivationResult` dung `newsArticleId`, `newsArticleTitle`, `status`, `changeType`, `eventId`, `eventCanonicalKey`. |
-| POST        | `/news-articles/derive-pending-news-events` | `derivePendingNewsEvents` | `derivePendingNewsArticleEvents(batchSize?)` | Da trien khai | Batch result dung `PendingNewsEventDerivationBatchResult` va summary helper moi theo naming `news-article`.                          |
+| POST        | `/news-articles/derive-pending-news-events` | `derivePendingNewsEvents` | `derivePendingNewsArticleEvents(batchSize?)` | Lech OpenAPI live 28/9 | Frontend action va button con goi endpoint nay, nhung OpenAPI dev hien tai khong publish operation. |
 | PATCH       | `/news-articles/{id}/feature-image`         | `updateFeatureImage`      | `updateNewsArticleFeatureImage(id, request)` | Da trien khai | Data layer canon nam trong `app/api/news-articles/action.ts`.                                                                        |
 
 Frontend lien quan:
@@ -247,15 +248,15 @@ Ghi chu:
 
 | Phuong thuc | Endpoint backend                                  | operationId                     | Tich hop frontend                                                 | Trang thai         | Ghi chu                                                                                                                                                             |
 | ----------- | ------------------------------------------------- | ------------------------------- | ----------------------------------------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| POST        | `/query`                                          | `query`                         | `queryMarket(request)`                                            | Khong con UI route | Legacy action/DTO con giu de compatibility voi contract cu, nhung frontend khong con route `/market-query` hoac redirect compatibility.                             |
+| POST        | `/query`                                          | `query`                         | `queryMarket(request)`                                            | Lech OpenAPI live 28/9 | Legacy action con goi endpoint nay, nhung OpenAPI dev hien tai khong publish operation; khong co route `/market-query`.                                             |
 | GET         | `/market-conversations`                           | `getConversations`              | `getMarketConversations(searchParams)`                            | Da tich hop        | List persisted market conversations, response OpenAPI `PageConversationSummaryResponse`; permission `query:execute`.                                                |
 | POST        | `/market-conversations`                           | `createConversation`            | `createMarketConversation(request)`                               | Da tich hop        | Tao conversation bang OpenAPI `CreateConversationRequest { title }`; title duoc derive tu cau hoi dau tien, permission `query:execute`.                             |
 | GET         | `/market-conversations/{id}`                      | `getConversation`               | `getMarketConversationById(id)`                                   | Da tich hop        | Doc conversation detail gom messages; permission `query:execute`.                                                                                                   |
 | GET         | `/market-conversations/{conversationId}/messages` | `getMarketConversationMessages` | `getMarketConversationMessages(conversationId, beforeMessageId?)` | Da tich hop        | Tai message history theo exclusive cursor `beforeMessageId` va optional `size`; message la text-only va khong con `kind`/`analysisId`; permission `query:execute`.  |
 | POST        | `/market-conversations/{id}/messages`             | `submitMessage`                 | `submitMarketConversationMessage(id, request, idempotencyKey)`    | Da tich hop        | Submit bang `{ message }` va gui header `Idempotency-Key`; frontend giu cung key khi retry cung draft sau loi, tao key moi khi draft thay doi hoac message truoc thanh cong; response chi gom `userMessage` va `assistantMessage`; permission `query:execute`. |
-| GET         | `/market-analyses/{id}`                           | `getAnalysis`                   | `-`                                                               | Chua tich hop      | Backend van publish persisted analysis snapshot, nhung frontend khong con action/surface vi conversation message khong co `analysisId`; permission `query:execute`. |
-| GET         | `/market-analyses/{id}/evidence`                  | `getAnalysisEvidence`           | `-`                                                               | Chua tich hop      | Backend van publish evidence snapshot, nhung frontend khong con analysis entry point; permission `query:execute`.                                                   |
-| POST        | `/market-analyses/{id}/telegram-deliveries`       | `deliverToTelegram`             | `-`                                                               | Chua tich hop      | Backend van ho tro delivery bang `{ destinationId }`, nhung frontend khong con manual delivery tu conversation; permission `query:execute`.                         |
+| GET         | `/market-analyses/{id}`                           | `getAnalysis`                   | `-`                                                               | Vang khoi OpenAPI live 28/9 | Operation khong duoc cong bo trong OpenAPI dev hien tai. |
+| GET         | `/market-analyses/{id}/evidence`                  | `getAnalysisEvidence`           | `-`                                                               | Vang khoi OpenAPI live 28/9 | Operation khong duoc cong bo trong OpenAPI dev hien tai. |
+| POST        | `/market-analyses/{id}/telegram-deliveries`       | `deliverToTelegram`             | `-`                                                               | Vang khoi OpenAPI live 28/9 | Operation khong duoc cong bo trong OpenAPI dev hien tai. |
 
 Frontend lien quan:
 
@@ -329,10 +330,14 @@ Ghi chu:
 | GET         | `/blogs/{id}`    | `getBlogPost`    | `getBlogById(id)`         | Da tich hop theo producer contract | Response gom structured `content`, `contentSchemaVersion`, `status`, va khong con `isVisible`/`visible`.      |
 | PUT         | `/blogs/{id}`    | `updateBlogPost` | `updateBlog(id, request)` | Da tich hop theo producer contract | Frontend gui structured content; slug bi khoa sau lan xuat ban dau; khong con `isVisible`.                    |
 | DELETE      | `/blogs/{id}`    | `deleteBlogPost` | `deleteBlog(id)`          | Da trien khai                      | Duoc boc trong `ActionResult`.                                                                                |
+| GET         | `/blogs/public`        | `getPublicBlogPosts` | `getPublicBlogs(page, size)` | Da tich hop | Public listing chi hien bai `PUBLISHED` sau khi frontend loc response. |
+| GET         | `/blogs/public/{slug}` | `getPublicBlogPost`  | `getPublicBlogBySlug(slug)`  | Da tich hop | Public detail theo slug; dung `fetchPublic()`. |
+| POST        | `/blogs/{id}/publish`   | `publishBlogPost`    | `publishBlog(id)`            | Da tich hop | Permission `blog:update`; publication control tren blog detail. |
+| POST        | `/blogs/{id}/unpublish` | `unpublishBlogPost`  | `unpublishBlog(id)`          | Da tich hop | Permission `blog:update`; publication control tren blog detail. |
 
 Ghi chu:
 
-- Live dev OpenAPI da duoc fetch va validate lai ngay 22/9/2026 van dang phat contract legacy: create/list/detail con `visible`, update con `isVisible`, va content van la `string`.
+- Live dev OpenAPI da duoc fetch va validate lai ngay 28/9/2026 van dang phat contract legacy: create/list/detail con `visible`, update con `isVisible`, va content van la `string`.
 - Producer PR [#95](https://github.com/signapse-group/signapse/pull/95) da merge contract draft authoring moi: `content` la JSON array theo schema version `1`, response co `status` (`DRAFT`/`PUBLISHED`), va `isVisible`/`visible` bi loai bo. Frontend authoring da target contract nay; can redeploy dev backend truoc khi kiem chung end-to-end voi API that.
 - `content` dung structured-content contract chung voi Personal Note; link chap nhan `http://`, `https://` hoac path noi bo `/`, con image chi chap nhan URL `https://`.
 
@@ -434,6 +439,8 @@ Ghi chú:
 | PATCH       | `/me`            | `updateProfile` | `updateMyProfile(request)`       | Da tich hop                         | Gui `UserProfileRequest` gom `firstName`, `lastName`, `birthday`, `phone`; response la `UserResponse`; auth `active-user`.                                                 |
 | GET         | `/users`         | `search`        | `getUsers(searchParams)`         | Da tich hop                         | Tim kiem user theo `user:search`; OpenAPI tra ve `Page<UserSearchResponse>`, frontend van giu fallback cho payload array legacy.                                           |
 | PATCH       | `/users/{id}`    | `updateUser`    | `updateManagedUser(id, request)` | Da tich hop nhung con lech contract | Request la `UserUpdateRequest`; permission `user:update`; OpenAPI response tham chieu `UserSearchResponse`, trong khi action frontend dang type ket qua la `UserResponse`. |
+| PATCH       | `/users/{id}/activate`   | `activate`   | `-` | Chua tich hop | Permission `user:update`; frontend chua goi endpoint rieng. |
+| PATCH       | `/users/{id}/deactivate` | `deactivate` | `-` | Chua tich hop | Permission `user:update`; frontend chua goi endpoint rieng. |
 
 Ghi chu:
 
@@ -612,6 +619,23 @@ Ghi chu:
 - Usage lon hon limit duoc giu nguyen de hien thi vuot muc. Payload thieu hoac sai schema bi coi la loi tai du lieu, khong fallback ve `0`; loi backend `401`/`403` va `ErrorBody` di qua authenticated transport.
 - Endpoint va schema da doi chieu voi producer-delivery comment cua GH-100 va OpenAPI dev hien tai; frontend khong gui user id, query hay request body.
 
+### API SMTP configuration
+
+| Phuong thuc | Endpoint backend              | operationId         | Quyen                         | Tich hop frontend                                    | Trang thai  |
+| ----------- | ----------------------------- | ------------------- | ----------------------------- | ---------------------------------------------------- | ----------- |
+| GET         | `/smtp-configuration`         | `getConfiguration`  | `smtp-configuration:read`     | `getSmtpConfiguration()` + `email-delivery/page.tsx` | Da tich hop |
+| PUT         | `/smtp-configuration`         | `saveConfiguration` | `smtp-configuration:manage`   | `saveSmtpConfiguration()`                            | Da tich hop |
+| POST        | `/smtp-configuration/test`    | `testConfiguration` | `smtp-configuration:manage`   | `testSmtpConfiguration()`                            | Da tich hop |
+| POST        | `/smtp-configuration/enable`  | `enable`            | `smtp-configuration:manage`   | `enableSmtpConfiguration()`                          | Da tich hop |
+| POST        | `/smtp-configuration/disable` | `disable`           | `smtp-configuration:manage`   | `disableSmtpConfiguration()`                         | Da tich hop |
+| DELETE      | `/smtp-configuration`         | `delete`            | `smtp-configuration:manage`   | `deleteSmtpConfiguration()`                          | Da tich hop |
+
+Ghi chu:
+
+- `SmtpConfigurationRequest` yêu cầu `host`, `port` (integer `1..65535`), `username`, `securityMode` (`STARTTLS` hoặc `TLS`) và `fromAddress` dạng email; `password`, `fromName` và `version` là tùy chọn theo thao tác. `SmtpConfigurationVersionRequest` yêu cầu `version` cho enable, disable và delete.
+- Tạo mới yêu cầu password; cập nhật bỏ field password để giữ secret đã lưu. GET và các mutation không trả password hoặc ciphertext. `version` là optimistic concurrency token; stale version trả lỗi `SMTP_CONFIGURATION_VERSION_CONFLICT`.
+- PUT khi delivery Off lưu draft mà không kiểm tra SMTP; khi delivery On backend kiểm tra ứng viên trước khi thay thế. Test kiểm tra draft nhưng không lưu. Enable kiểm tra cấu hình đã lưu; disable giữ lại cấu hình.
+
 ## Nhom frontend khong nam trong snapshot API hien tai
 
 Nhung nhom duoi day van ton tai tren frontend, nhung khong xuat hien trong `docs/api_mapping.json` hien tai.
@@ -702,6 +726,7 @@ type ActionResult<T = void> =
 | Watchlists                                | `app/api/watchlists/action.ts`, `app/lib/watchlists/definitions.ts`, `components/workspace-watchlist-editor.tsx`, `components/asset-multi-select-combobox.tsx`                                                                           |
 | Telegram                                  | `app/api/telegram/action.ts`, `app/lib/telegram/definitions.ts`, `app/lib/telegram/permissions.ts`, `app/[lang]/(main)/telegram/*`                                                                                                       |
 | Feedback                                  | `app/api/feedback/action.ts`, `app/lib/feedback/{definitions,errors,mappers,permissions,query,validation}.ts`, `app/[lang]/(main)/feedback*`                                                                                             |
+| SMTP configuration                       | `app/api/smtp-configuration/action.ts`, `app/lib/smtp-configuration/{definitions,permissions}.ts`, `app/[lang]/(main)/email-delivery/*`, `config/site.ts`, `components/app-breadcrumbs.tsx` |
 | Roles va permissions                      | `app/api/roles/action.ts`, `app/lib/roles/definitions.ts`, `app/(main)/roles/*`                                                                                                                                                          |
 | Route user cuc bo                         | `app/api/user/route.ts`                                                                                                                                                                                                                  |
 | Media                                     | `-`                                                                                                                                                                                                                                      |
@@ -712,6 +737,8 @@ type ActionResult<T = void> =
 
 - List/search runtime cua frontend dang dung `$filter/page/size/sort`, trong khi OpenAPI tiep tuc mo ta `specification/pageable` o nhieu list endpoint.
 - `feedback`: frontend da tich hop contract live moi voi lifecycle hai trang thai, review endpoint duy nhat, definitions, runtime validation, authenticated actions, permission constants, submission/moderation surface, navigation, i18n, HTTP fixture, va scope-specific screenshot proxy.
+- `smtp configuration`: frontend da tich hop day du sau khi doi chieu live contract ngay 28/9/2026; permission navigation tach read/manage, response an toan khong chua secret, mutation co version, va HTTP fixture bao phu lifecycle.
+- `live OpenAPI 28/9/2026`: them blog public list/detail va publish/unpublish, user activate/deactivate, cung SMTP configuration; khong con cong bo `/query`, ba market-analysis operations, va batch news-event derivation. FE con legacy call den `/query` va batch derivation; user activation endpoints chua tich hop.
 - Frontend da migrate route canon sang `/news-outlets*` va `/news-articles*`; `/sources*`, `/news-sources*`, va `/source-documents*` chi con redirect compatibility.
 - `news articles`: `linkedEvents[]` da co `eventStatus` enum moi theo enrichment lifecycle va khong con `eventEnrichmentStatus`; FE giu field trong DTO nhung detail va quick detail khong render linked-event UI hoac event navigation.
 - `events`: backend gate enrich/market reaction operators bang `news-article:analyze`; FE events da gate bang permission canon nay truoc va chi giu `source-document:analyze` nhu alias compatibility tam thoi.

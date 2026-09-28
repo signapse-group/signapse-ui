@@ -54,6 +54,7 @@ type FixtureController = {
     requests: Array<Record<string, unknown>>
     violations: Array<Record<string, unknown>>
     streamConnections: number
+    smtpConfiguration?: Record<string, unknown>
   }>
   setFeedbackScenario(
     scenario:

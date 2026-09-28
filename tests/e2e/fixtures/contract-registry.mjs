@@ -1,5 +1,11 @@
 export const fixtureContracts = [
   { method: "GET", path: "/me", mapping: "getMe", status: 200 },
+  { method: "GET", path: "/smtp-configuration", mapping: "getSmtpConfiguration", status: 200 },
+  { method: "PUT", path: "/smtp-configuration", mapping: "saveSmtpConfiguration", status: 200 },
+  { method: "DELETE", path: "/smtp-configuration", mapping: "deleteSmtpConfiguration", status: 200 },
+  { method: "POST", path: "/smtp-configuration/test", mapping: "testSmtpConfiguration", status: 200 },
+  { method: "POST", path: "/smtp-configuration/enable", mapping: "enableSmtpConfiguration", status: 200 },
+  { method: "POST", path: "/smtp-configuration/disable", mapping: "disableSmtpConfiguration", status: 200 },
   { method: "GET", path: "/me/feedback-submissions", mapping: "getPersonalFeedback", status: 200 },
   { method: "POST", path: "/me/feedback-submissions", mapping: "createFeedbackSubmission", status: 200 },
   { method: "GET", path: "/me/feedback-submissions/{id}", mapping: "getPersonalFeedbackDetail", status: 200 },

@@ -19,6 +19,7 @@ import { MARKET_CHART_NAV_PERMISSIONS } from "@/app/lib/market-charts/permission
 import { NEWS_ARTICLE_NAV_PERMISSIONS } from "@/app/lib/news-articles/permissions"
 import { NEWS_OUTLET_NAV_PERMISSIONS } from "@/app/lib/news-outlets/permissions"
 import { SYSTEM_PROMPT_NAV_PERMISSIONS } from "@/app/lib/system-prompts/permissions"
+import { SMTP_CONFIGURATION_NAV_PERMISSIONS } from "@/app/lib/smtp-configuration/permissions"
 import { TELEGRAM_NAV_PERMISSIONS } from "@/app/lib/telegram/permissions"
 import { FEEDBACK_READ_PERMISSION } from "@/app/lib/feedback/permissions"
 import type { Dictionary } from "@/app/lib/i18n/dictionary-types"
@@ -58,13 +59,12 @@ function hasPermissionMatch(
   }
 
   return requirement.some(
-    (permission) => permissions.includes("*") || permissions.includes(permission)
+    (permission) =>
+      permissions.includes("*") || permissions.includes(permission)
   )
 }
 
-export function createSiteConfig(
-  dictionary: Dictionary
-) {
+export function createSiteConfig(dictionary: Dictionary) {
   return {
     teams: [
       {
@@ -190,6 +190,12 @@ export function createSiteConfig(
                 title: dictionary.navigation.telegram,
                 url: "/telegram",
                 permission: TELEGRAM_NAV_PERMISSIONS,
+              },
+              {
+                id: "email-delivery",
+                title: dictionary.navigation.emailDelivery,
+                url: "/email-delivery",
+                permission: SMTP_CONFIGURATION_NAV_PERMISSIONS,
               },
             ],
           },
