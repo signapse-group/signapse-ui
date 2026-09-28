@@ -177,6 +177,20 @@ function createState() {
     workspaces: [primaryWorkspace, secondaryWorkspace],
     notes: [note(31, "Morning brief", "Review the fixture market brief.")],
     feedback: feedbackRecords(),
+    smtpConfiguration: {
+      configured: true,
+      enabled: false,
+      passwordConfigured: true,
+      version: 1,
+      host: "smtp.example.com",
+      port: 587,
+      username: "notifications",
+      securityMode: "STARTTLS",
+      fromAddress: "notifications@signapse.test",
+      fromName: "Signapse Notifications",
+      createdDate: NOW,
+      lastModifiedDate: NOW,
+    },
     permissions: ["*"],
     feedbackScenarios: {},
     assets: [
@@ -800,6 +814,118 @@ function hasFixturePermission(state, permission) {
     state.permissions.includes(permission)
 }
 
+function smtpConfigurationResponse(configuration) {
+  return configuration
+    ? { ...configuration }
+    : {
+        configured: false,
+        enabled: false,
+        passwordConfigured: false,
+        version: null,
+      }
+}
+
+function smtpConfigurationRouteResult(state, method, pathname, body) {
+  if (!pathname.startsWith("/smtp-configuration")) return null
+
+  const permission = method === "GET"
+    ? "smtp-configuration:read"
+    : "smtp-configuration:manage"
+  if (!hasFixturePermission(state, permission)) {
+    return {
+      __status: 403,
+      payload: errorPayload("SMTP configuration permission required", "PERMISSION_DENIED"),
+    }
+  }
+
+  const current = state.smtpConfiguration
+  if (method === "GET" && pathname === "/smtp-configuration") {
+    return smtpConfigurationResponse(current)
+  }
+
+  if (method === "PUT" && pathname === "/smtp-configuration") {
+    if (
+      (current && body?.version !== current.version) ||
+      (!current && body?.version !== undefined)
+    ) {
+      return {
+        __status: 409,
+        payload: errorPayload("SMTP configuration changed", "SMTP_CONFIGURATION_VERSION_CONFLICT"),
+      }
+    }
+    if (!current?.passwordConfigured && !body?.password) {
+      return {
+        __status: 422,
+        payload: errorPayload("SMTP password is required", "SMTP_PASSWORD_REQUIRED"),
+      }
+    }
+
+    state.smtpConfiguration = {
+      configured: true,
+      enabled: current?.enabled ?? false,
+      passwordConfigured: Boolean(body?.password) || Boolean(current?.passwordConfigured),
+      version: current ? current.version + 1 : 1,
+      host: body.host,
+      port: body.port,
+      username: body.username,
+      securityMode: body.securityMode,
+      fromAddress: body.fromAddress,
+      fromName: body.fromName ?? "",
+      createdDate: current?.createdDate ?? NOW,
+      lastModifiedDate: NOW,
+    }
+    return smtpConfigurationResponse(state.smtpConfiguration)
+  }
+
+  if (method === "POST" && pathname === "/smtp-configuration/test") {
+    if (!body?.password && !current?.passwordConfigured) {
+      return {
+        __status: 422,
+        payload: errorPayload("SMTP password is required", "SMTP_PASSWORD_REQUIRED"),
+      }
+    }
+    return { accepted: true }
+  }
+
+  if (
+    method === "POST" &&
+    (pathname === "/smtp-configuration/enable" || pathname === "/smtp-configuration/disable")
+  ) {
+    if (!current || body?.version !== current.version) {
+      return {
+        __status: 409,
+        payload: errorPayload("SMTP configuration changed", "SMTP_CONFIGURATION_VERSION_CONFLICT"),
+      }
+    }
+    state.smtpConfiguration = {
+      ...current,
+      enabled: pathname.endsWith("/enable"),
+      version: current.version + 1,
+      lastModifiedDate: NOW,
+    }
+    return smtpConfigurationResponse(state.smtpConfiguration)
+  }
+
+  if (method === "DELETE" && pathname === "/smtp-configuration") {
+    if (!current || body?.version !== current.version) {
+      return {
+        __status: 409,
+        payload: errorPayload("SMTP configuration changed", "SMTP_CONFIGURATION_VERSION_CONFLICT"),
+      }
+    }
+    if (current.enabled) {
+      return {
+        __status: 409,
+        payload: errorPayload("Disable SMTP delivery first", "SMTP_CONFIGURATION_ENABLED"),
+      }
+    }
+    state.smtpConfiguration = null
+    return { deleted: true }
+  }
+
+  return null
+}
+
 function feedbackScenarioFor(state, method, pathname) {
   if (method === "POST" && pathname === "/me/feedback-submissions") {
     return state.feedbackScenarios.compose ?? state.feedbackScenarios.feedback
@@ -985,6 +1111,9 @@ function feedbackRouteResult(state, method, pathname, url, body) {
 }
 
 function responseForRoute(state, method, pathname, url, body) {
+  const smtpResult = smtpConfigurationRouteResult(state, method, pathname, body)
+  if (smtpResult) return smtpResult
+
   if (method === "GET" && pathname === "/me") {
     return {
       id: FEEDBACK_OWNER_ID,
@@ -1322,6 +1451,7 @@ async function handleControl(request, response, url, body) {
       scenarios: state.scenarios,
       feedbackScenarios: state.feedbackScenarios,
       permissions: state.permissions,
+      smtpConfiguration: smtpConfigurationResponse(state.smtpConfiguration),
       streamConnections: state.streamConnections,
       requests: state.requests,
       violations: state.violations,
