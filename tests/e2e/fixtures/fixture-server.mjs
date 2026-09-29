@@ -822,6 +822,14 @@ function smtpConfigurationResponse(configuration) {
         enabled: false,
         passwordConfigured: false,
         version: null,
+        host: null,
+        port: null,
+        username: null,
+        securityMode: null,
+        fromAddress: null,
+        fromName: null,
+        createdDate: null,
+        lastModifiedDate: null,
       }
 }
 
@@ -1440,6 +1448,28 @@ async function handleControl(request, response, url, body) {
     const state = getState(String(testRunId))
     state.permissions = body.permissions.map(String)
     sendJson(response, 200, { testRunId, permissions: state.permissions })
+    return true
+  }
+
+  if (url.pathname === "/__test/smtp-configuration" && request.method === "POST") {
+    const testRunId = body?.testRunId ?? request.headers["x-signapse-test-run-id"]
+    if (!testRunId || !body || !("configuration" in body)) {
+      sendJson(
+        response,
+        400,
+        errorPayload(
+          "testRunId and configuration are required",
+          "SMTP_CONFIGURATION_REQUIRED"
+        )
+      )
+      return true
+    }
+    const state = getState(String(testRunId))
+    state.smtpConfiguration = body.configuration
+    sendJson(response, 200, {
+      testRunId,
+      smtpConfiguration: smtpConfigurationResponse(state.smtpConfiguration),
+    })
     return true
   }
 
