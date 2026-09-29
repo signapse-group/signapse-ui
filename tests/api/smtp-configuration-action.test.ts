@@ -93,6 +93,26 @@ describe("SMTP configuration authenticated actions", () => {
     expect(fetchAuthenticated).toHaveBeenCalledWith("/smtp-configuration")
   })
 
+  it("loads an unconfigured status when the backend returns null audit timestamps", async () => {
+    const unconfigured = {
+      configured: false,
+      enabled: false,
+      passwordConfigured: false,
+      version: null,
+      host: null,
+      port: null,
+      username: null,
+      securityMode: null,
+      fromAddress: null,
+      fromName: null,
+      createdDate: null,
+      lastModifiedDate: null,
+    }
+    vi.mocked(fetchAuthenticated).mockResolvedValue(unconfigured)
+
+    await expect(getSmtpConfiguration()).resolves.toEqual(unconfigured)
+  })
+
   it("saves the update draft with its version and omits an empty password", async () => {
     vi.mocked(fetchAuthenticated).mockResolvedValue(configuration)
 

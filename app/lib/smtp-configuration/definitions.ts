@@ -17,6 +17,8 @@ export interface SmtpConfigurationResponse {
   securityMode?: SmtpSecurityMode | null
   fromAddress?: string | null
   fromName?: string | null
+  createdDate?: string | null
+  lastModifiedDate?: string | null
 }
 
 export interface SmtpConfigurationRequest {
@@ -120,6 +122,6 @@ export const smtpConfigurationResponseSchema = z.object({
   securityMode: smtpSecurityModeSchema.nullable().optional(),
   fromAddress: z.string().nullable().optional(),
   fromName: z.string().nullable().optional(),
-  createdDate: z.string().optional(),
-  lastModifiedDate: z.string().optional(),
+  createdDate: z.string().nullable().optional(),
+  lastModifiedDate: z.string().nullable().optional(),
 })
