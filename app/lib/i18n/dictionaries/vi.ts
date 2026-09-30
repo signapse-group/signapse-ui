@@ -3294,6 +3294,7 @@ export const vi = {
     fromName: "Tên người gửi (không bắt buộc)",
     fromNamePlaceholder: "Signapse",
     deliveryTitle: "Gửi email hệ thống",
+    deliveryToggleLabel: "Bật gửi email hệ thống",
     deliveryOff: "Tắt",
     deliveryOn: "Bật",
     deliveryOffDescription: "Cấu hình SMTP đã lưu được giữ lại.",
@@ -3328,6 +3329,7 @@ export const vi = {
     deleteTitle: "Xóa cấu hình SMTP?",
     deleteDescription:
       "Thao tác này sẽ xóa vĩnh viễn cấu hình SMTP và mật khẩu đã lưu. Email hệ thống sẽ tiếp tục tắt cho đến khi lưu cấu hình mới.",
+    deleteEnabledHelper: "Tắt gửi email hệ thống trước khi xóa cấu hình.",
     delete: "Xóa cấu hình",
     deletePending: "Đang xóa…",
     deleteSuccess: "Đã xóa cấu hình SMTP.",

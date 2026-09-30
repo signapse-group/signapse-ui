@@ -3304,6 +3304,7 @@ export const en: Dictionary = {
     fromName: "From name (optional)",
     fromNamePlaceholder: "Signapse",
     deliveryTitle: "System email delivery",
+    deliveryToggleLabel: "Enable system email delivery",
     deliveryOff: "Off",
     deliveryOn: "On",
     deliveryOffDescription: "Saved SMTP settings are retained.",
@@ -3338,6 +3339,8 @@ export const en: Dictionary = {
     deleteTitle: "Delete SMTP configuration?",
     deleteDescription:
       "This permanently removes the saved SMTP settings and password. System emails will remain off until a new configuration is saved.",
+    deleteEnabledHelper:
+      "Turn system email delivery off before deleting the configuration.",
     delete: "Delete configuration",
     deletePending: "Deleting…",
     deleteSuccess: "SMTP configuration deleted.",
