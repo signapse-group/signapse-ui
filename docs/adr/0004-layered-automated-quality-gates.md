@@ -8,9 +8,9 @@ Signapse will use GitHub Actions to make deterministic Vitest coverage and Chrom
 
 ## Consequences
 
-- Test traffic and data must never target development or production systems.
+- The disposable release canary must never target development or production systems. A maintainer-authorized read-only smoke may use a configured public development backend and an explicitly supplied account; it must not mutate application data or send external messages.
 - P0 is delivered within Signapse UI as a secret-free PR lane; P1 is a cross-system dependency for the disposable backend, Clerk tenant, and external canary.
-- P0 exposes a runnable browser-test command to agents and developers; the separate P1 command fails closed with a clear missing-environment error rather than silently skipping integration coverage.
+- P0 exposes a runnable browser-test command to agents and developers; `test:integration` now runs a password/session/public-backend smoke and fails closed when its private environment is missing. It does not replace the full disposable-environment permission and delivery canary.
 - Future work is split into a P0 UI/browser-test foundation task followed by a P1 authenticated-quality-canary task.
 - A browser fixture backend is required because server-rendered actions call the backend independently of browser request interception.
 - Fixture behavior is contract-first: backend OpenAPI is canonical, with `docs/APIMAPPING.md` as the UI ledger, and contract drift must fail rather than silently diverge.

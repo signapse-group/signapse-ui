@@ -16,7 +16,7 @@
     "test:contract": "node tests/e2e/contract-guard.mjs",
     "test:browser": "playwright test",
     "test:browser:update": "playwright test --update-snapshots",
-    "test:integration": "node tests/e2e/require-p1-env.mjs",
+    "test:integration": "node tests/integration/run.mjs",
     "test:quality": "pnpm lint && pnpm typecheck && pnpm test && pnpm test:contract && pnpm build && pnpm test:browser"
   },
   "dependencies": {
@@ -107,6 +107,7 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.10.2",
+    "@clerk/testing": "^2.2.40",
     "@eslint/eslintrc": "^3.3.6",
     "@playwright/test": "^1.55.0",
     "@tailwindcss/postcss": "^4.3.3",
