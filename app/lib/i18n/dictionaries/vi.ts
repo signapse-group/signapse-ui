@@ -72,7 +72,6 @@ export const vi = {
     breadcrumb: "Đường dẫn điều hướng",
     feedbackReview: "Duyệt phản hồi",
     apiAccessToken: "Token truy cập API",
-    usageLimits: "Giới hạn sử dụng",
   },
   feedback: {
     composeAction: "Gửi phản hồi",
@@ -481,25 +480,20 @@ export const vi = {
   },
   usageLimits: {
     title: "Giới hạn sử dụng",
-    description:
-      "Xem mức sử dụng hiện tại so với giới hạn của tài khoản và các workspace.",
+    usedLimit: "Đã dùng / giới hạn",
     workspaceTitle: "Workspace",
-    workspaceDescription: "Số workspace do tài khoản của bạn tạo.",
     watchlistTitle: "Tài sản watchlist",
-    watchlistDescription:
-      "Số tài sản khác nhau được lưu trong watchlist của từng workspace.",
     conversationTurnsTitle: "Lượt AI",
     conversationTurnsDescription:
       "Số lượt hội thoại AI đã hoàn thành trong tháng này.",
     activeSchedulesTitle: "Lịch đang hoạt động",
-    activeSchedulesDescription:
-      "Lịch đang hoạt động trong các workspace của bạn.",
     resetAtLabel: "Cấp lại lúc",
     perWorkspace: "Tối đa {limit} cho mỗi workspace",
     workspaceLabel: "Workspace {id}",
     noWorkspaces: "Tài khoản này chưa có workspace nào được trả về.",
     overLimit: "Vượt giới hạn",
     invalidResetTime: "Không có thời điểm cấp lại",
+    utc: "UTC",
     loadingLabel: "Đang tải giới hạn sử dụng",
     responseInvalid: "Không thể đọc dữ liệu giới hạn sử dụng.",
     errorTitle: "Không thể tải giới hạn sử dụng",

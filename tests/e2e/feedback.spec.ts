@@ -236,7 +236,15 @@ test.describe("P0 feedback HTTP integration", () => {
     await dialog
       .getByRole("button", { name: "Xóa phản hồi", exact: true })
       .click()
-    await expect(page).toHaveURL(/\/vi\/feedback-submissions$/)
+    await expect(page).toHaveURL(/\/vi\/feedback-submissions\?/)
+    const queueUrl = new URL(page.url())
+    expect(queueUrl.pathname).toBe("/vi/feedback-submissions")
+    expect(Object.fromEntries(queueUrl.searchParams)).toEqual({
+      status: "PENDING_REVIEW",
+      sort: "createdDate_desc",
+      page: "1",
+      size: "10",
+    })
 
     await fixture.setScenario("/me/feedback-submissions", "empty", "GET")
     await page.goto("/vi/feedback")

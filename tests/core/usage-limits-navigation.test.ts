@@ -4,22 +4,23 @@ import { createSiteConfig, filterNavItemsByPermissions } from "@/config/site"
 import { en } from "@/app/lib/i18n/dictionaries/en"
 import { vi as viDictionary } from "@/app/lib/i18n/dictionaries/vi"
 
-describe("usage limits navigation", () => {
+describe("usage limits navigation cleanup", () => {
   it.each([
     ["en", en],
     ["vi", viDictionary],
-  ] as const)("exposes the protected route in %s", (_, dictionary) => {
+  ] as const)("does not expose a separate route in %s", (_, dictionary) => {
     const sections = filterNavItemsByPermissions(
       createSiteConfig(dictionary).navMain,
       []
     )
-    const usageLimits = sections
-      .flatMap((section) => section.items)
-      .find((item) => item.id === "usage-limits")
+    const navigationItems = sections.flatMap((section) =>
+      section.items.flatMap((item) => [item, ...(item.items ?? [])])
+    )
 
-    expect(usageLimits).toMatchObject({
-      title: dictionary.navigation.usageLimits,
-      url: "/usage-limits",
-    })
+    expect(
+      navigationItems.some(
+        (item) => item.id === "usage-limits" || item.url === "/usage-limits"
+      )
+    ).toBe(false)
   })
 })

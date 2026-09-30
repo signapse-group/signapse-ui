@@ -13,8 +13,9 @@ outside Git. Next.js reads `.env.local`; standalone test runners require explici
 Set `SIGNAPSE_AUTH_MODE=disabled` to open the dashboard without Clerk login while developing against a local backend with auth disabled. This mode is ignored in production and sends backend API requests without Clerk bearer tokens.
 
 Use `pnpm test:quality` for deterministic checks and `pnpm test:integration` for password
-authentication against the configured public development backend. See
-[browser and integration testing](docs/testing/browser-tests.md) for private file setup,
+authentication against the configured public development backend. See the
+[change-scope check selection](docs/testing/browser-tests.md#selecting-checks-by-change-scope)
+and [browser and integration testing](docs/testing/browser-tests.md) for private file setup,
 commands, and the scope each test lane proves.
 
 ## Using the Logo Component

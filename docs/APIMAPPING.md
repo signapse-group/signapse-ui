@@ -611,7 +611,7 @@ Ghi chu:
 
 | Phuong thuc | Endpoint backend       | operationId                 | Tich hop frontend                          | Trang thai    | Ghi chu                                                                                                                                                                  |
 | ----------- | ---------------------- | --------------------------- | ------------------------------------------ | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| GET         | `/me/usage-limits`     | `getCurrentUserUsageLimits` | `getUsageLimits()` + `usage-limits/page.tsx` | Da tich hop   | Auth `active-user`; khong nhan user id. Tra ve usage/limit cua workspace, watchlist theo tung workspace, completed AI turns trong thang UTC va ACTIVE schedules. |
+| GET         | `/me/usage-limits`     | `getCurrentUserUsageLimits` | `getUsageLimits()` + `components/profile-menu.tsx` | Da tich hop   | Auth `active-user`; khong nhan user id. Tra ve usage/limit cua workspace, watchlist theo tung workspace, completed AI turns trong thang UTC va ACTIVE schedules. |
 
 Ghi chu:
 

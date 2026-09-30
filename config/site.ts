@@ -3,7 +3,6 @@ import {
   CalendarDays,
   ChartCandlestick,
   GalleryVerticalEnd,
-  Gauge,
   LayoutDashboard,
   MessageSquareWarning,
   Newspaper,
@@ -155,12 +154,6 @@ export function createSiteConfig(dictionary: Dictionary) {
         id: "administration",
         title: dictionary.navigation.administration,
         items: [
-          {
-            id: "usage-limits",
-            title: dictionary.navigation.usageLimits,
-            url: "/usage-limits",
-            icon: Gauge,
-          },
           {
             id: "system-configuration",
             title: dictionary.navigation.systemConfiguration,

@@ -23,6 +23,17 @@ The fixture mode is a stricter submode of the existing non-production dev-auth m
 
 Each test receives a unique `testRunId`. The browser context carries it through the cookie and request header; the fixture resets and namespaces mutable state by that ID. Requests without the ID, authenticated requests, unregistered routes, or unexpected external browser requests fail the P0 test.
 
+## Selecting checks by change scope
+
+| Change                                                | Focused evidence                                                                                | Completion check                                                                                            |
+| ----------------------------------------------------- | ----------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Documentation only                                    | Check the edited content, links, and formatting.                                                | No application test lane is needed unless the documentation change affects a command or contract.           |
+| UI behavior or presentation                           | Run the focused Vitest/component test and the narrowest relevant P0 browser spec.               | Run `pnpm test:quality` for code or runtime changes. Review any screenshot diff before updating a baseline. |
+| API mapping, schema, or server action                 | Run the action/schema tests and `pnpm test:contract` when fixture routes or API mapping change. | Run `pnpm test:quality`; add authenticated integration when the change reaches a protected backend request. |
+| Authentication, backend transport, or protected pages | Run the relevant fixture checks for deterministic UI behavior.                                  | Run `pnpm test:quality` and the live `pnpm test:integration` lane. Keep live checks read-only.              |
+
+On Symphony, use `/opt/apps/symphony/runtime/run-fe-quality "$PWD"` and, for authenticated or backend changes, `/opt/apps/symphony/runtime/run-fe-integration "$PWD"`. These runners share a host lock so P0 and live browser processes do not compete for resources. Fixture-backed P0 success proves frontend behavior only; it does not prove authentication or public backend access.
+
 ## Scope and evidence
 
 The suite covers the application shell/workspace, canonical list URL/search/pagination/history behavior, Personal Notes save/retry/delete flows, Telegram configuration and Test message states, market-chart controls and SSE recovery, accessibility, and selected stable visual regions. Dynamic chart canvas pixels and full-page snapshots are intentionally excluded.

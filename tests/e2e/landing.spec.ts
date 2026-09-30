@@ -324,6 +324,15 @@ test.describe("P0 public landing", () => {
       "data-telegram-demo-state",
       "start"
     )
+    await expect(telegramDemo).toHaveAttribute(
+      "data-telegram-demo-playback",
+      "autoplay"
+    )
+    await expect(telegramDemo).toHaveAttribute(
+      "data-telegram-demo-state",
+      "assetOpen",
+      { timeout: 5_000 }
+    )
     await telegramTab.press("ArrowUp")
     await expect(
       showcase.getByRole("tab", { name: "AI Conversation" })
@@ -355,10 +364,15 @@ test.describe("P0 public landing", () => {
   test("keeps the AI conversation prompt and submitted message visible across loops", async ({
     page,
   }) => {
+    await page.clock.install({ time: new Date("2026-09-30T12:00:00Z") })
     await page.goto("/en")
     const showcase = page.locator('[data-landing-section="showcase"]')
     await showcase.scrollIntoViewIfNeeded()
     await showcase.getByRole("tab", { name: "Knowledge Graph" }).click()
+    await expect(showcase.locator("[data-ai-conversation-demo]")).toBeAttached()
+    await page.clock.pauseAt(
+      new Date((await page.evaluate(() => Date.now())) + 1_000)
+    )
     await showcase.getByRole("tab", { name: "AI Conversation" }).click()
 
     const demo = showcase.locator("[data-ai-conversation-demo]")
@@ -379,9 +393,13 @@ test.describe("P0 public landing", () => {
     ).toBe(true)
 
     await expect(demo).toHaveAttribute(
+      "data-ai-conversation-playback",
+      "autoplay"
+    )
+    await page.clock.runFor(7_400)
+    await expect(demo).toHaveAttribute(
       "data-ai-conversation-state",
-      "crossCheck",
-      { timeout: 12_000 }
+      "crossCheck"
     )
     await expect(demo.locator("[data-ai-thinking]")).toHaveAttribute(
       "data-visible",
@@ -391,9 +409,8 @@ test.describe("P0 public landing", () => {
       "data-visible",
       "false"
     )
-    await expect(demo).toHaveAttribute("data-ai-conversation-state", "answer", {
-      timeout: 8_000,
-    })
+    await page.clock.runFor(2_800)
+    await expect(demo).toHaveAttribute("data-ai-conversation-state", "answer")
     await expect(demo.locator("[data-ai-thinking]")).toHaveAttribute(
       "data-visible",
       "false"
@@ -402,19 +419,19 @@ test.describe("P0 public landing", () => {
       "data-streaming",
       "true"
     )
+    await page.clock.runFor(6_500)
     await expect(demo.locator("[data-ai-follow-up-thinking]")).toHaveAttribute(
       "data-visible",
-      "true",
-      { timeout: 10_000 }
+      "true"
     )
     await expect(demo.locator("[data-ai-follow-up-user]")).toHaveAttribute(
       "data-visible",
       "true"
     )
+    await page.clock.runFor(2_600)
     await expect(demo).toHaveAttribute(
       "data-ai-conversation-state",
-      "followUpAnswer",
-      { timeout: 8_000 }
+      "followUpAnswer"
     )
     await expect(demo.locator("[data-ai-follow-up-thinking]")).toHaveAttribute(
       "data-visible",
@@ -425,26 +442,14 @@ test.describe("P0 public landing", () => {
       "true"
     )
 
+    await page.clock.runFor(5_700)
+    await expect(demo).toHaveAttribute("data-ai-conversation-state", "complete")
+    await page.clock.runFor(2_600)
+    await expect(demo).toHaveAttribute("data-ai-conversation-state", "welcome")
+    await page.clock.runFor(3_600)
     await expect(demo).toHaveAttribute(
       "data-ai-conversation-state",
-      "complete",
-      {
-        timeout: 8_000,
-      }
-    )
-    await expect(demo).toHaveAttribute(
-      "data-ai-conversation-state",
-      "welcome",
-      {
-        timeout: 8_000,
-      }
-    )
-    await expect(demo).toHaveAttribute(
-      "data-ai-conversation-state",
-      "submitted",
-      {
-        timeout: 10_000,
-      }
+      "submitted"
     )
 
     const submittedMessageIsVisible = await demo
