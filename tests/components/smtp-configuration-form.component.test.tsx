@@ -34,8 +34,10 @@ import {
   saveSmtpConfiguration,
   testSmtpConfiguration,
 } from "@/app/api/smtp-configuration/action"
+import { en as enDictionary } from "@/app/lib/i18n/dictionaries/en"
 import { vi as viDictionary } from "@/app/lib/i18n/dictionaries/vi"
 import { LocalizationProvider } from "@/app/lib/i18n/provider"
+import type { Dictionary } from "@/app/lib/i18n/dictionary-types"
 import {
   SMTP_CONFIGURATION_VERSION_CONFLICT,
   type SmtpConfigurationResponse,
@@ -63,9 +65,14 @@ const unconfigured: SmtpConfigurationResponse = {
   version: null,
 }
 
-function renderForm(configuration = configuredOff, canManage = true) {
+function renderForm(
+  configuration = configuredOff,
+  canManage = true,
+  locale: "en" | "vi" = "vi",
+  dictionary: Dictionary = viDictionary
+) {
   return render(
-    <LocalizationProvider locale="vi" dictionary={viDictionary}>
+    <LocalizationProvider locale={locale} dictionary={dictionary}>
       <SmtpConfigurationForm
         configuration={configuration}
         canManage={canManage}
@@ -86,6 +93,21 @@ function deferred<T>() {
   })
   return { promise, resolve }
 }
+
+const placeholderLocalizations = [
+  {
+    locale: "en" as const,
+    dictionary: enDictionary,
+    newPassword: "Enter SMTP password",
+    savedPassword: "Leave blank to keep the saved password",
+  },
+  {
+    locale: "vi" as const,
+    dictionary: viDictionary,
+    newPassword: "Nhập mật khẩu SMTP",
+    savedPassword: "Để trống để giữ mật khẩu đã lưu",
+  },
+]
 
 describe("SmtpConfigurationForm", () => {
   const t = viDictionary.smtpConfiguration
@@ -125,13 +147,78 @@ describe("SmtpConfigurationForm", () => {
 
   afterEach(() => cleanup())
 
+  it.each(placeholderLocalizations)(
+    "shows $locale placeholders as empty values for a new configuration",
+    ({ locale, dictionary, newPassword }) => {
+      const localizedText = dictionary.smtpConfiguration
+      renderForm(unconfigured, true, locale, dictionary)
+
+      const fields: Array<[string, string]> = [
+        [localizedText.host, "smtp.example.net"],
+        [localizedText.port, "587"],
+        [localizedText.username, "notifications@example.net"],
+        [localizedText.fromAddress, "alerts@example.net"],
+        [localizedText.fromName, "Signapse"],
+      ]
+
+      for (const [label, placeholder] of fields) {
+        const input = screen.getByLabelText(labelPattern(label))
+        expect(input).toHaveProperty("value", "")
+        expect(input).toHaveAttribute("placeholder", placeholder)
+      }
+
+      const port = screen.getByLabelText(labelPattern(localizedText.port))
+      expect(port).toHaveAttribute("type", "text")
+      expect(port).toHaveAttribute("inputmode", "numeric")
+
+      const password = screen.getByLabelText(
+        labelPattern(localizedText.password)
+      )
+      expect(password).toHaveValue("")
+      expect(password).toHaveAttribute("required")
+      expect(password).toHaveAttribute("placeholder", newPassword)
+    }
+  )
+
+  it.each(placeholderLocalizations)(
+    "keeps populated $locale settings while showing the saved-password instruction",
+    ({ locale, dictionary, savedPassword }) => {
+      const localizedText = dictionary.smtpConfiguration
+      renderForm(configuredOff, true, locale, dictionary)
+
+      const fields: Array<[string, string | number, string]> = [
+        [localizedText.host, "smtp.example.net", "smtp.example.net"],
+        [localizedText.port, "587", "587"],
+        [
+          localizedText.username,
+          "notifications@example.net",
+          "notifications@example.net",
+        ],
+        [localizedText.fromAddress, "alerts@example.net", "alerts@example.net"],
+        [localizedText.fromName, "Signapse", "Signapse"],
+      ]
+
+      for (const [label, value, placeholder] of fields) {
+        const input = screen.getByLabelText(labelPattern(label))
+        expect(input).toHaveValue(value)
+        expect(input).toHaveAttribute("placeholder", placeholder)
+      }
+
+      const password = screen.getByLabelText(
+        labelPattern(localizedText.password)
+      )
+      expect(password).toHaveValue("")
+      expect(password).toHaveAttribute("placeholder", savedPassword)
+    }
+  )
+
   it("renders saved settings without ever placing a saved password in the form", () => {
     renderForm(configuredOff)
 
     expect(screen.getByLabelText(labelPattern(t.host))).toHaveValue(
       "smtp.example.net"
     )
-    expect(screen.getByLabelText(labelPattern(t.port))).toHaveValue(587)
+    expect(screen.getByLabelText(labelPattern(t.port))).toHaveValue("587")
     expect(screen.getByLabelText(labelPattern(t.username))).toHaveValue(
       "notifications@example.net"
     )
@@ -152,8 +239,9 @@ describe("SmtpConfigurationForm", () => {
       data: { ...configuredOff, host: "smtp.new.example.net", version: 1 },
     })
     renderForm(unconfigured)
-    expect(screen.getByLabelText(labelPattern(t.password))).not.toHaveAttribute(
-      "placeholder"
+    expect(screen.getByLabelText(labelPattern(t.password))).toHaveAttribute(
+      "placeholder",
+      t.passwordRequiredPlaceholder
     )
 
     await user.type(
@@ -213,6 +301,19 @@ describe("SmtpConfigurationForm", () => {
     ).toBeInTheDocument()
     expect(screen.getByText(t.validation.passwordRequired)).toBeInTheDocument()
     expect(testSmtpConfiguration).not.toHaveBeenCalled()
+
+    await user.clear(screen.getByLabelText(labelPattern(t.port)))
+    await user.type(screen.getByLabelText(labelPattern(t.port)), "587.5")
+    await user.click(screen.getByRole("button", { name: t.test }))
+
+    expect(
+      await screen.findByText(t.validation.portInteger)
+    ).toBeInTheDocument()
+    expect(testSmtpConfiguration).not.toHaveBeenCalled()
+
+    await user.click(screen.getByRole("button", { name: t.save }))
+    expect(saveSmtpConfiguration).not.toHaveBeenCalled()
+    expect(testSmtpConfiguration).not.toHaveBeenCalled()
   })
 
   it("tests an update draft without saving and locks related actions while pending", async () => {
@@ -248,6 +349,25 @@ describe("SmtpConfigurationForm", () => {
     expect(screen.getByLabelText(labelPattern(t.host))).toHaveValue(
       "smtp.draft.example.net"
     )
+  })
+
+  it("omits the password when saving an unchanged password for an existing configuration", async () => {
+    const user = userEvent.setup()
+    renderForm(configuredOff)
+
+    await user.click(screen.getByRole("button", { name: t.save }))
+
+    await vi.waitFor(() => {
+      expect(saveSmtpConfiguration).toHaveBeenCalledWith({
+        host: "smtp.example.net",
+        port: 587,
+        username: "notifications@example.net",
+        securityMode: "STARTTLS",
+        fromAddress: "alerts@example.net",
+        fromName: "Signapse",
+        version: 7,
+      })
+    })
   })
 
   it("keeps the entered draft after a failed Save", async () => {
