@@ -56,7 +56,7 @@ Repository execution context:
 - No repository PR quality workflow or protected required check is currently configured. The GitHub Pages deployment workflow is not code-quality CI. When the PR quality lane in `docs/adr/0004-layered-automated-quality-gates.md` is enabled, require a successful run for the delivered revision.
 - A maintainer-reviewed merge into the default branch completes the issue; the Project's `Item closed` workflow moves it to `Done`. Product, preview, cutover, and deployment acceptance remain with their human owners and do not delay issue completion.
 - Repository maintainers and PR reviewers own review and merge acceptance. The Signapse Product Owner or designated release owner owns documented product, preview, cutover, or deployment acceptance.
-- Relevant sources: `app/[lang]`, `app/api`, `app/lib`, `components`, scoped `AGENTS.override.md` files, `docs/APIMAPPING.md`, `docs/design/DESIGN.md`, `docs/adr`, and `docs/testing/browser-tests.md`.
+- Relevant sources: `app/[lang]`, `app/api`, `app/lib`, `components`, scoped `AGENTS.override.md` files, `docs/APIMAPPING.md`, `docs/design/DESIGN.md`, `docs/adr`, and the [browser-testing scope matrix](docs/testing/browser-tests.md#selecting-checks-by-change-scope).
 - Use Vietnamese for status and handoff communication. Preserve repository language in code and documentation, and maintain both supported dictionary locales for user-facing copy.
 
 Issue context:

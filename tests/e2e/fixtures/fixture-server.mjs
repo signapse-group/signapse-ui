@@ -1165,6 +1165,10 @@ function responseForRoute(state, method, pathname, url, body) {
           { workspaceId: 105, used: 2 },
           { workspaceId: 106, used: 3 },
           { workspaceId: 107, used: 1 },
+          ...Array.from({ length: 18 }, (_, index) => ({
+            workspaceId: index + 108,
+            used: index % 4,
+          })),
         ],
       },
       conversationTurns: {

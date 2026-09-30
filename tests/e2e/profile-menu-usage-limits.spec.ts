@@ -58,11 +58,22 @@ test.describe("P0 profile menu usage limits", () => {
     await page.keyboard.press("Enter")
 
     await expect(menu.getByText("Workspace 107", { exact: true })).toBeVisible()
+    await expect(menu.locator("[data-watchlist-workspace]")).toHaveCount(25)
     await expect(menu.getByText("2 / 5", { exact: true })).toBeVisible()
     await expect(menu.getByText("1,001 / 1,000", { exact: true })).toBeVisible()
     await expect(menu.getByText("2 / 1", { exact: true })).toBeVisible()
     await expect(menu.getByText(/October 1, 2026/)).toContainText("UTC")
     await expect(page).toHaveURL(screenUrl)
+    const menuItems = menu.locator("[data-watchlist-workspace]")
+    await menuItems.last().scrollIntoViewIfNeeded()
+    await expect(
+      menu.getByText("Workspace 125", { exact: true })
+    ).toBeInViewport()
+    const feedbackHistory = menu.getByRole("menuitem", {
+      name: en.feedback.historyAction,
+    })
+    await feedbackHistory.scrollIntoViewIfNeeded()
+    await expect(feedbackHistory).toBeInViewport()
 
     const accessibility = await new AxeBuilder({ page })
       .include('[data-slot="dropdown-menu-content"]')

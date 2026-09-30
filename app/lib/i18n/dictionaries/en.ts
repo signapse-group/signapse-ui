@@ -485,6 +485,7 @@ export const en: Dictionary = {
   },
   usageLimits: {
     title: "Usage limits",
+    usedLimit: "Used / limit",
     description:
       "Review your current usage against the limits for your account and workspaces.",
     workspaceTitle: "Workspaces",

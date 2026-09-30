@@ -480,6 +480,7 @@ export const vi = {
   },
   usageLimits: {
     title: "Giới hạn sử dụng",
+    usedLimit: "Đã dùng / giới hạn",
     description:
       "Xem mức sử dụng hiện tại so với giới hạn của tài khoản và các workspace.",
     workspaceTitle: "Workspace",

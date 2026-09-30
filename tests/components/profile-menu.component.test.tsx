@@ -94,6 +94,7 @@ describe("profile menu usage limits", () => {
     await user.click(screen.getByRole("button", { name: /Ada Lovelace/ }))
 
     const menu = await screen.findByRole("menu")
+    expect(menu).toHaveClass("w-[21rem]")
     const usageItem = within(menu).getByRole("menuitem", {
       name: en.usageLimits.title,
     })
@@ -110,11 +111,31 @@ describe("profile menu usage limits", () => {
     expect(usageItem).toHaveAttribute("aria-expanded", "true")
     expect(screen.getByRole("menu")).toBeVisible()
     expect(window.location.href).toBe(originalUrl)
+    expect(within(menu).getByText(en.usageLimits.usedLimit)).toBeVisible()
     expect(await screen.findByText("Workspace 107")).toBeVisible()
     expect(screen.getAllByText(/^Workspace \d+$/)).toHaveLength(7)
     expect(screen.getByText("0 / 5")).toBeVisible()
     expect(screen.getByText("1,001 / 1,000")).toBeVisible()
     expect(screen.getByText("2 / 0")).toBeVisible()
+    const progressBars = menu.querySelectorAll('[data-slot="progress"]')
+    expect(
+      Array.from(progressBars).map((progressBar) =>
+        progressBar.getAttribute("aria-label")
+      )
+    ).toEqual([
+      en.usageLimits.workspaceTitle,
+      en.usageLimits.conversationTurnsTitle,
+      en.usageLimits.activeSchedulesTitle,
+    ])
+    expect(progressBars[0]).toHaveAttribute("aria-valuenow", "0")
+    expect(progressBars[1]).toHaveAttribute("aria-valuenow", "100")
+    expect(progressBars[1]).toHaveAttribute("aria-valuetext", "1,001 / 1,000")
+    expect(progressBars[2]).toHaveAttribute("aria-valuenow", "100")
+    expect(progressBars[2]).toHaveAttribute("aria-valuetext", "2 / 0")
+    const workspaceRows = menu.querySelectorAll("[data-watchlist-workspace]")
+    expect(workspaceRows).toHaveLength(7)
+    expect(workspaceRows[1]).toHaveTextContent("Workspace 102")
+    expect(workspaceRows[1]).toHaveTextContent("4 / 3")
     expect(screen.getByText(/October 1, 2026/)).toHaveTextContent("UTC")
     expect(getUsageLimits).toHaveBeenCalledOnce()
   })

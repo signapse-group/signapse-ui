@@ -36,6 +36,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { DropdownMenuContentInOverlay } from "@/components/ui/dropdown-menu-content-in-overlay"
+import { Progress } from "@/components/ui/progress"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   SidebarMenu,
@@ -145,7 +146,7 @@ export function ProfileMenu({
             <ChevronsUpDownIcon aria-hidden="true" className="ml-auto" />
           </DropdownMenuTrigger>
           <DropdownMenuContentInOverlay
-            className="w-(--anchor-width) max-w-[calc(100vw-1rem)] min-w-56 rounded-lg"
+            className="w-[21rem] max-w-[calc(100vw-1rem)] min-w-56 rounded-lg"
             side={isMobile ? "bottom" : "right"}
             align="end"
             sideOffset={4}
@@ -189,6 +190,7 @@ export function ProfileMenu({
                 {dictionary.auth.notifications}
               </DropdownMenuItem>
             </DropdownMenuGroup>
+            <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuItem
                 id={usageTriggerId}
@@ -286,8 +288,9 @@ function UsageLimitsDetails({
       role="group"
       aria-labelledby={triggerId}
       aria-busy={status === "loading"}
+      aria-live={status === "loaded" ? "polite" : undefined}
       hidden={hidden}
-      className="min-w-0 px-2 pb-2"
+      className="min-w-0 py-1 pr-3 pl-8"
     >
       {status === "loading" ? (
         <div role="status" className="flex flex-col gap-2 py-2">
@@ -347,11 +350,40 @@ function UsageLimitsSummary({
 
   return (
     <div className="flex min-w-0 flex-col gap-1.5 py-2 text-xs">
+      <div className="flex min-w-0 items-center justify-between gap-2 border-b pb-1.5">
+        <span className="min-w-0 font-semibold text-foreground">
+          {dictionary.usageLimits.title}
+        </span>
+        <span className="shrink-0 text-muted-foreground">
+          {dictionary.usageLimits.usedLimit}
+        </span>
+      </div>
       <UsageMetricLine
         dictionary={dictionary}
         locale={locale}
         metric={data.workspace}
         title={dictionary.usageLimits.workspaceTitle}
+      />
+      <UsageMetricLine
+        dictionary={dictionary}
+        locale={locale}
+        metric={data.conversationTurns}
+        title={dictionary.usageLimits.conversationTurnsTitle}
+      />
+      <p className="text-muted-foreground">
+        {dictionary.usageLimits.conversationTurnsDescription}
+      </p>
+      <p className="text-muted-foreground">
+        {dictionary.usageLimits.resetAtLabel}:{" "}
+        <time dateTime={data.conversationTurns.resetAtUtc}>
+          {resetAt} {dictionary.usageLimits.utc}
+        </time>
+      </p>
+      <UsageMetricLine
+        dictionary={dictionary}
+        locale={locale}
+        metric={data.activeSchedules}
+        title={dictionary.usageLimits.activeSchedulesTitle}
       />
       <div className="flex min-w-0 flex-col gap-1">
         <div className="flex min-w-0 flex-col gap-0.5">
@@ -373,6 +405,7 @@ function UsageLimitsSummary({
             {data.watchlist.workspaces.map((workspace) => (
               <div
                 key={workspace.workspaceId}
+                data-watchlist-workspace={workspace.workspaceId}
                 className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2"
               >
                 <span className="min-w-0 break-words text-muted-foreground">
@@ -397,27 +430,6 @@ function UsageLimitsSummary({
           </div>
         )}
       </div>
-      <UsageMetricLine
-        dictionary={dictionary}
-        locale={locale}
-        metric={data.conversationTurns}
-        title={dictionary.usageLimits.conversationTurnsTitle}
-      />
-      <p className="text-muted-foreground">
-        {dictionary.usageLimits.conversationTurnsDescription}
-      </p>
-      <p className="text-muted-foreground">
-        {dictionary.usageLimits.resetAtLabel}:{" "}
-        <time dateTime={data.conversationTurns.resetAtUtc}>
-          {resetAt} {dictionary.usageLimits.utc}
-        </time>
-      </p>
-      <UsageMetricLine
-        dictionary={dictionary}
-        locale={locale}
-        metric={data.activeSchedules}
-        title={dictionary.usageLimits.activeSchedulesTitle}
-      />
     </div>
   )
 }
@@ -433,18 +445,34 @@ function UsageMetricLine({
   metric: { used: number; limit: number }
   title: string
 }) {
+  const percentage =
+    metric.limit === 0
+      ? metric.used === 0
+        ? 0
+        : 100
+      : Math.min((metric.used / metric.limit) * 100, 100)
+
   return (
-    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2">
-      <span className="min-w-0 font-medium break-words">{title}</span>
-      <span className="min-w-0 text-right font-mono break-all tabular-nums">
-        {formatNumber(metric.used, locale)} /{" "}
-        {formatNumber(metric.limit, locale)}
-      </span>
-      {metric.used > metric.limit ? (
-        <Badge variant="outline" className="col-span-2 justify-self-end">
-          {dictionary.usageLimits.overLimit}
-        </Badge>
-      ) : null}
+    <div className="flex min-w-0 flex-col gap-1">
+      <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2">
+        <span className="min-w-0 font-medium break-words">{title}</span>
+        <span className="min-w-0 text-right font-mono break-all tabular-nums">
+          {formatNumber(metric.used, locale)} /{" "}
+          {formatNumber(metric.limit, locale)}
+        </span>
+        {metric.used > metric.limit ? (
+          <Badge variant="outline" className="col-span-2 justify-self-end">
+            {dictionary.usageLimits.overLimit}
+          </Badge>
+        ) : null}
+      </div>
+      <Progress
+        aria-label={title}
+        aria-valuetext={`${formatNumber(metric.used, locale)} / ${formatNumber(metric.limit, locale)}`}
+        aria-hidden="true"
+        className="gap-0"
+        value={percentage}
+      />
     </div>
   )
 }

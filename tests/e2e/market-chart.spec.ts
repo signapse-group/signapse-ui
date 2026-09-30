@@ -34,8 +34,6 @@ test.describe("P0 market chart workbench", () => {
     await expect(page.getByText("Giá trực tiếp", { exact: true })).toBeVisible({
       timeout: 30_000,
     })
-    const initialStreamConnections = (await fixture.state()).streamConnections
-
     const fourHourButton = page.getByRole("button", { name: "4 giờ" })
     await expect(fourHourButton).toBeEnabled()
     await fourHourButton.click()
@@ -43,10 +41,22 @@ test.describe("P0 market chart workbench", () => {
     await expect(page.locator("#market-chart-asset")).toBeVisible()
 
     await expect
-      .poll(async () => (await fixture.state()).streamConnections, {
-        timeout: 15_000,
-      })
-      .toBeGreaterThan(initialStreamConnections)
+      .poll(
+        async () => {
+          const state = await fixture.state()
+
+          return state.requests.filter(
+            (request) =>
+              request.method === "GET" &&
+              request.path === "/market-charts/live" &&
+              String(request.query).includes("timeframe=4h")
+          ).length
+        },
+        {
+          timeout: 15_000,
+        }
+      )
+      .toBeGreaterThan(0)
     await expect(page.getByText("Giá trực tiếp", { exact: true })).toBeVisible({
       timeout: 30_000,
     })
