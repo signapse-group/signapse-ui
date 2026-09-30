@@ -170,7 +170,7 @@ test("password session reaches the public backend and renders the account page",
     )
 
   const directUsage = await loadUsageLimits(request, backendUrl, token)
-  await page.goto(withLocalePath("/dashboard", DEFAULT_APP_LOCALE))
+  const screenUrl = page.url()
   const profileMenuTrigger = page.locator("#app-sidebar-user-menu-trigger")
   await profileMenuTrigger.click()
   const menu = page.getByRole("menu")
@@ -179,6 +179,7 @@ test("password session reaches the public backend and renders the account page",
     name: vi.usageLimits.title,
   })
   await usageItem.click()
+  await expect(page).toHaveURL(screenUrl)
   await expect(menu.locator('[data-slot="progress"]').first()).toBeVisible()
   await expectUsageMenuToMatch(menu, directUsage)
 
@@ -186,5 +187,6 @@ test("password session reaches the public backend and renders the account page",
   const reopenedUsage = await loadUsageLimits(request, backendUrl, token)
   await usageItem.click()
   await expect(menu.locator('[data-slot="progress"]').first()).toBeVisible()
+  await expect(page).toHaveURL(screenUrl)
   await expectUsageMenuToMatch(menu, reopenedUsage)
 })
