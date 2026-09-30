@@ -486,16 +486,11 @@ export const en: Dictionary = {
   usageLimits: {
     title: "Usage limits",
     usedLimit: "Used / limit",
-    description:
-      "Review your current usage against the limits for your account and workspaces.",
     workspaceTitle: "Workspaces",
-    workspaceDescription: "Workspaces created by your account.",
     watchlistTitle: "Watchlist assets",
-    watchlistDescription: "Distinct assets saved in each workspace watchlist.",
     conversationTurnsTitle: "AI turns",
     conversationTurnsDescription: "Completed AI conversation turns this month.",
     activeSchedulesTitle: "Active schedules",
-    activeSchedulesDescription: "Active schedules across your workspaces.",
     resetAtLabel: "Resets",
     perWorkspace: "Up to {limit} per workspace",
     workspaceLabel: "Workspace {id}",

@@ -481,19 +481,12 @@ export const vi = {
   usageLimits: {
     title: "Giới hạn sử dụng",
     usedLimit: "Đã dùng / giới hạn",
-    description:
-      "Xem mức sử dụng hiện tại so với giới hạn của tài khoản và các workspace.",
     workspaceTitle: "Workspace",
-    workspaceDescription: "Số workspace do tài khoản của bạn tạo.",
     watchlistTitle: "Tài sản watchlist",
-    watchlistDescription:
-      "Số tài sản khác nhau được lưu trong watchlist của từng workspace.",
     conversationTurnsTitle: "Lượt AI",
     conversationTurnsDescription:
       "Số lượt hội thoại AI đã hoàn thành trong tháng này.",
     activeSchedulesTitle: "Lịch đang hoạt động",
-    activeSchedulesDescription:
-      "Lịch đang hoạt động trong các workspace của bạn.",
     resetAtLabel: "Cấp lại lúc",
     perWorkspace: "Tối đa {limit} cho mỗi workspace",
     workspaceLabel: "Workspace {id}",

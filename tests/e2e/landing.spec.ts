@@ -324,6 +324,15 @@ test.describe("P0 public landing", () => {
       "data-telegram-demo-state",
       "start"
     )
+    await expect(telegramDemo).toHaveAttribute(
+      "data-telegram-demo-playback",
+      "autoplay"
+    )
+    await expect(telegramDemo).toHaveAttribute(
+      "data-telegram-demo-state",
+      "assetOpen",
+      { timeout: 5_000 }
+    )
     await telegramTab.press("ArrowUp")
     await expect(
       showcase.getByRole("tab", { name: "AI Conversation" })
