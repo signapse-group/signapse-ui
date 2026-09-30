@@ -309,7 +309,7 @@ describe("SmtpConfigurationForm", () => {
     vi.mocked(enableSmtpConfiguration).mockReturnValue(enableResult.promise)
     renderForm(configuredOff)
     const deliverySwitch = screen.getByRole("switch", {
-      name: t.deliveryTitle,
+      name: t.deliveryToggleLabel,
     })
 
     await user.click(deliverySwitch)
@@ -362,7 +362,7 @@ describe("SmtpConfigurationForm", () => {
       screen.queryByRole("button", { name: t.test })
     ).not.toBeInTheDocument()
     expect(
-      screen.getByRole("switch", { name: t.deliveryTitle })
+      screen.getByRole("switch", { name: t.deliveryToggleLabel })
     ).toHaveAttribute("aria-disabled", "true")
     expect(screen.getByText(t.readOnly)).toBeInTheDocument()
     expect(saveSmtpConfiguration).not.toHaveBeenCalled()

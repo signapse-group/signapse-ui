@@ -420,7 +420,7 @@ export function SmtpConfigurationForm({
       ) : null}
 
       <form onSubmit={handleSave} noValidate>
-        <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,2.2fr)_minmax(19rem,0.9fr)]">
+        <div className="grid min-w-0 items-start gap-6 xl:grid-cols-[minmax(0,2.2fr)_minmax(19rem,0.9fr)]">
           <Card className="min-w-0">
             <CardHeader>
               <CardTitle>{t.formTitle}</CardTitle>
@@ -518,34 +518,36 @@ export function SmtpConfigurationForm({
 
           <div className="flex min-w-0 flex-col gap-6">
             <Card>
-              <CardHeader>
-                <CardTitle>{t.deliveryTitle}</CardTitle>
-                <CardDescription>
-                  {savedConfiguration.enabled
-                    ? t.deliveryOnDescription
-                    : t.deliveryOffDescription}
-                </CardDescription>
+              <CardHeader className="flex flex-row items-start justify-between gap-4">
+                <div className="flex min-w-0 flex-col gap-1.5">
+                  <CardTitle>{t.deliveryTitle}</CardTitle>
+                  <CardDescription>
+                    {savedConfiguration.enabled
+                      ? t.deliveryOnDescription
+                      : t.deliveryOffDescription}
+                  </CardDescription>
+                </div>
+                <div className="flex shrink-0 flex-col items-end gap-1">
+                  <Label htmlFor="delivery-switch" className="sr-only">
+                    {t.deliveryToggleLabel}
+                  </Label>
+                  <Switch
+                    id="delivery-switch"
+                    checked={savedConfiguration.enabled}
+                    disabled={
+                      !canManage ||
+                      isPending ||
+                      !savedConfiguration.configured ||
+                      typeof savedConfiguration.version !== "number"
+                    }
+                    onCheckedChange={handleDeliveryChange}
+                  />
+                  <span className="text-sm text-muted-foreground">
+                    {deliveryLabel}
+                  </span>
+                </div>
               </CardHeader>
               <CardContent className="flex flex-col gap-4">
-                <div className="flex items-center justify-between gap-4">
-                  <Label htmlFor="delivery-switch">{t.deliveryTitle}</Label>
-                  <div className="flex flex-col items-end gap-1">
-                    <Switch
-                      id="delivery-switch"
-                      checked={savedConfiguration.enabled}
-                      disabled={
-                        !canManage ||
-                        isPending ||
-                        !savedConfiguration.configured ||
-                        typeof savedConfiguration.version !== "number"
-                      }
-                      onCheckedChange={handleDeliveryChange}
-                    />
-                    <span className="text-sm text-muted-foreground">
-                      {deliveryLabel}
-                    </span>
-                  </div>
-                </div>
                 <p className="text-sm text-muted-foreground">
                   {t.enableHelper}
                 </p>
@@ -659,6 +661,11 @@ export function SmtpConfigurationForm({
             <p className="text-sm text-muted-foreground">
               {t.deleteDescription}
             </p>
+            {savedConfiguration.enabled ? (
+              <p className="text-sm text-muted-foreground">
+                {t.deleteEnabledHelper}
+              </p>
+            ) : null}
           </div>
           <AlertDialog
             open={deleteOpen}

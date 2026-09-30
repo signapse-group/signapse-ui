@@ -62,8 +62,8 @@ function EmailDeliverySkeleton({ dictionary }: { dictionary: Dictionary }) {
         </h1>
         <Skeleton className="h-5 w-80 max-w-full" />
       </header>
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,2.2fr)_minmax(19rem,0.9fr)]">
-        <Card>
+      <div className="grid min-w-0 items-start gap-6 xl:grid-cols-[minmax(0,2.2fr)_minmax(19rem,0.9fr)]">
+        <Card className="min-w-0">
           <CardHeader>
             <Skeleton className="h-6 w-64 max-w-full" />
             <Skeleton className="h-4 w-96 max-w-full" />
@@ -77,7 +77,7 @@ function EmailDeliverySkeleton({ dictionary }: { dictionary: Dictionary }) {
             ))}
           </CardContent>
         </Card>
-        <div className="flex flex-col gap-6">
+        <div className="flex min-w-0 flex-col gap-6">
           {Array.from({ length: 2 }).map((_, index) => (
             <Card key={index}>
               <CardHeader>
