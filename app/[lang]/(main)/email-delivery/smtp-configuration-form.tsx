@@ -1,7 +1,7 @@
 "use client"
 
 import { useRef, useState } from "react"
-import type { FormEvent } from "react"
+import type { FormEvent, InputHTMLAttributes } from "react"
 import { useRouter } from "next/navigation"
 import { Check, Send, Trash2 } from "lucide-react"
 import { toast } from "sonner"
@@ -112,9 +112,7 @@ function TextField({
   description,
   error,
   autoComplete,
-  min,
-  max,
-  step,
+  inputMode,
 }: {
   id: DraftField
   label: string
@@ -127,9 +125,7 @@ function TextField({
   description?: string
   error?: string
   autoComplete?: string
-  min?: number
-  max?: number
-  step?: number
+  inputMode?: InputHTMLAttributes<HTMLInputElement>["inputMode"]
 }) {
   const helpId = `${id}-help`
   const errorId = `${id}-error`
@@ -149,9 +145,7 @@ function TextField({
         disabled={disabled}
         required={required}
         autoComplete={autoComplete}
-        min={min}
-        max={max}
-        step={step}
+        inputMode={inputMode}
         aria-invalid={Boolean(error)}
         aria-describedby={
           [description ? helpId : null, error ? errorId : null]
@@ -436,6 +430,7 @@ export function SmtpConfigurationForm({
                   onChange={(value) => updateDraft("host", value)}
                   disabled={!canManage || isPending}
                   required
+                  placeholder={t.hostPlaceholder}
                   autoComplete="url"
                   error={errors.host}
                 />
@@ -446,10 +441,9 @@ export function SmtpConfigurationForm({
                   onChange={(value) => updateDraft("port", value)}
                   disabled={!canManage || isPending}
                   required
-                  type="number"
-                  min={1}
-                  max={65535}
-                  step={1}
+                  type="text"
+                  inputMode="numeric"
+                  placeholder={t.portPlaceholder}
                   description={t.portHelper}
                   error={errors.port}
                 />
@@ -460,6 +454,7 @@ export function SmtpConfigurationForm({
                   onChange={(value) => updateDraft("username", value)}
                   disabled={!canManage || isPending}
                   required
+                  placeholder={t.usernamePlaceholder}
                   autoComplete="username"
                   error={errors.username}
                 />
@@ -500,7 +495,7 @@ export function SmtpConfigurationForm({
                       placeholder={
                         savedConfiguration.configured
                           ? t.passwordPlaceholder
-                          : undefined
+                          : t.passwordRequiredPlaceholder
                       }
                       autoComplete="new-password"
                       description={
@@ -595,6 +590,7 @@ export function SmtpConfigurationForm({
                   disabled={!canManage || isPending}
                   required
                   type="email"
+                  placeholder={t.fromAddressPlaceholder}
                   autoComplete="email"
                   error={errors.fromAddress}
                 />
@@ -604,6 +600,7 @@ export function SmtpConfigurationForm({
                   value={draft.fromName}
                   onChange={(value) => updateDraft("fromName", value)}
                   disabled={!canManage || isPending}
+                  placeholder={t.fromNamePlaceholder}
                   autoComplete="name"
                   error={errors.fromName}
                 />

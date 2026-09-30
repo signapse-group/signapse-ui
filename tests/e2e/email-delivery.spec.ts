@@ -13,6 +13,28 @@ test.describe("P0 email delivery HTTP integration", () => {
     await expect(page.locator("h1")).toHaveText("Gửi email hệ thống")
     await expect(page.getByText("Chưa cấu hình", { exact: true })).toBeVisible()
     await expect(page.getByLabel("Máy chủ SMTP")).toHaveValue("")
+    await expect(page.getByLabel("Máy chủ SMTP")).toHaveAttribute(
+      "placeholder",
+      "smtp.example.net"
+    )
+    await expect(page.getByLabel("Cổng")).toHaveValue("")
+    await expect(page.getByLabel("Cổng")).toHaveAttribute("placeholder", "587")
+    await expect(page.getByLabel("Tên đăng nhập")).toHaveValue("")
+    await expect(page.getByLabel("Tên đăng nhập")).toHaveAttribute(
+      "placeholder",
+      "notifications@example.net"
+    )
+    await expect(page.getByLabel("Email người gửi")).toHaveValue("")
+    await expect(page.getByLabel("Email người gửi")).toHaveAttribute(
+      "placeholder",
+      "alerts@example.net"
+    )
+    await expect(page.getByLabel("Tên người gửi (không bắt buộc)")).toHaveValue(
+      ""
+    )
+    await expect(
+      page.getByLabel("Tên người gửi (không bắt buộc)")
+    ).toHaveAttribute("placeholder", "Signapse")
     await expect(page.getByLabel("Máy chủ SMTP")).toBeDisabled()
     await expect(page.getByLabel("Mật khẩu mới")).toHaveCount(0)
     await expect(
@@ -36,13 +58,14 @@ test.describe("P0 email delivery HTTP integration", () => {
   test("renders an empty editable form for a user with manage permission", async ({
     page,
     fixture,
-  }) => {
+  }, testInfo) => {
     await fixture.setSmtpConfiguration(null)
     await fixture.setPermissions([
       "smtp-configuration:read",
       "smtp-configuration:manage",
     ])
 
+    await page.setViewportSize({ width: 1520, height: 1024 })
     await page.goto("/en/email-delivery")
 
     await expect(page.locator("h1")).toHaveText("Email delivery")
@@ -50,16 +73,43 @@ test.describe("P0 email delivery HTTP integration", () => {
       page.getByText("Not configured", { exact: true })
     ).toBeVisible()
     await expect(page.getByLabel("SMTP host")).toHaveValue("")
+    await expect(page.getByLabel("SMTP host")).toHaveAttribute(
+      "placeholder",
+      "smtp.example.net"
+    )
     await expect(page.getByLabel("SMTP host")).toBeEnabled()
     await expect(page.getByLabel("Port")).toHaveValue("")
+    await expect(page.getByLabel("Port")).toHaveAttribute("placeholder", "587")
+    await expect(page.getByLabel("Port")).toHaveAttribute("type", "text")
+    await expect(page.getByLabel("Port")).toHaveAttribute(
+      "inputmode",
+      "numeric"
+    )
+    await expect(page.getByPlaceholder("587")).toBeVisible()
     await expect(page.getByLabel("Username")).toHaveValue("")
+    await expect(page.getByLabel("Username")).toHaveAttribute(
+      "placeholder",
+      "notifications@example.net"
+    )
     await expect(page.getByLabel("New password")).toHaveValue("")
+    await expect(page.getByLabel("New password")).toHaveAttribute(
+      "placeholder",
+      "Enter SMTP password"
+    )
     await expect(page.getByLabel("New password")).toHaveAttribute(
       "required",
       ""
     )
     await expect(page.getByLabel("From email")).toHaveValue("")
+    await expect(page.getByLabel("From email")).toHaveAttribute(
+      "placeholder",
+      "alerts@example.net"
+    )
     await expect(page.getByLabel("From name (optional)")).toHaveValue("")
+    await expect(page.getByLabel("From name (optional)")).toHaveAttribute(
+      "placeholder",
+      "Signapse"
+    )
     await expect(
       page.getByRole("button", { name: "Save configuration" })
     ).toBeVisible()
@@ -69,6 +119,12 @@ test.describe("P0 email delivery HTTP integration", () => {
     await expect(
       page.getByText("Email delivery is unavailable", { exact: true })
     ).toHaveCount(0)
+
+    const rendered = await page.screenshot({ fullPage: false })
+    await testInfo.attach("email-delivery-empty-new-config-en.png", {
+      body: rendered,
+      contentType: "image/png",
+    })
 
     const state = await fixture.state()
     const smtpRequests = state.requests.filter(
@@ -106,6 +162,12 @@ test.describe("P0 email delivery HTTP integration", () => {
 
     await expect(page.locator("h1")).toHaveText("Email delivery")
     await expect(page.getByLabel("SMTP host")).toHaveValue("smtp.example.net")
+    await expect(page.getByLabel("SMTP host")).toHaveAttribute(
+      "placeholder",
+      "smtp.example.net"
+    )
+    await expect(page.getByLabel("Port")).toHaveValue("587")
+    await expect(page.getByLabel("Port")).toHaveAttribute("placeholder", "587")
     await expect(page.getByLabel("SMTP host")).toBeDisabled()
     await expect(
       page.getByText("Password saved", { exact: true })
@@ -150,7 +212,35 @@ test.describe("P0 email delivery HTTP integration", () => {
     await expect(page.getByLabel("Máy chủ SMTP")).toHaveValue(
       "smtp.example.com"
     )
+    await expect(page.getByLabel("Máy chủ SMTP")).toHaveAttribute(
+      "placeholder",
+      "smtp.example.net"
+    )
+    await expect(page.getByLabel("Cổng")).toHaveValue("587")
+    await expect(page.getByLabel("Cổng")).toHaveAttribute("placeholder", "587")
+    await expect(page.getByLabel("Tên đăng nhập")).toHaveValue("notifications")
+    await expect(page.getByLabel("Tên đăng nhập")).toHaveAttribute(
+      "placeholder",
+      "notifications@example.net"
+    )
+    await expect(page.getByLabel("Email người gửi")).toHaveValue(
+      "notifications@signapse.test"
+    )
+    await expect(page.getByLabel("Email người gửi")).toHaveAttribute(
+      "placeholder",
+      "alerts@example.net"
+    )
+    await expect(page.getByLabel("Tên người gửi (không bắt buộc)")).toHaveValue(
+      "Signapse Notifications"
+    )
+    await expect(
+      page.getByLabel("Tên người gửi (không bắt buộc)")
+    ).toHaveAttribute("placeholder", "Signapse")
     await expect(page.getByLabel("Mật khẩu mới")).toHaveValue("")
+    await expect(page.getByLabel("Mật khẩu mới")).toHaveAttribute(
+      "placeholder",
+      "Để trống để giữ mật khẩu đã lưu"
+    )
     await expect(page.getByText("Đã lưu mật khẩu")).toBeVisible()
     await expect(page.getByRole("switch")).not.toBeChecked()
 
