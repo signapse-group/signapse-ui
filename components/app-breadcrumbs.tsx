@@ -43,7 +43,6 @@ function getFriendlySegmentNames(
     roles: dictionary.navigation.roles,
     "source-documents": dictionary.navigation.sourceDocuments,
     "system-prompts": dictionary.navigation.systemPrompts,
-    "usage-limits": dictionary.navigation.usageLimits,
     users: dictionary.navigation.users,
   }
 }

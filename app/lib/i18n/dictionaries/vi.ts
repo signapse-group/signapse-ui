@@ -72,7 +72,6 @@ export const vi = {
     breadcrumb: "Đường dẫn điều hướng",
     feedbackReview: "Duyệt phản hồi",
     apiAccessToken: "Token truy cập API",
-    usageLimits: "Giới hạn sử dụng",
   },
   feedback: {
     composeAction: "Gửi phản hồi",
@@ -500,6 +499,7 @@ export const vi = {
     noWorkspaces: "Tài khoản này chưa có workspace nào được trả về.",
     overLimit: "Vượt giới hạn",
     invalidResetTime: "Không có thời điểm cấp lại",
+    utc: "UTC",
     loadingLabel: "Đang tải giới hạn sử dụng",
     responseInvalid: "Không thể đọc dữ liệu giới hạn sử dụng.",
     errorTitle: "Không thể tải giới hạn sử dụng",

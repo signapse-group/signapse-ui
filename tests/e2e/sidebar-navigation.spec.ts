@@ -45,7 +45,7 @@ test.describe("P0 sidebar navigation", () => {
     await expect(sidebar).toHaveAttribute("data-state", "expanded")
   })
 
-  test("renders the canonical Vietnamese hierarchy and temporary disclosure", async ({
+  test("renders the canonical Vietnamese hierarchy and grouped disclosures", async ({
     page,
   }) => {
     await page.goto("/vi/dashboard")
@@ -77,7 +77,6 @@ test.describe("P0 sidebar navigation", () => {
       "Lịch kinh tế",
     ])
     expect((await groupItems(2).allTextContents()).map(firstLine)).toEqual([
-      "Giới hạn sử dụng",
       "Cấu hình hệ thống",
       "Người dùng & phân quyền",
       "Duyệt phản hồi",
@@ -105,6 +104,7 @@ test.describe("P0 sidebar navigation", () => {
       "Prompt hệ thống",
       "Tác vụ định kỳ",
       "Tích hợp Telegram",
+      "Gửi email hệ thống",
     ])
 
     await sidebar
@@ -122,6 +122,7 @@ test.describe("P0 sidebar navigation", () => {
       "Prompt hệ thống",
       "Tác vụ định kỳ",
       "Tích hợp Telegram",
+      "Gửi email hệ thống",
       "Người dùng",
       "Vai trò & phân quyền",
     ])
@@ -146,13 +147,17 @@ test.describe("P0 sidebar navigation", () => {
       })
       .click()
 
-    const overviewLink = page
-      .locator('[data-slot="sidebar"]')
-      .first()
-      .getByRole("link", {
-        name: "Tổng quan",
-        exact: true,
-      })
+    const sidebar = page.locator('[data-slot="sidebar"]').first()
+    await expect(sidebar).toHaveAttribute("data-state", "collapsed")
+    await expect(sidebar.locator('[data-slot="sidebar-gap"]')).toHaveCSS(
+      "width",
+      "48px"
+    )
+
+    const overviewLink = sidebar.getByRole("link", {
+      name: "Tổng quan",
+      exact: true,
+    })
     await expect(overviewLink).toBeVisible()
 
     const sidebarInset = page.locator('[data-slot="sidebar-inset"]').first()
@@ -292,7 +297,7 @@ test.describe("P0 sidebar navigation", () => {
       await sidebar
         .locator('[data-slot="sidebar-group-label"]')
         .allTextContents()
-    ).toEqual(["Phân tích", "Dữ liệu", "Quản trị"])
+    ).toEqual(["Phân tích", "Dữ liệu"])
     const newsGroup = page.getByRole("button", { name: "Tin tức", exact: true })
     await expect(newsGroup).toBeVisible()
     await newsGroup.click()
@@ -303,8 +308,8 @@ test.describe("P0 sidebar navigation", () => {
       page.getByRole("link", { name: "Nguồn tin", exact: true })
     ).toHaveCount(0)
     await expect(
-      page.getByText("Giới hạn sử dụng", { exact: true })
-    ).toBeVisible()
+      sidebar.getByText("Giới hạn sử dụng", { exact: true })
+    ).toHaveCount(0)
 
     await fixture.setPermissions([])
     await page.goto("/vi/dashboard")
@@ -312,7 +317,7 @@ test.describe("P0 sidebar navigation", () => {
       await sidebar
         .locator('[data-slot="sidebar-group-label"]')
         .allTextContents()
-    ).toEqual(["Phân tích", "Quản trị"])
+    ).toEqual(["Phân tích"])
     await expect(
       page
         .locator('[data-slot="sidebar"]')
@@ -324,7 +329,7 @@ test.describe("P0 sidebar navigation", () => {
         .locator('[data-slot="sidebar"]')
         .first()
         .getByRole("link", { name: "Giới hạn sử dụng", exact: true })
-    ).toBeVisible()
+    ).toHaveCount(0)
   })
 
   test("keeps mobile navigation dismissible and touch-friendly", async ({

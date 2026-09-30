@@ -1,24 +1,12 @@
 "use client"
 
 import * as React from "react"
-import { SignOutButton } from "@clerk/nextjs"
-import {
-  BadgeCheckIcon,
-  BellIcon,
-  ClipboardListIcon,
-  ChevronRightIcon,
-  ChevronsUpDownIcon,
-  KeyRound,
-  LogOutIcon,
-  MessageSquareText,
-  XIcon,
-} from "lucide-react"
+import { ChevronRightIcon, XIcon } from "lucide-react"
 import { LocalizedLink as Link } from "@/components/localized-link"
 import { usePathname } from "next/navigation"
 
 import { useLocalization } from "@/app/lib/i18n/provider"
 import { stripLocaleFromPathname } from "@/app/lib/i18n/routing"
-import { FeedbackComposeDialog } from "@/components/feedback/feedback-compose-dialog"
 import {
   NavItem,
   NavSection,
@@ -29,7 +17,6 @@ import { Logo } from "@/components/logo"
 import { cn } from "@/lib/utils"
 import { Button } from "./ui/button"
 
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar"
 import {
   Collapsible,
   CollapsibleContent,
@@ -38,10 +25,7 @@ import {
 import {
   DropdownMenu,
   DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuLinkItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu"
 import { DropdownMenuContentInOverlay } from "./ui/dropdown-menu-content-in-overlay"
@@ -62,21 +46,14 @@ import {
   SidebarRail,
   useSidebar,
 } from "./ui/sidebar"
-
-const USER_MENU_TRIGGER_ID = "app-sidebar-user-menu-trigger"
+import { ProfileMenu, type ProfileMenuUser } from "./profile-menu"
 
 function getNavCollapsibleContentId(id: string) {
   return `app-sidebar-nav-${id}-content`
 }
 
-type SimpleUser = {
-  imageUrl: string
-  fullName: string | null
-  username: string | null
-} | null
-
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
-  user: SimpleUser
+  user: ProfileMenuUser
   isAuthenticated: boolean
   permissions: string[]
   isP0FixtureMode?: boolean
@@ -368,123 +345,17 @@ function CollapsedNavGroup({
 }
 
 interface NavUserProps {
-  user: SimpleUser
+  user: ProfileMenuUser
   isP0FixtureMode: boolean
 }
 
 function NavUser({ user, isP0FixtureMode }: NavUserProps) {
   const { isMobile } = useSidebar()
-  const { dictionary } = useLocalization()
-  const [composeOpen, setComposeOpen] = React.useState(false)
-
   return (
-    <SidebarMenu>
-      <SidebarMenuItem>
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            render={
-              <SidebarMenuButton
-                size="lg"
-                className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-              />
-            }
-            id={USER_MENU_TRIGGER_ID}
-          >
-            <Avatar className="h-8 w-8 rounded-lg">
-              <AvatarImage
-                src={user?.imageUrl ?? ""}
-                alt={user?.fullName ?? ""}
-              />
-              <AvatarFallback className="rounded-lg text-foreground">
-                CN
-              </AvatarFallback>
-            </Avatar>
-            <div className="grid flex-1 text-left text-sm leading-tight">
-              <span className="truncate font-medium">
-                {user?.fullName ?? ""}
-              </span>
-              <span className="truncate text-xs">{user?.username ?? ""}</span>
-            </div>
-            <ChevronsUpDownIcon className="ml-auto size-4" />
-          </DropdownMenuTrigger>
-          <DropdownMenuContentInOverlay
-            className="w-(--anchor-width) min-w-56 rounded-lg"
-            side={isMobile ? "bottom" : "right"}
-            align="end"
-            sideOffset={4}
-            aria-labelledby={USER_MENU_TRIGGER_ID}
-          >
-            <DropdownMenuGroup>
-              <DropdownMenuLabel className="p-0 font-normal">
-                <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                  <Avatar className="h-8 w-8 rounded-lg">
-                    <AvatarImage
-                      src={user?.imageUrl ?? ""}
-                      alt={user?.fullName ?? ""}
-                    />
-                    <AvatarFallback className="rounded-lg text-foreground">
-                      CN
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="grid flex-1 text-left text-sm leading-tight">
-                    <span className="truncate font-medium">
-                      {user?.fullName ?? ""}
-                    </span>
-                    <span className="truncate text-xs">
-                      {user?.username ?? ""}
-                    </span>
-                  </div>
-                </div>
-              </DropdownMenuLabel>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              <DropdownMenuLinkItem render={<Link href="/account" />}>
-                <BadgeCheckIcon />
-                {dictionary.auth.account}
-              </DropdownMenuLinkItem>
-              <DropdownMenuLinkItem render={<Link href="/developer-token" />}>
-                <KeyRound />
-                {dictionary.navigation.apiAccessToken}
-              </DropdownMenuLinkItem>
-              <DropdownMenuItem>
-                <BellIcon />
-                {dictionary.auth.notifications}
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              <DropdownMenuItem onClick={() => setComposeOpen(true)}>
-                <MessageSquareText />
-                {dictionary.feedback.composeAction}
-              </DropdownMenuItem>
-              <DropdownMenuLinkItem render={<Link href="/feedback" />}>
-                <ClipboardListIcon />
-                {dictionary.feedback.historyAction}
-              </DropdownMenuLinkItem>
-            </DropdownMenuGroup>
-            {isP0FixtureMode ? null : (
-              <>
-                <DropdownMenuSeparator />
-                <DropdownMenuGroup>
-                  <DropdownMenuItem>
-                    <SignOutButton>
-                      <div className="flex w-full items-center gap-2 px-1 py-1.5">
-                        <LogOutIcon />
-                        <span>{dictionary.auth.signOut}</span>
-                      </div>
-                    </SignOutButton>
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
-              </>
-            )}
-          </DropdownMenuContentInOverlay>
-        </DropdownMenu>
-        <FeedbackComposeDialog
-          open={composeOpen}
-          onOpenChange={setComposeOpen}
-        />
-      </SidebarMenuItem>
-    </SidebarMenu>
+    <ProfileMenu
+      isMobile={isMobile}
+      isP0FixtureMode={isP0FixtureMode}
+      user={user}
+    />
   )
 }

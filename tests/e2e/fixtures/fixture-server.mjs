@@ -1152,6 +1152,31 @@ function responseForRoute(state, method, pathname, url, body) {
     return slicePage(state.workspaces, url)
   }
 
+  if (method === "GET" && pathname === "/me/usage-limits") {
+    return {
+      workspace: { used: 2, limit: 5 },
+      watchlist: {
+        limit: 3,
+        workspaces: [
+          { workspaceId: 101, used: 0 },
+          { workspaceId: 102, used: 4 },
+          { workspaceId: 103, used: 0 },
+          { workspaceId: 104, used: 1 },
+          { workspaceId: 105, used: 2 },
+          { workspaceId: 106, used: 3 },
+          { workspaceId: 107, used: 1 },
+        ],
+      },
+      conversationTurns: {
+        used: 1001,
+        limit: 1000,
+        periodStartUtc: "2026-09-01T00:00:00Z",
+        resetAtUtc: "2026-10-01T00:00:00Z",
+      },
+      activeSchedules: { used: 2, limit: 1 },
+    }
+  }
+
   if (method === "POST" && pathname === "/me/workspaces") {
     const next = workspace(state.nextIds.workspace++, String(body?.name ?? "New workspace"))
     state.workspaces.push(next)

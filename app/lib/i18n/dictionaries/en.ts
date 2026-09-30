@@ -74,7 +74,6 @@ export const en: Dictionary = {
     breadcrumb: "Breadcrumb navigation",
     feedbackReview: "Feedback review",
     apiAccessToken: "API access token",
-    usageLimits: "Usage limits",
   },
   feedback: {
     composeAction: "Send feedback",
@@ -502,6 +501,7 @@ export const en: Dictionary = {
     noWorkspaces: "No workspaces were returned for this account.",
     overLimit: "Over limit",
     invalidResetTime: "Reset time unavailable",
+    utc: "UTC",
     loadingLabel: "Loading usage limits",
     responseInvalid: "Usage limits data could not be read.",
     errorTitle: "Could not load usage limits",
