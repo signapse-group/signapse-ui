@@ -37,4 +37,8 @@ pnpm-debug.log*
 next-env.d.ts
 /.codegraph
 .env
+.env.*
+!.env.example
+!.env.e2e.example
+/playwright/.auth/
 *.log

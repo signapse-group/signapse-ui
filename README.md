@@ -6,7 +6,16 @@ A modern Next.js application with shadcn/ui, featuring real-time market data vis
 
 ## Local Development
 
+Copy `.env.example` to the ignored `.env.local` and supply your backend URL and Clerk keys, or use
+your operator-provided application environment file. Real configuration and test accounts belong
+outside Git. Next.js reads `.env.local`; standalone test runners require explicit loading.
+
 Set `SIGNAPSE_AUTH_MODE=disabled` to open the dashboard without Clerk login while developing against a local backend with auth disabled. This mode is ignored in production and sends backend API requests without Clerk bearer tokens.
+
+Use `pnpm test:quality` for deterministic checks and `pnpm test:integration` for password
+authentication against the configured public development backend. See
+[browser and integration testing](docs/testing/browser-tests.md) for private file setup,
+commands, and the scope each test lane proves.
 
 ## Using the Logo Component
 

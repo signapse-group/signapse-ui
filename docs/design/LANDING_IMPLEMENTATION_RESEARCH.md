@@ -248,7 +248,7 @@ Route-specific components phải ở cạnh route, Server Components là default
 
 P0 fixture hiện đặt `SIGNAPSE_AUTH_MODE=disabled` (`playwright.config.ts:8-16`), nên browser lane này chỉ chứng minh signed-in CTA. Anonymous behavior cần targeted unit/integration test với Clerk mocked hoặc một Clerk-enabled test environment; không được ghi “verified” chỉ vì fixture mở được locale root.
 
-ADR của repo cũng xác định P0 không chứng minh authorization và Clerk thật thuộc P1 (`docs/adr/0004-layered-automated-quality-gates.md:7-19`). P1 hiện chưa thực thi được: script chủ động fail với thông báo authenticated canary chưa được implement (`tests/e2e/require-p1-env.mjs:1-24`). Vì vậy anonymous/authenticated acceptance trong production Clerk cần được ghi là release-owner/P1 check cho đến khi canary tồn tại; không được tạo test-only bypass mới trong production code.
+ADR của repo cũng xác định P0 không chứng minh authorization và Clerk thật thuộc P1 (`docs/adr/0004-layered-automated-quality-gates.md`). `pnpm test:integration` hiện chạy smoke test password auth và public dev backend (`tests/integration/auth-and-backend.spec.ts`); setup và giới hạn được ghi tại `docs/testing/browser-tests.md`. Anonymous/authenticated acceptance trong production Clerk vẫn thuộc release-owner và full P1 canary; smoke dev không thay thế acceptance đó và không cho phép test-only bypass trong production code.
 
 ### Baseline đã chạy trong research
 
