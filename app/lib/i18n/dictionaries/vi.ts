@@ -736,7 +736,6 @@ export const vi = {
   },
   landing: {
     nav: {
-      flow: "Cách hoạt động",
       product: "Sản phẩm",
       solutions: "Giải pháp",
       resources: "Tài nguyên",
@@ -815,14 +814,9 @@ export const vi = {
       eyebrow: "MARKET INTELLIGENCE & TRADING AUTOMATION PLATFORM",
       title: "Hiểu nhanh hơn. Hành động chủ động hơn.",
       body: "Signapse kết nối tin tức, sự kiện, giá và dữ liệu thị trường để giúp bạn nhìn thấy bức tranh lớn, hiểu điều gì đang làm giá chuyển động, hỏi AI, nhận tín hiệu tự động và xây dựng chiến lược có thể kiểm thử.",
-      trustNote:
-        "Bối cảnh rõ ràng · Tín hiệu theo cấu hình · Tự động hóa có kiểm soát",
       proofOneTitle: "Trợ lý AI chuyên biệt",
       proofOneBody:
         "Vận hành trên Đồ thị Tri thức, được xây dựng từ dữ liệu thị trường đa nguồn đã qua tổng hợp, đánh giá và phân tích.",
-      proofTwoTitle: "Đọc bối cảnh, không chỉ nhìn nến",
-      proofTwoBody:
-        "Đọc diễn biến giá trên chart cùng phản ứng thị trường, sự kiện và lịch kinh tế liên quan.",
       contextFigureTitle: "Hai góc nhìn về bối cảnh thị trường",
       contextFigureDescription:
         "Hình minh họa tương tác đặt Đồ thị Tri thức thị trường cạnh Diễn biến giá như hai góc nhìn bổ sung về bối cảnh, không phải phép biến đổi hay dự báo giá.",
@@ -843,89 +837,33 @@ export const vi = {
       requestAccessAria: "Liên hệ để xem demo Signapse",
       signInAria: "Đăng nhập vào Signapse",
       openDashboardAria: "Mở bảng điều khiển Signapse",
-      exploreJourney: "Khám phá nền tảng",
-      exploreJourneyAria: "Khám phá nền tảng Signapse",
+      contact: "Liên Hệ",
+      contactAria: "Liên Hệ với Signapse",
     },
     capabilityStrip: {
+      label: "Năng lực Signapse",
       marketViewTitle: "MARKET VIEW",
       impactTitle: "IMPACT GRAPH",
       aiTitle: "AI CONVERSATION",
       telegramTitle: "TELEGRAM",
       strategyTitle: "STRATEGY CODING",
     },
-    analysisFlow: {
-      eyebrow: "TỪ TÍN HIỆU ĐẾN TỰ ĐỘNG HÓA",
-      heading: "Một luồng làm việc liền mạch, từ dữ liệu đến hành động.",
-      body: "Signapse đưa công nghệ về đúng vai trò: hỗ trợ con người hiểu rõ hơn, kiểm thử tốt hơn và tự động hóa phần việc đã được xác nhận.",
-      loopEyebrow: "THE SIGNAPSE LOOP",
-      loopTitle: "News → Signal → Strategy → Automation",
-      loopBody:
-        "Mỗi lớp công nghệ tạo ra một đầu ra rõ ràng trong quy trình giao dịch và nghiên cứu.",
-      loopNews: "News",
-      loopSignal: "Signal",
-      loopStrategy: "Strategy",
-      loopDelivery: "Bot / Telegram",
-      stepOneTitle: "Theo dõi thị trường",
-      stepOneBody: "Chọn tài sản, nguồn tin, sự kiện và dữ liệu cần quan tâm.",
-      stepTwoTitle: "Hiểu tác động",
-      stepTwoBody:
-        "Đối chiếu diễn biến giá với sự kiện, phản ứng và nguồn liên quan.",
-      stepThreeTitle: "Hỏi AI và xây dựng chiến lược",
-      stepThreeBody:
-        "Đào sâu bằng hội thoại, coding chỉ báo và kiểm thử logic trên dữ liệu.",
-      stepFourTitle: "Gửi cảnh báo hoặc chạy bot",
-      stepFourBody:
-        "Phân phối qua Telegram hoặc triển khai bot trong phạm vi quyền kiểm soát.",
-    },
     product: {
-      eyebrow: "NĂM NĂNG LỰC · MỘT QUY TRÌNH LIỀN MẠCH",
-      heading: "Mọi thứ bạn cần để theo dõi, phân tích và tự động hóa.",
-      body: "Signapse kết nối những bước thường bị tách rời trong quy trình giao dịch — từ hiểu thị trường đến xây dựng và vận hành chiến lược.",
-      knowledgeGraphTitle: "01 · MARKET VIEW",
       knowledgeGraphOutcome: "Nắm trọn bức tranh thị trường.",
       knowledgeGraphBody:
         "Kết nối giá, tin tức, sự kiện và nguồn liên quan để bạn nhìn thấy toàn cảnh trong một nơi.",
-      knowledgeGraphLinkLabel: "Hiểu bối cảnh nhanh hơn",
-      knowledgeGraphMediaTitle: "Ảnh Đồ thị Tri thức",
-      knowledgeGraphMediaCaption:
-        "Ảnh Graph View cho thấy quan hệ giữa một sự kiện, tài sản liên quan và nguồn tin.",
-      knowledgeGraphMediaAlt:
-        "Đồ thị Tri thức hiển thị một sự kiện nối với tài sản và nguồn tin liên quan.",
-      knowledgeGraphAnnotationEvent: "Sự kiện đang được khám phá",
-      knowledgeGraphAnnotationAsset: "Tài sản liên quan",
-      knowledgeGraphAnnotationSource: "Nguồn tin liên quan",
-      liveChartsTitle: "02 · IMPACT GRAPH",
       liveChartsOutcome: "Thấy rõ điều gì đang làm giá chuyển động.",
       liveChartsBody:
         "Đặt diễn biến giá cạnh các sự kiện và nguồn tin liên quan để hiểu tác động, không chỉ nhìn vào một biểu đồ.",
-      liveChartsLinkLabel: "Theo dấu tác động",
-      liveChartsDetail:
-        "Theo dấu tác động từ biến động giá tới sự kiện và nguồn liên quan.",
-      liveChartsMediaTitle: "Ảnh biểu đồ trực tiếp",
-      liveChartsMediaCaption:
-        "Ảnh biểu đồ cho thấy diễn biến giá cùng dấu mốc sự kiện và lịch kinh tế.",
-      liveChartsMediaAlt:
-        "Biểu đồ giá hiển thị dấu mốc sự kiện và lịch kinh tế liên quan.",
-      aiAssistantTitle: "03 · AI CONVERSATION",
       aiAssistantOutcome: "Hỏi nhanh, hiểu sâu cùng AI.",
       aiAssistantBody:
         "Đặt câu hỏi bằng ngôn ngữ tự nhiên, đào sâu theo mạch hội thoại và nhận góc nhìn dựa trên dữ liệu liên quan.",
-      aiAssistantLinkLabel: "Hỏi Signapse",
-      telegramTitle: "04 · TELEGRAM",
       telegramOutcome: "Tín hiệu quan trọng, gửi thẳng đến Telegram.",
       telegramBody:
         "Cài đặt tài sản, điều kiện và lịch nhận để tin tức, tín hiệu và cảnh báo đến đúng kênh, đúng lúc.",
-      telegramLinkLabel: "Thiết lập luồng nhận tin",
-      telegramSetup:
-        "Thiết lập luồng nhận tin theo nhu cầu và lịch làm việc của bạn.",
-      strategyTitle: "05 · STRATEGY CODING",
       strategyOutcome: "Biến ý tưởng giao dịch thành chiến lược.",
       strategyBody:
         "Coding chỉ báo, kiểm thử logic và đánh giá kết quả trước khi đưa vào quy trình tự động hóa.",
-      strategyLinkLabel: "Xây dựng chiến lược",
-      media: {
-        error: "Không thể tải ảnh này.",
-      },
     },
     audiences: {
       eyebrow: "DESIGNED FOR MARKET OPERATORS",
@@ -949,9 +887,6 @@ export const vi = {
         "Phân phối tín hiệu qua Telegram, quản lý bot và giảm thao tác thủ công trong đội ngũ.",
     },
     showcase: {
-      eyebrow: "SEE THE WORKFLOW",
-      heading: "Xem cách Signapse biến dữ liệu thành hành động.",
-      body: "Khám phá cách Đồ thị Tri thức, biểu đồ thị trường, hội thoại AI và Telegram kết nối trong quy trình phân tích.",
       tabListLabel: "Tính năng trong quy trình Signapse",
       knowledgeGraph: {
         label: "Đồ thị Tri thức",
@@ -1122,6 +1057,8 @@ export const vi = {
       },
       telegram: {
         label: "Telegram theo lịch",
+        workspace: "Phân tích thị trường theo lịch",
+        browserUrl: "https://www.signapse.cloud/",
         title: "Từ lịch phân tích đến điểm nhận Telegram.",
         body: "Xem cách cấu hình tài sản, giờ gửi và ngôn ngữ đầu ra trong Signapse, rồi nhận bản phân tích theo lịch trên Telegram.",
         demoLabel: "DEMO",
@@ -1233,7 +1170,6 @@ export const vi = {
       productStrategy: "Xây dựng chiến lược",
       contactHeading: "Liên hệ",
       demo: "Đặt lịch demo",
-      workflow: "Cách hoạt động",
       copyright: "© 2026 Signapse. All rights reserved.",
       disclaimer: "Phân tích và tự động hóa không phải là cam kết lợi nhuận.",
       requestAccessEmail: "access@signapse.cloud",
@@ -1350,8 +1286,7 @@ export const vi = {
       "Không thể cập nhật trạng thái xuất bản. Vui lòng thử lại.",
     publicationPermissionError:
       "Bạn không có quyền xuất bản hoặc gỡ xuất bản bài viết.",
-    publicationValidationError:
-      "Bài viết chưa đáp ứng đủ điều kiện xuất bản.",
+    publicationValidationError: "Bài viết chưa đáp ứng đủ điều kiện xuất bản.",
     publicationMissingError:
       "Bài viết không còn tồn tại. Vui lòng tải lại trang.",
     publicationConflictError:
@@ -1373,8 +1308,7 @@ export const vi = {
     allStatuses: "Tất cả trạng thái",
     actionsColumn: "Thao tác",
     detailTitle: "Chi tiết bài viết",
-    detailDescription:
-      "Xem nội dung hiện hành và trạng thái của bài viết này.",
+    detailDescription: "Xem nội dung hiện hành và trạng thái của bài viết này.",
     backToList: "Quay lại danh sách bài viết",
     noShortDescription: "Bài viết chưa có mô tả ngắn.",
     noContent: "Bài viết chưa có nội dung được lưu.",

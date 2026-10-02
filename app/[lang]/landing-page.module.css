@@ -432,24 +432,6 @@ a.megaMenuItem:focus-visible {
   border-radius: var(--landing-control-radius);
 }
 
-.landingCardGrid {
-  gap: 1px;
-  overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: var(--landing-card-radius);
-  background: var(--border);
-}
-
-.landingCardGridItem {
-  background: color-mix(in oklab, var(--card) 94%, transparent);
-  padding: var(--landing-card-padding);
-  transition: background-color 150ms ease;
-}
-
-.landingCardGridItem:hover {
-  background: var(--card);
-}
-
 .capabilityFlow {
   position: relative;
   padding: 0.5rem 0;
@@ -531,11 +513,26 @@ a.megaMenuItem:focus-visible {
 
 .capabilityRailStep {
   display: grid;
+  width: 100%;
+  cursor: pointer;
+  scroll-margin-top: calc(var(--landing-header-height) + 1rem);
   min-height: 3rem;
   grid-template-columns: 3rem minmax(0, 1fr);
   align-items: center;
   gap: 1rem;
   color: var(--foreground);
+}
+
+.capabilityRailStep:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 4px;
+}
+
+.capabilityRailStep:hover .capabilityRailTitle,
+.capabilityRailStep:focus-visible .capabilityRailTitle,
+.capabilityRailStep[aria-expanded="true"] .capabilityRailTitle {
+  opacity: 1;
+  animation: none;
 }
 
 .capabilityRailIcon {
@@ -726,18 +723,6 @@ a.megaMenuItem:focus-visible {
   .capabilityRailTitle {
     opacity: 1;
   }
-}
-
-.landingPanel {
-  border: 1px solid var(--border);
-  border-radius: var(--landing-card-radius);
-  background: color-mix(in oklab, var(--muted) 38%, transparent);
-  padding: var(--landing-card-padding);
-  box-shadow: none;
-}
-
-.analysisStep:not(:last-child) {
-  border-bottom: 1px solid color-mix(in oklab, var(--border) 28%, transparent);
 }
 
 .providerRail {

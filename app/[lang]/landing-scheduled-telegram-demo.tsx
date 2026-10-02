@@ -32,7 +32,7 @@ export function LandingScheduledTelegramDemo({
   active: boolean
   labels: Dictionary["landing"]["showcase"]["telegram"]
   locale: AppLocale
-  progressRef: RefObject<SVGCircleElement | null>
+  progressRef: RefObject<SVGRectElement | null>
 }) {
   const rootRef = useRef<HTMLDivElement>(null)
   const windowRef = useRef<HTMLElement>(null)
@@ -161,6 +161,7 @@ export function LandingScheduledTelegramDemo({
           cursor={
             <m.span
               className={styles.demoCursor}
+              data-telegram-demo-cursor
               style={{ x, y, scale, opacity }}
               aria-hidden="true"
             >

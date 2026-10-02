@@ -20,7 +20,7 @@ export function LandingAiConversationDemo({
 }: {
   active: boolean
   labels: Labels
-  progressRef: RefObject<SVGCircleElement | null>
+  progressRef: RefObject<SVGRectElement | null>
 }) {
   const rootRef = useRef<HTMLDivElement>(null)
   const transcriptRef = useRef<HTMLDivElement>(null)

@@ -54,17 +54,17 @@ export function LandingKnowledgeGraphDemo({
 }: {
   active: boolean
   labels: Labels
-  progressRef: RefObject<SVGCircleElement | null>
+  progressRef: RefObject<SVGRectElement | null>
 }) {
   const rootRef = useRef<HTMLDivElement>(null)
   const isInView = useInView(rootRef, { amount: 0.2 })
   const reducedMotion = useReducedMotion()
-  const [frame, setFrame] = useState(() => getKnowledgeGraphDemoFrame(0))
+  const [frame, setFrame] = useState(KNOWLEDGE_GRAPH_DEMO_FINAL_FRAME)
   const canPlay = active && isInView && !reducedMotion
 
   useEffect(() => {
     if (!canPlay) return
-    let previous = getKnowledgeGraphDemoFrame(0)
+    let previous = KNOWLEDGE_GRAPH_DEMO_FINAL_FRAME
     const playback = animate(0, KNOWLEDGE_GRAPH_DEMO_DURATION, {
       duration: KNOWLEDGE_GRAPH_DEMO_DURATION,
       ease: "linear",
@@ -291,6 +291,8 @@ export function LandingKnowledgeGraphDemo({
       <div
         ref={rootRef}
         className={styles.graphDemo}
+        data-graph-demo-state={visibleFrame.phase}
+        data-demo-renderer={canPlay ? "motion" : "static"}
         role="img"
         aria-label={labels.stageLabel}
       >
@@ -441,7 +443,7 @@ export function LandingKnowledgeGraphDemo({
           <aside className={styles.graphInspector}>
             <m.div
               key={selectedId}
-              initial={{ opacity: 0, y: 5 }}
+              initial={canPlay ? { opacity: 0, y: 5 } : false}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.25 }}
             >

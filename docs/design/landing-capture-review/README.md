@@ -1,3 +1,5 @@
+> Historical reference only: product screenshots were retired on 2026-10-02. The landing now renders every demo from code; these archived references are not runtime assets.
+
 # Landing capture review — 2026-09-08
 
 Four user-supplied screenshots were reviewed and cropped. Original files remain unchanged. The user approved integrating these four crops into the landing on 2026-09-08; AI Assistant and Telegram captures remain pending.

@@ -11,12 +11,12 @@ import { LandingNavigationDisclosure } from "./landing-navigation-disclosure"
 
 const SUPPORTED_LANDING_HASHES = new Set([
   "top",
-  "product",
+  "capability-strip",
   "knowledge-graph",
   "live-charts",
   "ai-assistant",
   "telegram",
-  "how-it-works",
+  "strategy-coding",
   "trust",
   "access",
 ])
