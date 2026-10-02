@@ -4,13 +4,6 @@ This document is the active repo-wide instruction file for Codex when working in
 
 When framework versions, the UI preset, CI, or repository ownership change, refresh the affected facts and pointers here.
 
-## CodeGraph
-
-- When available, prefer CodeGraph for architecture, execution flow, bugs, refactors, impact review, or locating code to change.
-- Use `codegraph_context` as the default entry point for questions like "how does X work", bug investigation, or identifying related entry points.
-- Use `codegraph_trace` when the task needs the path from symbol/interaction A to B, `codegraph_impact` before refactors, `codegraph_search` for fast symbol lookup, and `codegraph_explore` to gather several related symbols/files in one pass.
-- Use `rg` or direct reads when CodeGraph is unavailable, lacks an index, returns insufficient context, or the task concerns non-symbol content such as dictionaries, CSS, Markdown, or config.
-
 ## Scoped Instructions And Skills
 
 - `AGENTS.md` holds only repo-wide architecture, verification, and review policy.
