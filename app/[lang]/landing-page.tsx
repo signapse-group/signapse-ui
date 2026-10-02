@@ -1,25 +1,15 @@
 import Link from "next/link"
-import { Suspense, type ElementType } from "react"
+import { Suspense } from "react"
 import {
   ArrowRightIcon,
-  BellRingIcon,
-  BrainCircuitIcon,
-  CalendarClockIcon,
   ChevronDownIcon,
-  Code2Icon,
   Globe2Icon,
-  LineChartIcon,
   MenuIcon,
-  NetworkIcon,
 } from "lucide-react"
 
 import type { AppLocale } from "@/app/lib/i18n/config"
 import type { Dictionary } from "@/app/lib/i18n/dictionary-types"
 import { withLocalePath } from "@/app/lib/i18n/routing"
-import {
-  getApprovedLandingProductCapture,
-  type LandingProductFeature,
-} from "./landing-product-media"
 import { LandingOhlcvBackground } from "./landing-ohlcv-background"
 import {
   createLandingAccessModel,
@@ -27,7 +17,7 @@ import {
 } from "./landing-access"
 import styles from "./landing-page.module.css"
 import { LandingAudienceSection } from "./landing-audience-section"
-import { LandingCapabilityFlowReveal } from "./landing-capability-flow-reveal"
+import { LandingCapabilityStrip } from "./landing-capability-strip"
 import { LandingContextFigure } from "./landing-context-figure"
 import { LandingFeatureShowcase } from "./landing-feature-showcase"
 import { LandingHeaderShell } from "./landing-header-shell"
@@ -211,10 +201,8 @@ export function LandingPage({
 
       <main id="main-content" tabIndex={-1}>
         <HeroSection access={access} dictionary={dictionary} locale={locale} />
-        <ProductStory dictionary={dictionary} />
-        <LandingAudienceSection dictionary={dictionary} />
-        <AnalysisFlow dictionary={dictionary} />
         <ShowcaseSection dictionary={dictionary} locale={locale} />
+        <LandingAudienceSection dictionary={dictionary} />
         <ProviderIntegrations dictionary={dictionary} />
         <FinalAccessCta access={access} dictionary={dictionary} />
       </main>
@@ -275,11 +263,6 @@ function LandingHeader({
           href: "#telegram",
           label: t.nav.telegram,
           description: t.nav.telegramDescription,
-        },
-        {
-          href: "#how-it-works",
-          label: t.nav.flow,
-          description: t.nav.exploreDemoDescription,
         },
       ],
     },
@@ -441,9 +424,6 @@ function LandingHeader({
             groups={resourceGroups}
             comingSoonLabel={t.nav.comingSoon}
           />
-          <a href="#how-it-works" className={styles.headerNavItem}>
-            {t.nav.flow}
-          </a>
           <a href="#access" className={styles.headerNavItem}>
             {t.nav.contact}
           </a>
@@ -531,9 +511,6 @@ function LandingHeader({
                   groups={resourceGroups}
                   comingSoonLabel={t.nav.comingSoon}
                 />
-                <a href="#how-it-works" className={styles.headerMenuItem}>
-                  {t.nav.flow}
-                </a>
                 <a href="#access" className={styles.headerMenuItem}>
                   {t.nav.contact}
                 </a>
@@ -598,17 +575,13 @@ function HeroSection({
               className={`${styles.sectionAction} w-full sm:w-auto`}
               size="lg"
             />
-            <LandingActionButton
-              action={access.heroSecondary}
-              className={`${styles.sectionAction} w-full sm:w-auto`}
-              size="lg"
-              variant="ghost"
-              showArrow={false}
-            />
           </div>
-          <p className="max-w-xl border-l-2 border-chart-2 pl-4 text-sm leading-6 text-foreground">
-            {t.hero.trustNote}
-          </p>
+          <dl className="max-w-xl border-l-2 border-chart-2 pl-4">
+            <ProofPoint
+              title={t.hero.proofOneTitle}
+              body={t.hero.proofOneBody}
+            />
+          </dl>
         </div>
 
         <div className={`${styles.heroVisual} flex min-w-0 flex-col gap-6`}>
@@ -623,19 +596,9 @@ function HeroSection({
               fallback: t.hero.contextFigureFallback,
             }}
           />
-          <dl className="grid gap-4 pt-5 sm:grid-cols-2 lg:grid-cols-1">
-            <ProofPoint
-              title={t.hero.proofOneTitle}
-              body={t.hero.proofOneBody}
-            />
-            <ProofPoint
-              title={t.hero.proofTwoTitle}
-              body={t.hero.proofTwoBody}
-            />
-          </dl>
         </div>
       </div>
-      <CapabilityStrip dictionary={dictionary} />
+      <LandingCapabilityStrip />
     </section>
   )
 }
@@ -649,280 +612,6 @@ function ProofPoint({ title, body }: { title: string; body: string }) {
   )
 }
 
-function CapabilityStrip({ dictionary }: { dictionary: Dictionary }) {
-  const t = dictionary.landing.capabilityStrip
-  const capabilities = [
-    {
-      title: t.marketViewTitle,
-      icon: NetworkIcon,
-    },
-    {
-      title: t.impactTitle,
-      icon: LineChartIcon,
-    },
-    {
-      title: t.aiTitle,
-      icon: BrainCircuitIcon,
-    },
-    {
-      title: t.telegramTitle,
-      icon: BellRingIcon,
-    },
-    {
-      title: t.strategyTitle,
-      icon: Code2Icon,
-    },
-  ]
-
-  return (
-    <section
-      id="capability-strip"
-      data-landing-section="capability-strip"
-      aria-label={dictionary.landing.product.eyebrow}
-      className={`${styles.heroContent} ${styles.heroRail} mx-auto w-full max-w-[100rem] px-4 pb-4 sm:px-6 sm:pb-6 lg:px-8 lg:pb-4`}
-    >
-      <LandingCapabilityFlowReveal className={styles.capabilityFlow}>
-        <span aria-hidden="true" className={styles.capabilityFlowTrack}>
-          <span className={styles.capabilityFlowLight} />
-        </span>
-        <ul className={styles.capabilityFlowList}>
-          {capabilities.map((capability) => {
-            const Icon = capability.icon
-
-            return (
-              <li key={capability.title} className={styles.capabilityFlowItem}>
-                <div className={styles.capabilityRailStep}>
-                  <span
-                    aria-hidden="true"
-                    className={styles.capabilityRailIcon}
-                  >
-                    <Icon />
-                  </span>
-                  <span className={styles.capabilityRailTitle}>
-                    {capability.title}
-                  </span>
-                </div>
-              </li>
-            )
-          })}
-        </ul>
-      </LandingCapabilityFlowReveal>
-    </section>
-  )
-}
-
-function AnalysisFlow({ dictionary }: { dictionary: Dictionary }) {
-  const t = dictionary.landing.analysisFlow
-  const steps = [
-    { title: t.stepOneTitle, body: t.stepOneBody },
-    { title: t.stepTwoTitle, body: t.stepTwoBody },
-    { title: t.stepThreeTitle, body: t.stepThreeBody },
-    { title: t.stepFourTitle, body: t.stepFourBody },
-  ]
-  const loop = [t.loopNews, t.loopSignal, t.loopStrategy, t.loopDelivery]
-
-  return (
-    <section
-      id="how-it-works"
-      data-landing-section="analysis-flow"
-      data-landing-surface="light"
-      aria-labelledby="landing-flow-heading"
-      className={`${styles.lightSurface} border-b border-border/80 bg-background`}
-    >
-      <div className="mx-auto grid w-full max-w-[100rem] gap-12 px-4 py-16 sm:px-6 sm:py-24 lg:grid-cols-[minmax(0,0.82fr)_minmax(0,1.18fr)] lg:px-8">
-        <div className="flex min-w-0 flex-col gap-8">
-          <div className="flex max-w-3xl flex-col gap-5">
-            <p className="text-xs font-semibold tracking-[0.18em] text-chart-1 uppercase">
-              {t.eyebrow}
-            </p>
-            <h2
-              id="landing-flow-heading"
-              className={`${styles.landingDisplayHeading} text-3xl leading-tight sm:text-4xl`}
-            >
-              {t.heading}
-            </h2>
-            <p className="leading-7 text-muted-foreground">{t.body}</p>
-          </div>
-          <aside className={`${styles.landingPanel} flex flex-col gap-4`}>
-            <p className="text-xs font-semibold tracking-[0.18em] text-chart-1 uppercase">
-              {t.loopEyebrow}
-            </p>
-            <h3 className="text-2xl leading-tight font-semibold">
-              {t.loopTitle}
-            </h3>
-            <p className="text-sm leading-6 text-muted-foreground">
-              {t.loopBody}
-            </p>
-            <ol className="flex flex-wrap items-center gap-2 text-xs font-semibold">
-              {loop.map((item, index) => (
-                <li key={item} className="flex items-center gap-2">
-                  <span className="border border-border bg-background px-3 py-2">
-                    {item}
-                  </span>
-                  {index < loop.length - 1 ? (
-                    <ArrowRightIcon
-                      aria-hidden="true"
-                      className="size-3 text-muted-foreground"
-                    />
-                  ) : null}
-                </li>
-              ))}
-            </ol>
-          </aside>
-        </div>
-
-        <ol className="min-w-0">
-          {steps.map((step, index) => (
-            <li
-              key={step.title}
-              className={`${styles.analysisStep} grid min-w-0 grid-cols-[3rem_minmax(0,1fr)] gap-4 py-6`}
-            >
-              <span className="font-mono text-xs text-muted-foreground tabular-nums">
-                {String(index + 1).padStart(2, "0")}
-              </span>
-              <div className="flex flex-col gap-2">
-                <h3 className="text-xl font-semibold">{step.title}</h3>
-                <p className="max-w-md leading-7 text-muted-foreground">
-                  {step.body}
-                </p>
-              </div>
-            </li>
-          ))}
-        </ol>
-      </div>
-    </section>
-  )
-}
-
-type ProductCapability = {
-  id: LandingProductFeature
-  title: string
-  outcome: string
-  body: string
-  linkLabel: string
-  icon: ElementType
-}
-
-function ProductStory({ dictionary }: { dictionary: Dictionary }) {
-  const t = dictionary.landing.product
-  const capabilities: ProductCapability[] = [
-    {
-      id: "knowledge-graph",
-      title: t.knowledgeGraphTitle,
-      outcome: t.knowledgeGraphOutcome,
-      body: t.knowledgeGraphBody,
-      linkLabel: t.knowledgeGraphLinkLabel,
-      icon: NetworkIcon,
-    },
-    {
-      id: "live-charts",
-      title: t.liveChartsTitle,
-      outcome: t.liveChartsOutcome,
-      body: t.liveChartsBody,
-      linkLabel: t.liveChartsLinkLabel,
-      icon: LineChartIcon,
-    },
-    {
-      id: "ai-assistant",
-      title: t.aiAssistantTitle,
-      outcome: t.aiAssistantOutcome,
-      body: t.aiAssistantBody,
-      linkLabel: t.aiAssistantLinkLabel,
-      icon: BrainCircuitIcon,
-    },
-    {
-      id: "telegram",
-      title: t.telegramTitle,
-      outcome: t.telegramOutcome,
-      body: t.telegramBody,
-      linkLabel: t.telegramLinkLabel,
-      icon: CalendarClockIcon,
-    },
-    {
-      id: "strategy-coding",
-      title: t.strategyTitle,
-      outcome: t.strategyOutcome,
-      body: t.strategyBody,
-      linkLabel: t.strategyLinkLabel,
-      icon: Code2Icon,
-    },
-  ]
-
-  return (
-    <section
-      id="product"
-      data-landing-section="product-story"
-      data-landing-surface="light"
-      aria-labelledby="landing-product-heading"
-      className={`${styles.lightSurface} border-b border-border/80 bg-background`}
-    >
-      <div className="mx-auto flex w-full max-w-[100rem] flex-col gap-12 px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
-        <div className="flex max-w-5xl flex-col gap-5">
-          <p className="text-xs font-semibold tracking-[0.18em] text-chart-1 uppercase">
-            {t.eyebrow}
-          </p>
-          <h2
-            id="landing-product-heading"
-            className={`${styles.landingDisplayHeading} max-w-4xl text-4xl leading-[1.02] sm:text-5xl lg:text-6xl`}
-          >
-            {t.heading}
-          </h2>
-          <p className="max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">
-            {t.body}
-          </p>
-        </div>
-
-        <div
-          className={`${styles.landingCardGrid} grid auto-rows-fr sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5`}
-        >
-          {capabilities.map((capability) => (
-            <CapabilityCard capability={capability} key={capability.id} />
-          ))}
-        </div>
-      </div>
-    </section>
-  )
-}
-
-function CapabilityCard({ capability }: { capability: ProductCapability }) {
-  const Icon = capability.icon
-
-  return (
-    <article
-      id={capability.id}
-      data-product-card
-      aria-labelledby={`${capability.id}-title`}
-      className={`${styles.landingCardGridItem} flex h-full min-w-0 flex-col gap-0 xl:min-h-[23rem]`}
-    >
-      <span
-        aria-hidden="true"
-        className="flex size-11 items-center justify-center rounded-xl border border-border bg-background text-chart-1"
-      >
-        <Icon className="size-5" />
-      </span>
-
-      <div className="mt-12 flex min-w-0 flex-col gap-3">
-        <p className="text-[0.7rem] font-semibold tracking-[0.16em] text-chart-1 uppercase">
-          {capability.title}
-        </p>
-        <h3
-          id={`${capability.id}-title`}
-          className="text-xl leading-[1.08] font-semibold tracking-[-0.025em]"
-        >
-          {capability.outcome}
-        </h3>
-        <p className="text-sm leading-6 text-muted-foreground">
-          {capability.body}
-        </p>
-      </div>
-
-      <p className="mt-auto pt-6 text-xs font-medium text-muted-foreground">
-        {capability.linkLabel}
-      </p>
-    </article>
-  )
-}
-
 function ShowcaseSection({
   dictionary,
   locale,
@@ -931,51 +620,17 @@ function ShowcaseSection({
   locale: AppLocale
 }) {
   const t = dictionary.landing.showcase
-  const product = dictionary.landing.product
-  const graphCapture = getApprovedLandingProductCapture(
-    locale,
-    "knowledge-graph"
-  )
-  const chartCapture = getApprovedLandingProductCapture(locale, "live-charts")
 
   return (
     <section
       id="showcase"
       data-landing-section="showcase"
       data-landing-surface="light"
-      aria-labelledby="landing-showcase-heading"
+      aria-label={t.tabListLabel}
       className={`${styles.lightSurface} border-b border-border/80 bg-background`}
     >
       <div className="mx-auto w-full max-w-[100rem] px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
-        <LandingFeatureShowcase
-          locale={locale}
-          labels={t}
-          captures={{
-            knowledgeGraph: {
-              capture: graphCapture,
-              labels: {
-                alt: product.knowledgeGraphMediaAlt,
-                label: product.knowledgeGraphMediaTitle,
-                caption: product.knowledgeGraphMediaCaption,
-                error: product.media.error,
-                annotations: [
-                  product.knowledgeGraphAnnotationEvent,
-                  product.knowledgeGraphAnnotationAsset,
-                  product.knowledgeGraphAnnotationSource,
-                ],
-              },
-            },
-            marketChart: {
-              capture: chartCapture,
-              labels: {
-                alt: product.liveChartsMediaAlt,
-                label: product.liveChartsMediaTitle,
-                caption: product.liveChartsMediaCaption,
-                error: product.media.error,
-              },
-            },
-          }}
-        />
+        <LandingFeatureShowcase locale={locale} labels={t} />
       </div>
     </section>
   )
@@ -1150,12 +805,6 @@ function LandingFooter({
           <span className="font-mono text-xs text-muted-foreground">
             {t.footer.requestAccessEmail}
           </span>
-          <a
-            href="#how-it-works"
-            className="text-muted-foreground hover:text-foreground"
-          >
-            {t.footer.workflow}
-          </a>
         </nav>
       </div>
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-2 border-t border-border px-4 py-5 text-xs text-muted-foreground sm:flex-row sm:justify-between sm:px-6 lg:px-8">

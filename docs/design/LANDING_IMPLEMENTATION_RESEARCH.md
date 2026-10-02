@@ -1,3 +1,5 @@
+> Historical reference only: product screenshots were retired on 2026-10-02. The landing now renders every demo from code; these archived references are not runtime assets.
+
 # Landing Implementation Research
 
 > Trạng thái: nghiên cứu chuẩn bị implementation, chưa triển khai application code

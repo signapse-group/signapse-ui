@@ -2,11 +2,27 @@
 
 > Trạng thái: Đã chốt cho implementation
 > Phạm vi: Landing công khai tại `/vi` và `/en`  
-> Cập nhật gần nhất: 2026-09-15
+> Cập nhật gần nhất: 2026-10-02
 
-Quyết định ngày 2026-09-09: landing tập trung vào bốn tính năng Đồ thị Tri thức, Biểu đồ trực tiếp, Trợ lý AI và Telegram. Graph và Chart dùng ảnh sản phẩm đã duyệt; AI Assistant và Telegram là hai chapter text-only hoàn chỉnh, không có hạng mục ảnh còn thiếu.
+Quyết định bỏ ảnh demo ngày 2026-10-02: landing chỉ trình diễn bằng code. Bỏ toàn bộ product screenshot, catalog, component ảnh, copy caption/alt/error và test dành riêng cho nhánh ảnh. Graph/Chart render trực tiếp DOM/SVG final frame từ SSR, rồi chạy animation khi active và trong viewport; AI/Telegram giữ fallback tĩnh bằng code. Logo, icon và brand assets không thuộc ảnh demo và vẫn giữ. Các bảng chapter cũ bên dưới là lịch sử composition; quyết định này thay thế mọi yêu cầu ảnh sản phẩm trước đó.
 
-Quyết định showcase ngày 2026-09-15: `SEE THE WORKFLOW` dùng bốn feature selector Đồ thị Tri thức, Biểu đồ thị trường, Hội thoại AI và Telegram theo lịch trên một shared stage. Graph/Chart giữ approved product surfaces, AI dùng browser-window conversation simulation có nhãn `Demo`, và Telegram theo lịch dùng interactive DOM simulation với route-local Motion.
+Quyết định tối giản ngày 2026-10-02: bỏ `AnalysisFlow` / `#how-it-works` và toàn bộ copy “FROM SIGNALS TO AUTOMATION”. Hero capability flow và các popup chi tiết đã là điểm giải thích quy trình duy nhất; header, footer và locale routing không còn cung cấp link hoặc hash cho section đã xóa.
+
+Thứ tự section hiện tại: Hero → `SEE THE WORKFLOW` → đối tượng sử dụng → Provider integrations → liên hệ.
+
+Showcase giữ bốn demo hiện tại và bỏ hẳn ba đoạn intro (eyebrow `SEE THE WORKFLOW`, heading và body chung). Mỗi bước có ba lớp text riêng: label, title và body. Theo reference Clerk Multi-tenancy và screenshot đã duyệt, từ `1024px` demo active chiếm cùng một vị trí sticky bên phải; copy bốn bước cuộn bên trái và kích hoạt demo ở vùng giữa viewport. Không đặt ngưỡng chiều cao để bật sticky: vị trí sticky và chiều cao canvas thích ứng với cửa sổ thấp. Text giới hạn `22rem`, title desktop `20px`, body `15px`; các badge số nối bằng đường dọc nét đứt. Dưới `1024px`, text và demo của từng bước xếp liên tiếp, không có vùng cuộn bị khóa hoặc scale toàn bộ chữ trong demo. Không JavaScript hoặc không IntersectionObserver thì giữ toàn bộ copy và bản xem trước bằng code trong luồng tự nhiên. Viền tiến trình bao quanh badge số trên cả hai bố cục; nó là thời gian phát của demo đang active, không phải phần trăm cuộn trang. Demo dừng khi inactive/ngoài viewport và giữ final frame khi reduced motion. Buttons native hỗ trợ click, Tab, Enter/Space và các phím điều hướng bước; scroll không lấy focus và không dùng tablist/tabpanel.
+
+Đồng bộ Telegram cùng ngày: cả renderer động và static proof dùng một browser frame chung qua `LandingDemoBrowserChrome`, chứa panel cấu hình/phân tích Signapse và panel hội thoại Telegram. Chỉ outer browser có shadow; panel con có viền nhẹ. Hai panel cạnh nhau khi stage đủ rộng (`38rem`), còn mobile xếp dọc trong cùng browser. Theo yêu cầu thu gọn đã duyệt, riêng form minh họa `inert` dùng label `11px`, control text `12px` và chiều cao `28px`; Select dùng size `sm` trước khi áp dụng phần compact còn lại. Đây là ngoại lệ hẹp của demo, không đổi shared shadcn wrappers hoặc form vận hành. Desktop browser content giữ tối thiểu `31rem` để tránh cắt bản tin và kết quả phân tích khi viewport quá thấp; ở cửa sổ không đủ chiều cao, phần dư đi theo cuộn tự nhiên khi ra khỏi vùng sticky. Giữ cỡ chữ tin nhắn, timeline, playback và vị trí cursor theo control; kiểm tra bản tin đủ nội dung ở VI/EN, cửa sổ thấp, mobile và reduced motion.
+
+Quyết định tối giản ngày 2026-10-02: flow tại Hero là nơi duy nhất giới thiệu năm năng lực MARKET VIEW, IMPACT GRAPH, AI CONVERSATION, TELEGRAM và STRATEGY CODING. Bỏ section ProductStory / `#product` cùng năm card riêng; sau Hero là section đối tượng sử dụng. Mỗi item trong flow mở một popover chứa outcome và body đã có; không thêm ảnh hoặc CTA vào popover. Desktop mở bằng hover và giữ nội dung khi chuột chuyển vào popup; touch mở/đóng bằng chạm; bàn phím dùng Enter/Space, Escape đóng và trả focus. Chỉ một popup mở, không đổi chiều cao Hero. Popup dùng shadcn Popover và fixed navy/mint semantic palette của landing, không kế thừa theme dashboard.
+
+Các anchor `#knowledge-graph`, `#live-charts`, `#ai-assistant`, `#telegram`, `#strategy-coding` thuộc item tương ứng trong Hero. Menu/footer và URL trực tiếp mở đúng chi tiết; đổi locale giữ các hash này và `#capability-strip`, bỏ hash `#product`. Showcase chỉ dùng các renderer bằng code. Các mô tả ProductStory/chapter và bảng section bên dưới ghi lại bố cục trước thay đổi này; quyết định ngày 2026-10-02 thay thế chúng trong phạm vi năng lực và navigation.
+
+Quyết định Hero cùng ngày: bỏ trust note và proof “Đọc bối cảnh, không chỉ nhìn nến”; chuyển proof “Trợ lý AI chuyên biệt” xuống dưới một CTA “Liên Hệ” luôn dẫn tới `#access`, không phụ thuộc trạng thái đăng nhập. Header/footer/final CTA giữ hành vi hiện có.
+
+Quyết định ngày 2026-09-09: landing tập trung vào bốn tính năng Đồ thị Tri thức, Biểu đồ trực tiếp, Trợ lý AI và Telegram. Graph và Chart dùng renderer bằng code; AI Assistant và Telegram là hai chapter text-only hoàn chỉnh, không có hạng mục ảnh còn thiếu.
+
+Quyết định showcase ngày 2026-09-15: `SEE THE WORKFLOW` dùng bốn feature selector Đồ thị Tri thức, Biểu đồ thị trường, Hội thoại AI và Telegram theo lịch trên một shared stage. Graph/Chart dùng DOM/SVG, AI dùng browser-window conversation simulation có nhãn `Demo`, và Telegram theo lịch dùng interactive DOM simulation với route-local Motion.
 
 Quyết định visual ngày 2026-09-09: landing dùng fixed branded composition với palette navy/mint đã được duyệt cho Signapse. Quyết định này chỉ áp dụng cho landing; dashboard vẫn phản ứng theo theme preference của người dùng.
 
@@ -108,7 +124,7 @@ Thứ tự tính năng: Đồ thị Tri thức → Biểu đồ trực tiếp �
 | Hero proof 2 title       | Đọc bối cảnh, không chỉ nhìn nến                                                                                                                                                                                | Read the context, not just the candles                                                                                                                                                                       |
 | Hero proof 2 body        | Đọc diễn biến giá trên chart cùng phản ứng thị trường, sự kiện và lịch kinh tế liên quan.                                                                                                                       | Read price action alongside market reactions, related events, and economic-calendar context.                                                                                                                 |
 
-Hero giữ visual conceptual hiện có; dưới figure là hai proof block ngắn. Điều hướng tới bốn chapter vẫn thuộc Header và ProductStory; ảnh Graph/Chart nằm trong chapter tương ứng, không lặp thành một hàng link trong Hero.
+Hero giữ visual conceptual hiện có; các demo Graph/Chart nằm trong showcase bằng code, không lặp thành một hàng link trong Hero.
 
 Implementation dùng các chuỗi trong first viewport và Locked Section Copy làm editorial baseline. Chỉ được sửa lỗi chính tả hoặc ngữ pháp mà không đổi nghĩa; mọi thay đổi về promise, qualifier, capability boundary, hierarchy hoặc CTA phải cập nhật tài liệu này và cả hai locale trong cùng change.
 
@@ -219,7 +235,7 @@ Section không cần intro lặp danh sách bốn tính năng đã hiển thị 
 | H3      | Nhìn thấy các mối liên hệ trong thị trường.                                                                                                          | See how market information connects.                                                                                                                         |
 | Body    | Khám phá quan hệ giữa sự kiện, tài sản và tin tức trên Đồ thị Tri thức. Theo dấu các liên kết để mở rộng bối cảnh quanh thông tin bạn đang quan tâm. | Explore relationships between events, assets, and news on the Knowledge Graph. Follow the links to expand the context around information that interests you. |
 
-Product proof: ảnh Graph View thực tế cho thấy một sự kiện nối với tài sản và bài viết liên quan. Giữ phân biệt bề mặt Graph View có thể khám phá với lớp Market Knowledge Graph cung cấp ngữ cảnh cho AI. Không dùng hình động Hero hoặc Sigma demo để giả làm ảnh sản phẩm. Các giới hạn về node kinds, narrative và workspace filtering trong claim matrix vẫn áp dụng.
+Product proof: demo Graph dựng bằng DOM/SVG cho thấy một sự kiện nối với tài sản và bài viết liên quan. Giữ phân biệt bề mặt Graph View có thể khám phá với lớp Market Knowledge Graph cung cấp ngữ cảnh cho AI. Các giới hạn về node kinds, narrative và workspace filtering trong claim matrix vẫn áp dụng.
 
 #### Chapter 2 — Live Charts — `#live-charts`
 
@@ -230,7 +246,7 @@ Product proof: ảnh Graph View thực tế cho thấy một sự kiện nối v
 | Body              | Theo dõi diễn biến giá cập nhật trực tiếp, cùng các dấu mốc sự kiện và lịch kinh tế trên biểu đồ. | Follow live price movements alongside event markers and the economic calendar on the chart. |
 | Supporting detail | Mở dấu mốc sự kiện để xem phản ứng thị trường và kiểm tra nguồn tin.                              | Open an event marker to review market reactions and check the sources.                      |
 
-Product proof: ảnh chart thực tế có dữ liệu giá, dấu mốc sự kiện và trạng thái luồng được giữ nguyên. Chú thích là preview và đường dẫn tới chi tiết; không ngụ ý toàn bộ nguồn tin nằm trong popup. Reaction & Evidence được gộp vào phần giải thích Chart, không còn là chapter riêng. Trạng thái dữ liệu cũ, mất kết nối, thị trường đóng cửa và giới hạn dữ liệu phải được giữ trong capture và ghi chú chi tiết phù hợp.
+Product proof: demo Chart dựng bằng DOM/SVG thể hiện giá, dấu mốc sự kiện và lịch kinh tế từ fixture công khai; không trình bày như dữ liệu live.
 
 #### Chapter 3 — AI Assistant — `#ai-assistant`
 
@@ -355,44 +371,12 @@ Các asset sau đã nằm trong public runtime và được phép dùng trên la
 
 Ưu tiên SVG cho UI. Hai bản WebP chỉ dùng khi consumer cần raster; không tải file 2048px nếu kích thước hiển thị nhỏ hơn đáng kể.
 
-### Product captures permitted after review
+### Product demos rendered from code
 
-Phạm vi media chỉ gồm ảnh Đồ thị Tri thức và Biểu đồ trực tiếp. Hai feature này đã có asset Việt–Anh được duyệt và tích hợp; AI Assistant và Telegram không có media slot.
-
-| Planned asset                                         | Surface được capture                                                  | Vị trí            | Trạng thái           |
-| ----------------------------------------------------- | --------------------------------------------------------------------- | ----------------- | -------------------- |
-| `public/images/landing/{lang}/knowledge-graph.webp`   | Graph View với sự kiện, tài sản và bài viết liên quan                 | Đồ thị Tri thức   | Đã duyệt và tích hợp |
-| `public/images/landing/{lang}/live-market-chart.webp` | Chart với giá, dấu mốc sự kiện, lịch kinh tế và trạng thái luồng thật | Biểu đồ trực tiếp | Đã duyệt và tích hợp |
-
-`{lang}` là `vi` hoặc `en`. Capture có visible UI text phải có hai asset dùng cùng demo scenario, product state và crop tương đương; text trong ảnh phải khớp locale của route. Asset không có text phụ thuộc ngôn ngữ có thể dùng chung dưới `public/images/landing/shared/` sau khi được duyệt. Nếu asset của một locale chưa tồn tại hoặc chưa approved, locale đó bỏ media slot và dùng text-first composition; không fallback sang ảnh của locale còn lại.
-
-Text-first chỉ là fallback khi Graph hoặc Chart thiếu ảnh đã duyệt cho locale hiện tại. AI Assistant và Telegram luôn là text-only theo thiết kế và không được ghi nhận như media còn thiếu.
-
-### Capture preparation and ownership
-
-- Codex phụ trách kịch bản chụp, crop, tối ưu, caption và alt cho ảnh Graph/Chart Việt–Anh. Product Owner xác nhận môi trường/nguồn demo được phép công khai và duyệt riêng ảnh cuối của từng locale trước khi tích hợp.
-- Graph ưu tiên một cụm quan hệ dễ đọc gồm sự kiện, tài sản và bài viết liên quan; 2–3 chú thích chỉ rõ điều cần quan sát. Không dùng Sigma demo thay Graph View hoặc diễn đạt đường nối như bằng chứng nhân quả.
-- Chart thể hiện giá, dấu mốc sự kiện, lịch kinh tế và trạng thái dữ liệu thực tế. Có thể dùng thêm crop chi tiết sự kiện khi cần, nhưng phải phân biệt preview với màn chi tiết; ảnh tĩnh không được mô tả như biểu đồ live đang chạy.
-- AI Assistant và Telegram không có capture requirement hoặc media catalog entry.
-- Ghi lại theo Graph/Chart và locale: nguồn và kịch bản, path, dimensions, caption/alt, trạng thái thiếu ảnh/chờ duyệt/đã duyệt, cùng xác nhận của owner. Không lưu credential hoặc dữ liệu riêng trong hồ sơ này.
-
-### Capture approval checklist
-
-Một product capture chỉ được công khai khi tất cả điều kiện sau đạt:
-
-- Dùng seeded/demo workspace hoặc dữ liệu đã được chủ sở hữu xác nhận cho phép công khai.
-- Không có tên, email, avatar, workspace riêng, watchlist riêng hoặc thông tin nhận dạng người dùng thật.
-- Không có API key, token, permission detail, internal hostname, request payload, console log hoặc admin-only control nhạy cảm.
-- Không hiển thị unreleased hoặc backend-only capability.
-- Không chứa customer logo, testimonial, portfolio value, P&L hoặc performance metric chưa được duyệt.
-- Headline, article excerpt và source content tuân thủ quyền sử dụng; ưu tiên demo copy do Signapse sở hữu hoặc dữ liệu được phép tái sử dụng.
-- Vendor/source attribution vẫn hiển thị khi license hoặc ngữ cảnh yêu cầu.
-- Số liệu trong capture là dữ liệu demo có chủ đích, không phải số ngẫu nhiên được trình bày như runtime truth.
-- Crop không làm thay đổi ý nghĩa hoặc che limitation/status quan trọng.
-- Visible UI text khớp locale của route; asset selection, caption và alt text lấy từ dictionary.
-- Có localized alt text; nội dung thiết yếu trong ảnh cũng được giải thích bằng text cạnh ảnh.
-- Hai locale được duyệt độc lập trên cùng demo scenario; không dùng ảnh sai locale làm fallback.
-- Asset có intrinsic dimensions, được tối ưu WebP/AVIF và không gây layout shift.
+- Bốn demo dùng DOM/SVG và fixture public có chủ đích; không dùng ảnh chụp sản phẩm, catalog ảnh hoặc fallback ảnh.
+- Graph và Chart dùng cùng renderer cho bản xem trước SSR và animation, bắt đầu ở final frame trước khi playback hoạt động. Inspector của Graph phải thấy được khi JavaScript tắt.
+- AI và Telegram giữ bản tĩnh bằng code khi module animation chưa tải hoặc tải lỗi.
+- Copy lấy từ dictionary đúng locale; summary accessible và attribution cần thiết vẫn giữ. Không chứa credential, workspace riêng hoặc dữ liệu runtime nhạy cảm.
 
 ### Prohibited assets and treatments
 
@@ -404,7 +388,7 @@ Một product capture chỉ được công khai khi tất cả điều kiện sa
 - Không dùng customer logo, quote, rating hoặc certification khi chưa có quyền bằng văn bản.
 - Không dùng generated image để giả làm screenshot sản phẩm.
 
-Nếu chưa có capture được duyệt, hero phải dùng text-first composition và conceptual figure có nhãn, không dùng placeholder mock để lấp chỗ trống.
+Hero giữ conceptual figure bằng code cùng text summary, không dùng ảnh sản phẩm.
 
 ## Information Architecture
 
@@ -412,9 +396,9 @@ Nếu chưa có capture được duyệt, hero phải dùng text-first compositi
 | ------ | ------------------------------- | --------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
 | 1      | `PublicHeader`                  | —               | Nhận diện, điều hướng và access path                      | Logo; Sản phẩm (Tổng quan, bốn tính năng, Cách hoạt động); locale; auth-aware CTA           | Brand asset                                          |
 | 2      | `HeroProductProof`              | `#top`          | Định vị Knowledge Graph/AI và dẫn tới hành động tiếp theo | H1/supporting copy baseline; CTA; trust line; hai proof point                               | Conceptual market-context figure hiện có             |
-| 3      | `ProductStory`                  | `#product`      | Giải thích bốn tính năng chính bằng bốn chapter lớn       | Đồ thị Tri thức → Biểu đồ trực tiếp → Trợ lý AI → Telegram                                  | Ảnh Graph/Chart; AI/Telegram text-only               |
+| 3      | `ProductStory`                  | `#product`      | Giải thích bốn tính năng chính bằng bốn chapter lớn       | Đồ thị Tri thức → Biểu đồ trực tiếp → Trợ lý AI → Telegram                                  | Nội dung đã chuyển vào Hero và demo bằng code               |
 | 4      | `AnalysisFlow`                  | `#how-it-works` | Giúp người mới hình dung hành trình sử dụng               | Chọn tài sản, xem diễn biến giá → Mở sự kiện, kiểm tra nguồn tin → Phân tích cùng Trợ lý AI | Ba bước bằng text; đường nối thứ tự tĩnh là tùy chọn |
-| 5      | `InteractiveProductShowcase`    | —               | Cho xem bốn feature trên một shared stage                 | Graph/Chart product surface; AI browser conversation; Scheduled Telegram Motion demo         | Hai approved surface + hai DOM demo có nhãn          |
+| 5      | `InteractiveProductShowcase`    | —               | Cho xem bốn feature trên một shared stage                 | Graph/Chart DOM/SVG demo; AI browser conversation; Scheduled Telegram Motion demo         | Bốn DOM/SVG demo bằng code          |
 | 6      | `ProviderIntegrations`          | `#trust`        | Cho thấy khả năng tích hợp nhiều nhà cung cấp AI          | OpenAI; Gemini; Anthropic; DeepSeek; Groq; Z.AI                                             | Logo màu, không khung, chuyển động chậm              |
 | 7      | `FinalAccessCta`                | `#access`       | Kết thúc bằng cùng một conversion path                    | Outcome recap; auth-aware CTA; email behavior microcopy                                     | Không cần media                                      |
 | 8      | `PublicFooter`                  | —               | Cung cấp fallback và locale path                          | Brand; sign-in hoặc dashboard theo auth state; request-access email; locale                 | Brand asset                                          |
@@ -430,7 +414,7 @@ Nếu chưa có capture được duyệt, hero phải dùng text-first compositi
 - Header, Hero và Final CTA dùng cùng một primary destination.
 - Footer chỉ hiển thị link đang tồn tại; không render Docs, Privacy hoặc Terms trước khi route thật có sẵn.
 - Route-specific sections ở cạnh route. Không tạo shared component hoặc wrapper mới chỉ cho landing.
-- Showcase shell sở hữu feature selection và shared stage; mỗi feature renderer là route-local và có thể được thay độc lập. Graph, Chart và AI dùng cùng chuẩn browser frame; AI và Telegram có interactive renderer.
+- Showcase shell sở hữu feature selection và shared stage; mỗi feature renderer là route-local và có thể được thay độc lập. Cả bốn demo dùng cùng chuẩn browser frame; AI và Telegram có interactive renderer.
 
 ### Feature-specific composition
 
@@ -447,10 +431,10 @@ Graph là điểm nhấn thị giác đầu tiên nhưng không tạo thêm sect
 
 ### Product image presentation
 
-- Mỗi ảnh sản phẩm được duyệt hiển thị trực tiếp trong chapter, không có nút mở rộng hoặc hộp thoại phụ. Ảnh là product proof tĩnh, không phải demo và không chứa interaction giả với graph/chart/chat.
-- Chú thích, annotation và thông tin thiết yếu luôn là text ngoài ảnh, đọc được ngay tại chapter. Caption/alt dựa trên nội dung capture đã duyệt; không khẳng định dữ liệu chưa có trong ảnh.
-- Ảnh giữ tỷ lệ và intrinsic dimensions, dùng responsive width theo bố cục chapter, không crop thêm hoặc kéo méo. Ở mobile và zoom `200%`, ảnh reflow bên dưới copy và không tạo page-level overflow.
-- Nếu ảnh inline lỗi, chapter vẫn giữ outcome, body, caption và annotation; thông báo lỗi localized không được làm mất nội dung giải thích.
+- Product demo dùng renderer bằng code; không có nút mở rộng hoặc lightbox cho ảnh sản phẩm.
+- Nội dung giải thích và accessible summary lấy từ dictionary, không phụ thuộc text trong ảnh.
+- Demo reflow theo chiều rộng và không tạo page-level horizontal overflow.
+- Bản xem trước SSR giữ đầy đủ nội dung khi animation chưa chạy hoặc module animation tải lỗi.
 
 ## Visual Direction
 
@@ -473,7 +457,7 @@ Landing phải gợi cảm giác một market briefing rõ ràng, chính xác v�
 - Dùng một accent có kiểm soát cho primary CTA và tín hiệu nghiệp vụ thật.
 - Hero dùng một interactive market-context figure có nhãn localized, static dual-view fallback và route-local WebGL enhancement; Analysis Flow chỉ dùng đường nối thứ tự tĩnh decorative khi cần, theo composition đã chốt trong Locked Section Copy. Connector/grid/node geometry phải nhẹ, không lặp trong chapter/card; conceptual labels và summary phải có nghĩa độc lập với motion.
 - Hero dùng trường glyph `O/H/L/C/V` route-local làm texture thứ cấp phía sau nội dung và figure. Chiều sâu đến từ scale, opacity, navy/mint gradient và mask; lớp này tĩnh, không tương tác, ẩn khỏi accessibility tree và không cạnh tranh với headline hoặc figure.
-- Product capture là visual chính; icon chỉ hỗ trợ scan và dùng Lucide, không dùng emoji.
+- Demo bằng code là visual chính; icon chỉ hỗ trợ scan và dùng Lucide.
 - Section rhythm dùng chapter Graph với copy trái và ảnh phải ở desktop, sau đó các chapter copy/media theo Feature-specific composition; giữ copy trước media ở mobile. Không copy giá trị màu hoặc tài sản của Graphify; không đổi geometry, font hoặc motion Hero chỉ để giống reference.
 - Không dùng bento wall, testimonial carousel, logo cloud, glassmorphism, purple gradient hoặc AI decoration không có product meaning.
 - Không thêm GSAP hoặc chart engine. Hero figure được phép dùng route-local `three@0.180.0` để tái hiện visual core đã duyệt; renderer phải dynamic-load, capped-pixel-ratio, dừng khi idle/paused/hidden/offscreen, dispose đầy đủ và tôn trọng reduced motion. Scheduled Telegram showcase được phép dùng route-local `motion` qua progressive client boundary; các transition UI khác dùng `150–250ms` cho hover/focus/disclosure.
@@ -484,7 +468,7 @@ Landing phải gợi cảm giác một market briefing rõ ràng, chính xác v�
 | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `< 640px`      | Một cột; copy trước visual; CTA full-width khi cần; header giữ brand + primary CTA + menu, locale và secondary action nằm trong native disclosure; touch target ưu tiên tối thiểu 44×44px. |
 | `640px–767px`  | Một cột; copy trước visual; mobile navigation dùng native disclosure; locale có thể hiển thị khi đủ chỗ; touch target ưu tiên tối thiểu 44×44px.                                           |
-| `768px–1199px` | Hero và product chapters vẫn một cột để product capture có đủ chiều rộng; AnalysisFlow ba bước xếp dọc; showcase selector đứng trước shared stage.                                         |
+| `768px–1199px` | Hero và product chapters vẫn một cột để demo có đủ chiều rộng; AnalysisFlow ba bước xếp dọc; showcase selector đứng trước shared stage.                                         |
 | `≥ 1200px`     | Hero có thể dùng split `5/7`; Graph và Chart có copy trái/ảnh phải; AI/Telegram chapter text-only; AnalysisFlow cùng hàng; showcase selector trái, shared stage phải.                    |
 | Zoom `200%`    | Reflow như narrow viewport; không page-level horizontal overflow; sticky/fixed surface không che focus hoặc heading.                                                                       |
 
@@ -504,9 +488,9 @@ Landing phải gợi cảm giác một market briefing rõ ràng, chính xác v�
 - Không dùng color làm tín hiệu duy nhất cho direction, confidence, status hoặc graph relation.
 - Interactive figure có nhãn phải có `<figure>`/caption hoặc text summary localized; stage là focusable labelled group, không dùng `role="application"`; canvas, connector và node geometry decorative dùng `aria-hidden`. Enter/Space đổi mode, arrow keys xoay, pointer fine có hover preview/click pin, touch phân biệt tap và drag, và Pause/Resume là native button.
 - Meaningful image có localized `alt`; decorative image có `alt=""`.
-- Ảnh product proof là nội dung tĩnh, có alt localized và caption/annotation đi kèm; không tạo thêm interaction chỉ để phóng to ảnh.
-- Alt text mô tả insight của capture, không liệt kê mọi chữ trong screenshot.
-- Nội dung và hành động không phụ thuộc hover; screenshot không chứa control trông tương tác được nếu nó chỉ là ảnh.
+- Các bản xem trước demo là DOM/SVG tĩnh, cùng nội dung localized với renderer animation.
+- Accessible summary mô tả nội dung demo, không liệt kê từng control trong mô phỏng.
+- Nội dung và hành động không phụ thuộc hover; control minh họa không tạo tác động bên ngoài.
 - Tôn trọng `prefers-reduced-motion`; trang vẫn đầy đủ ý nghĩa khi tắt toàn bộ motion. Reduced-motion bắt đầu không auto-rotate, đổi mode tức thời và chỉ opt-in rotation trong mount hiện tại.
 - Contrast tối thiểu `4.5:1` cho normal text và `3:1` cho large text, focus indicator và component boundary quan trọng khi landing hiển thị dưới cả global light và dark theme.
 - Trang sử dụng được hoàn toàn bằng keyboard và ở zoom `200%`.
@@ -554,10 +538,10 @@ Landing phải gợi cảm giác một market briefing rõ ràng, chính xác v�
 - Giữ implementation route-local: `page.tsx` sở hữu metadata/dictionary/auth orchestration; một Server Component sở hữu các named landing sections; Context figure là client island riêng cho WebGL/interaction; locale switch vẫn là client island nhỏ đọc hash/query; một pure access model sở hữu CTA state/destination. Không tạo shared landing framework hoặc tách mỗi section thành một shallow file.
 - Ưu tiên native disclosure cho mobile navigation; không thêm dependency mới.
 - Reuse `Logo`, `Button`, locale routing helpers và shadcn wrappers hiện có.
-- Product capture chỉ là inline media surface với fallback lỗi localized; không thêm dialog, lightbox hoặc client boundary riêng chỉ để phóng to ảnh.
+- Các demo Graph/Chart/AI/Telegram là route-local renderer; không có nhánh product screenshot.
 - Không thêm shared UI abstraction chỉ phục vụ landing.
-- Product images dùng `next/image`, intrinsic dimensions và responsive `sizes`.
-- Hero image được ưu tiên tải chỉ khi asset đã approved; below-fold images lazy-load.
+- Chỉ logo và brand assets dùng image component; nội dung demo dùng DOM/SVG.
+- Hero figure dựng bằng code; không có product image cần preload.
 - Mục tiêu CLS `< 0.1`; không thêm third-party script hoặc external font cho landing.
 - Khi rebuild, xóa toàn bộ unused landing mock helpers, copy keys và old section code; không giữ compatibility component không còn caller.
 
@@ -587,13 +571,11 @@ Landing phải gợi cảm giác một market briefing rõ ràng, chính xác v�
 
 ### Media
 
-- Chỉ approved brand asset, approved product capture hoặc Scheduled Telegram DOM simulation có nhãn `Demo` xuất hiện trên trang.
-- Nếu chưa có approved hero capture, hero render text-first với conceptual figure, không có synthetic mock.
-- Product capture đáp ứng toàn bộ capture approval checklist.
-- Chỉ Graph View và live chart có ảnh sản phẩm. Ghi rõ nguồn, locale và trạng thái duyệt của hai slot này; AI Assistant và Telegram là text-only theo thiết kế.
-- Capture có visible UI text dùng đúng asset `vi`/`en`; thiếu một locale thì locale đó dùng text-first, không fallback chéo ngôn ngữ.
+- Chỉ brand assets và bốn renderer demo bằng code xuất hiện trên landing.
+- Hero dùng conceptual figure bằng code và text summary.
+
 - Không có fake metric, private/runtime-sensitive data hoặc unlabeled synthetic product UI. Telegram controls chỉ thay đổi fixture công khai trong demo và không tạo external effect.
-- Có hồ sơ nguồn/demo approval và duyệt ảnh cuối cho Graph/Chart theo locale. Thiếu ảnh ở hai feature này thì bỏ media surface, không giữ text placeholder.
+
 
 ### Layout and accessibility
 
@@ -603,9 +585,9 @@ Landing phải gợi cảm giác một market briefing rõ ràng, chính xác v�
 - Reduced-motion mode không mất nội dung hoặc interaction.
 - Conceptual figure có accessible text summary; decorative geometry không xuất hiện trong accessibility tree.
 - Trường glyph OHLCV xuất hiện đúng một lần trong Hero, nằm sau content/figure, không thêm accessible name, control hoặc tab stop và không tạo page-level overflow.
-- Screenshot alt text và adjacent copy truyền đạt cùng insight chính.
-- Graph và Chart chapter có copy trái, ảnh phải ở desktop; AI/Telegram chapter text-only. Showcase giữ selector trái/stage phải ở desktop và selector trước stage trên mobile/zoom; nhãn feature không cạnh tranh với outcome heading.
-- Ảnh approved hiển thị đúng locale, không méo/crop sai; caption/annotation luôn đọc được ngoài ảnh và lỗi ảnh không làm mất nội dung chapter.
+- Bản xem trước SSR và reduced motion giữ đủ nội dung demo và accessible summary.
+- Showcase có copy trái và demo sticky phải từ 1024px. Showcase giữ selector trái/stage phải ở desktop và selector trước stage trên mobile/zoom; nhãn feature không cạnh tranh với outcome heading.
+- Cả bốn demo dùng đúng dictionary locale; không tải ảnh sản phẩm trong SSR, hydration hoặc playback.
 
 ### Verification
 
@@ -614,8 +596,8 @@ Landing phải gợi cảm giác một market briefing rõ ràng, chính xác v�
 - Chạy lint, typecheck và production build.
 - Static search xác nhận old landing keys, old mock components và forbidden claims đã được loại bỏ.
 - Kiểm tra metadata, canonical/alternate locale URLs và mọi CTA/link destination.
-- Với thay đổi bốn tính năng: kiểm tra thứ tự section/chapter, copy VI/EN, ba bước AnalysisFlow, CTA và feature-anchor/locale behavior; kiểm tra Graph/Chart asset path, dimensions, locale và accessibility text. AI/Telegram chapter không có media surface; showcase kiểm tra riêng ba static proofs và một labeled Scheduled Telegram demo.
-- Với đợt cải thiện bố cục/media: automated checks từ repo kiểm tra heading hierarchy, text-first fallback cho Graph/Chart, bố cục chapter, thứ tự mobile, đúng ảnh/locale và trạng thái lỗi inline. Owner approval của Graph/Chart vẫn được ghi rõ riêng.
+- Với thay đổi bốn tính năng: kiểm tra copy VI/EN, thứ tự section, keyboard/scroll, playback/progress, reduced motion và bản xem trước SSR bằng code.
+- Với thay đổi demo: kiểm tra không có request ảnh sản phẩm, native reflow và nội dung đủ khi JavaScript tắt.
 - Apex cutover chỉ được duyệt sau khi automated gates pass và owner xác nhận Clerk thật, mailbox, visual/accessibility VI/EN light/dark/breakpoints, canonical/alternates và hai social card trên preview. Các owner/manual checks này là cutover gates, không phải automated completion checks của landing implementation task.
 
 ## Deferred Until Explicitly Approved
@@ -633,4 +615,3 @@ Landing phải gợi cảm giác một market briefing rõ ràng, chính xác v�
 
 - `docs/design/DESIGN.md`
 - `docs/APIMAPPING.md`
-- `docs/design/landing-product-captures.md`

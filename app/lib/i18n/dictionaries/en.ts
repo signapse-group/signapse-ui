@@ -738,7 +738,6 @@ export const en: Dictionary = {
   },
   landing: {
     nav: {
-      flow: "How it works",
       product: "Product",
       solutions: "Solutions",
       resources: "Resources",
@@ -815,13 +814,9 @@ export const en: Dictionary = {
       eyebrow: "MARKET INTELLIGENCE & TRADING AUTOMATION PLATFORM",
       title: "Understand faster. Act proactively.",
       body: "Signapse connects news, events, prices, and market data so you can see the bigger picture, understand what is moving prices, ask AI, receive automated signals, and build testable strategies.",
-      trustNote: "Clear context · Configurable signals · Controlled automation",
       proofOneTitle: "Specialized AI Assistant",
       proofOneBody:
         "Powered by a Knowledge Graph built from multi-source market data—aggregated, evaluated, and analyzed.",
-      proofTwoTitle: "Read the context, not just the candles",
-      proofTwoBody:
-        "Read price action alongside market reactions, related events, and economic-calendar context.",
       contextFigureTitle: "Two views of market context",
       contextFigureDescription:
         "An interactive figure places the Market Knowledge Graph alongside price action as two complementary views of context, not a price transformation or forecast.",
@@ -842,89 +837,33 @@ export const en: Dictionary = {
       requestAccessAria: "Contact Signapse for a demo",
       signInAria: "Sign in to Signapse",
       openDashboardAria: "Open the Signapse dashboard",
-      exploreJourney: "Explore the platform",
-      exploreJourneyAria: "Explore the Signapse platform",
+      contact: "Contact",
+      contactAria: "Contact Signapse",
     },
     capabilityStrip: {
+      label: "Signapse capabilities",
       marketViewTitle: "MARKET VIEW",
       impactTitle: "IMPACT GRAPH",
       aiTitle: "AI CONVERSATION",
       telegramTitle: "TELEGRAM",
       strategyTitle: "STRATEGY CODING",
     },
-    analysisFlow: {
-      eyebrow: "FROM SIGNALS TO AUTOMATION",
-      heading: "One seamless workflow, from data to action.",
-      body: "Signapse puts technology in the right role: helping people understand more clearly, test more thoroughly, and automate work that has been validated.",
-      loopEyebrow: "THE SIGNAPSE LOOP",
-      loopTitle: "News → Signal → Strategy → Automation",
-      loopBody:
-        "Each technology layer produces a clear output for trading and research workflows.",
-      loopNews: "News",
-      loopSignal: "Signal",
-      loopStrategy: "Strategy",
-      loopDelivery: "Bot / Telegram",
-      stepOneTitle: "Monitor the market",
-      stepOneBody: "Choose the assets, sources, events, and data that matter.",
-      stepTwoTitle: "Understand the impact",
-      stepTwoBody:
-        "Compare price action with related events, reactions, and sources.",
-      stepThreeTitle: "Ask AI and build a strategy",
-      stepThreeBody:
-        "Go deeper through conversation, code indicators, and test logic against data.",
-      stepFourTitle: "Send alerts or run a bot",
-      stepFourBody:
-        "Distribute through Telegram or deploy a bot within controlled limits.",
-    },
     product: {
-      eyebrow: "FIVE CAPABILITIES · ONE SEAMLESS WORKFLOW",
-      heading: "Everything you need to monitor, analyze, and automate.",
-      body: "Signapse connects the steps that are often separated in trading workflows—from understanding the market to building and operating strategies.",
-      knowledgeGraphTitle: "01 · MARKET VIEW",
       knowledgeGraphOutcome: "See the complete market picture.",
       knowledgeGraphBody:
         "Connect prices, news, events, and related sources so you can see the full picture in one place.",
-      knowledgeGraphLinkLabel: "Understand context faster",
-      knowledgeGraphMediaTitle: "Knowledge Graph capture",
-      knowledgeGraphMediaCaption:
-        "A Graph View capture shows the relationship between an event, a related asset, and a source.",
-      knowledgeGraphMediaAlt:
-        "Knowledge Graph showing an event connected to a related asset and source.",
-      knowledgeGraphAnnotationEvent: "Event being explored",
-      knowledgeGraphAnnotationAsset: "Related asset",
-      knowledgeGraphAnnotationSource: "Related source",
-      liveChartsTitle: "02 · IMPACT GRAPH",
       liveChartsOutcome: "See what is moving prices.",
       liveChartsBody:
         "Place price action alongside related events and sources to understand impact, not just read a chart.",
-      liveChartsLinkLabel: "Trace the impact",
-      liveChartsDetail:
-        "Trace the impact from price movement to related events and sources.",
-      liveChartsMediaTitle: "Live charts capture",
-      liveChartsMediaCaption:
-        "A chart capture shows price movement alongside event markers and the economic calendar.",
-      liveChartsMediaAlt:
-        "Price chart showing related event markers and economic-calendar context.",
-      aiAssistantTitle: "03 · AI CONVERSATION",
       aiAssistantOutcome: "Ask quickly and understand deeply with AI.",
       aiAssistantBody:
         "Ask questions in natural language, follow a conversational thread, and get perspectives grounded in related data.",
-      aiAssistantLinkLabel: "Ask Signapse",
-      telegramTitle: "04 · TELEGRAM",
       telegramOutcome: "Send important signals straight to Telegram.",
       telegramBody:
         "Configure assets, conditions, and schedules so news, signals, and alerts reach the right channel at the right time.",
-      telegramLinkLabel: "Set up delivery",
-      telegramSetup:
-        "Set up the delivery flow around your needs and working schedule.",
-      strategyTitle: "05 · STRATEGY CODING",
       strategyOutcome: "Turn a trading idea into a strategy.",
       strategyBody:
         "Code indicators, test logic, and evaluate results before adding a strategy to an automated workflow.",
-      strategyLinkLabel: "Build a strategy",
-      media: {
-        error: "This image could not be loaded.",
-      },
     },
     audiences: {
       eyebrow: "DESIGNED FOR MARKET OPERATORS",
@@ -948,9 +887,6 @@ export const en: Dictionary = {
         "Distribute signals through Telegram, manage bots, and reduce manual team operations.",
     },
     showcase: {
-      eyebrow: "SEE THE WORKFLOW",
-      heading: "See how Signapse turns data into action.",
-      body: "Explore how the Knowledge Graph, market charts, AI conversations, and Telegram connect across the analysis workflow.",
       tabListLabel: "Features in the Signapse workflow",
       knowledgeGraph: {
         label: "Knowledge Graph",
@@ -1123,6 +1059,8 @@ export const en: Dictionary = {
       },
       telegram: {
         label: "Scheduled Telegram",
+        workspace: "Scheduled Market Analysis",
+        browserUrl: "https://www.signapse.cloud/",
         title: "From scheduled analysis to your Telegram destination.",
         body: "Watch an asset, local send time, and output language being configured in Signapse, followed by the scheduled analysis arriving in Telegram.",
         demoLabel: "DEMO",
@@ -1234,7 +1172,6 @@ export const en: Dictionary = {
       productStrategy: "Strategy building",
       contactHeading: "Contact",
       demo: "Book a demo",
-      workflow: "How it works",
       copyright: "© 2026 Signapse. All rights reserved.",
       disclaimer: "Analysis and automation are not a promise of profit.",
       requestAccessEmail: "access@signapse.cloud",
@@ -1463,7 +1400,8 @@ export const en: Dictionary = {
     noContent: "This article does not contain readable content.",
     imageUnavailable: "Image unavailable",
     notFoundTitle: "Article not found",
-    notFoundDescription: "This article is unavailable or is no longer published.",
+    notFoundDescription:
+      "This article is unavailable or is no longer published.",
     loadErrorTitle: "Could not load articles",
     loadErrorDescription: "Try again to load published articles.",
     detailLoadErrorTitle: "Could not load this article",

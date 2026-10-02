@@ -33,6 +33,7 @@ import {
   getTelegramDemoMessage,
   type TelegramDemoFrame,
 } from "./landing-scheduled-telegram-demo-model"
+import { LandingDemoBrowserChrome } from "./landing-demo-browser-chrome"
 import styles from "./landing-feature-showcase.module.css"
 
 type TelegramLabels = Dictionary["landing"]["showcase"]["telegram"]
@@ -211,7 +212,12 @@ function DemoSelect({
           value={selected ? options[0] : null}
           open={false}
         >
-          <SelectTrigger id={id} className="w-full" data-cursor-target={target}>
+          <SelectTrigger
+            id={id}
+            size="sm"
+            className="w-full"
+            data-cursor-target={target}
+          >
             <SelectValue placeholder={label} />
           </SelectTrigger>
         </Select>
@@ -263,236 +269,249 @@ export function LandingTelegramWindows({
 
   return (
     <div
+      className={styles.telegramDemo}
+      data-telegram-browser
       role="img"
       aria-label={`${labels.stageLabel}. ${labels.scheduleName}: XAU/USD, 08:00, ${labels.timezone}, ${languageOptions[0]}. ${message.summary}`}
     >
-      <div className={styles.telegramWindows} inert aria-hidden="true">
-        <section ref={windowRef} className={styles.signapseWindow}>
-          <header className={styles.signapseAppBar}>
-            <span className={styles.signapseMark}>
-              <Logo width={30} height={30} colorScheme="light" />
-            </span>
-            <span className={styles.signapseBreadcrumb}>
-              Signapse <span>/</span> Telegram
-            </span>
-            <span className={styles.activeDot}>{labels.enabledStatus}</span>
-          </header>
-          <AnimatePresence mode="wait" initial={false}>
-            {!analysisStarted ? (
-              <m.div
-                key="schedule"
-                className={styles.scheduleSetup}
-                initial={{ opacity: 1 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0, y: -6 }}
-                transition={{ duration: 0.2 }}
-              >
-                <div className={styles.signapseFormHeader}>
-                  <span className={styles.formIcon}>
-                    <CalendarClockIcon />
-                  </span>
-                  <div>
-                    <h3>{labels.formTitle}</h3>
-                    <p>{labels.formDescription}</p>
+      <div className={styles.telegramBrowserContent} inert aria-hidden="true">
+        <LandingDemoBrowserChrome labels={labels} />
+        <div className={styles.telegramWindows} data-telegram-canvas>
+          <section ref={windowRef} className={styles.signapseWindow}>
+            <header className={styles.signapseAppBar}>
+              <span className={styles.signapseMark}>
+                <Logo width={24} height={24} colorScheme="light" />
+              </span>
+              <span className={styles.signapseBreadcrumb}>
+                Signapse <span>/</span> Telegram
+              </span>
+              <span className={styles.activeDot}>{labels.enabledStatus}</span>
+            </header>
+            <AnimatePresence mode="wait" initial={false}>
+              {!analysisStarted ? (
+                <m.div
+                  key="schedule"
+                  className={styles.scheduleSetup}
+                  initial={{ opacity: 1 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <div className={styles.signapseFormHeader}>
+                    <span className={styles.formIcon}>
+                      <CalendarClockIcon />
+                    </span>
+                    <div>
+                      <h3>{labels.formTitle}</h3>
+                      <p>{labels.formDescription}</p>
+                    </div>
                   </div>
-                </div>
-                <div className={styles.signapseForm}>
-                  <FieldGroup className={styles.demoFieldGroup}>
-                    <Field>
-                      <FieldLabel htmlFor={`${id}-name`}>
-                        {labels.scheduleNameLabel}
-                      </FieldLabel>
-                      <Input
-                        id={`${id}-name`}
-                        value={labels.scheduleName}
-                        readOnly
-                      />
-                    </Field>
-                    <Field>
-                      <FieldLabel htmlFor={`${id}-destination`}>
-                        {labels.destinationLabel}
-                      </FieldLabel>
-                      <Input
-                        id={`${id}-destination`}
-                        value={labels.destinationName}
-                        readOnly
-                      />
-                    </Field>
-                    <FieldGroup className={styles.demoFieldRow}>
-                      <DemoSelect
-                        id={`${id}-asset`}
-                        label={labels.assetLabel}
-                        target="asset"
-                        options={["XAU/USD", "BTC/USD"]}
-                        selected={frame.at >= timing.assetSelected}
-                        open={frame.phase === "assetOpen"}
-                      />
-                      <DemoSelect
-                        id={`${id}-time`}
-                        label={labels.timeLabel}
-                        target="time"
-                        options={["08:00", "18:00"]}
-                        selected={frame.at >= timing.timeSelected}
-                        open={frame.phase === "timeOpen"}
-                      />
-                    </FieldGroup>
-                    <FieldGroup className={styles.demoFieldRow}>
+                  <div className={styles.signapseForm}>
+                    <FieldGroup className={styles.demoFieldGroup}>
                       <Field>
-                        <FieldLabel htmlFor={`${id}-timezone`}>
-                          {labels.timezoneLabel}
+                        <FieldLabel htmlFor={`${id}-name`}>
+                          {labels.scheduleNameLabel}
                         </FieldLabel>
                         <Input
-                          id={`${id}-timezone`}
-                          value={labels.timezone}
+                          id={`${id}-name`}
+                          value={labels.scheduleName}
                           readOnly
                         />
                       </Field>
-                      <DemoSelect
-                        id={`${id}-language`}
-                        label={labels.languageLabel}
-                        target="language"
-                        options={languageOptions}
-                        selected={frame.at >= timing.languageSelected}
-                        open={frame.phase === "languageOpen"}
-                      />
+                      <Field>
+                        <FieldLabel htmlFor={`${id}-destination`}>
+                          {labels.destinationLabel}
+                        </FieldLabel>
+                        <Input
+                          id={`${id}-destination`}
+                          value={labels.destinationName}
+                          readOnly
+                        />
+                      </Field>
+                      <FieldGroup className={styles.demoFieldRow}>
+                        <DemoSelect
+                          id={`${id}-asset`}
+                          label={labels.assetLabel}
+                          target="asset"
+                          options={["XAU/USD", "BTC/USD"]}
+                          selected={frame.at >= timing.assetSelected}
+                          open={frame.phase === "assetOpen"}
+                        />
+                        <DemoSelect
+                          id={`${id}-time`}
+                          label={labels.timeLabel}
+                          target="time"
+                          options={["08:00", "18:00"]}
+                          selected={frame.at >= timing.timeSelected}
+                          open={frame.phase === "timeOpen"}
+                        />
+                      </FieldGroup>
+                      <FieldGroup className={styles.demoFieldRow}>
+                        <Field>
+                          <FieldLabel htmlFor={`${id}-timezone`}>
+                            {labels.timezoneLabel}
+                          </FieldLabel>
+                          <Input
+                            id={`${id}-timezone`}
+                            value={labels.timezone}
+                            readOnly
+                          />
+                        </Field>
+                        <DemoSelect
+                          id={`${id}-language`}
+                          label={labels.languageLabel}
+                          target="language"
+                          options={languageOptions}
+                          selected={frame.at >= timing.languageSelected}
+                          open={frame.phase === "languageOpen"}
+                        />
+                      </FieldGroup>
                     </FieldGroup>
-                  </FieldGroup>
-                  <div className={styles.signapseFormFooter}>
-                    <span className={styles.formStatus}>
-                      {scheduled ? <CheckCircle2Icon /> : <CalendarClockIcon />}
-                      {scheduled ? labels.scheduledStatus : labels.routeName}
-                    </span>
-                    <div
-                      className={styles.demoSubmit}
-                      data-pressed={frame.phase === "submit"}
-                    >
-                      <Button
-                        type="button"
-                        size="sm"
-                        data-cursor-target="submit"
-                      >
+                    <div className={styles.signapseFormFooter}>
+                      <span className={styles.formStatus}>
                         {scheduled ? (
-                          <CheckIcon data-icon="inline-start" />
+                          <CheckCircle2Icon />
                         ) : (
-                          <CalendarClockIcon data-icon="inline-start" />
+                          <CalendarClockIcon />
                         )}
-                        {scheduled
-                          ? labels.scheduledStatus
-                          : labels.createSchedule}
-                      </Button>
+                        {scheduled ? labels.scheduledStatus : labels.routeName}
+                      </span>
+                      <div
+                        className={styles.demoSubmit}
+                        data-pressed={frame.phase === "submit"}
+                      >
+                        <Button
+                          type="button"
+                          size="sm"
+                          data-cursor-target="submit"
+                        >
+                          {scheduled ? (
+                            <CheckIcon data-icon="inline-start" />
+                          ) : (
+                            <CalendarClockIcon data-icon="inline-start" />
+                          )}
+                          {scheduled
+                            ? labels.scheduledStatus
+                            : labels.createSchedule}
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </m.div>
-            ) : (
-              <AnalysisRunPanel labels={labels} frame={frame} />
-            )}
-          </AnimatePresence>
-          {cursor}
-        </section>
+                </m.div>
+              ) : (
+                <AnalysisRunPanel labels={labels} frame={frame} />
+              )}
+            </AnimatePresence>
+            {cursor}
+          </section>
 
-        <section className={styles.telegramWindow}>
-          <header className={styles.telegramAppBar}>
-            <ChevronLeftIcon />
-            <span className={styles.telegramAvatar}>
-              <Image
-                src="/images/telegram-logo.svg"
-                alt=""
-                width={30}
-                height={30}
-              />
-            </span>
-            <span className={styles.telegramIdentity}>
-              <strong>{labels.destinationName}</strong>
-              <small>
-                {telegramIsTyping
-                  ? labels.telegramTyping
-                  : labels.telegramLastSeen}
-              </small>
-            </span>
-            <SearchIcon />
-            <MoreVerticalIcon />
-          </header>
-          <div className={styles.telegramConversation}>
-            <span className={styles.telegramDate}>{labels.telegramToday}</span>
-            <div className={styles.messageArea}>
-              <div
-                className={styles.telegramMessage}
-                data-visible={showMessage}
-              >
-                <Message>
-                  <Bubble variant="outline">
-                    <BubbleContent>
-                      <p className={styles.messageTitle}>{message.title}</p>
-                      <p className={styles.messageBias}>{message.horizon}</p>
-                      <p className={styles.messageSummary}>{message.summary}</p>
-                      <div className={styles.messageSection}>
-                        <strong>{message.contextTitle}</strong>
-                        <span>• {message.supportContext}</span>
-                        <span>• {message.pressureContext}</span>
-                      </div>
-                      <div className={styles.messageSection}>
-                        <strong>{message.levelsTitle}</strong>
-                        <span>{message.supportLevel}</span>
-                        <span>{message.resistanceLevel}</span>
-                      </div>
-                      <div className={styles.messageSection}>
-                        <strong>{message.scenario}</strong>
-                        <span className={styles.messagePrice}>
-                          {message.entry}
-                        </span>
-                        <span className={styles.messagePrice}>
-                          {message.targets}
-                        </span>
-                        <span>{message.trigger}</span>
-                        <span>{message.invalidation}</span>
-                      </div>
-                      <p className={styles.messageEvent}>{message.event}</p>
-                      <p className={styles.messageRisk}>{message.risk}</p>
-                      <p className={styles.messageMeta}>
-                        {message.meta} · 08:00
-                      </p>
-                    </BubbleContent>
-                  </Bubble>
-                </Message>
-              </div>
-              <div
-                className={styles.telegramTyping}
-                data-visible={telegramIsTyping}
-              >
-                <span />
-                <span />
-                <span />
+          <section className={styles.telegramWindow}>
+            <header className={styles.telegramAppBar}>
+              <ChevronLeftIcon />
+              <span className={styles.telegramAvatar}>
+                <Image
+                  src="/images/telegram-logo.svg"
+                  alt=""
+                  width={24}
+                  height={24}
+                />
+              </span>
+              <span className={styles.telegramIdentity}>
+                <strong>{labels.destinationName}</strong>
+                <small>
+                  {telegramIsTyping
+                    ? labels.telegramTyping
+                    : labels.telegramLastSeen}
+                </small>
+              </span>
+              <SearchIcon />
+              <MoreVerticalIcon />
+            </header>
+            <div className={styles.telegramConversation}>
+              <span className={styles.telegramDate}>
+                {labels.telegramToday}
+              </span>
+              <div className={styles.messageArea}>
+                <div
+                  className={styles.telegramMessage}
+                  data-visible={showMessage}
+                >
+                  <Message>
+                    <Bubble variant="outline">
+                      <BubbleContent>
+                        <p className={styles.messageTitle}>{message.title}</p>
+                        <p className={styles.messageBias}>{message.horizon}</p>
+                        <p className={styles.messageSummary}>
+                          {message.summary}
+                        </p>
+                        <div className={styles.messageSection}>
+                          <strong>{message.contextTitle}</strong>
+                          <span>• {message.supportContext}</span>
+                          <span>• {message.pressureContext}</span>
+                        </div>
+                        <div className={styles.messageSection}>
+                          <strong>{message.levelsTitle}</strong>
+                          <span>{message.supportLevel}</span>
+                          <span>{message.resistanceLevel}</span>
+                        </div>
+                        <div className={styles.messageSection}>
+                          <strong>{message.scenario}</strong>
+                          <span className={styles.messagePrice}>
+                            {message.entry}
+                          </span>
+                          <span className={styles.messagePrice}>
+                            {message.targets}
+                          </span>
+                          <span>{message.trigger}</span>
+                          <span>{message.invalidation}</span>
+                        </div>
+                        <p className={styles.messageEvent}>{message.event}</p>
+                        <p className={styles.messageRisk}>{message.risk}</p>
+                        <p className={styles.messageMeta}>
+                          {message.meta} · 08:00
+                        </p>
+                      </BubbleContent>
+                    </Bubble>
+                  </Message>
+                </div>
+                <div
+                  className={styles.telegramTyping}
+                  data-visible={telegramIsTyping}
+                >
+                  <span />
+                  <span />
+                  <span />
+                </div>
               </div>
             </div>
-          </div>
-          <div className={styles.telegramComposer}>
-            <PaperclipIcon />
-            <span>{labels.telegramMessagePlaceholder}</span>
-            <SendIcon />
-          </div>
-        </section>
-        <m.span
-          className={styles.analysisPacket}
-          initial={false}
-          animate={
-            frame.phase === "sending"
-              ? {
-                  opacity: [0, 1, 1, 0],
-                  x: ["-90%", "-20%", "20%", "90%"],
-                  scale: [0.8, 1, 1, 0.8],
-                }
-              : { opacity: 0, x: "-75%", scale: 0.8 }
-          }
-          transition={{
-            duration: 1.6,
-            ease: "easeInOut",
-            times: [0, 0.35, 0.65, 1],
-          }}
-          aria-hidden="true"
-        >
-          <Logo width={18} height={18} colorScheme="light" />
-        </m.span>
+            <div className={styles.telegramComposer}>
+              <PaperclipIcon />
+              <span>{labels.telegramMessagePlaceholder}</span>
+              <SendIcon />
+            </div>
+          </section>
+          <m.span
+            className={styles.analysisPacket}
+            initial={false}
+            animate={
+              frame.phase === "sending"
+                ? {
+                    opacity: [0, 1, 1, 0],
+                    x: ["-90%", "-20%", "20%", "90%"],
+                    scale: [0.8, 1, 1, 0.8],
+                  }
+                : { opacity: 0, x: "-75%", scale: 0.8 }
+            }
+            transition={{
+              duration: 1.6,
+              ease: "easeInOut",
+              times: [0, 0.35, 0.65, 1],
+            }}
+            aria-hidden="true"
+          >
+            <Logo width={18} height={18} colorScheme="light" />
+          </m.span>
+        </div>
       </div>
     </div>
   )

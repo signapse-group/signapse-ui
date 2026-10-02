@@ -423,13 +423,13 @@ export function LandingMarketChartDemo({
 }: {
   active: boolean
   labels: Labels
-  progressRef: RefObject<SVGCircleElement | null>
+  progressRef: RefObject<SVGRectElement | null>
 }) {
   const rootRef = useRef<HTMLDivElement>(null)
   const elapsedRef = useRef(0)
   const isInView = useInView(rootRef, { amount: 0.2 })
   const reducedMotion = useReducedMotion()
-  const [seconds, setSeconds] = useState(0)
+  const [seconds, setSeconds] = useState(MARKET_CHART_DEMO_DURATION)
   const [cycle, setCycle] = useState(0)
   const [detailDismissed, setDetailDismissed] = useState(false)
   const canPlay = active && isInView && !reducedMotion
@@ -507,7 +507,7 @@ export function LandingMarketChartDemo({
       className={styles.marketDemo}
       data-market-demo-state={frame.phase}
       data-demo-mode="automatic"
-      data-demo-renderer="motion"
+      data-demo-renderer={canPlay ? "motion" : "static"}
       data-market-tick={tickTime}
       aria-label={labels.stageLabel}
     >
