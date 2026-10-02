@@ -30,6 +30,7 @@ function getFriendlySegmentNames(
     "dashboard-prototype": dictionary.dashboardPrototype.routeLabel,
     "developer-token": dictionary.navigation.apiAccessToken,
     "economic-calendar": dictionary.navigation.economicCalendar,
+    "email-delivery": dictionary.navigation.emailDelivery,
     events: dictionary.navigation.events,
     feedback: dictionary.feedback.pageTitle,
     "feedback-submissions": dictionary.feedback.moderationTitle,
@@ -42,7 +43,6 @@ function getFriendlySegmentNames(
     roles: dictionary.navigation.roles,
     "source-documents": dictionary.navigation.sourceDocuments,
     "system-prompts": dictionary.navigation.systemPrompts,
-    "usage-limits": dictionary.navigation.usageLimits,
     users: dictionary.navigation.users,
   }
 }
@@ -72,8 +72,11 @@ export function AppBreadcrumb() {
   const segments = stripLocaleFromPathname(pathname).split("/").filter(Boolean)
   const overviewLabel = dictionary.navigation.overview
   const isDashboardRoute = segments.length === 1 && segments[0] === "dashboard"
+  const isEmailDeliveryRoute =
+    segments.length === 1 && segments[0] === "email-delivery"
   const showOverviewCrumb = !(
-    segments.length === 1 && segments[0] === "graph-view"
+    segments.length === 1 &&
+    (segments[0] === "graph-view" || segments[0] === "email-delivery")
   )
   const visibleSegments = isDashboardRoute ? [] : segments
 
@@ -83,6 +86,16 @@ export function AppBreadcrumb() {
       aria-label={dictionary.navigation.breadcrumb}
     >
       <BreadcrumbList className="flex-nowrap">
+        {isEmailDeliveryRoute ? (
+          <>
+            <BreadcrumbItem>
+              <span className="text-muted-foreground">
+                {dictionary.navigation.systemConfiguration}
+              </span>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+          </>
+        ) : null}
         {showOverviewCrumb ? (
           <BreadcrumbItem className="hidden md:block">
             {segments.length === 0 || isDashboardRoute ? (

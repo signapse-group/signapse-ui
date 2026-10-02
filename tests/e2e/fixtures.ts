@@ -54,6 +54,7 @@ type FixtureController = {
     requests: Array<Record<string, unknown>>
     violations: Array<Record<string, unknown>>
     streamConnections: number
+    smtpConfiguration?: Record<string, unknown>
   }>
   setFeedbackScenario(
     scenario:
@@ -70,6 +71,9 @@ type FixtureController = {
     kind?: "feedback" | "compose" | "withdraw" | "review" | "erase"
   ): Promise<void>
   setPermissions(permissions: string[]): Promise<void>
+  setSmtpConfiguration(
+    configuration: Record<string, unknown> | null
+  ): Promise<void>
 }
 
 type Fixtures = {
@@ -164,6 +168,12 @@ export const test = base.extend<Fixtures>({
           await postControl("/__test/permissions", {
             testRunId,
             permissions,
+          })
+        },
+        async setSmtpConfiguration(configuration) {
+          await postControl("/__test/smtp-configuration", {
+            testRunId,
+            configuration,
           })
         },
       }

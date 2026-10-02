@@ -33,6 +33,12 @@ When framework versions, the UI preset, CI, or repository ownership change, refr
 - Use `pnpm dev`, `pnpm build`, `pnpm lint`, `pnpm format`, and `pnpm typecheck`.
 - Equivalent slash commands may be used when available in the current environment.
 - Run the production server with `pnpm start`.
+- Run `pnpm test:quality` for code/runtime changes; its P0 browser tests use fixtures and disabled auth.
+- For authentication, backend transport, and protected-page changes, also run `pnpm test:integration`
+  with the private application/account files described in `docs/testing/browser-tests.md`.
+- Select focused checks by change type using the [browser-testing scope matrix](docs/testing/browser-tests.md#selecting-checks-by-change-scope).
+  Keep these live smoke tests read-only and report their actual result separately from P0.
+  Never commit real `.env` files, account passwords, Clerk secrets, JWTs, cookies, or auth artifacts.
 
 ## Architecture
 
