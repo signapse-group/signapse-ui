@@ -39,6 +39,7 @@ Signapse UI is an admin dashboard built with **Next.js 16 App Router** for an AI
 
 - **Stack:** Clerk, shadcn/ui, Tailwind CSS v4, Lucide icons, Geist, Geist Mono, and Zod v4.
 - **Route groups:** `app/[lang]/(main)/` is the protected app, `app/[lang]/(auth)/` is Clerk auth, and `app/api/[feature]/action.ts` contains server actions by feature.
+- **Public scope:** Only localized `sign-in/**` pages are public. Locale roots redirect to the protected dashboard. Marketing landing and public articles are maintained in a separate repository; do not restore them or standalone editor/dashboard samples here.
 
 ## Feature Structure
 

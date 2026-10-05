@@ -11,7 +11,7 @@ import {
   isDevAuthModeEnabled,
   isP0FixtureModeEnabled,
 } from "@/app/lib/dev-auth-mode"
-import { isPublicLandingPathname } from "@/app/lib/public-landing/public-path"
+import { isPublicAuthPathname } from "@/app/lib/auth/public-path"
 
 function getLocaleRedirect(req: NextRequest): NextResponse | null {
   const { pathname } = req.nextUrl
@@ -57,9 +57,11 @@ function createAuthenticatedProxy() {
 
     const { pathname } = req.nextUrl
     const pathLocale = getPathLocale(pathname)
-    const isApi = req.nextUrl.pathname.startsWith("/api") || req.nextUrl.pathname.startsWith("/trpc")
+    const isApi =
+      req.nextUrl.pathname.startsWith("/api") ||
+      req.nextUrl.pathname.startsWith("/trpc")
 
-    if (!isDevAuthModeEnabled() && !isPublicLandingPathname(pathname)) {
+    if (!isDevAuthModeEnabled() && !isPublicAuthPathname(pathname)) {
       await auth.protect(
         isApi
           ? undefined
@@ -76,7 +78,9 @@ function createAuthenticatedProxy() {
   })
 }
 
-export default isP0FixtureModeEnabled() ? fixtureProxy : createAuthenticatedProxy()
+export default isP0FixtureModeEnabled()
+  ? fixtureProxy
+  : createAuthenticatedProxy()
 
 export const config = {
   matcher: [

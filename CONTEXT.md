@@ -16,39 +16,12 @@ _Avoid_: Package, plan, subscription tier
 A short-lived credential an authenticated user obtains to call Signapse APIs under their own identity and permissions.
 _Avoid_: Developer token, API key, system token, admin token
 
-## Public Web Surfaces
+## Product Scope
 
-**Coming-soon site**:
-The temporary public announcement surface that represents Signapse before the full public product landing is released.
-_Avoid_: Application landing page, production app
-
-**Application landing page**:
-The localized public product story delivered by the Signapse application and evaluated independently before any public cutover.
-_Avoid_: Coming-soon site, dashboard
-
-**Text-first landing**:
-An application landing-page state that omits product captures when no locale-appropriate capture has been approved, while keeping the complete product story in text.
-_Avoid_: Placeholder mock, synthetic product preview
-
-**Approved product capture (Ảnh sản phẩm được duyệt)**:
-A static capture of an available Signapse product surface or a real Signapse Telegram message, using demo data approved for public use and with the final image approved by the Product Owner. It illustrates an actual product state, not a conceptual visual or an interactive product demo.
-_Avoid_: Generated product screenshot, private-workspace capture, live demo
-
-**Interactive Telegram workflow demo (Demo tương tác quy trình Telegram)**:
-A public DOM simulation of the supported scheduled asset-analysis workflow, using fixed demo data without calling the backend or sending a Telegram message. It may reproduce selected product concepts and states, but it is not a live product session or proof of delivery.
-_Avoid_: Live demo, Telegram delivery test, approved product capture, synthetic product screenshot
-
-**Interactive product showcase (Showcase sản phẩm tương tác)**:
-A public landing section that presents the four primary Signapse capabilities through feature selectors and one shared demonstration stage. Each capability owns its stage content while the surrounding section preserves a consistent product-story hierarchy.
-_Avoid_: Product card wall, screenshot gallery, live application workspace
-
-**Interactive market-context figure (Hình bối cảnh thị trường tương tác)**:
-A localized conceptual landing visual that presents the Market Knowledge Graph and price action as complementary views of market context. It has no visible control chrome, but supports fine-pointer hover and drag; coarse pointers do not expose a hidden tap mode. It begins once per page view with a brief graph-only rotation that settles automatically, supports nonvisual keyboard exploration with focus feedback, and keeps a silent dual-view fallback with a nonvisual description when rendering is unavailable. It is not a product capture and does not imply that the graph generates, predicts, or transforms into market prices.
-_Avoid_: Product demo, live trading chart, graph-generated price, prediction visualization
-
-**Price action (Diễn biến giá)**:
-The conceptual view of observable market-price movement paired with the Market Knowledge Graph in the interactive market-context figure.
-_Avoid_: Live trading chart, trading signal, price forecast, Knowledge Graph output
+This repository serves the authenticated dashboard and public sign-in. Marketing
+landing and public articles are maintained and deployed in a separate repository.
+Standalone editor and dashboard samples have been retired; the shared editor
+continues to support blog authoring and Personal Notes.
 
 **Market Intelligence Platform (Nền tảng Market Intelligence)**:
 The public product category for Signapse, which organizes inspectable price, event, reaction, source, and relationship data into Market Knowledge Graph context for AI-assisted market questions; the user owns the trading decision.
@@ -67,10 +40,6 @@ _Avoid_: Chat with a selected graph node, automatic chart-context handoff, guara
 **Knowledge Graph demo surface (Bề mặt demo Đồ thị Tri thức)**:
 An internal evaluation surface for comparing ways to browse the Market Knowledge Graph with a fixed representative graph; it is not the production Graph View and does not change the shared graph contract.
 _Avoid_: Production Graph View, backend graph endpoint, product capture
-
-**Landing release owner**:
-The Signapse Product Owner accountable for approving the public landing cutover after collecting the required product and engineering sign-offs.
-_Avoid_: Mailbox owner, deployment operator
 
 ## Feedback
 

@@ -11,7 +11,7 @@ Xác minh lần cuối: ngày 28 tháng 9 năm 2026
 | URL gốc API          | `https://dev-api.signapse.cloud`                      |
 | Nguồn chuẩn          | `https://dev-api.signapse.cloud/v3/api-docs`          |
 | Hàm auth chính       | `fetchAuthenticated()` trong `app/api/auth/action.ts` |
-| Hàm public           | `fetchPublic()` trong `app/api/auth/action.ts`        |
+| Phạm vi public       | Đọc nội dung công khai thuộc repo landing riêng     |
 | Kiểu mutation result | `ActionResult<T>` trong `app/lib/definitions.ts`      |
 | Locale frontend      | URL prefix `/{lang}` (`vi` / `en`, fallback `vi`)     |
 
@@ -19,7 +19,7 @@ Xác minh lần cuối: ngày 28 tháng 9 năm 2026
 
 - Các request được bảo vệ đi qua `fetchAuthenticated()`.
 - `apiFetch()` đọc `response.text()` trước khi parse JSON.
-- `apiFetch()` resolve app locale from the active route locale (`x-signapse-locale` set by `proxy.ts` for page/action requests, with referer route fallback) and sends the same value as `Accept-Language` for both `fetchAuthenticated()` and `fetchPublic()`.
+- `apiFetch()` resolve app locale from the active route locale (`x-signapse-locale` set by `proxy.ts` for page/action requests, with referer route fallback) and sends the same value as `Accept-Language` for `fetchAuthenticated()`.
 - `apiFetch()` gửi `Accept: application/json` mặc định, nhưng chỉ gửi `Content-Type: application/json` khi request có JSON body và không phải `FormData`.
 - Frontend runtime list/search đang serialize query thành `$filter`, `page`, `size`, `sort` thông qua `queryParamsToString()`.
 - OpenAPI vẫn mô tả list query bằng `specification` và `pageable`, nên cần tách biệt giữa spec contract và effective runtime contract mà frontend đang gọi.
@@ -330,14 +330,15 @@ Ghi chu:
 | GET         | `/blogs/{id}`    | `getBlogPost`    | `getBlogById(id)`         | Da tich hop theo producer contract | Response gom structured `content`, `contentSchemaVersion`, `status`, va khong con `isVisible`/`visible`.      |
 | PUT         | `/blogs/{id}`    | `updateBlogPost` | `updateBlog(id, request)` | Da tich hop theo producer contract | Frontend gui structured content; slug bi khoa sau lan xuat ban dau; khong con `isVisible`.                    |
 | DELETE      | `/blogs/{id}`    | `deleteBlogPost` | `deleteBlog(id)`          | Da trien khai                      | Duoc boc trong `ActionResult`.                                                                                |
-| GET         | `/blogs/public`        | `getPublicBlogPosts` | `getPublicBlogs(page, size)` | Da tich hop | Public listing chi hien bai `PUBLISHED` sau khi frontend loc response. |
-| GET         | `/blogs/public/{slug}` | `getPublicBlogPost`  | `getPublicBlogBySlug(slug)`  | Da tich hop | Public detail theo slug; dung `fetchPublic()`. |
+| GET         | `/blogs/public`        | `getPublicBlogPosts` | Khong con trong repo dashboard | Ngoai pham vi | Backend van cung cap public listing; frontend doc cong khai thuoc repo landing rieng. |
+| GET         | `/blogs/public/{slug}` | `getPublicBlogPost`  | Khong con trong repo dashboard | Ngoai pham vi | Backend van cung cap public detail; route articles va action doc cong khai da duoc go. |
 | POST        | `/blogs/{id}/publish`   | `publishBlogPost`    | `publishBlog(id)`            | Da tich hop | Permission `blog:update`; publication control tren blog detail. |
 | POST        | `/blogs/{id}/unpublish` | `unpublishBlogPost`  | `unpublishBlog(id)`          | Da tich hop | Permission `blog:update`; publication control tren blog detail. |
 
 Ghi chu:
 
 - Live dev OpenAPI da duoc fetch va validate lai ngay 28/9/2026 van dang phat contract legacy: create/list/detail con `visible`, update con `isVisible`, va content van la `string`.
+- Ngay 5/10/2026, da fetch va validate lai OpenAPI cho pham vi go public content: hai endpoint `/blogs/public` va `/blogs/public/{slug}` van ton tai, operationId khong doi. Thay doi nay chi go frontend consumer khoi repo dashboard, khong xoa endpoint backend hay chuc nang quan tri/xuat ban blog.
 - Producer PR [#95](https://github.com/signapse-group/signapse/pull/95) da merge contract draft authoring moi: `content` la JSON array theo schema version `1`, response co `status` (`DRAFT`/`PUBLISHED`), va `isVisible`/`visible` bi loai bo. Frontend authoring da target contract nay; can redeploy dev backend truoc khi kiem chung end-to-end voi API that.
 - `content` dung structured-content contract chung voi Personal Note; link chap nhan `http://`, `https://` hoac path noi bo `/`, con image chi chap nhan URL `https://`.
 

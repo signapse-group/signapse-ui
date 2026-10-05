@@ -1,8 +1,13 @@
 ---
-status: accepted
+status: superseded
 ---
 
 # Stage the public landing before apex cutover
+
+Historical decision, superseded on 2026-10-05: marketing and public articles are
+maintained and deployed in a separate repository. This repository now serves
+only the protected dashboard and public sign-in; the landing and coming-soon
+sources and their release gates have been retired here.
 
 Signapse will keep the coming-soon site at the public apex while the localized application landing page is tested independently on the application host. After the landing satisfies its release gates, an explicit owner-run cutover will make it the public apex experience while preserving the coming-soon deployment as the initial rollback target; this avoids exposing an unverified landing while still converging on one canonical public surface.
 

@@ -36,6 +36,12 @@ On Symphony, use `/opt/apps/symphony/runtime/run-fe-quality "$PWD"` and, for aut
 
 ## Scope and evidence
 
+`dashboard-entry.spec.ts` checks locale-root redirects, application noindex
+metadata and 404 responses for retired public articles, editor and dashboard
+prototype pages. These fixture checks do not prove real authorization. The live
+integration lane additionally checks anonymous redirects, login availability,
+authenticated entry and logout with Clerk enabled.
+
 The suite covers the application shell/workspace, canonical list URL/search/pagination/history behavior, Personal Notes save/retry/delete flows, Telegram configuration and Test message states, market-chart controls and SSE recovery, accessibility, and selected stable visual regions. Dynamic chart canvas pixels and full-page snapshots are intentionally excluded.
 
 Failed P0 browser runs retain Playwright traces, screenshots, videos, HTML reports, fixture state, and application/fixture logs under the ignored `test-results/`. A configured P0 CI lane may upload that directory on failure without protected credentials. Live integration artifacts follow the stricter rules below.

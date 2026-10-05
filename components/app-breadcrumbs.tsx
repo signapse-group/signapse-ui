@@ -27,7 +27,6 @@ function getFriendlySegmentNames(
     blogs: dictionary.navigation.blogs,
     cronjobs: dictionary.navigation.cronjobs,
     dashboard: dictionary.navigation.overview,
-    "dashboard-prototype": dictionary.dashboardPrototype.routeLabel,
     "developer-token": dictionary.navigation.apiAccessToken,
     "economic-calendar": dictionary.navigation.economicCalendar,
     "email-delivery": dictionary.navigation.emailDelivery,

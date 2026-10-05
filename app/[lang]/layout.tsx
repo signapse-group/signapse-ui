@@ -1,7 +1,7 @@
 import { ClerkProvider } from "@clerk/nextjs"
 import { enUS, viVN } from "@clerk/localizations"
 import { notFound } from "next/navigation"
-import { Geist, Geist_Mono, Inter } from "next/font/google"
+import { Geist, Geist_Mono } from "next/font/google"
 import NextTopLoader from "nextjs-toploader"
 import type { Metadata } from "next"
 
@@ -25,11 +25,6 @@ const fontMono = Geist_Mono({
   variable: "--font-mono",
 })
 
-const fontDisplay = Inter({
-  subsets: ["latin", "latin-ext", "vietnamese"],
-  variable: "--font-display",
-})
-
 const clerkLocalizations: Record<AppLocale, typeof viVN> = {
   en: enUS,
   vi: viVN,
@@ -38,6 +33,7 @@ const clerkLocalizations: Record<AppLocale, typeof viVN> = {
 export const metadata: Metadata = {
   title: "Signapse - Market Intelligence Platform",
   description: "Real-time market data visualization and analysis",
+  robots: { index: false, follow: false },
   icons: {
     icon: "/favicon.svg",
   },
@@ -74,7 +70,6 @@ export default async function RootLayout({
       suppressHydrationWarning
       className={cn(
         "h-screen antialiased",
-        fontDisplay.variable,
         fontMono.variable,
         "font-sans",
         fontSans.variable

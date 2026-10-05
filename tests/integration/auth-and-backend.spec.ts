@@ -92,12 +92,30 @@ test.afterEach(async ({ page }) => {
     .evaluate(() => Boolean(window.Clerk?.session))
     .catch(() => false)
   if (hasSession) {
-    await page.goto(withLocalePath("/", DEFAULT_APP_LOCALE))
     await clerk.signOut({ page })
   }
 })
 
-test("password session reaches the public backend and renders the account page", async ({
+test("anonymous visitors can only open the localized login", async ({
+  page,
+}) => {
+  for (const locale of ["vi", "en"] as const) {
+    for (const path of [
+      "/",
+      "/dashboard",
+      "/articles",
+      "/editor",
+      "/dashboard-prototype",
+    ]) {
+      await page.goto(withLocalePath(path, locale))
+      await expect(page).toHaveURL(new RegExp(`/${locale}/sign-in(?:[/?].*)?$`))
+      await expect(page.locator(".cl-signIn-root")).toBeVisible()
+      await expect(page.locator(".cl-footerAction")).toBeHidden()
+    }
+  }
+})
+
+test("password session reaches the backend, dashboard entry and account page", async ({
   page,
   request,
 }) => {
@@ -152,6 +170,13 @@ test("password session reaches the public backend and renders the account page",
   expect(profile.email).toBe(primaryEmail)
   expect(profile.id).toEqual(expect.any(Number))
 
+  for (const locale of ["vi", "en"] as const) {
+    await page.goto(withLocalePath("/", locale))
+    await expect(page).toHaveURL(new RegExp(`/${locale}/dashboard$`))
+    await page.goto(withLocalePath("/sign-in", locale))
+    await expect(page).toHaveURL(new RegExp(`/${locale}/dashboard$`))
+  }
+
   const response = await page.goto(
     withLocalePath("/account", DEFAULT_APP_LOCALE)
   )
@@ -189,4 +214,9 @@ test("password session reaches the public backend and renders the account page",
   await expect(menu.locator('[data-slot="progress"]').first()).toBeVisible()
   await expect(page).toHaveURL(screenUrl)
   await expectUsageMenuToMatch(menu, reopenedUsage)
+
+  await menu.getByRole("menuitem", { name: vi.auth.signOut }).click()
+  await expect(page).toHaveURL(new RegExp(`/${DEFAULT_APP_LOCALE}/sign-in$`))
+  await expect(page.locator(".cl-signIn-root")).toBeVisible()
+  expect((await page.request.get("/api/user")).status()).not.toBe(200)
 })

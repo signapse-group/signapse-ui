@@ -156,8 +156,7 @@ Nội dung ưu tiên:
 
 Module không hiển thị forecast, previous, actual, calendar rows hoặc badge quan
 hệ với asset/event. Article có thể là bản raw chưa được liên kết; việc thiếu quan
-hệ không loại item khỏi module và không được biểu diễn bằng metadata giả. Khi
-prototype không có ID tin tức thật, từng row không giả lập link detail.
+hệ không loại item khỏi module và không được biểu diễn bằng metadata giả.
 
 ### Event Timeline
 
