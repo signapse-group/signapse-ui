@@ -10,8 +10,6 @@ const resultsDir = resolve(process.cwd(), "test-results")
 process.env.API_BASE_URL = `http://127.0.0.1:${fixturePort}`
 process.env.SIGNAPSE_AUTH_MODE = "disabled"
 process.env.SIGNAPSE_E2E_MODE = "fixture"
-process.env.SIGNAPSE_PUBLIC_ORIGIN = "https://dev.signapse.cloud"
-process.env.SIGNAPSE_LANDING_INDEXABLE = "false"
 Object.assign(process.env, { NODE_ENV: "development" })
 process.env.P0_APP_PORT = String(appPort)
 process.env.FIXTURE_PORT = String(fixturePort)

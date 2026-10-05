@@ -27,8 +27,8 @@ Ngày nghiên cứu: 2026-09-09. Trạng thái: đề xuất để thảo luận
 | [Cấu hình locale](../app/lib/i18n/config.ts) có `vi`, `en`, mặc định `vi` | Thiết kế URL và quy trình dịch từ đầu cho hai ngôn ngữ |
 | [Cấu hình điều hướng](../config/site.ts) có nhóm phân tích, dữ liệu, quản trị và lọc theo quyền | Không sao chép nguyên sidebar hiện tại thành mục lục cho người dùng cuối |
 | [Layout ứng dụng](../app/[lang]/(main)/layout.tsx) tải tài khoản, workspace và quyền | Docs công khai nên nằm ngoài `(main)` để không phụ thuộc dữ liệu workspace |
-| [Proxy](../proxy.ts) và [public-path](../app/lib/public-landing/public-path.ts) hiện chỉ miễn bảo vệ cho locale root và sign-in | Thêm route help chưa đủ để có docs công khai; cần bổ sung ngoại lệ đường dẫn hẹp, có kiểm tra |
-| [ADR-0005](adr/0005-stage-public-landing-before-apex-cutover.md) tách triển khai landing khỏi cutover apex | Không tự coi `signapse.cloud` đã là host ứng dụng; dùng origin của môi trường hiện hành |
+| [Proxy](../proxy.ts) và [public-path](../app/lib/auth/public-path.ts) chỉ miễn bảo vệ cho sign-in; locale root đi vào dashboard được bảo vệ | Docs công khai thuộc repo marketing riêng; hướng dẫn trong dashboard tuân theo auth boundary hiện tại |
+| [README](../README.md) xác định landing và nội dung công khai được triển khai từ repo riêng | Dùng host ứng dụng hiện hành cho đường dẫn dashboard và host marketing cho nội dung công khai |
 | Thư mục `docs/` chứa API mapping, ADR, design và research | Giữ tài liệu nội bộ tách rõ khỏi nguồn bài công khai |
 | [CONTEXT.md](../CONTEXT.md) và runtime AI conversation mô tả hội thoại theo workspace | Bài AI cần giải thích workspace, lịch sử và giới hạn; không hứa tự nhận ngữ cảnh chart/node đang chọn |
 | Runtime Telegram và domain glossary mô tả nhiều quyền, điểm nhận, lịch và ngôn ngữ | Cần tách việc nhận thông báo khỏi việc cấu hình hạ tầng Telegram |
@@ -52,7 +52,7 @@ Các quyết định về URL, số lượng bài, cấu trúc thư mục và th
 - URL chuẩn trong ứng dụng: `/{lang}/help` và `/{lang}/help/{slug}`; ví dụ `/vi/help/getting-started`.
 - Cùng origin với ứng dụng ở giai đoạn đầu. Chưa mở `docs.signapse.cloud` để tránh thêm deployment, DNS và quản lý thương hiệu/locale.
 - Route dự kiến: `app/[lang]/(help)/help/[[...slug]]/page.tsx`; layout docs độc lập trong `(help)`.
-- Điểm vào: “Hướng dẫn” ở khu điều hướng phụ/menu tài khoản; link từ landing/footer khi có nội dung sẵn sàng; link bài cụ thể tại các empty/error state phù hợp.
+- Điểm vào: “Hướng dẫn” ở khu điều hướng phụ/menu tài khoản; link bài cụ thể tại các empty/error state phù hợp. Liên kết marketing thuộc repo triển khai riêng.
 - Điều hướng help bình thường mở cùng tab. Với form đang nhập hoặc nội dung chưa lưu, cung cấp link mở tab mới có thông báo rõ để người dùng không mất công việc.
 - Không bắt đăng nhập để đọc hướng dẫn truy cập tài khoản. Các link chuyển sang thao tác trong app vẫn tuân thủ xác thực và quyền hiện có.
 

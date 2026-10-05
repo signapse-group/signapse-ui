@@ -26,7 +26,6 @@ vi.mock("@/app/lib/i18n/server", () => ({
 import { auth } from "@clerk/nextjs/server"
 import {
   fetchAuthenticated,
-  fetchPublic,
   getBackendAuthHeaders,
   getClerkToken,
 } from "@/app/api/auth/action"
@@ -37,6 +36,10 @@ describe("authenticated transport", () => {
   beforeEach(() => {
     vi.stubEnv("API_BASE_URL", "https://api.example.test")
     vi.stubEnv("SIGNAPSE_AUTH_MODE", "")
+    vi.mocked(auth).mockResolvedValue({
+      getToken: vi.fn().mockResolvedValue("token-123"),
+      userId: "user-123",
+    } as unknown as Awaited<ReturnType<typeof auth>>)
     fetchMock = vi.fn()
     vi.stubGlobal("fetch", fetchMock)
   })
@@ -54,11 +57,11 @@ describe("authenticated transport", () => {
       new Response(JSON.stringify({ enabled: true }), { status: 200 })
     )
 
-    await expect(fetchPublic<{ enabled: boolean }>("/config")).resolves.toEqual(
-      {
-        enabled: true,
-      }
-    )
+    await expect(
+      fetchAuthenticated<{ enabled: boolean }>("/config")
+    ).resolves.toEqual({
+      enabled: true,
+    })
 
     const [url, options] = fetchMock.mock.calls[0] as [string, RequestInit]
     expect(url).toBe("https://api.example.test/config")
@@ -67,6 +70,7 @@ describe("authenticated transport", () => {
     expect(options.headers).toEqual({
       Accept: "application/json",
       "Accept-Language": "vi",
+      Authorization: "Bearer token-123",
     })
     expect(options.signal).toBeInstanceOf(AbortSignal)
     expect(options.opentelemetry).toEqual({
@@ -78,13 +82,13 @@ describe("authenticated transport", () => {
 
   it("handles empty success responses and missing configuration", async () => {
     fetchMock.mockResolvedValueOnce(new Response(null, { status: 204 }))
-    await expect(fetchPublic("/empty")).resolves.toBeNull()
+    await expect(fetchAuthenticated("/empty")).resolves.toBeNull()
 
     fetchMock.mockResolvedValueOnce(new Response(null, { status: 200 }))
-    await expect(fetchPublic("/empty-body")).resolves.toBeNull()
+    await expect(fetchAuthenticated("/empty-body")).resolves.toBeNull()
 
     vi.stubEnv("API_BASE_URL", "")
-    await expect(fetchPublic("/config")).rejects.toThrow(
+    await expect(fetchAuthenticated("/config")).rejects.toThrow(
       testDictionary.errors.missingApiBaseUrl
     )
   })
@@ -96,13 +100,13 @@ describe("authenticated transport", () => {
         status: 422,
       })
     )
-    await expect(fetchPublic("/invalid")).rejects.toMatchObject({
+    await expect(fetchAuthenticated("/invalid")).rejects.toMatchObject({
       message: "Rejected by backend",
       status: 422,
     })
 
     fetchMock.mockResolvedValueOnce(new Response("Not Found", { status: 404 }))
-    await expect(fetchPublic("/missing")).rejects.toMatchObject({
+    await expect(fetchAuthenticated("/missing")).rejects.toMatchObject({
       message: "Not Found",
       status: 404,
     })
@@ -127,7 +131,7 @@ describe("authenticated transport", () => {
         })
     )
 
-    const pending = fetchPublic("/slow")
+    const pending = fetchAuthenticated("/slow")
     const rejection = expect(pending).rejects.toThrow(
       "The operation was aborted"
     )
@@ -144,16 +148,18 @@ describe("authenticated transport", () => {
 
     const cancellation = new DOMException("private abort detail", "AbortError")
     fetchMock.mockRejectedValueOnce(cancellation)
-    await expect(fetchPublic("/cancelled?secret=query-value")).rejects.toBe(
-      cancellation
-    )
+    await expect(
+      fetchAuthenticated("/cancelled?secret=query-value")
+    ).rejects.toBe(cancellation)
 
     const networkError = new Error("private network detail")
     fetchMock.mockRejectedValueOnce(networkError)
-    await expect(fetchPublic("/network")).rejects.toBe(networkError)
+    await expect(fetchAuthenticated("/network")).rejects.toBe(networkError)
 
     fetchMock.mockResolvedValueOnce(new Response("not-json", { status: 200 }))
-    await expect(fetchPublic("/parse")).rejects.toBeInstanceOf(SyntaxError)
+    await expect(fetchAuthenticated("/parse")).rejects.toBeInstanceOf(
+      SyntaxError
+    )
 
     const diagnostics = consoleError.mock.calls.map(([value]) => String(value))
     expect(diagnostics).toHaveLength(3)

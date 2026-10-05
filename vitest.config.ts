@@ -26,7 +26,6 @@ export default defineConfig({
         "**/node_modules/**",
         "**/.next/**",
         "**/tests/**",
-        "**/coming-soon/**",
         "**/.agents/**",
       ],
     },

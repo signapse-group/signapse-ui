@@ -238,13 +238,6 @@ export async function fetchAuthenticated<T>(
   return apiFetch<T>(urlPath, finalOptions)
 }
 
-export async function fetchPublic<T>(
-  urlPath: string,
-  options: RequestInit = {}
-): Promise<T> {
-  return apiFetch<T>(urlPath, options)
-}
-
 function recordTransportFailure(
   operation: ServerOperationController,
   outcome: ObservabilityOutcome,

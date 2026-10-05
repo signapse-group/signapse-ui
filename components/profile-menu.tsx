@@ -22,6 +22,7 @@ import type { Dictionary } from "@/app/lib/i18n/dictionary-types"
 import { formatDateTime, formatNumber } from "@/app/lib/i18n/format"
 import { formatMessage } from "@/app/lib/i18n/messages"
 import { useLocalization } from "@/app/lib/i18n/provider"
+import { withLocalePath } from "@/app/lib/i18n/routing"
 import { FeedbackComposeDialog } from "@/components/feedback/feedback-compose-dialog"
 import { LocalizedLink as Link } from "@/components/localized-link"
 import { Badge } from "@/components/ui/badge"
@@ -244,7 +245,9 @@ export function ProfileMenu({
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
                   <DropdownMenuItem>
-                    <SignOutButton>
+                    <SignOutButton
+                      redirectUrl={withLocalePath("/sign-in", locale)}
+                    >
                       <div className="flex w-full items-center gap-2 px-1 py-1.5">
                         <LogOutIcon aria-hidden="true" />
                         <span>{dictionary.auth.signOut}</span>

@@ -12,7 +12,7 @@ These instructions apply to `app/api/**` and extend the repository-level guidanc
 ## Authentication And Transport
 
 - Protected backend requests must use `fetchAuthenticated()` from `app/api/auth/action.ts`.
-- Use `fetchPublic()` only when the backend endpoint is explicitly public.
+- This dashboard has no anonymous backend transport. Public content consumption belongs to the separate marketing repository.
 - Do not recreate API base URL handling, Clerk JWT retrieval, locale headers, timeout handling, or JSON response parsing in feature actions.
 - `app/api/auth/action.ts` is the single owner of authenticated JSON transport.
 - Read `response.text()` before `JSON.parse()` when implementing or modifying direct response parsing.

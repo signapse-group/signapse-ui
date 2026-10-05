@@ -1,8 +1,12 @@
 ---
-status: accepted
+status: superseded
 ---
 
 # Use progressive WebGL for the landing context figure
+
+Historical decision, superseded on 2026-10-05: the landing is maintained in a
+separate repository. Its WebGL components and direct dependencies have been
+removed from this dashboard repository.
 
 Signapse will replace the public landing Hero's static conceptual diagram with a route-local interactive market-context figure derived from the approved v9 Three.js demo. The figure presents the Market Knowledge Graph and price action as complementary views rather than a product capture or a claim that the graph generates prices; it preserves the surrounding Hero and uses a server-rendered static dual-view fallback, a narrowly scoped client island, pinned Three.js dependencies, localized pointer/touch/keyboard controls, theme parity, reduced-motion behavior, and bounded rendering that stops when idle, hidden, or offscreen.
 
