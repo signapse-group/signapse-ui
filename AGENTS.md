@@ -14,6 +14,7 @@ When framework versions, the UI preset, CI, or repository ownership change, refr
 - When a task spans multiple domains, read every applicable scoped instruction file.
 - Scoped instructions extend this file; the more specific instruction wins when guidance conflicts.
 - `.agents/skills` holds repository-specific or non-overlapping recipes.
+- For assigned Jira/Symphony work, read [WORKFLOW.md](WORKFLOW.md) for the implementation contract, repository-owned execution policy, and review/handoff requirements. Planning owns project hierarchy, routing and acceptance; ordinary requests do not activate tracker lifecycle actions.
 - Load the corresponding repository skill when the change or review matches its trigger:
 - `shadcn`: adding, fixing, composing shadcn components, wrappers, CLI, docs, presets, and styling rules.
 - Overlay hydration mismatches: use the Hydration section in `components/AGENTS.override.md`.

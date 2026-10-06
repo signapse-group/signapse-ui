@@ -1,5 +1,5 @@
 interface:
   display_name: "Implement"
-  short_description: "Deliver assigned work through PR review"
+  short_description: "Deliver assigned work with verification and review"
 policy:
   allow_implicit_invocation: false

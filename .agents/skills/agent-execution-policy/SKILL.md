@@ -1,13 +1,13 @@
 ---
 name: agent-execution-policy
-description: Load the shared implementation, verification, review, and delivery policy for an explicitly assigned workflow run.
+description: Load the Signapse UI implementation, verification, review, and handoff policy for assigned Jira Subtasks or an explicitly activated local-contract workflow.
 ---
 
 # Agent Execution Policy
 
-Apply this workflow only when the Symphony prompt assigns work and loads this skill, or when the user explicitly requests this workflow for the current scope. Installing the skills or finding repository instructions does not activate the workflow.
+Apply this repository-owned policy when the Symphony prompt assigns a Jira Subtask and loads it, or when the user explicitly activates this workflow for an accepted local contract. Installation, configuration maintenance and ordinary requests do not activate tracker lifecycle actions.
 
-Read [references/execution-policy.md](references/execution-policy.md) before workflow-dependent action. Use the assigned prompt, repository files, tracker, and existing `AGENTS.md` if present for project-specific facts. Repository instructions take precedence for project-specific facts; the shared policy remains authoritative for workflow behavior unless the user explicitly changes it.
+Read [references/execution-policy.md](references/execution-policy.md) before workflow-dependent action, together with `WORKFLOW.md`, `AGENTS.md` and applicable scoped instructions. Planning owns hierarchy, routing and acceptance; this repository owns implementation, verification, review and handoff. The skills are maintained here independently of Symphony releases.
 
 If required project-specific configuration is missing, report it before dependent action and continue independent work that remains valid. Do not create or edit `AGENTS.md` merely to activate this workflow.
 

@@ -14,6 +14,25 @@ The editor and dashboard prototype routes have been retired. The shared Plate
 editor remains available for blog authoring and Personal Notes, with explicit
 initial content supplied by each feature.
 
+## Assigned Execution
+
+Jira [Signapse](https://signapse-group.atlassian.net/) project `SIGN` holds assigned
+contracts and lifecycle state. [Planning's execution workflow](https://github.com/signapse-group/signapse-planing/blob/main/workflow/project-execution-workflow.md)
+defines hierarchy, routing and human acceptance. This repository's
+[WORKFLOW.md](WORKFLOW.md) configures its Symphony worker for native Subtasks with
+`route-frontend`; GitHub hosts code, PRs and CI.
+
+[Repository-owned execution skills](.agents/skills/agent-execution-policy/SKILL.md)
+are committed under `.agents/skills` and available after clone, independently of
+Symphony releases. Agents hand off at `In Review`; the coordinator completes
+`Done` after the applicable review, merge and deployment/evidence gates. A PR's
+Jira key in its title links it to the Subtask's Development panel.
+
+Configuration changes require operator verification before activation: confirm
+the installed Symphony revision, worker credentials/tools and a separate FE
+workspace root; drain the previous worker, reconcile existing work and verify a
+coordinator-authorized canary. See the [adaptation plan](docs/jira-workflow-adaptation-plan.md).
+
 ## Local Development
 
 Copy `.env.example` to the ignored `.env.local` and supply your backend URL and Clerk keys, or use
@@ -38,7 +57,7 @@ commands, and the scope each test lane proves.
 Import the Logo component to display the Signapse branding:
 
 ```tsx
-import { Logo } from "@/components/logo";
+import { Logo } from "@/components/logo"
 
 export function Header() {
   return (
@@ -46,11 +65,12 @@ export function Header() {
       <Logo width={40} height={40} />
       <span className="font-semibold">Signapse</span>
     </div>
-  );
+  )
 }
 ```
 
 The Logo component automatically adapts to light/dark theme. Props:
+
 - `width`: Logo width in pixels (default: 40)
 - `height`: Logo height in pixels (default: 40)
 - `className`: Additional CSS classes
@@ -71,5 +91,5 @@ This will place the ui components in the `components` directory.
 To use the components in your app, import them as follows:
 
 ```tsx
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/button"
 ```

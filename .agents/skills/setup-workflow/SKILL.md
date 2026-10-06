@@ -1,85 +1,69 @@
 ---
 name: setup-workflow
-description: Configure Symphony execution for assigned work by creating or updating WORKFLOW.md from verified repository, tracker, and deployment facts.
+description: Configure the Signapse UI Jira Subtask worker in WORKFLOW.md from verified planning, repository, tracker and deployment facts.
 ---
 
 # Setup Workflow
 
-Run this skill explicitly when configuring or refreshing Symphony execution for a repository.
-Invoking `$setup-workflow` establishes that the repository will run assigned work through Symphony;
-do not ask the user to confirm that choice again. This is a repository onboarding workflow, not
-Symphony host installation, implementation, planning, or issue publication. Read existing
-`AGENTS.md` for context if present, but do not create or edit it. The only file this skill writes is
-`WORKFLOW.md`.
+Run explicitly when configuring or refreshing this repository's Symphony consumer.
+The request establishes the intended onboarding scope; reuse approvals already
+given. This skill writes only `WORKFLOW.md`, leaving host installation, product
+planning, issue publication and runtime activation to their owners. Read
+`AGENTS.md` and applicable instructions; configuration work does not activate an
+implementation run or Jira lifecycle writes.
 
 ## Explore first
 
-Read [agent-execution-policy](../agent-execution-policy/SKILL.md) and its shared policy before
-drafting or refreshing the Symphony prompt. Reading the policy for configuration does not start an
-implementation run. Compare existing instructions with the policy; an old repository rule is not
-an exception merely because it is already written. Preserve only explicit current repository
-exceptions in `WORKFLOW.md`. If a material exception is unclear, ask about that exception.
+Read the repository-owned [agent-execution-policy](../agent-execution-policy/SKILL.md)
+and [runtime configuration reference](references/symphony-workflow.md). Compare
+the current workflow with [planning's execution policy](https://github.com/signapse-group/signapse-planing/blob/main/workflow/project-execution-workflow.md)
+and the installed Symphony version's Jira guide. Clarify only material unresolved
+exceptions; already-approved migration choices need no second confirmation.
 
 Inspect the target repository before proposing any configuration:
 
-- `AGENTS.md`, `CLAUDE.md`, `WORKFLOW.md`, and any existing Agent Workflow, Symphony, or agent-skills sections, as read-only sources except for `WORKFLOW.md`;
-- `git remote -v` and `.git/config` for repository identity and hosting;
-- package/build configuration and existing scripts for focused checks and completion checks;
-- CI workflow files for required CI;
-- existing issue, contract, architecture, API, and domain-document locations;
-- repository-specific delivery conventions and human acceptance ownership when documented;
-- the tracker adapter and scope, dispatch/active/terminal states, repository bootstrap, and how
-  project-scoped skills remain available after the repository is cloned;
-- the deployed Symphony profile or an existing workflow for deployment-owned settings such as
-  workspace location, polling, concurrency, Codex command, approval, and sandbox policy.
+- Root/scoped instructions, current `WORKFLOW.md`, Git remote/branch and dirty-file ownership.
+- Package scripts, lockfile, CI/required checks and delivery conventions.
+- Jira Subtask/parent contracts, native relationships and accepted planning routing/lifecycle.
+- Clone/bootstrap and availability of committed repository-owned execution skills after clone.
+- Installed Symphony support and host configuration: workspace root, polling,
+  concurrency, turn limits, Codex/model, approval, sandbox/network and tool availability.
 
-For Symphony workspace paths, inspect the deployed runtime environment and service configuration in
-addition to repository files. `workspace.root` is normally a deployment-level setting, not a
-repository-specific input. If an existing workflow uses an environment-backed value such as
-`$SYMPHONY_WORKSPACE_ROOT`, treat that reference as the verified configuration and preserve it;
-do not ask the user to re-enter the resolved server path.
+Preserve existing environment-backed references such as `$SYMPHONY_WORKSPACE_ROOT`
+and established host settings. Verify resolved paths/credentials on the host
+before activation, rather than asking the user to re-enter discoverable values.
+An inaccessible deployment profile is a verification limit; retain existing values
+and report it without inventing machine-specific settings.
 
-Treat the shared policy's `In progress`, `Blocked`, `In review`, and `Done` labels as semantic
-roles, not tracker configuration values. Read the exact provider-native names from the target
-board and map each role explicitly. Never substitute familiar Linear or GitHub state names.
+## Verify the Jira profile
 
-For a GitHub Projects v2 board using the standard Agent Workflow profile, start with this mapping
-and verify each option against the board's `Status` field before drafting:
+Use authorized read-only Jira operations to verify site/project `SIGN`, native
+Subtask type, native Parent/Blocks support and the current statuses/transitions.
+Do not infer live options from source code or an empty issue search. Resolve IDs
+from current metadata when an API needs them; status and transition names are distinct.
 
-- `Open`: outside autonomous dispatch;
-- `Ready`: dispatch and initial active state;
-- `In progress`: active implementation state;
-- `In review`: non-terminal human handoff state;
-- `Blocked`: external-input wait state, outside active execution;
-- `Done`: terminal state.
+Configure Jira with `issue_types: [Subtask]`, the full recognized routing set from
+planning in `provider.routing_labels`, and `required_labels: [route-frontend]`.
+Verify native Subtask metadata/parent and exactly one recognized route. Preserve
+business labels; title prefix or assignee does not determine repository routing.
+Keep malformed or missing profiles unready instead of widening selection.
 
-Generate `dispatch_states: [Ready]`, `active_states: [Ready, In progress]`,
-`review_state: In review`, and `terminal_states: [Done]`. Ask for a mapping override only when the
-board does not expose one of these exact options. Do not inspect application code to infer this
-mapping.
+Map verified states to `dispatch_states: [Ready, Progress]`,
+`active_states: [Ready, Progress]`, `review_state: In Review`,
+`terminal_states: [Done]`. Open, In Review and Blocked remain outside execution;
+Done is terminal. Progress discovery recovers authorized work after restart/review/
+blocker resume, reusing its output. Coordinator owns Open → Ready, Blocked resume
+to the actual previous status, Done and parent acceptance.
 
-The default Project issue filter is `issue_types: [Task, Bug]`. Verify that both `Task` and `Bug`
-occur in the target Project's Issue `issueType.name` values before writing the workflow. If either
-type is absent, stop the draft at that setting and ask for the intended issue types; do not silently
-dispatch a broader set. A Project with no matching items is not evidence that the type exists.
+Confirm dependency admission for Ready and Progress: native blockers must be in
+Jira category done; unreadable blockers and Resolved in an active category do not
+qualify. Source/profile readiness does not establish installed-worker support or
+authorize live dispatch. Record a gap if Jira/runtime support differs from the profile.
 
-Verify the mapping through the configured tracker connector or GitHub Projects API. When `gh` is
-available, `gh project field-list <number> --owner <owner> --format json` is the preferred read-only
-check. Repository source code is not evidence for the target board's live options.
-
-Verify issue types with the Project GraphQL item query used by the GitHub adapter and collect every
-`Issue.issueType.name` across all pages. The check passes only when both `Task` and `Bug` are present.
-
-For GitHub Projects, verify that the Project's `Item closed` workflow is enabled before describing
-issue closure as an automatic transition to `Done`. Report an unverified or disabled workflow as a
-delivery configuration gap; do not present the status mapping alone as proof of automation.
-
-Use evidence from the repository, tracker, and deployed Symphony profile. Do not invent repository
-names, issue URLs, Project IDs, commands, CI requirements, delivery conditions, or named owners.
-Infer routine bootstrap from committed package-manager and lock files, and use role-based ownership
-such as repository maintainers or PR reviewers when repository policy establishes that role without
-naming a person. Ask only for a material repository or tracker decision that cannot be discovered
-and would change dispatch or delivery behavior.
+Use repository/tracker/host evidence for names, commands, CI, delivery conditions
+and owners. Derive bootstrap from committed package/lock files and use established
+role-based owners. Ask only about an undiscoverable material setting that changes
+selection or delivery behavior.
 
 ## Configuration boundary
 
@@ -88,17 +72,18 @@ Configure only the project-specific execution context needed by the Symphony ent
 - repository role and contract source;
 - focused and completion checks;
 - required CI;
-- delivery condition and any exceptions to the shared issue-linking rule;
+- operation-specific handoff/delivery and Jira Development-panel PR linking;
 - human acceptance owner;
 - relevant architecture, API-contract, and domain-context locations;
 - output language.
 
-Map existing tracker fields and states into the runtime configuration. Do not design or publish product requirements, Epic/Story/Task/Bug bodies, issue-tracker schemas, planning workflow, Project fields, triage labels, or domain terminology. Those belong to the planning repository or the consuming repository's own policy.
+Map accepted fields/states into supported runtime configuration. Requirements,
+hierarchy, routing changes, publication and acceptance remain planning/coordinator-owned.
 
 Keep these ownership boundaries explicit:
 
-- The repository owns tracker scope, issue filters, repository bootstrap, required skills, checks,
-  delivery policy, and the unattended prompt.
+- This repository owns its tracker profile, clone/bootstrap, local skills, checks,
+  review/handoff policy and unattended prompt.
 - The Symphony deployment owns workspace location, polling, concurrency, Codex command, model,
   approval policy, sandbox policy, credentials, and host tool availability.
 
@@ -109,29 +94,29 @@ deployment profile cannot be inspected, retain existing references and values; f
 fields, rely on supported runtime defaults and report the deployment verification gap. Do not invent
 host-specific values merely to make the draft look complete.
 
-The generic execution policy remains in `$agent-execution-policy` and its bundled references. Keep
-the Symphony prompt short and store only facts specific to the consuming repository. Do not copy
-the shared policy into `WORKFLOW.md`. Put the project-specific execution facts collected above in
-its prompt, or point to stable repository sources for them; do not rely on an `AGENTS.md` adoption
-block. Do not require `AGENTS.md` to run assigned work.
+Keep detailed execution rules in repository-owned policy and implementation skills.
+The prompt states assigned scope, context, permissions and handoff boundary, then
+points to those local sources. Do not provision a skills package from Symphony
+or add a second policy engine.
 
 ## Draft before writing
 
-Summarize what was found, what is missing, and any assumptions. Read
-[references/symphony-workflow.md](references/symphony-workflow.md) and show the complete proposed
-`WORKFLOW.md`. Its prompt must load `$agent-execution-policy`, invoke `$implement` for the
-assigned work item, and state the granted lifecycle actions and handoff boundary. Keep credentials
-in environment variables or an existing external credential helper.
+Summarize verified facts, gaps and assumptions and show the complete proposed
+`WORKFLOW.md` when drafting an unapproved configuration. Its prompt reads repository
+instructions, loads local policy and invokes implement, supplies immutable issue
+ID/type/parent context, and rereads live contracts through jira_rest. State granted
+operations and the non-terminal In Review boundary. Credential values stay in host
+environment variables/helpers.
 
 Before showing the `WORKFLOW.md`, summarize the proposed mapping as `dispatch`, `active`,
 `review handoff`, and `terminal`. The review handoff must be non-terminal and excluded from
 `active_states` when Symphony should stop while a human owns the next action.
 
-Ask the user to accept or edit the `WORKFLOW.md` draft before writing. Do not infer acceptance from silence.
-Do not ask whether Symphony is used, whether ordinary lockfile-based dependency installation is
-allowed, or which deployment defaults to use. If a material repository or tracker setting remains
-unknown, ask only about that setting and keep independently verified settings in the draft. Do not
-write a `WORKFLOW.md` with placeholders that would make Symphony invalid or dispatch the wrong work.
+Obtain acceptance before writing a new proposal; an explicit request to implement
+an already-approved plan supplies that acceptance. Do not ask again for agreed
+scope/settings or infer approval from silence. Missing required settings remain
+unready; do not write placeholders that could select wrong work. Accepted repository
+configuration does not authorize host changes, canaries or Jira writes.
 
 ## Write safely
 
@@ -140,7 +125,7 @@ After explicit acceptance:
 1. Create or update the root `WORKFLOW.md`. Preserve valid provider-specific and deployment-owned
    settings and unrelated prompt instructions unless they conflict with the accepted execution
    boundary. Never copy credentials into it.
-2. Confirm that the cloned Symphony workspace can discover `$agent-execution-policy`, `$implement`, and their required companion skills. Prefer project-scoped installed skills committed with the repository; otherwise record the verified worker provisioning mechanism.
+2. Confirm clone includes committed local policy, implement and required companion skills; no Symphony package install is needed. Validate YAML/config and strict Liquid rendering with the supported runtime using offline fixture credentials/metadata. Never start live polling merely to validate a file.
 3. Do not overwrite unrelated edits or create or change `AGENTS.md`.
 
 Re-read the resulting `WORKFLOW.md` and report its exact path, the settings written, unresolved items,

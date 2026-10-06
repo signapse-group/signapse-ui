@@ -1,6 +1,6 @@
 ---
 name: technical-design
-description: Collaborate with a human technical owner to design an implementation from an already divided set of product, backend, and frontend issues, grounded in the affected repositories. Use before autonomous implementation; do not use to define product requirements or implement the issues.
+description: Design repository contributions with a human technical owner from accepted Jira parent requirements and assigned Subtasks. Use before autonomous implementation, without publishing requirements or implementing the work.
 ---
 
 # Technical Design
@@ -9,7 +9,7 @@ Run this skill with the human technical owner after upstream planning has produc
 
 ## Build the design context
 
-Read the current Epic/Story and all affected backend/frontend Tasks, decision comments, dependencies, and linked contracts. Use exact repository-qualified issue references. Separate accepted requirements from planning suggestions, unresolved decisions, and assumptions. Map each acceptance criterion to its intended implementing issue; flag omissions, overlap, or a task split that does not fit the code. Planning owns product requirements and issue publication, so propose changes to the human rather than silently changing them.
+Read the Epic and parent Story/Task/Bug requirements, affected execution Subtasks, accepted comments, native dependencies and linked contracts. Each contribution has one repository owning its output and one routing label from the [planning map](https://github.com/signapse-group/signapse-planing/blob/main/workflow/project-execution-workflow.md); inspect the repositories actually affected. Map parent AC or Bug expected behavior to Subtask scope/verification and flag omissions or overlap. Keep accepted requirements distinct from assumptions/proposals. Planning/coordinator owns requirements, decomposition, publication and acceptance; propose corrections rather than changing them.
 
 Inspect the relevant working trees, repository instructions, architecture documentation, existing flows, data models, API shapes, and tests. For a cross-repository feature, inspect each affected repository before making claims about its code. Cite paths and concrete behavior for findings; label any inaccessible repository or unverified assumption. Identify shared policy or data decisions across the issue set before designing individual tasks.
 

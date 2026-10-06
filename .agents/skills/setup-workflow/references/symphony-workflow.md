@@ -20,7 +20,7 @@ Codex command and model, approval policy, sandbox/network settings, credentials,
 tools. Copy or preserve these values when the workflow format requires them; do not make them new
 repository onboarding decisions.
 
-Keep tokens and secrets in environment variables or an existing external credential helper. The clone/bootstrap path must also make the installed workflow skills available to Codex. A project-scoped installation committed in the repository satisfies this after clone; a global installation must be verified on every worker host.
+Keep tokens and secrets in environment variables or an existing external credential helper. Clone includes the committed repository-owned skills; no shared Symphony skills installation is required.
 
 Treat `workspace.root` as a deployment-level location for per-issue workspaces. Inspect the
 Symphony service environment or deployment configuration for its established value. Prefer an
@@ -37,56 +37,32 @@ bootstrap would require credentials, destructive host changes, or a material cho
 does not settle. Repository requirements such as Node, pnpm, browser binaries, or system libraries
 are inputs to the deployment; host installation remains outside `$setup-workflow`.
 
-For the standard GitHub Projects v2 Agent Workflow profile, use these verified roles:
+## Routed Jira configuration and prompt
 
-```yaml
-tracker:
-  kind: github
-  provider:
-    repo: owner/repository
-    project_owner: owner
-    project_number: 1
-    issue_types: [Task, Bug]
-  dispatch_states: [Ready]
-  active_states: [Ready, In progress]
-  review_state: In review
-  terminal_states: [Done]
-```
+Use this repository's [WORKFLOW.md](../../../../WORKFLOW.md) as the current FE
+profile/prompt, checked against the installed runtime's [Jira guide](https://github.com/signapse-group/signapse-symphony/blob/main/elixir/README.md#routed-jira-subtask-workflows).
+Planning's [execution workflow](https://github.com/signapse-group/signapse-planing/blob/main/workflow/project-execution-workflow.md)
+owns the accepted routing map and native lifecycle.
 
-`Open` remains outside autonomous dispatch, `Blocked` remains outside active execution, and
-`In review` is the human handoff boundary. Verify these exact option names against the target
-Project's `Status` field. Verify that both `Task` and `Bug` occur in the Project's
-`Issue.issueType.name` values before accepting the default filter. If either is absent, require an
-explicit issue-type override. If the board differs, change only the mapping; preserve the roles.
+- `tracker.kind` selects Jira; provider `base_url`, `email`, `api_token` accept host
+  environment references. Provider `project_key` scopes all reads.
+- `provider.issue_types` selects native Subtasks. `provider.routing_labels` carries
+  the full recognized route set; `required_labels` identifies this worker's single
+  route. Runtime verifies native type/parent and rejects conflicting/missing routes.
+- Ready and Progress are dispatch/active states. Progress polling recovers already
+  authorized output; In Review and Blocked stay idle, Done is terminal.
+- Routed dependency admission checks native Blocks links and blocker category done
+  before starting/retrying Ready or Progress work; it does not interrupt an already
+  running worker merely because a dependency changes.
+- The prompt includes ID/key/type/parent plus title/state/URL/labels/description,
+  reads live contracts/comments through jira_rest and loads local execution skills.
+  It states permissions through In Review; coordinator retains approval/resume/Done
+  and parent acceptance. Git/PR tooling is provisioned separately.
 
-Use this minimal prompt shape and adapt tracker terminology and allowed mutations to the
-consuming repository's policy. Do not copy state names from this example into a target
-repository: tracker-native names must come from that repository's configured board.
-
-```markdown
-You are working on assigned work item `{{ issue.identifier }}` in this repository.
-
-Read repository instructions if present, load `$agent-execution-policy`, and invoke `$implement` for this work item. The work item is the accepted implementation contract for this unattended run.
-
-Issue context:
-
-- Identifier: {{ issue.identifier }}
-- Title: {{ issue.title }}
-- State: {{ issue.state }}
-- URL: {{ issue.url }}
-- Labels: {{ issue.labels }}
-
-Description:
-{% if issue.description %}
-{{ issue.description }}
-{% else %}
-No description provided.
-{% endif %}
-
-This run authorizes implementation, verification, commits, branch push, pull-request creation or update, required CI follow-up, and configured issue-state transitions through the repository's review handoff boundary. Continue from the existing workspace and pull request on later attempts. Do not merge or deploy unless the assigned prompt explicitly authorizes that action for the current state.
-```
-
-Keep additional prompt instructions only when they express a repository-specific fact or a real unattended-runtime constraint. Do not duplicate the implementation, testing, review, or delivery procedure already owned by `$agent-execution-policy` and `$implement`.
+Keep behavior details in [execution policy](../../agent-execution-policy/references/execution-policy.md).
+Jira key in PR title links to Development panel; delivery evidence goes in one
+agent-owned Jira handoff comment. Review/build, merge when required and deployment/
+evidence when applicable define the coordinator's Done gate.
 
 Before writing, check these invariants:
 
@@ -96,5 +72,20 @@ Before writing, check these invariants:
 - the prompt's authorized state transitions match the tracker configuration and verified repository delivery condition;
 - the review handoff state is a non-terminal human-owned boundary and is excluded from
   `active_states` when Symphony should stop there;
-- the prompt states the repository facts required for unattended execution or points to stable repository sources for them, without requiring `AGENTS.md` or an adoption block;
+- the prompt reads repository/scoped instructions and points to committed local policy/skills;
 - the resulting YAML parses and contains no unresolved placeholder in a required runtime field.
+
+Validate configuration and strict Liquid rendering offline with the supported runtime;
+this check must not start polling, run clone hooks or send live tracker writes.
+From the Symphony Elixir project, run the committed consumer check against the
+current UI workflow (supply absolute paths):
+
+```bash
+mix run --no-start /path/to/signapse-ui/scripts/check-symphony-workflow.exs /path/to/signapse-ui/WORKFLOW.md
+```
+
+The check uses fixture credentials and the runtime's actual YAML, config, Jira
+normalization and strict Liquid implementation; it refuses a started application.
+Before activation, the operator verifies installed revision, credentials/tools,
+workspace separation and prior-worker drain/reconciliation; the coordinator assigns
+the canary explicitly. Configuration maintenance alone does not perform that cutover.
