@@ -27,6 +27,9 @@ hooks:
     git -c credential.helper=/opt/apps/symphony/runtime/git-credential-github clone --depth 1 https://github.com/signapse-group/signapse-ui.git .
     git config credential.helper /opt/apps/symphony/runtime/git-credential-github
     pnpm install --frozen-lockfile
+  before_run: |
+    /opt/apps/symphony/runtime/prepare-fe-workspace
+  timeout_ms: 900000
 agent:
   max_concurrent_agents: 4
   max_turns: 20
@@ -35,8 +38,7 @@ codex:
   approval_policy: never
   thread_sandbox: workspace-write
   turn_sandbox_policy:
-    type: workspaceWrite
-    networkAccess: true
+    type: dangerFullAccess
 ---
 
 You are executing the assigned Jira Subtask `{{ issue.identifier }}` in `signapse-group/signapse-ui`.
@@ -58,6 +60,8 @@ Repository execution context:
 - This repository owns the authenticated dashboard/app. Verify that the Subtask has exactly one recognized routing label, `route-frontend`, and its Deliverable belongs to `signapse-group/signapse-ui`. The live backend OpenAPI contract is canonical for API behavior; `docs/APIMAPPING.md` is the frontend mapping ledger, and `docs/design/DESIGN.md` defines durable UI/UX rules.
 - For any task with an approved UI reference attachment or link (such as a screenshot, Figma file, mockup, or video), inspect it before implementation and compare the rendered UI against it before handoff. Use the reference with `docs/design/DESIGN.md` as the visual contract; an inaccessible or materially ambiguous reference blocks the affected UI work and must be reported.
 - Run the narrowest relevant Vitest, contract, or Playwright checks while implementing. For code, build, runtime configuration, or behavior changes, complete `pnpm test:quality`. Documentation-only changes require relevant content, link, and formatting checks.
+- On the Symphony host, read `/opt/apps/symphony/runtime/README-fe-testing.md` and run `/opt/apps/symphony/runtime/run-fe-quality "$PWD"` for that quality gate. For authentication, backend transport, or protected-page changes, also run `/opt/apps/symphony/runtime/run-fe-integration "$PWD"`. Both wrappers use the shared host lock; P0 fixtures do not prove real authentication or backend access.
+- The `before_run` hook refreshes the workspace's ignored `.env.local` from `$SIGNAPSE_UI_APP_ENV`. Account credentials remain in the private file referenced by `$SIGNAPSE_UI_E2E_ENV`; never copy them into the workspace, application environment, logs, commits, or handoff evidence. Keep live integration checks read-only and report sanitized results.
 - Inspect the current repository-required CI before delivery. GitHub Pages deployment is not PR quality CI. When the PR quality lane in `docs/adr/0004-layered-automated-quality-gates.md` is enabled, require a successful run for the delivered revision.
 - Repository-file changes require a reviewed PR targeting the default branch; read-only investigation/report output does not require a PR. Include the Subtask key in the PR title for Jira Development-panel linking. Follow the repository-owned policy for the PR body and Jira delivery handoff comment.
 - Repository maintainers and PR reviewers own merge acceptance. The coordinator owns Jira `Done` after review/checks, merge when required, and deployment/evidence when the deliverable requires them. Record pending human-owned delivery actions at `In Review`; a merge alone does not complete the Jira issue.
