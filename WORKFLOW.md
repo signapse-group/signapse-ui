@@ -1,22 +1,23 @@
 ---
 tracker:
-  kind: github
+  kind: jira
   provider:
-    repo: signapse-group/signapse-ui
-    project_owner: signapse-group
-    project_number: 1
-    issue_types:
-      - Task
-      - Bug
-  required_labels: []
-  dispatch_states:
-    - Ready
-  active_states:
-    - Ready
-    - In progress
-  review_state: In review
-  terminal_states:
-    - Done
+    base_url: $JIRA_BASE_URL
+    email: $JIRA_EMAIL
+    api_token: $JIRA_API_TOKEN
+    project_key: SIGN
+    issue_types: [Subtask]
+    routing_labels:
+      - route-backend
+      - route-frontend
+      - route-quality-assurance
+      - route-mdg
+      - route-landing
+  required_labels: [route-frontend]
+  dispatch_states: [Ready, Progress]
+  active_states: [Ready, Progress]
+  review_state: In Review
+  terminal_states: [Done]
 polling:
   interval_ms: 10000
 workspace:
@@ -38,34 +39,48 @@ codex:
     networkAccess: true
 ---
 
-You are working on assigned GitHub Project work item `{{ issue.identifier }}` in `signapse-group/signapse-ui`.
+You are executing the assigned Jira Subtask `{{ issue.identifier }}` in `signapse-group/signapse-ui`.
 
 {% if attempt %}
 This is follow-up attempt #{{ attempt }}. Resume the existing workspace, branch, and pull request;
 do not restart completed investigation or verification unless later changes invalidated it.
 {% endif %}
 
-Read repository instructions if present, load `$agent-execution-policy`, and invoke `$implement` for this work item.
-The work item is the accepted implementation contract for this unattended run.
+Read `AGENTS.md` and the applicable scoped instructions, load the repository-owned
+`$agent-execution-policy`, and invoke `$implement` for this Subtask. These skills
+are committed in this repository and do not require a Symphony skills installation.
+Use `jira_rest` to reread the live Subtask, its native parent, relevant comments,
+dependencies and approved references at start, resume and handoff. The Subtask
+defines this contribution; its parent owns the accepted outcome and requirements.
 
 Repository execution context:
 
-- This repository is the Signapse Next.js frontend. The assigned GitHub issue is the implementation contract. The live backend OpenAPI contract is canonical for API behavior; `docs/APIMAPPING.md` is the frontend mapping ledger, and `docs/design/DESIGN.md` defines durable UI/UX rules.
+- This repository owns the authenticated dashboard/app. Verify that the Subtask has exactly one recognized routing label, `route-frontend`, and its Deliverable belongs to `signapse-group/signapse-ui`. The live backend OpenAPI contract is canonical for API behavior; `docs/APIMAPPING.md` is the frontend mapping ledger, and `docs/design/DESIGN.md` defines durable UI/UX rules.
 - For any task with an approved UI reference attachment or link (such as a screenshot, Figma file, mockup, or video), inspect it before implementation and compare the rendered UI against it before handoff. Use the reference with `docs/design/DESIGN.md` as the visual contract; an inaccessible or materially ambiguous reference blocks the affected UI work and must be reported.
 - Run the narrowest relevant Vitest, contract, or Playwright checks while implementing. For code, build, runtime configuration, or behavior changes, complete `pnpm test:quality`. Documentation-only changes require relevant content, link, and formatting checks.
-- No repository PR quality workflow or protected required check is currently configured. The GitHub Pages deployment workflow is not code-quality CI. When the PR quality lane in `docs/adr/0004-layered-automated-quality-gates.md` is enabled, require a successful run for the delivered revision.
-- A maintainer-reviewed merge into the default branch completes the issue; the Project's `Item closed` workflow moves it to `Done`. Product, preview, cutover, and deployment acceptance remain with their human owners and do not delay issue completion.
-- Repository maintainers and PR reviewers own review and merge acceptance. The Signapse Product Owner or designated release owner owns documented product, preview, cutover, or deployment acceptance.
+- Inspect the current repository-required CI before delivery. GitHub Pages deployment is not PR quality CI. When the PR quality lane in `docs/adr/0004-layered-automated-quality-gates.md` is enabled, require a successful run for the delivered revision.
+- Repository-file changes require a reviewed PR targeting the default branch; read-only investigation/report output does not require a PR. Include the Subtask key in the PR title for Jira Development-panel linking. Follow the repository-owned policy for the PR body and Jira delivery handoff comment.
+- Repository maintainers and PR reviewers own merge acceptance. The coordinator owns Jira `Done` after review/checks, merge when required, and deployment/evidence when the deliverable requires them. Record pending human-owned delivery actions at `In Review`; a merge alone does not complete the Jira issue.
+- Planning owns hierarchy, routing and acceptance in its [project execution workflow](https://github.com/signapse-group/signapse-planing/blob/main/workflow/project-execution-workflow.md). Symphony owns runtime selection, dependency admission, workspace scheduling and recovery. GitHub retains code, PRs and CI.
 - Relevant sources: `app/[lang]`, `app/api`, `app/lib`, `components`, scoped `AGENTS.override.md` files, `docs/APIMAPPING.md`, `docs/design/DESIGN.md`, `docs/adr`, and the [browser-testing scope matrix](docs/testing/browser-tests.md#selecting-checks-by-change-scope).
 - Use Vietnamese for status and handoff communication. Preserve repository language in code and documentation, and maintain both supported dictionary locales for user-facing copy.
 
-Issue context:
+Subtask context (reread live before acting):
 
+- Immutable ID: {{ issue.id }}
 - Identifier: {{ issue.identifier }}
 - Title: {{ issue.title }}
 - State: {{ issue.state }}
 - URL: {{ issue.url }}
 - Labels: {{ issue.labels }}
+  {% if issue.native_ref %}
+  {% if issue.native_ref.issue_type %}
+- Type: {{ issue.native_ref.issue_type.name }} ({{ issue.native_ref.issue_type.id }})
+  {% endif %}
+  {% if issue.native_ref.parent %}
+- Native parent: {{ issue.native_ref.parent.key }} ({{ issue.native_ref.parent.id }})
+  {% endif %}
+  {% endif %}
 
 Description:
 {% if issue.description %}
@@ -74,21 +89,16 @@ Description:
 No description provided.
 {% endif %}
 
-Use this tracker lifecycle:
+This run authorizes the assigned implementation/investigation, verification,
+scoped commits, branch push, PR creation/update when required, required CI follow-up,
+and agent-owned comments on this Subtask. Under the repository-owned execution
+policy, it also authorizes `Ready → Progress`, `Progress → In Review`, and
+`Ready`/`Progress → Blocked` when the corresponding gates are met. Resolve current
+transitions by destination status and reread remote state after an ambiguous write.
 
-- `Open`: outside autonomous dispatch.
-- `Ready`: ready for autonomous work; move it to `In progress` before implementation.
-- `In progress`: implementation, verification, review fixes, pull-request delivery, and required CI are agent-owned.
-- `In review`: non-terminal human handoff. Do not modify code or merge while the item remains in this state; human-requested changes return it to `In progress`.
-- `Blocked`: use only when material external input or access is required and no meaningful independent work remains.
-- `Done`: terminal; do nothing and stop.
-
-This run authorizes implementation, verification, scoped commits, branch push, pull-request creation or
-update, required CI follow-up, and GitHub Project transitions from `Ready` to `In progress`, from
-`In progress` to `In review` after the shared policy's handoff requirements are met, or
-from an active state to `Blocked` when the shared policy's blocker conditions are met. Continue
-from the existing workspace and pull request on later attempts.
-
-Do not merge, deploy, move the item to `Done`, change product requirements, or create additional work
-items unless the human explicitly authorizes that action for this run. Stop at the `In review` handoff,
-`Done`, or a genuine external blocker with no meaningful independent work remaining.
+`Progress` polling resumes the same authorized operation, workspace, branch and
+PR. Stop execution at `Open`, `In Review`, `Blocked` or `Done`. Coordinator-owned
+Open → Ready, Blocked resume, Done and parent transitions remain with the coordinator.
+Do not merge, deploy, change requirements or create additional tickets unless the
+human explicitly authorizes that action for this run. `jira_rest` supplies Jira
+operations; Git/PR operations require separately configured code-host access.

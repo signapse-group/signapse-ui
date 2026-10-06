@@ -11,9 +11,9 @@ Use [agent-execution-policy](../agent-execution-policy/SKILL.md) when reviewing 
 
 Accept the issue/contract and resolved base from the caller. For a PR, resolve its actual base branch; honor an explicit user-specified base. Ask only if the intended base or source cannot be discovered unambiguously. Resolve refs to commit SHAs before reviewing.
 
-Read the live issue and relevant parent, accepted decision comments and references directly. A local accepted contract is valid for explicitly assigned work without an issue. In ad hoc review without a requirement source, disclose that adherence cannot be assessed; never convert missing required input into a full Task handoff pass.
+Read the live Jira Subtask and native parent, accepted decision comments and references directly. Assess the contribution against parent AC or Bug expected behavior and its own scope/Verification. A local accepted contract is valid for explicitly assigned work without an issue. In ad hoc review without a requirement source, disclose that adherence cannot be assessed; never convert missing required input into a full contribution handoff pass.
 
-Inspect the Task's committed diff from the resolved base/merge-base to HEAD, staged and unstaged diffs, and relevant untracked file contents. An empty committed diff is not an empty review if uncommitted work exists. Inspect relevant final code beyond changed lines to understand behavior and callers. Record base, HEAD and which working changes were inspected.
+Inspect the contribution's committed diff from the resolved base/merge-base to HEAD, staged and unstaged diffs, and relevant untracked output. An empty committed diff is not an empty review if uncommitted work exists. Inspect relevant final code beyond changed lines to understand behavior and callers; for read-only deliverables, inspect the report and source evidence. Record base, HEAD and which working changes/output were inspected.
 
 Exclude unrelated changes only with clear ownership evidence. Report ambiguous scope and whether it prevents a reliable conclusion. Do not silently ignore ambiguous files or assign all worktree changes to this Task.
 
@@ -34,9 +34,10 @@ Use existing check evidence when it applies to the reviewed state. Request or ru
 ## Findings and Completion
 
 Make each finding actionable and traceable to its axis, location and evidence. Scale explanation to impact; a concise sentence may suffice for a simple nonblocking finding, without a fixed multi-field template. Distinguish:
+
 - **Blocking:** missing/wrong required behavior, correctness/security defects affecting safe delivery, missing mandatory evidence or failing required checks.
 - **Nonblocking:** optional naming, refactoring or optimization that does not affect requirements or safety.
 
-Report a separate result for each axis and one handoff conclusion. A nonblocking suggestion does not keep the Task in execution. The implementer may challenge findings with evidence; reassess them rather than requiring unnecessary changes. Escalate unresolved material contract/risk disagreements to the human.
+Report a separate result for each axis and one handoff conclusion. A nonblocking suggestion does not keep the contribution in execution. The implementer may challenge findings with evidence; reassess them rather than requiring unnecessary changes. Escalate unresolved material contract/risk disagreements to the human.
 
-After fixes, review the changed parts and affected surrounding behavior; broaden only if the changes warrant it. A later code, contract or base change invalidates affected evidence. Never attribute review of an earlier state to the final delivered revision. Return the result to the caller for the assigned GitHub issue's handoff comment, or for the PR summary when the contract has no issue; no mandatory repository report, snapshot or fingerprint is needed.
+After fixes, review the changed parts and affected surrounding behavior; broaden only if warranted. A later code, contract or base change invalidates affected evidence. Return the result for the assigned Jira Subtask's delivery handoff comment, or the requested local-contract PR/artifact/session. Identify applicable pending human-owned delivery actions; the reviewer does not transition issues or claim coordinator acceptance. No mandatory repository report, snapshot or fingerprint is needed.

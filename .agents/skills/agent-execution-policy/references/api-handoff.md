@@ -1,6 +1,6 @@
 # Cross-repository API delivery
 
-Use the assigned prompt, repository sources, and existing instructions to identify producer/consumer repositories, the contract source, delivery conditions, and any exceptions to shared issue-linking rules.
+Use the assigned Subtask, its native parent and dependencies, repository sources, and existing instructions to identify producer/consumer repositories, the contract source and delivery conditions. The coordinator owns cross-repository decomposition and acceptance.
 
 Treat the linked producer contract as the source for agreed observable behavior, request/response shapes, authorization, business rules, error behavior, and examples. Do not create or extend that contract as part of ordinary implementation.
 

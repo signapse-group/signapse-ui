@@ -1,6 +1,6 @@
 interface:
   display_name: "Agent Execution Policy"
-  short_description: "Load the shared delivery policy for assigned work"
+  short_description: "Load the UI delivery policy for assigned Jira work"
   default_prompt: "Use $agent-execution-policy for this explicitly assigned workflow run."
 policy:
   allow_implicit_invocation: true
