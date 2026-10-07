@@ -34,6 +34,7 @@ interface PaginationNavigationProps {
   currentPage: number
   isPending: boolean
   onPageChange: (page: number) => void
+  showWhenSinglePage?: boolean
   siblingCount?: number
   totalPageCount: number
 }
@@ -45,6 +46,7 @@ interface PaginationPageSizeSelectProps {
   onValueChange: (value: number) => void
   options?: readonly number[] | number[]
   showLabel?: boolean
+  compactOptions?: boolean
   triggerClassName?: string
   value: number
 }
@@ -64,6 +66,7 @@ export function PaginationPageSizeSelect({
   onValueChange,
   options = DEFAULT_PAGE_SIZE_OPTIONS,
   showLabel = true,
+  compactOptions = false,
   triggerClassName,
   value,
 }: PaginationPageSizeSelectProps) {
@@ -78,9 +81,11 @@ export function PaginationPageSizeSelect({
       <Select
         items={options.map((option) => ({
           value: option.toString(),
-          label: formatMessage(dictionary.pagination.perPage, {
-            count: option,
-          }),
+          label: compactOptions
+            ? option.toString()
+            : formatMessage(dictionary.pagination.perPage, {
+                count: option,
+              }),
         }))}
         value={value.toString()}
         onValueChange={(nextValue) => {
@@ -118,6 +123,7 @@ export function PaginationNavigation({
   currentPage,
   isPending,
   onPageChange,
+  showWhenSinglePage = false,
   siblingCount = 1,
   totalPageCount,
 }: PaginationNavigationProps) {
@@ -128,7 +134,7 @@ export function PaginationNavigation({
     totalPageCount,
   })
 
-  if (totalPageCount <= 1) {
+  if (totalPageCount <= 1 && !showWhenSinglePage) {
     return null
   }
 

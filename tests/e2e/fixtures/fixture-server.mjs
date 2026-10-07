@@ -155,6 +155,30 @@ function feedbackRecords() {
   ]
 }
 
+function contactRequestRecords() {
+  return Array.from({ length: 21 }, (_, index) => {
+    const id = index + 1
+    const createdDate = new Date(
+      Date.parse("2026-10-07T00:00:00.000Z") - index * 24 * 60 * 60 * 1000
+    ).toISOString()
+    const repeatedEmail = id <= 2
+    const email = repeatedEmail
+      ? "repeat@example.test"
+      : `request-${id}@example.test`
+
+    return {
+      id,
+      email,
+      name: id === 1 ? "Minh Anh" : id === 3 ? "Quang Nguyen" : null,
+      message:
+        id === 1
+          ? `Xin chào Signapse. ${"Tôi muốn tìm hiểu thêm về sản phẩm. ".repeat(5)}\nDòng thứ hai có Unicode: tiếng Việt, 日本語 👋 <script>alert(1)</script>`
+          : `Lời nhắn ${id} cho Signapse.`,
+      createdDate,
+    }
+  })
+}
+
 function createState() {
   const primaryWorkspace = workspace(1, "Workspace Alpha", true)
   const secondaryWorkspace = workspace(2, "Workspace Beta")
@@ -177,6 +201,7 @@ function createState() {
     workspaces: [primaryWorkspace, secondaryWorkspace],
     notes: [note(31, "Morning brief", "Review the fixture market brief.")],
     feedback: feedbackRecords(),
+    contactRequests: contactRequestRecords(),
     smtpConfiguration: {
       configured: true,
       enabled: false,
@@ -1135,6 +1160,19 @@ function responseForRoute(state, method, pathname, url, body) {
     }
   }
 
+  if (method === "GET" && pathname === "/contact-requests") {
+    if (!hasFixturePermission(state, "contact-request:read")) {
+      return {
+        __status: 403,
+        payload: errorPayload("Contact request permission denied", "FORBIDDEN"),
+      }
+    }
+    const pageResponse = slicePage(state.contactRequests, url)
+    return Number(url.searchParams.get("size")) === 50
+      ? { content: pageResponse.content }
+      : pageResponse
+  }
+
   const blogIdMatch = pathname.match(/^\/blogs\/(\d+)$/)
   if (method === "GET" && blogIdMatch) {
     const id = Number(blogIdMatch[1])
@@ -1593,6 +1631,9 @@ const server = createServer(async (request, response) => {
   if (scenario === "outage") {
     sendJson(response, 503, errorPayload("Fixture backend is unavailable", "FIXTURE_OUTAGE"))
     return
+  }
+  if (scenario === "delayed") {
+    await new Promise((resolve) => setTimeout(resolve, 350))
   }
   if (scenario === "validation-error") {
     sendJson(response, 422, errorPayload("Fixture validation failed", "FIXTURE_VALIDATION"))

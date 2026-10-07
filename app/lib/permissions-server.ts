@@ -15,7 +15,7 @@ export const getCurrentPermissions = cache(async (): Promise<string[]> => {
         const me = await getMe()
         return me.permissions ?? []
       } catch {
-        return getDevAuthPermissions()
+        return []
       }
     }
     return getDevAuthPermissions()
