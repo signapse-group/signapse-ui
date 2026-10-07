@@ -77,4 +77,22 @@ describe("contact request authenticated read action", () => {
       "Invalid contact request page response"
     )
   })
+
+  it("rejects a page without content instead of displaying an empty list", async () => {
+    vi.mocked(getCurrentPermissions).mockResolvedValue(["contact-request:read"])
+    vi.mocked(fetchAuthenticated).mockResolvedValue({})
+
+    await expect(getContactRequests({ page: 1, size: 20 })).rejects.toThrow(
+      "Invalid contact request page response"
+    )
+  })
+
+  it("accepts page metadata omitted by the published OpenAPI schema", async () => {
+    vi.mocked(getCurrentPermissions).mockResolvedValue(["contact-request:read"])
+    vi.mocked(fetchAuthenticated).mockResolvedValue({ content: [] })
+
+    await expect(getContactRequests({ page: 1, size: 20 })).resolves.toEqual({
+      content: [],
+    })
+  })
 })

@@ -1,10 +1,9 @@
 "use server"
 
 import { fetchAuthenticated, type BackendApiError } from "@/app/api/auth/action"
-import type { Page } from "@/app/lib/definitions"
 import {
   contactRequestPageResponseSchema,
-  type ContactRequestResponse,
+  type ContactRequestPageData,
 } from "@/app/lib/contact-requests/definitions"
 import { CONTACT_REQUEST_READ_PERMISSION } from "@/app/lib/contact-requests/permissions"
 import { serializeContactRequestsQuery } from "@/app/lib/contact-requests/query"
@@ -14,7 +13,7 @@ import { getCurrentPermissions } from "@/app/lib/permissions-server"
 
 export async function getContactRequests(
   query: Parameters<typeof serializeContactRequestsQuery>[0]
-): Promise<Page<ContactRequestResponse>> {
+): Promise<ContactRequestPageData> {
   const permissions = await getCurrentPermissions()
   if (!hasPermission(permissions, CONTACT_REQUEST_READ_PERMISSION)) {
     const dictionary = await getServerDictionary()
@@ -33,5 +32,10 @@ export async function getContactRequests(
     throw new Error("Invalid contact request page response")
   }
 
-  return parsed.data
+  const content = parsed.data.content
+  if (content === undefined) {
+    throw new Error("Invalid contact request page response")
+  }
+
+  return { ...parsed.data, content }
 }

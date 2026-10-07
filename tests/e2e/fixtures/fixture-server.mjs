@@ -169,8 +169,7 @@ function contactRequestRecords() {
     return {
       id,
       email,
-      ...(id === 1 ? { name: "Minh Anh" } : {}),
-      ...(id === 3 ? { name: "Quang Nguyen" } : {}),
+      name: id === 1 ? "Minh Anh" : id === 3 ? "Quang Nguyen" : null,
       message:
         id === 1
           ? `Xin chào Signapse. ${"Tôi muốn tìm hiểu thêm về sản phẩm. ".repeat(5)}\nDòng thứ hai có Unicode: tiếng Việt, 日本語 👋 <script>alert(1)</script>`
@@ -1168,7 +1167,10 @@ function responseForRoute(state, method, pathname, url, body) {
         payload: errorPayload("Contact request permission denied", "FORBIDDEN"),
       }
     }
-    return slicePage(state.contactRequests, url)
+    const pageResponse = slicePage(state.contactRequests, url)
+    return Number(url.searchParams.get("size")) === 50
+      ? { content: pageResponse.content }
+      : pageResponse
   }
 
   const blogIdMatch = pathname.match(/^\/blogs\/(\d+)$/)

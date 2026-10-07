@@ -4,8 +4,7 @@ import { Fragment, useState } from "react"
 import { useRouter } from "next/navigation"
 import { ChevronDown, ChevronUp, MessageSquareText } from "lucide-react"
 
-import type { Page } from "@/app/lib/definitions"
-import type { ContactRequestResponse } from "@/app/lib/contact-requests/definitions"
+import type { ContactRequestPageData } from "@/app/lib/contact-requests/definitions"
 import { CONTACT_REQUESTS_PAGE_SIZE_OPTIONS } from "@/app/lib/contact-requests/definitions"
 import { useLocalization } from "@/app/lib/i18n/provider"
 import {
@@ -38,7 +37,7 @@ import {
 import type { ContactRequestsQuery } from "@/app/lib/contact-requests/query"
 
 interface ContactRequestsListProps {
-  page: Page<ContactRequestResponse> | null
+  page: ContactRequestPageData | null
   query: ContactRequestsQuery
   errorDescription?: string
   errorTitle?: string
@@ -66,8 +65,42 @@ export function ContactRequestsList({
     useLocalization()
   const t = dictionary.contactRequests
   const router = useRouter()
-  const firstRequestKey = page?.content[0]
-    ? `${query.page}-${query.size}-${page.content[0].id ?? 0}`
+  const content = page?.content ?? []
+  const responsePageNumber = page?.number ?? page?.pageable?.pageNumber
+  const pageNumber =
+    responsePageNumber !== undefined && responsePageNumber >= 0
+      ? responsePageNumber
+      : query.page - 1
+  const responsePageSize = page?.size ?? page?.pageable?.pageSize
+  const pageSize =
+    responsePageSize !== undefined && responsePageSize > 0
+      ? responsePageSize
+      : query.size
+  const totalElements =
+    page?.totalElements !== undefined && page.totalElements >= 0
+      ? page.totalElements
+      : undefined
+  const totalPages =
+    page?.totalPages !== undefined && page.totalPages >= 0
+      ? page.totalPages
+      : page?.last !== undefined
+        ? page.last
+          ? pageNumber + 1
+          : pageNumber + 2
+        : totalElements !== undefined
+          ? Math.ceil(totalElements / pageSize)
+          : content.length >= pageSize
+            ? pageNumber + 2
+            : pageNumber + 1
+  const showPagination =
+    page?.totalPages !== undefined && page.totalPages >= 0
+      ? page.totalPages > 0
+      : page?.last === false ||
+        (totalElements !== undefined && totalElements > 0) ||
+        pageNumber > 0 ||
+        content.length > 0
+  const firstRequestKey = content[0]
+    ? `${query.page}-${query.size}-${content[0].id ?? 0}`
     : null
   const pageKey = `${query.page}-${query.size}-${firstRequestKey ?? "empty"}`
   const [expandedRequest, setExpandedRequest] = useState<{
@@ -105,15 +138,19 @@ export function ContactRequestsList({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between gap-4 text-sm">
         <p>
-          {formatMessage(
-            page.totalElements === 1
-              ? t.requestCountSingular
-              : t.requestCountPlural,
-            { count: formatNumber(page.totalElements) }
-          )}
+          {totalElements !== undefined
+            ? formatMessage(
+                totalElements === 1
+                  ? t.requestCountSingular
+                  : t.requestCountPlural,
+                { count: formatNumber(totalElements) }
+              )
+            : formatMessage(t.requestCountOnPage, {
+                count: formatNumber(content.length),
+              })}
         </p>
         <p className="text-muted-foreground">{t.newestFirst}</p>
       </div>
@@ -140,7 +177,7 @@ export function ContactRequestsList({
             </AppListTableHeaderRow>
           </TableHeader>
           <TableBody>
-            {page.content.length === 0 ? (
+            {content.length === 0 ? (
               <AppListTableEmptyState colSpan={5}>
                 <EmptyHeader>
                   <EmptyMedia variant="icon">
@@ -151,7 +188,7 @@ export function ContactRequestsList({
                 </EmptyHeader>
               </AppListTableEmptyState>
             ) : (
-              page.content.map((request, index) => {
+              content.map((request, index) => {
                 const requestKey = `${query.page}-${query.size}-${request.id ?? index}`
                 const expandedKey = requestKey
                 const detailId = `contact-request-message-${requestKey}`
@@ -208,22 +245,25 @@ export function ContactRequestsList({
                           <Button
                             type="button"
                             variant="secondary"
-                            className="h-8 px-4 text-xs"
                             aria-expanded={isExpanded}
                             aria-controls={detailId}
                             onClick={() =>
-                              setExpandedRequest(
-                                {
-                                  pageKey,
-                                  requestKey: isExpanded ? null : expandedKey,
-                                }
-                              )
+                              setExpandedRequest({
+                                pageKey,
+                                requestKey: isExpanded ? null : expandedKey,
+                              })
                             }
                           >
                             {isExpanded ? (
-                              <ChevronUp aria-hidden="true" />
+                              <ChevronUp
+                                aria-hidden="true"
+                                data-icon="inline-start"
+                              />
                             ) : (
-                              <ChevronDown aria-hidden="true" />
+                              <ChevronDown
+                                aria-hidden="true"
+                                data-icon="inline-start"
+                              />
                             )}
                             {isExpanded ? t.hideFullMessage : t.showFullMessage}
                           </Button>
@@ -263,19 +303,26 @@ export function ContactRequestsList({
 
       <div className="flex flex-col gap-3 rounded-xl border border-border/60 bg-muted/20 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-xs text-muted-foreground">
-          {page.totalElements > 0
-            ? formatMessage(dictionary.pagination.displayedResults, {
-                from: formatNumber(page.number * page.size + 1),
-                to: formatNumber(
-                  Math.min((page.number + 1) * page.size, page.totalElements)
-                ),
-                total: formatNumber(page.totalElements),
-              })
-            : dictionary.pagination.noResults}
+          {totalElements !== undefined
+            ? totalElements > 0
+              ? formatMessage(dictionary.pagination.displayedResults, {
+                  from: formatNumber(pageNumber * pageSize + 1),
+                  to: formatNumber(
+                    Math.min((pageNumber + 1) * pageSize, totalElements)
+                  ),
+                  total: formatNumber(totalElements),
+                })
+              : dictionary.pagination.noResults
+            : content.length > 0
+              ? formatMessage(t.displayedPageResults, {
+                  from: formatNumber(pageNumber * pageSize + 1),
+                  to: formatNumber(pageNumber * pageSize + content.length),
+                })
+              : dictionary.pagination.noResults}
         </p>
         <div className="flex flex-col gap-3 sm:ml-auto sm:flex-row sm:items-center sm:justify-end">
           <PaginationPageSizeSelect
-            value={page.size}
+            value={pageSize}
             options={[...CONTACT_REQUESTS_PAGE_SIZE_OPTIONS]}
             isPending={isPending}
             label={t.rowsPerPage}
@@ -285,11 +332,11 @@ export function ContactRequestsList({
             className="sm:pt-0"
           />
           <PaginationNavigation
-            currentPage={page.number + 1}
-            totalPageCount={page.totalPages}
+            currentPage={pageNumber + 1}
+            totalPageCount={totalPages}
             isPending={isPending}
             onPageChange={setPage}
-            showWhenSinglePage={page.totalPages > 0}
+            showWhenSinglePage={showPagination}
             className="w-auto shrink-0"
           />
         </div>

@@ -96,7 +96,9 @@ test.describe("P0 contact request read dashboard", () => {
       "dateTime",
       "2026-10-07T00:00:00.000Z"
     )
-    expect(await submittedTime.innerText()).not.toBe("2026-10-07T00:00:00.000Z")
+    expect(await submittedTime.innerText()).not.toBe(
+      "2026-10-07T00:00:00.000Z"
+    )
 
     const axe = await new AxeBuilder({ page })
       .withTags(["wcag2a", "wcag2aa"])
@@ -170,9 +172,7 @@ test.describe("P0 contact request read dashboard", () => {
       "dateTime",
       "2026-10-07T00:00:00.000Z"
     )
-    expect(await submittedTime.innerText()).not.toBe(
-      "2026-10-07T00:00:00.000Z"
-    )
+    expect(await submittedTime.innerText()).not.toBe("2026-10-07T00:00:00.000Z")
     const dimensions = await page.evaluate(() => ({
       body: document.body.scrollWidth,
       viewport: document.documentElement.clientWidth,
@@ -196,6 +196,20 @@ test.describe("P0 contact request read dashboard", () => {
     await expect(
       page.getByRole("button", { name: "View message" }).first()
     ).toBeInViewport()
+  })
+
+  test("renders content when the API omits optional page metadata", async ({
+    page,
+  }) => {
+    await page.goto("/vi/contact-requests?size=50")
+
+    await expect(page.locator("[data-contact-request-row]")).toHaveCount(21)
+    await expect(
+      page.getByText("21 yêu cầu trên trang này", { exact: true })
+    ).toBeVisible()
+    await expect(
+      page.getByText("Hiển thị 1-21 yêu cầu trên trang này", { exact: true })
+    ).toBeVisible()
   })
 
   test("fails closed for direct routes and API reads without permission", async ({

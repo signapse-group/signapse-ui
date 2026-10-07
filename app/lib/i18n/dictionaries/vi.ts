@@ -251,6 +251,8 @@ export const vi = {
     newestFirst: "Mới nhất trước",
     requestCountSingular: "{count} yêu cầu",
     requestCountPlural: "{count} yêu cầu",
+    requestCountOnPage: "{count} yêu cầu trên trang này",
+    displayedPageResults: "Hiển thị {from}-{to} yêu cầu trên trang này",
     rowsPerPage: "Số hàng mỗi trang",
     missingValue: "Không có thông tin",
     missingName: "—",

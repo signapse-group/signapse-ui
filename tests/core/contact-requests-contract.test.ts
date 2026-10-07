@@ -31,21 +31,30 @@ const page = {
 }
 
 describe("contact requests API contract", () => {
-  it("accepts optional names and preserves Unicode and multiline messages", () => {
+  it("accepts nullable names and preserves Unicode and multiline messages", () => {
     const message = "Xin chào 👋\nDòng thứ hai: <script>alert(1)</script>"
     const parsed = contactRequestResponseSchema.parse({
       id: 42,
       email: "visitor@example.test",
+      name: null,
       message,
       createdDate: "2026-10-07T04:00:00Z",
     })
 
-    expect(parsed.name).toBeUndefined()
+    expect(parsed.name).toBeNull()
     expect(parsed.message).toBe(message)
+    expect(contactRequestResponseSchema.safeParse({}).success).toBe(false)
   })
 
   it("validates the page envelope and rejects malformed records", () => {
     expect(contactRequestPageResponseSchema.parse(page).content).toEqual([])
+    expect(contactRequestPageResponseSchema.parse({})).toEqual({})
+    expect(
+      contactRequestPageResponseSchema.parse({
+        content: [],
+        pageable: {},
+      })
+    ).toEqual({ content: [], pageable: {} })
     expect(
       contactRequestPageResponseSchema.safeParse({ ...page, content: null })
         .success

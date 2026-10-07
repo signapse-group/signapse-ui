@@ -257,6 +257,8 @@ export const en: Dictionary = {
     newestFirst: "Newest first",
     requestCountSingular: "{count} request",
     requestCountPlural: "{count} requests",
+    requestCountOnPage: "{count} requests on this page",
+    displayedPageResults: "Showing {from}-{to} requests on this page",
     rowsPerPage: "Rows per page",
     missingValue: "Not provided",
     missingName: "—",

@@ -7,7 +7,7 @@ export const contactRequestResponseSchema = z
   .object({
     id: z.number().int().optional(),
     email: z.string().email().max(254).optional(),
-    name: z.string().max(100).optional(),
+    name: z.string().max(100).nullable(),
     message: z.string().max(5000).optional(),
     createdDate: z.string().datetime({ offset: true }).optional(),
   })
@@ -15,26 +15,35 @@ export const contactRequestResponseSchema = z
 
 export const contactRequestPageResponseSchema = z
   .object({
-    content: z.array(contactRequestResponseSchema),
+    content: z.array(contactRequestResponseSchema).optional(),
     pageable: z
       .object({
-        pageNumber: z.number().int().nonnegative(),
-        pageSize: z.number().int().positive(),
-        offset: z.number().int().nonnegative(),
-        paged: z.boolean(),
-        unpaged: z.boolean(),
+        pageNumber: z.number().int().optional(),
+        pageSize: z.number().int().optional(),
+        offset: z.number().int().optional(),
+        paged: z.boolean().optional(),
+        unpaged: z.boolean().optional(),
       })
-      .passthrough(),
-    last: z.boolean(),
-    totalElements: z.number().int().nonnegative(),
-    totalPages: z.number().int().nonnegative(),
-    size: z.number().int().positive(),
-    number: z.number().int().nonnegative(),
-    first: z.boolean(),
-    numberOfElements: z.number().int().nonnegative(),
-    empty: z.boolean(),
+      .passthrough()
+      .optional(),
+    last: z.boolean().optional(),
+    totalElements: z.number().int().optional(),
+    totalPages: z.number().int().optional(),
+    size: z.number().int().optional(),
+    number: z.number().int().optional(),
+    first: z.boolean().optional(),
+    numberOfElements: z.number().int().optional(),
+    empty: z.boolean().optional(),
   })
   .passthrough()
+
+export type ContactRequestPageResponse = z.infer<
+  typeof contactRequestPageResponseSchema
+>
+
+export type ContactRequestPageData = ContactRequestPageResponse & {
+  content: ContactRequestResponse[]
+}
 
 export type ContactRequestResponse = z.infer<
   typeof contactRequestResponseSchema

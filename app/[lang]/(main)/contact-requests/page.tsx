@@ -1,7 +1,6 @@
 import { getContactRequests } from "@/app/api/contact-requests/action"
 import type { BackendApiError } from "@/app/api/auth/action"
-import type { Page } from "@/app/lib/definitions"
-import type { ContactRequestResponse } from "@/app/lib/contact-requests/definitions"
+import type { ContactRequestPageData } from "@/app/lib/contact-requests/definitions"
 import { CONTACT_REQUEST_READ_PERMISSION } from "@/app/lib/contact-requests/permissions"
 import {
   parseContactRequestsQuery,
@@ -43,7 +42,7 @@ export default async function ContactRequestsPage({
     )
   }
 
-  let page: Page<ContactRequestResponse>
+  let page: ContactRequestPageData
   try {
     page = await getContactRequests(query)
   } catch (error: unknown) {
@@ -91,7 +90,7 @@ function ContactRequestsPageContent({
   pageTitle,
   pageDescription,
 }: {
-  page: Page<ContactRequestResponse> | null
+  page: ContactRequestPageData | null
   query: ContactRequestsQuery
   errorDescription?: string
   errorTitle?: string

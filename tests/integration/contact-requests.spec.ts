@@ -90,7 +90,7 @@ test("contact requests use the signed-in account permission and live API", async
         .getByRole("link", { name: vi.navigation.contactRequests, exact: true })
     ).toHaveAttribute("aria-current", "page")
     await expect(page.locator("[data-contact-request-row]")).toHaveCount(
-      parsed.data.content.length
+      parsed.data.content?.length ?? 0
     )
   } else {
     expect(
