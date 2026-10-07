@@ -14,6 +14,10 @@ Confirm native `is blocked by` dependencies are complete before initial or resum
 
 For an explicitly accepted local contract without a Jira issue, use the named contract and requested delivery boundary; do not create a ticket as a prerequisite. Tracker actions below apply only to assigned Jira work and within the prompt's granted permissions.
 
+For API work, follow the [API consumer policy](api-handoff.md) for producer lookup,
+published-contract readiness and discrepancy handling. Native blocker completion
+does not replace required live contract and producer delivery evidence.
+
 ## Execution and review
 
 1. Read the contract, references, this policy and applicable repository instructions.
@@ -29,7 +33,7 @@ Reuse the same workspace, branch and PR for a contribution's retries and review 
 
 GitHub hosts source, PRs and CI. For assigned Jira work, reread the current Subtask key/title and set the PR title to `[<Jira-key>] <current Subtask title>`. Follow a repository PR template when present; otherwise write a concise change and validation summary. The Jira key links the PR to the Subtask's Development panel through GitHub for Atlassian. Verify the saved title and actual panel linkage before claiming the link is established; report unavailable linking verification explicitly. Git/PR access is configured separately from `jira_rest`.
 
-Keep one agent-owned delivery handoff comment on the Subtask, updated for its latest delivered revision/output. Identify the existing comment for this operation and author before editing; preserve other authors' content. If ownership is unclear, report the conflict instead of overwriting or duplicating the record. Use the planning format:
+Keep one agent-owned delivery handoff comment on the Subtask, updated for its latest delivered revision/output. Preserve earlier revision identities and evidence links when updating the same operation; distinct QA runs retain their own records. Identify the existing comment and author before editing; preserve other authors' content. If ownership is unclear, report the conflict instead of overwriting or duplicating the record. Use the planning format:
 
 ```text
 Delivery handoff
@@ -39,11 +43,20 @@ Delivery handoff
 - Review: <reviewer; both axes and result>
 - Checks/build: <commands/results and contract coverage>
 - Deploy: <environment/revision/result or pending owner action> | Not applicable
+- API contract: <producer OpenAPI/protocol URL and producer revision/environment> | Not applicable
+- Contract live check: <fetch time, revision match/result and evidence> | Not applicable
 - Evidence: <durable links and short summary>
 - Remaining: <none or explicit gaps and human-owned actions>
 ```
 
 The Development panel is the PR link/status source; the comment holds delivery evidence. Evidence files stay outside Jira with durable links and limits. Deploy is Not applicable only when the deliverable does not require deployment; otherwise record confirmed evidence or the pending owner/action. `Done` additionally requires the coordinator's review/check acceptance, merge when required and deployment/evidence when applicable. Merge and child completion do not automatically satisfy Subtask or parent acceptance.
+
+The API fields apply when this output integrates or delivers API behavior. Separate
+FE output identity from the producer's delivered contract. Use Not applicable for
+unrelated output; missing required producer revision/publication evidence is a gap.
+Keep schema/business rules at the producer source. Record remaining contract
+coverage/discrepancies, breaking changes, affected consumers and pending integration
+under Remaining when applicable.
 
 For local-contract workflow work without Jira, record the same applicable evidence in the PR or requested artifact/session. Do not invent a tracker record.
 

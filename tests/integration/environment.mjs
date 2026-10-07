@@ -61,6 +61,20 @@ function parseUrl(value, key) {
   }
 }
 
+export function parsePublicBackendUrl(value) {
+  const url = parseUrl(value, "API_BASE_URL")
+  if (
+    url.protocol !== "https:" ||
+    isIP(url.hostname.replace(/^\[|\]$/g, "")) ||
+    url.hostname === "localhost" ||
+    url.hostname.endsWith(".localhost") ||
+    url.hostname.endsWith(".local")
+  ) {
+    throw new Error("API_BASE_URL must use a public HTTPS backend hostname.")
+  }
+  return url
+}
+
 /** @param {Record<string, string | undefined>} environment */
 export function readIntegrationEnvironment(environment = process.env) {
   const appFile = readEnvFile(environment, "SIGNAPSE_UI_APP_ENV")
@@ -101,16 +115,7 @@ export function readIntegrationEnvironment(environment = process.env) {
     )
   }
 
-  const backendUrl = parseUrl(appEnvironment.API_BASE_URL, "API_BASE_URL")
-  if (
-    backendUrl.protocol !== "https:" ||
-    isIP(backendUrl.hostname.replace(/^\[|\]$/g, "")) ||
-    backendUrl.hostname === "localhost" ||
-    backendUrl.hostname.endsWith(".localhost") ||
-    backendUrl.hostname.endsWith(".local")
-  ) {
-    throw new Error("API_BASE_URL must use a public HTTPS backend hostname.")
-  }
+  const backendUrl = parsePublicBackendUrl(appEnvironment.API_BASE_URL)
   if (
     !appEnvironment.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY.startsWith("pk_test_") ||
     !appEnvironment.CLERK_SECRET_KEY.startsWith("sk_test_")

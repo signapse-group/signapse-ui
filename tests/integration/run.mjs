@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process"
+import { spawn, spawnSync } from "node:child_process"
 import { existsSync } from "node:fs"
 import { createRequire } from "node:module"
 import { dirname, resolve } from "node:path"
@@ -29,6 +29,26 @@ try {
 }
 
 const environment = { ...process.env, ...configuration.testEnvironment }
+if (!options.includes("--list")) {
+  const contractCheck = spawnSync(
+    process.execPath,
+    [resolve(runnerRoot, "tests/e2e/contract-guard.mjs"), "--live"],
+    {
+      env: {
+        ...process.env,
+        API_BASE_URL: configuration.appEnvironment.API_BASE_URL,
+      },
+      stdio: "inherit",
+      timeout: 30000,
+    }
+  )
+  if (contractCheck.error || contractCheck.status !== 0) {
+    console.error(
+      "Live OpenAPI verification did not pass. No browser integration tests were run."
+    )
+    process.exit(1)
+  }
+}
 const cli = createRequire(import.meta.url).resolve("@playwright/test/cli")
 const args = [
   cli,

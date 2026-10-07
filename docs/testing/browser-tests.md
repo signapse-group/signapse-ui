@@ -7,9 +7,9 @@ The P0 lane is a secret-free, fixture-backed Chromium check for the highest-risk
 ```text
 pnpm test:browser       # run Chromium/Vietnamese browser journeys
 pnpm test:browser:update # update selected native screenshot baselines; reviewer approval required
-pnpm test:contract      # verify fixture routes against docs/APIMAPPING.md
-pnpm test:quality       # lint, typecheck, Vitest, contract guard, build, and browser suite
-pnpm test:integration   # real password auth and public dev backend; requires private credentials
+pnpm test:contract      # offline fixture operation consistency; no live API conformance claim
+pnpm test:quality       # lint, typecheck, Vitest, fixture guard, build, and browser suite
+pnpm test:integration   # live OpenAPI preflight, password auth and dev backend; requires private credentials
 ```
 
 The Playwright config starts both local services and sets the P0-only process contract:
@@ -25,12 +25,12 @@ Each test receives a unique `testRunId`. The browser context carries it through 
 
 ## Selecting checks by change scope
 
-| Change                                                | Focused evidence                                                                                | Completion check                                                                                            |
-| ----------------------------------------------------- | ----------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| Documentation only                                    | Check the edited content, links, and formatting.                                                | No application test lane is needed unless the documentation change affects a command or contract.           |
-| UI behavior or presentation                           | Run the focused Vitest/component test and the narrowest relevant P0 browser spec.               | Run `pnpm test:quality` for code or runtime changes. Review any screenshot diff before updating a baseline. |
-| API mapping, schema, or server action                 | Run the action/schema tests and `pnpm test:contract` when fixture routes or API mapping change. | Run `pnpm test:quality`; add authenticated integration when the change reaches a protected backend request. |
-| Authentication, backend transport, or protected pages | Run the relevant fixture checks for deterministic UI behavior.                                  | Run `pnpm test:quality` and the live `pnpm test:integration` lane. Keep live checks read-only.              |
+| Change                                                | Focused evidence                                                                  | Completion check                                                                                            |
+| ----------------------------------------------------- | --------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Documentation only                                    | Check the edited content, links, and formatting.                                  | No application test lane is needed unless the documentation change affects a command or contract.           |
+| UI behavior or presentation                           | Run the focused Vitest/component test and the narrowest relevant P0 browser spec. | Run `pnpm test:quality` for code or runtime changes. Review any screenshot diff before updating a baseline. |
+| API integration, schema, or server action             | Run the action/schema tests and `pnpm test:contract` when fixture routes change.  | Run `pnpm test:quality`; add authenticated integration when the change reaches a protected backend request. |
+| Authentication, backend transport, or protected pages | Run the relevant fixture checks for deterministic UI behavior.                    | Run `pnpm test:quality` and the live `pnpm test:integration` lane. Keep live checks read-only.              |
 
 On Symphony, use `/opt/apps/symphony/runtime/run-fe-quality "$PWD"` and, for authenticated or backend changes, `/opt/apps/symphony/runtime/run-fe-integration "$PWD"`. These runners share a host lock so P0 and live browser processes do not compete for resources. Fixture-backed P0 success proves frontend behavior only; it does not prove authentication or public backend access.
 
@@ -58,6 +58,24 @@ Visual baseline changes are intentional test changes: run the update command nar
 public HTTPS backend from `API_BASE_URL`. It uses a separate test directory and never loads
 the P0 fixture config. This is an operator-authorized, read-only development smoke; it is not
 the full release canary in ADR 0004. It sends no Telegram message and changes no application data.
+
+After environment validation, the runner fetches `/v3/api-docs` from that backend
+and compares fixture operation paths, methods and declared response statuses with
+the published OpenAPI. This live preflight must pass before browser integration
+starts; `--list` only lists tests and performs no live fetch. Unavailable/invalid
+contracts or mismatches fail without a local fallback. Source/time and discrepancies
+are reported separately from P0. This is a structural check; schemas, business
+semantics, authorization and delivered revision still need applicable evidence under
+the [API consumer policy](../../.agents/skills/agent-execution-policy/references/api-handoff.md).
+
+The same public contract check can run without account credentials:
+
+```bash
+API_BASE_URL=https://dev-api.signapse.cloud pnpm test:contract --live
+```
+
+Its success does not prove password authentication, feature acceptance or full API
+conformance. P0 keeps using fixture inputs and never fetches OpenAPI from the network.
 
 Use Node 24 or later. Store two files outside the checkout, with owner-only access:
 

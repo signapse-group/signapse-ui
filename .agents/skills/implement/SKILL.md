@@ -17,6 +17,11 @@ Inspect the checkout, branch, target branch, existing output/PR and dirty files.
 
 Confirm dependencies are fulfilled before dependent execution. Announce a short plan describing changes, verification seams and material risks, then proceed within accepted scope without a plan-approval round. Do not require a plan file, snapshot, fingerprint or verification report in the repository.
 
+For API integration, follow the [API consumer policy](../agent-execution-policy/references/api-handoff.md)
+for current producer lookup and delivery readiness. Inspect affected operations and
+trace their callers/types directly in source. Refresh live evidence on resume and
+before handoff; fixtures do not prove producer publication or live integration.
+
 ## Implement and Verify
 
 Use [tdd](../tdd/SKILL.md) for behavior verification; choose the highest stable public seam using the issue, repository policy and existing code. Follow the repository's diagnostic workflow when investigation is needed. Keep each slice small, run focused checks and fix failures caused by the change.
@@ -43,7 +48,7 @@ For repository-file changes, commit scoped reviewed work, push the contribution'
 
 For assigned Jira work, reread the current Subtask key/title and apply the repository-owned policy's PR title/body format. Verify the saved PR title and Development-panel linkage before claiming a successful link. GitHub for Atlassian links through the Subtask key in the title; Git/PR tooling and credentials are separate from jira_rest. Report unavailable linking verification explicitly.
 
-Keep one agent-owned Jira delivery handoff comment for this Subtask/operation using the [execution policy's format](../agent-execution-policy/references/execution-policy.md#pr-and-delivery-handoff). Update it on resume, verify ownership and read it back after saving. It records revision/output, review, checks/build, deploy or Not applicable, durable evidence and remaining actions/gaps; the Development panel is the PR link/status source. Missing permission or required evidence is unmet, not a readiness pass. Preserve human content and report ownership conflicts instead of overwriting or duplicating comments.
+Keep one agent-owned Jira delivery handoff comment for this Subtask/operation using the [execution policy's format](../agent-execution-policy/references/execution-policy.md#pr-and-delivery-handoff). Update it on resume, retaining earlier revision/evidence links, verify ownership and read it back after saving. Include conditional producer contract/live-check evidence for API work; the Development panel is the PR link/status source. Missing permission or required evidence is unmet, not a readiness pass. Preserve human content and report ownership conflicts instead of overwriting or duplicating comments.
 
 When a PR is used, wait for repository-required CI on its current revision. Fix in-scope failures on the same branch/PR, rerun affected checks/review and refresh handoff evidence after pushing. Use the delivered revision's results; external failures or missing access do not waive required checks.
 
