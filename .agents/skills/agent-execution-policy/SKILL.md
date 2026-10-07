@@ -11,6 +11,6 @@ Read [references/execution-policy.md](references/execution-policy.md) before wor
 
 If required project-specific configuration is missing, report it before dependent action and continue independent work that remains valid. Do not create or edit `AGENTS.md` merely to activate this workflow.
 
-Load [references/decision-gate.md](references/decision-gate.md) only when execution reaches an unresolved material decision. Load [references/api-handoff.md](references/api-handoff.md) only for producer/consumer API delivery.
+Load [references/decision-gate.md](references/decision-gate.md) only when execution reaches an unresolved material decision. Load [references/api-handoff.md](references/api-handoff.md) for API integration, contract-sensitive design/review or producer/consumer delivery.
 
 This entrypoint reads policy and project configuration. It does not itself authorize implementation, remote writes, merge, or deployment.

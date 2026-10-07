@@ -99,6 +99,11 @@ The prompt states assigned scope, context, permissions and handoff boundary, the
 points to those local sources. Do not provision a skills package from Symphony
 or add a second policy engine.
 
+For API context, use the repository's [API consumer policy](../agent-execution-policy/references/api-handoff.md):
+producer-published contracts own the current API; Jira owns accepted requirements.
+Keep its lookup/discrepancy and conditional handoff pointer in refreshed prompts,
+with source-code impact analysis rather than a maintained mapping document.
+
 ## Draft before writing
 
 Summarize verified facts, gaps and assumptions and show the complete proposed

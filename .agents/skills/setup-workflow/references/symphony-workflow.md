@@ -60,6 +60,10 @@ owns the accepted routing map and native lifecycle.
   and parent acceptance. Git/PR tooling is provisioned separately.
 
 Keep behavior details in [execution policy](../../agent-execution-policy/references/execution-policy.md).
+For API work, keep the [API consumer policy](../../agent-execution-policy/references/api-handoff.md)
+pointer in the prompt: current contract comes from the producer, requirements from
+Jira, and usages from FE source. API handoff includes producer revision/environment
+and live-check evidence; prompt refresh must preserve those boundaries.
 Jira key in PR title links to Development panel; delivery evidence goes in one
 agent-owned Jira handoff comment. Review/build, merge when required and deployment/
 evidence when applicable define the coordinator's Done gate.

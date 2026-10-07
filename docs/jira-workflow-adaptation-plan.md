@@ -204,11 +204,13 @@ mới. Phải ghi riêng source readiness, installed-runtime readiness và activ
 Có hai bản DESIGN/APIMAPPING trong UI và planning. So sánh bỏ qua line endings cho
 thấy DESIGN khác đường dẫn reference; APIMAPPING planning còn snapshot 18/9 trong
 khi UI ghi 28/9 và phản ánh việc tách public landing. Đây là drift tài liệu, chưa là
-verification của API live ngày 6/10. Không thay ledger mới bằng bản planning cũ.
-Owner cần chốt source/pointers và cách cập nhật theo [frontend docs index][planning-frontend]
-và [scoped ownership][planning-policy]; sync API riêng phải dùng `api-mapping-sync`.
-Đối soát này là follow-up phối hợp tài liệu, không phải lý do sửa behavior UI hoặc
-migration hàng loạt docs trong contribution chuyển tracker.
+verification của API live ngày 6/10. Đoạn này giữ evidence khảo sát lịch sử.
+Theo [API adaptation đã chốt](api-contract-workflow-adaptation-plan.md) ngày 7/10,
+APIMAPPING và `api-mapping-sync` được retire, gồm bản mapping cũ ở planning.
+Hướng dẫn current API lookup nằm trong [API consumer policy](../.agents/skills/agent-execution-policy/references/api-handoff.md):
+đọc contract producer trực tiếp và trace usages trong source FE. Các bản mapping cũ
+không còn là nguồn contract hoặc hướng dẫn sync. DESIGN vẫn theo ownership/pointers
+tại [frontend docs index][planning-frontend] và [scoped ownership][planning-policy].
 
 ## Completion và giới hạn evidence
 

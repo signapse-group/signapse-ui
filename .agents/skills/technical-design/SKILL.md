@@ -13,6 +13,14 @@ Read the Epic and parent Story/Task/Bug requirements, affected execution Subtask
 
 Inspect the relevant working trees, repository instructions, architecture documentation, existing flows, data models, API shapes, and tests. For a cross-repository feature, inspect each affected repository before making claims about its code. Cite paths and concrete behavior for findings; label any inaccessible repository or unverified assumption. Identify shared policy or data decisions across the issue set before designing individual tasks.
 
+For API-dependent design, use the [API consumer policy](../agent-execution-policy/references/api-handoff.md):
+fetch the published producer contract for the target environment and record source,
+time/revision and gaps. Distinguish current supported behavior from proposed API
+changes, and identify publication/handoff before dependent integration. Default to
+one owning UI + integration contribution as planning specifies; propose a split only
+when UI can land independently. Native producer dependencies and delivery evidence
+remain necessary when a new API is required; mock readiness does not satisfy them.
+
 ## Develop the proposal together
 
 Recommend a coherent design that fits the observed code: responsibilities, data and migration, consistency and concurrency, failure and retry behavior, security/authorization, cross-repository contracts, and verification seams where relevant. Apply [codebase-design](../codebase-design/SKILL.md) when deciding module interfaces or seams; do not force a new module or abstraction merely to use that vocabulary. Compare realistic alternatives only for material trade-offs, and state the recommended option and why.

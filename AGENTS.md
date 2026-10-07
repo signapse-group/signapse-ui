@@ -20,7 +20,7 @@ When framework versions, the UI preset, CI, or repository ownership change, refr
 - Overlay hydration mismatches: use the Hydration section in `components/AGENTS.override.md`.
 - `frontend-design`: redesign, UI polish, dashboards/workbenches, or new layouts that need visual direction.
 - `accessibility`: keyboard, focus, screen reader, semantic markup, dialog/form accessibility.
-- `api-mapping-sync`: when the live dev OpenAPI contract, `docs/APIMAPPING.md`, or backend APIs change.
+- For API integration, contract changes or reviews, read the [API consumer policy](.agents/skills/agent-execution-policy/references/api-handoff.md). The producer's published OpenAPI owns the supported HTTP API contract; Jira owns accepted requirements and acceptance.
 
 ## Commands
 
