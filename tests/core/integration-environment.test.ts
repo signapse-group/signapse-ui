@@ -18,6 +18,7 @@ import {
 } from "../integration/environment.mjs"
 import {
   buildPlaywrightGrep,
+  buildPlaywrightSelectionArgs,
   discoverIntegrationCases,
   parseIntegrationOptions,
   parsePlaywrightTestList,
@@ -127,7 +128,7 @@ describe("integration environment", () => {
 
     expect(
       selectIntegrationCases(discovered, [
-        "tests/integration/auth-and-backend.spec.ts:10#password session reaches the backend",
+        "tests/integration/auth-and-backend.spec.ts:10#[authenticated-backend] password session reaches the backend",
       ])
     ).toHaveLength(1)
     expect(() => selectIntegrationCases(discovered, [""])).toThrow(/empty/i)
@@ -138,7 +139,7 @@ describe("integration environment", () => {
     ).toThrow(/no integration case/i)
     const grep = buildPlaywrightGrep(
       selectIntegrationCases(discovered, [
-        "tests/integration/auth-and-backend.spec.ts:10#password session reaches the backend",
+        "tests/integration/auth-and-backend.spec.ts:10#[authenticated-backend] password session reaches the backend",
       ]),
       discovered
     )
@@ -148,6 +149,52 @@ describe("integration environment", () => {
     expect(grep).toContain(
       "^clerk-setup clerk\\.setup\\.ts configure Clerk testing token$"
     )
+    expect(
+      buildPlaywrightSelectionArgs(
+        selectIntegrationCases(discovered, [
+          "tests/integration/auth-and-backend.spec.ts:10#[authenticated-backend] password session reaches the backend",
+        ]),
+        resolve(".")
+      )
+    ).toEqual([
+      "--project=authenticated-backend",
+      resolve("tests/integration/auth-and-backend.spec.ts:10"),
+    ])
+  })
+
+  it("preserves project and source-line identity when Playwright cases collide", () => {
+    const root = resolve(".")
+    const discovered = parsePlaywrightTestList(
+      [
+        "  [chromium] › duplicate.spec.ts:10:1 › same title",
+        "  [firefox] › duplicate.spec.ts:10:1 › same title",
+        "  [chromium] › duplicate.spec.ts:18:1 › same title",
+      ].join("\n"),
+      root
+    )
+
+    expect(discovered.map(({ id }) => id)).toEqual([
+      "tests/integration/duplicate.spec.ts:10#[chromium] same title",
+      "tests/integration/duplicate.spec.ts:10#[firefox] same title",
+      "tests/integration/duplicate.spec.ts:18#[chromium] same title",
+    ])
+    const selected = selectIntegrationCases(discovered, [
+      "tests/integration/duplicate.spec.ts:10#[firefox] same title",
+    ])
+    expect(selected).toMatchObject([{ project: "firefox", lineNumber: 10 }])
+    expect(buildPlaywrightSelectionArgs(selected, root)).toEqual([
+      "--project=firefox",
+      resolve("tests/integration/duplicate.spec.ts:10"),
+    ])
+    expect(() =>
+      parsePlaywrightTestList(
+        [
+          "  [chromium] › duplicate.spec.ts:10:1 › same title",
+          "  [chromium] › duplicate.spec.ts:10:1 › same title",
+        ].join("\n"),
+        root
+      )
+    ).toThrow(/duplicate case identity/i)
   })
 
   it("discovers cases from the workspace suite instead of a stable checkout", () => {
@@ -184,10 +231,10 @@ describe("integration environment", () => {
     })
 
     expect(cases.map(({ id }) => id)).toEqual([
-      "tests/integration/workspace.spec.ts:3#new workspace case",
+      "tests/integration/workspace.spec.ts:3#[default] new workspace case",
     ])
     expect(cases.map(({ id }) => id)).not.toContain(
-      "tests/integration/workspace.spec.ts:3#legacy stable case"
+      "tests/integration/workspace.spec.ts:3#[default] legacy stable case"
     )
   })
 
@@ -257,7 +304,7 @@ describe("integration environment", () => {
     expect(result.stdout).toContain("Live OpenAPI preflight: not run")
     expect(result.stdout).toContain("anonymous visitors")
     expect(result.stdout).toContain(
-      "tests/integration/auth-and-backend.spec.ts:99#anonymous visitors can only open the localized login"
+      "tests/integration/auth-and-backend.spec.ts:99#[authenticated-backend] anonymous visitors can only open the localized login"
     )
     expect(result.stderr).toBe("")
   })

@@ -76,13 +76,16 @@ export function parsePlaywrightTestList(output, suiteRoot) {
     }
     const lineNumber = Number(match[3])
     const title = match[4]
-    const id = `${path}:${lineNumber}#${title}`
-    if (seen.has(id)) continue
+    const project = match[1] || undefined
+    const id = `${path}:${lineNumber}#[${project ?? "default"}] ${title}`
+    if (seen.has(id)) {
+      throw new Error(`Playwright listed a duplicate case identity: ${id}`)
+    }
     seen.add(id)
-    const grepTitle = [match[1], basename(path), title.replace(/\s+›\s+/g, " ")]
+    const grepTitle = [project, basename(path), title.replace(/\s+›\s+/g, " ")]
       .filter(Boolean)
       .join(" ")
-    cases.push({ grepTitle, id, lineNumber, path, title })
+    cases.push({ grepTitle, id, lineNumber, path, project, title })
   }
 
   return cases
@@ -154,6 +157,21 @@ export function buildPlaywrightGrep(selected, discovered) {
     ({ grepTitle }) => `^${escapeRegex(grepTitle)}$`
   )
   return `(?:${patterns.join("|")})`
+}
+
+export function buildPlaywrightSelectionArgs(selected, suiteRoot) {
+  const projects = [
+    ...new Set(selected.map(({ project }) => project).filter(Boolean)),
+  ]
+  const locations = [
+    ...new Set(
+      selected.map(
+        ({ lineNumber, path }) => `${resolve(suiteRoot, path)}:${lineNumber}`
+      )
+    ),
+  ]
+
+  return [...projects.map((project) => `--project=${project}`), ...locations]
 }
 
 export const integrationRunnerVersion = "2"

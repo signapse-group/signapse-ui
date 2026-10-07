@@ -55,7 +55,8 @@ cross-browser release coverage, and Telegram delivery canary remain separate wor
 The contract and integration runner is version 2. Full execution is the default; use
 `--full` to make that choice explicit. Select contract operations by the exact
 `METHOD /path` identity, comma-separated. Select browser cases by the exact
-`tests/integration/file:line#title` identity printed by `--list`.
+`tests/integration/file:line#[project] title` identity printed by `--list`;
+cases without a named Playwright project use `[default]`.
 
 ```bash
 pnpm test:contract -- --scope "GET /me,GET /me/notes"
@@ -63,7 +64,7 @@ pnpm test:contract -- --full
 pnpm test:integration -- --version
 pnpm test:integration -- --list
 pnpm test:integration -- --scope "GET /me,GET /me/usage-limits" \
-  --case "tests/integration/auth-and-backend.spec.ts:118#password session reaches the backend, dashboard entry and account page"
+  --case "tests/integration/auth-and-backend.spec.ts:118#[authenticated-backend] password session reaches the backend, dashboard entry and account page"
 pnpm test:integration -- --full
 ```
 

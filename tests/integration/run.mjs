@@ -13,6 +13,7 @@ import {
 import { readIntegrationEnvironment } from "./environment.mjs"
 import {
   buildPlaywrightGrep,
+  buildPlaywrightSelectionArgs,
   discoverIntegrationCases,
   integrationRunnerVersion,
   parseIntegrationOptions,
@@ -52,7 +53,7 @@ if (rawOptions.length === 1 && rawOptions[0] === "--help") {
   console.log(
     [
       `Signapse FE integration runner v${integrationRunnerVersion}`,
-      "Usage: pnpm test:integration [--full | --scope 'METHOD /path'] [--case 'tests/integration/file#title'] [--list]",
+      "Usage: pnpm test:integration [--full | --scope 'METHOD /path'] [--case 'tests/integration/file:line#[project] title'] [--list]",
       "Selectors are exact. Runner config, auth environment, and artifacts are fixed.",
     ].join("\n")
   )
@@ -151,6 +152,9 @@ const args = [
   "test",
   "--config",
   resolve(runnerRoot, "playwright.integration.config.ts"),
+  ...(selectedCases.length
+    ? buildPlaywrightSelectionArgs(selectedCases, runnerRoot)
+    : []),
   ...(selectedCases.length
     ? ["--grep", buildPlaywrightGrep(selectedCases, discoveredCases)]
     : []),
