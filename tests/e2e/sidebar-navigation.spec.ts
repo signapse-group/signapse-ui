@@ -80,6 +80,7 @@ test.describe("P0 sidebar navigation", () => {
       "Cấu hình hệ thống",
       "Người dùng & phân quyền",
       "Duyệt phản hồi",
+      "Yêu cầu liên hệ",
     ])
 
     await sidebar.getByRole("button", { name: "Tin tức", exact: true }).click()

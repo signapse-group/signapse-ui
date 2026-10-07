@@ -1,5 +1,6 @@
 export const fixtureContracts = [
   { method: "GET", path: "/me", mapping: "getMe", status: 200 },
+  { method: "GET", path: "/contact-requests", mapping: "getContactRequests", status: 200 },
   { method: "GET", path: "/smtp-configuration", mapping: "getSmtpConfiguration", status: 200 },
   { method: "PUT", path: "/smtp-configuration", mapping: "saveSmtpConfiguration", status: 200 },
   { method: "DELETE", path: "/smtp-configuration", mapping: "deleteSmtpConfiguration", status: 200 },

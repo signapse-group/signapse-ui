@@ -4,6 +4,7 @@ import {
   ChartCandlestick,
   GalleryVerticalEnd,
   LayoutDashboard,
+  MessageSquareText,
   MessageSquareWarning,
   Newspaper,
   Settings2,
@@ -21,6 +22,7 @@ import { SYSTEM_PROMPT_NAV_PERMISSIONS } from "@/app/lib/system-prompts/permissi
 import { SMTP_CONFIGURATION_NAV_PERMISSIONS } from "@/app/lib/smtp-configuration/permissions"
 import { TELEGRAM_NAV_PERMISSIONS } from "@/app/lib/telegram/permissions"
 import { FEEDBACK_READ_PERMISSION } from "@/app/lib/feedback/permissions"
+import { CONTACT_REQUEST_READ_PERMISSION } from "@/app/lib/contact-requests/permissions"
 import type { Dictionary } from "@/app/lib/i18n/dictionary-types"
 
 export interface NavSubItem {
@@ -218,6 +220,13 @@ export function createSiteConfig(dictionary: Dictionary) {
             url: "/feedback-submissions",
             icon: MessageSquareWarning,
             permission: FEEDBACK_READ_PERMISSION,
+          },
+          {
+            id: "contact-requests",
+            title: dictionary.navigation.contactRequests,
+            url: "/contact-requests",
+            icon: MessageSquareText,
+            permission: CONTACT_REQUEST_READ_PERMISSION,
           },
         ],
       },

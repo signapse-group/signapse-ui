@@ -22,6 +22,7 @@ function getFriendlySegmentNames(
   return {
     account: dictionary.accountProfile.title,
     categories: dictionary.navigation.categories,
+    "contact-requests": dictionary.navigation.contactRequests,
     create: dictionary.common.create,
     "ai-provider-configs": dictionary.navigation.aiProviders,
     blogs: dictionary.navigation.blogs,
