@@ -189,6 +189,8 @@ Translation:
 - Description dùng muted foreground.
 - Footer card tách khỏi body bằng border/subtle background; footer plain dùng top divider trong suốt, không tạo thêm card background, và phải giữ cùng footprint khi pending.
 - Mỗi input có visible label; placeholder không thay thế label. Required state, helper text và format yêu cầu phải rõ trước khi submit.
+- Mọi field nhập text hoặc số có thể chỉnh sửa phải có placeholder phù hợp ngữ cảnh, áp dụng cho create, update, profile, dialog và inline edit. Ngoại lệ gồm field chỉ đọc, input kỹ thuật ẩn và control native không hỗ trợ placeholder như date/time/file.
+- Placeholder cung cấp ví dụ hoặc gợi ý ngắn và dùng copy từ dictionary; giữ hướng dẫn quan trọng trong helper text hiển thị riêng. Giá trị mẫu nằm trong placeholder, không tự điền thành `value`/`defaultValue`.
 - Dùng semantic input type và `autocomplete` phù hợp để hỗ trợ mobile keyboard và browser autofill.
 - Field error nằm cạnh field, dùng `aria-invalid` và liên kết bằng `aria-describedby`; sau submit lỗi, focus chuyển đến field lỗi đầu tiên hoặc error summary khi có nhiều lỗi.
 - Submit/save pending phải disabled và hiển thị `<Spinner>`.
@@ -391,7 +393,7 @@ Khi implement hoặc review UI, kiểm tra các state và breakpoint liên quan:
 - Realtime current value, last-updated, stale state, pause/freeze và reduced motion.
 - Semantic heading, skip link, route-change focus, focus ring và keyboard navigation.
 - Contrast light/dark, non-color status cues, target size và zoom `200%`.
-- Form labels, announced errors, recovery action, unsaved-change protection và data retention sau lỗi.
+- Form labels, placeholder khi field rỗng theo phần Forms (create và edit sau khi xóa giá trị), announced errors, recovery action, unsaved-change protection và data retention sau lỗi.
 - Bounded content giữ cap và căn giữa; fluid/canvas không bị page-level cap; loading, empty, error và permission-denied state mirror mode của content thật.
 - Horizontal overflow chỉ xuất hiện bên trong surface chủ đích.
 - Không có mojibake.

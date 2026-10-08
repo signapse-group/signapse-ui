@@ -4,6 +4,8 @@ These instructions apply to `components/**`. The root guidance may also route UI
 
 For changes to visual presentation, interaction, accessibility, or user-facing content, read the relevant sections of `docs/design/DESIGN.md`, the UI/UX source of truth. Use its UI Review Criteria for the affected surfaces and states.
 
+Before implementing or reviewing forms, read [Forms](../docs/design/DESIGN.md#forms) and [UI Review Criteria](../docs/design/DESIGN.md#ui-review-criteria), including empty-field placeholder checks.
+
 ## Component Placement
 
 - Keep route-specific components beside their route under `app/[lang]/`.
