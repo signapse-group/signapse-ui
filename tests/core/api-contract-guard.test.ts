@@ -40,7 +40,26 @@ describe("API contract guard", () => {
       )
       expect(result.status).toBe(0)
       expect(result.stdout).toContain("Fixture consistency")
+      expect(result.stdout).toContain("Scope: full")
+      expect(result.stdout).toContain("passed for 60 operations")
       expect(result.stdout).not.toContain("live")
+
+      const scopedResult = spawnSync(
+        process.execPath,
+        [resolve("tests/e2e/contract-guard.mjs"), "--scope", "GET /me"],
+        {
+          cwd: directory,
+          env: {
+            PATH: process.env.PATH,
+            NODE_ENV: "test",
+          },
+          encoding: "utf8",
+          timeout: 5000,
+        }
+      )
+      expect(scopedResult.status).toBe(0)
+      expect(scopedResult.stdout).toContain("Scope: GET /me")
+      expect(scopedResult.stdout).toContain("passed for 1 operations")
     } finally {
       rmSync(directory, { recursive: true, force: true })
     }
@@ -58,6 +77,64 @@ describe("API contract guard", () => {
     expect(
       guard.checkPublishedContracts([{ ...contract, mapping: "getItem" }], spec)
     ).not.toEqual([])
+  })
+
+  it("limits scoped contract checks to exact HTTP operation identities", () => {
+    const outsideScope = {
+      method: "GET",
+      path: "/outside",
+      mapping: "getOutside",
+      status: 200,
+    }
+    const scoped = guard.selectContractsByScope(
+      [...contracts, outsideScope],
+      "GET /items/{id}"
+    )
+
+    expect(scoped).toEqual(contracts)
+    expect(guard.checkPublishedContracts(scoped, spec)).toEqual([])
+    expect(
+      guard.checkPublishedContracts([...contracts, outsideScope], spec)
+    ).toContain(
+      "getOutside: GET /outside: producer path is missing or ambiguous"
+    )
+  })
+
+  it("keeps mismatches inside the selected scope failing", () => {
+    const scoped = guard.selectContractsByScope(
+      [{ ...contracts[0], status: 204 }],
+      "GET /items/{id}"
+    )
+
+    expect(guard.checkPublishedContracts(scoped, spec)).toContain(
+      "getItem: GET /items/{id}: fixture status 204 is not declared by producer"
+    )
+  })
+
+  it.each(["", " ", "INVALID /items/{id}", "GET /missing", "GET /items/{id},"])(
+    "rejects empty, malformed, or unmatched contract scopes: %j",
+    (scope) => {
+      expect(() => guard.selectContractsByScope(contracts, scope)).toThrow()
+    }
+  )
+
+  it("rejects runner options that could widen or redirect contract execution", () => {
+    expect(
+      guard.parseContractGuardOptions(["--scope", "GET /items/{id}"])
+    ).toEqual({
+      full: false,
+      live: false,
+      scope: "GET /items/{id}",
+    })
+    expect(() => guard.parseContractGuardOptions(["--scope", ""])).toThrow(
+      /empty/
+    )
+    expect(() =>
+      guard.parseContractGuardOptions(["--scope", "GET /items/{id}", "--full"])
+    ).toThrow()
+    expect(() =>
+      guard.parseContractGuardOptions(["--config=other.ts"])
+    ).toThrow(/only|option/i)
   })
 
   it("handles local path-item and response references with status ranges", () => {

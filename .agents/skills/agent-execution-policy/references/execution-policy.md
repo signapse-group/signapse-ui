@@ -14,9 +14,34 @@ Confirm native `is blocked by` dependencies are complete before initial or resum
 
 For an explicitly accepted local contract without a Jira issue, use the named contract and requested delivery boundary; do not create a ticket as a prerequisite. Tracker actions below apply only to assigned Jira work and within the prompt's granted permissions.
 
-For API work, follow the [API consumer policy](api-handoff.md) for producer lookup,
-published-contract readiness and discrepancy handling. Native blocker completion
-does not replace required live contract and producer delivery evidence.
+For API behavior work, follow the [API consumer policy](api-handoff.md) for producer
+lookup and discrepancy handling. Run live contract/producer checks when they are part
+of the assigned operation; native dependency completion does not replace evidence
+that the accepted scope explicitly requires.
+
+## Local handoff and live acceptance
+
+The default agent handoff covers the assigned implementation with applicable local
+checks, independent review, required PR/CI, and saved evidence. A protected page or
+reuse of authenticated transport does not by itself require private live smoke.
+Require live execution only when the accepted assignment names the operation, scope,
+and inputs needed to run it. Report local fixture evidence separately from live
+acceptance; fixtures never count as an authentication or backend pass.
+
+Separate contribution failures from baseline gaps, pending live acceptance, and
+missing live inputs. A baseline mismatch outside a selected scope remains visible in
+full-mode results without failing an unrelated scoped result. Block only when an
+explicitly assigned operation cannot proceed for lack of input/access and no useful
+independent work remains. A required output that does not exist is still a gap. When
+the revision/output exists and is reviewable, the coordinator may own metadata or
+link verification that the agent cannot write; record that action as pending and do
+not claim verification succeeded.
+
+Use the versioned workspace runner and exact operation/case selectors described in
+the [scope and evidence guide](../../../../docs/testing/browser-tests.md#runner-scopes-and-evidence).
+Selectors must cover every behavior affected by the contribution. The runner reports
+application revision, suite revision, worktree state, version, and selected scope;
+host activation remains a coordinator action after merge.
 
 ## Execution and review
 
@@ -41,7 +66,7 @@ Delivery handoff
 - Repository: signapse-group/signapse-ui
 - Revision/output: <verified commit or report/output identity>
 - Review: <reviewer; both axes and result>
-- Checks/build: <commands/results and contract coverage>
+- Checks/build: <commands/results; runner version, app/suite revisions and scope; contract coverage>
 - Deploy: <environment/revision/result or pending owner action> | Not applicable
 - API contract: <producer OpenAPI/protocol URL and producer revision/environment> | Not applicable
 - Contract live check: <fetch time, revision match/result and evidence> | Not applicable
