@@ -28,10 +28,10 @@ When framework versions, the UI preset, CI, or repository ownership change, refr
 - Equivalent slash commands may be used when available in the current environment.
 - Run the production server with `pnpm start`.
 - Run `pnpm test:quality` for code/runtime changes; its P0 browser tests use fixtures and disabled auth.
-- For authentication, backend transport, and protected-page changes, also run `pnpm test:integration`
-  with the private application/account files described in `docs/testing/browser-tests.md`.
+- Run `pnpm test:integration` only when the assigned work names a live operation, scope, and required inputs.
+  Protected-page changes or reuse of authenticated transport do not alone make live smoke a handoff gate.
 - Select focused checks by change type using the [browser-testing scope matrix](docs/testing/browser-tests.md#selecting-checks-by-change-scope).
-  Keep these live smoke tests read-only and report their actual result separately from P0.
+  Use its versioned runner selectors and activation runbook; report live results separately from P0.
   Never commit real `.env` files, account passwords, Clerk secrets, JWTs, cookies, or auth artifacts.
 
 ## Architecture

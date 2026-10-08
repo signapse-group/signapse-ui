@@ -46,11 +46,12 @@ host. Retired landing environment variables are no longer read by this app.
 
 Set `SIGNAPSE_AUTH_MODE=disabled` to open the dashboard without Clerk login while developing against a local backend with auth disabled. This mode is ignored in production and sends backend API requests without Clerk bearer tokens.
 
-Use `pnpm test:quality` for deterministic checks and `pnpm test:integration` for password
-authentication against the configured public development backend. See the
+Use `pnpm test:quality` for deterministic checks. Run `pnpm test:integration` only for
+an explicitly assigned live operation with its scope and required inputs; protected
+pages and reuse of authenticated transport do not alone require live smoke. See the
 [change-scope check selection](docs/testing/browser-tests.md#selecting-checks-by-change-scope)
-and [browser and integration testing](docs/testing/browser-tests.md) for private file setup,
-commands, and the scope each test lane proves.
+and [runner scopes and evidence](docs/testing/browser-tests.md#runner-scopes-and-evidence)
+for version, exact selectors, private file setup, and the evidence each lane proves.
 
 ## Using the Logo Component
 

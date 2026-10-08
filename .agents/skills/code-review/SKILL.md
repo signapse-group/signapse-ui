@@ -17,9 +17,10 @@ For API work, read the [API consumer policy](../agent-execution-policy/reference
 and current producer contract for the relevant environment. Requirement adherence
 uses accepted requirements; Correctness & Standards checks consumer schema, auth,
 status/error/media/protocol and business semantics against that contract. Verify
-applicable producer publication/revision and FE live evidence. A structural guard or
-P0 pass does not prove full integration. Raise discrepancies to the owner instead
-of changing expected behavior or inferring filter scope from generic runtime fields.
+applicable producer publication/revision and FE live evidence when those gates are
+in the accepted scope. A structural guard or P0 pass does not prove full integration.
+Raise discrepancies to the owner instead of changing expected behavior or inferring
+filter scope from generic runtime fields.
 
 Inspect the contribution's committed diff from the resolved base/merge-base to HEAD, staged and unstaged diffs, and relevant untracked output. An empty committed diff is not an empty review if uncommitted work exists. Inspect relevant final code beyond changed lines to understand behavior and callers; for read-only deliverables, inspect the report and source evidence. Record base, HEAD and which working changes/output were inspected.
 
@@ -34,6 +35,12 @@ The delegated reviewer executes the two axes directly and returns its findings; 
 ## Review Both Axes
 
 **Requirement adherence:** map Acceptance Criteria or Expected Behavior to the actual final behavior and suitable evidence. Check omissions, scope creep, accepted contract changes, and related regression risks. Existing implementation can satisfy a criterion without appearing in the diff. Tests passing alone do not establish full coverage.
+
+For a local implementation handoff, require only the applicable local checks, review,
+and CI. A protected page or reused authenticated transport does not alone add live
+smoke; require it when the accepted assignment names the operation, scope, and inputs.
+Check that scoped selectors still cover every affected behavior, and report baseline
+gaps and pending live acceptance separately from contribution findings.
 
 **Correctness & Standards:** inspect defects in logic, authorization/security, persistence, concurrency, error handling and applicable repository standards. Consider maintainability where it has a concrete impact; naming preferences and speculative abstractions are not automatic blockers. Standards take precedence over generic heuristics.
 

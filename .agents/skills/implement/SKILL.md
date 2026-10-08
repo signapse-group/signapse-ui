@@ -19,14 +19,15 @@ Confirm dependencies are fulfilled before dependent execution. Announce a short 
 
 For API integration, follow the [API consumer policy](../agent-execution-policy/references/api-handoff.md)
 for current producer lookup and delivery readiness. Inspect affected operations and
-trace their callers/types directly in source. Refresh live evidence on resume and
-before handoff; fixtures do not prove producer publication or live integration.
+trace their callers/types directly in source. Refresh producer/live evidence on
+resume and before handoff when that gate is in the accepted scope; fixtures do not
+prove producer publication or live integration.
 
 ## Implement and Verify
 
 Use [tdd](../tdd/SKILL.md) for behavior verification; choose the highest stable public seam using the issue, repository policy and existing code. Follow the repository's diagnostic workflow when investigation is needed. Keep each slice small, run focused checks and fix failures caused by the change.
 
-Run the completion checks required by repository policy for the affected work. Preserve required public contract documentation and handoff evidence. Missing mandatory evidence is a blocker, not a risk note that automatically permits handoff. Do not require manual live acceptance unless the user or repository policy requests it.
+Run the completion checks required by repository policy for the affected work. Preserve required public contract documentation and handoff evidence. Missing mandatory evidence is a blocker, not a risk note that automatically permits handoff. Require live acceptance only when the accepted assignment names the operation, scope, and required inputs; see the [runner scope and evidence guide](../../../docs/testing/browser-tests.md#runner-scopes-and-evidence).
 
 ## Decisions and Resume
 
@@ -48,7 +49,7 @@ For repository-file changes, commit scoped reviewed work, push the contribution'
 
 For assigned Jira work, reread the current Subtask key/title and apply the repository-owned policy's PR title/body format. Verify the saved PR title and Development-panel linkage before claiming a successful link. GitHub for Atlassian links through the Subtask key in the title; Git/PR tooling and credentials are separate from jira_rest. Report unavailable linking verification explicitly.
 
-Keep one agent-owned Jira delivery handoff comment for this Subtask/operation using the [execution policy's format](../agent-execution-policy/references/execution-policy.md#pr-and-delivery-handoff). Update it on resume, retaining earlier revision/evidence links, verify ownership and read it back after saving. Include conditional producer contract/live-check evidence for API work; the Development panel is the PR link/status source. Missing permission or required evidence is unmet, not a readiness pass. Preserve human content and report ownership conflicts instead of overwriting or duplicating comments.
+Keep one agent-owned Jira delivery handoff comment for this Subtask/operation using the [execution policy's format](../agent-execution-policy/references/execution-policy.md#pr-and-delivery-handoff). Update it on resume, retaining earlier revision/evidence links, verify ownership and read it back after saving. Include producer contract/live-check evidence when API or live verification is in scope; the Development panel is the PR link/status source. If a reviewable output exists but metadata/link verification is unavailable, record the coordinator-owned action as pending without claiming it passed. Preserve human content and report ownership conflicts instead of overwriting or duplicating comments.
 
 When a PR is used, wait for repository-required CI on its current revision. Fix in-scope failures on the same branch/PR, rerun affected checks/review and refresh handoff evidence after pushing. Use the delivered revision's results; external failures or missing access do not waive required checks.
 
