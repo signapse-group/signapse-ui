@@ -37,6 +37,10 @@ the revision/output exists and is reviewable, the coordinator may own metadata o
 link verification that the agent cannot write; record that action as pending and do
 not claim verification succeeded.
 
+QA case preparation/approval/runs, merge/deployment of this contribution and owner acceptance are separate gates; record their owner and next action as pending. Parent acceptance or an unfinished QA ticket does not by itself block an authorized dev contribution. An unresolved choice solely about who performs QA goes to the coordinator without stopping independent implementation; a choice changing expected behavior or required dev verification blocks the affected work. This does not waive planning's requirement-completion gate before ticket publication or native dependency admission.
+
+Required behavior, local checks, independent review and required CI remain handoff gates. Fix contribution failures in Progress; use Blocked only for necessary external input/access when no meaningful independent work remains. Record the affected output/AC/check and resume condition. Baseline failures outside the selected scope remain visible; a failed required full check or CI is never converted into a scoped pass. Missing mandatory output, publication access, saved handoff or status-write access remains a gap; metadata pending does not establish a successful transition.
+
 Use the versioned workspace runner and exact operation/case selectors described in
 the [scope and evidence guide](../../../../docs/testing/browser-tests.md#runner-scopes-and-evidence).
 Selectors must cover every behavior affected by the contribution. The runner reports

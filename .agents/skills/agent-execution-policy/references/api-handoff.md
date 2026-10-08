@@ -57,6 +57,10 @@ OpenAPI → producer handoff → FE integration. The accepted temporary dev mism
 not establish FE/feature/QA completion or a production rollout policy. Record the
 changed operation/rule, affected consumer and integration still pending.
 
+## Contract lookup and feature acceptance
+
+Reading the producer's published contract and verifying a new/changed API dependency remain requirements of consumer integration. They are distinct from executing a feature against live services. Verify the consumer implementation locally at the actual HTTP boundary in its runtime; for SSR, browser interception alone does not verify server-side fetching. Require live feature/hosted acceptance only for the operation and phase assigned under the [local handoff policy](execution-policy.md#local-handoff-and-live-acceptance). Missing in-scope producer schemas, permissions or required publication evidence is still an integration gap.
+
 ## Verification and evidence
 
 Use existing checks appropriate to the changed behavior. Documentation/description

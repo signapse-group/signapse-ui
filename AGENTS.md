@@ -22,6 +22,10 @@ When framework versions, the UI preset, CI, or repository ownership change, refr
 - `accessibility`: keyboard, focus, screen reader, semantic markup, dialog/form accessibility.
 - For API integration, contract changes or reviews, read the [API consumer policy](.agents/skills/agent-execution-policy/references/api-handoff.md). The producer's published OpenAPI owns the supported HTTP API contract; Jira owns accepted requirements and acceptance.
 
+## Dev handoff boundary
+
+For direct work, complete the requested output with applicable verification; tracker/review/PR/CI workflow steps activate only when assigned. For an activated workflow, apply the repository's [local handoff and live acceptance policy](.agents/skills/agent-execution-policy/references/execution-policy.md#local-handoff-and-live-acceptance). Pending QA, merge/deploy of this contribution or owner acceptance does not itself stop dev work. Missing behavior, required checks or necessary producer/input access remains a contribution gap; keep doing meaningful independent work.
+
 ## Commands
 
 - Use `pnpm dev`, `pnpm build`, `pnpm lint`, `pnpm format`, and `pnpm typecheck`.

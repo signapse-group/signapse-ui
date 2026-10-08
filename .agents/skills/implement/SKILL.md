@@ -27,7 +27,7 @@ prove producer publication or live integration.
 
 Use [tdd](../tdd/SKILL.md) for behavior verification; choose the highest stable public seam using the issue, repository policy and existing code. Follow the repository's diagnostic workflow when investigation is needed. Keep each slice small, run focused checks and fix failures caused by the change.
 
-Run the completion checks required by repository policy for the affected work. Preserve required public contract documentation and handoff evidence. Missing mandatory evidence is a blocker, not a risk note that automatically permits handoff. Require live acceptance only when the accepted assignment names the operation, scope, and required inputs; see the [runner scope and evidence guide](../../../docs/testing/browser-tests.md#runner-scopes-and-evidence).
+Run the completion checks required by repository policy for the affected work. Preserve required public contract documentation and handoff evidence. Missing evidence required for the assigned operation and phase prevents handoff readiness; keep implementation failures in Progress and reserve Blocked for external input/access under the [local handoff policy](../agent-execution-policy/references/execution-policy.md#local-handoff-and-live-acceptance). Require live acceptance only when the accepted assignment names the operation, scope, and required inputs; see the [runner scope and evidence guide](../../../docs/testing/browser-tests.md#runner-scopes-and-evidence).
 
 ## Decisions and Resume
 

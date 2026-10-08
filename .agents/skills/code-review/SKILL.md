@@ -42,6 +42,8 @@ smoke; require it when the accepted assignment names the operation, scope, and i
 Check that scoped selectors still cover every affected behavior, and report baseline
 gaps and pending live acceptance separately from contribution findings.
 
+Assess mandatory evidence at the contribution's operation and phase using the [local handoff policy](../agent-execution-policy/references/execution-policy.md#local-handoff-and-live-acceptance). Pending QA/owner acceptance and coordinator-owned metadata are recorded separately from blocking implementation findings; missing required behavior, local verification, review or CI still prevents handoff readiness.
+
 **Correctness & Standards:** inspect defects in logic, authorization/security, persistence, concurrency, error handling and applicable repository standards. Consider maintainability where it has a concrete impact; naming preferences and speculative abstractions are not automatic blockers. Standards take precedence over generic heuristics.
 
 Use existing check evidence when it applies to the reviewed state. Request or run missing safe checks appropriate to the work; do not broaden testing solely to repeat a green result. Documentation-only work does not require code or build checks unless repository policy says otherwise. Report missing significant required evidence explicitly.

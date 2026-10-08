@@ -55,6 +55,8 @@ Use `jira_rest` to reread the live Subtask, its native parent, relevant comments
 dependencies and approved references at start, resume and handoff. The Subtask
 defines this contribution; its parent owns the accepted outcome and requirements.
 
+The [local handoff policy](.agents/skills/agent-execution-policy/references/execution-policy.md#local-handoff-and-live-acceptance) defines the dev boundary and classification of pending QA/owner acceptance, baseline gaps and metadata. Apply it to this contribution's operation and phase without waiving required checks, review, CI or producer dependencies.
+
 Repository execution context:
 
 - This repository owns the authenticated dashboard/app. Verify that the Subtask has exactly one recognized routing label, `route-frontend`, and its Deliverable belongs to `signapse-group/signapse-ui`. The producer's published OpenAPI owns the supported HTTP API contract, including consumer-facing business rules; Jira owns accepted requirements. For API work, read the repository's [API consumer policy](.agents/skills/agent-execution-policy/references/api-handoff.md). `docs/design/DESIGN.md` defines durable UI/UX rules.
