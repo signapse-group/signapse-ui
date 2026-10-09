@@ -60,34 +60,26 @@ Reuse the same workspace, branch and PR for a contribution's retries and review 
 
 ## PR and delivery handoff
 
-GitHub hosts source, PRs and CI. For assigned Jira work, reread the current Subtask key/title and set the PR title to `[<Jira-key>] <current Subtask title>`. Follow a repository PR template when present; otherwise write a concise change and validation summary. The Jira key links the PR to the Subtask's Development panel through GitHub for Atlassian. Verify the saved title and actual panel linkage before claiming the link is established; report unavailable linking verification explicitly. Git/PR access is configured separately from `jira_rest`.
+GitHub hosts source, PRs and CI. For assigned Jira work, reread the current Subtask key/title and set the PR title to `[<Jira-key>] <current Subtask title>`. Follow the repository PR template/conventions: explain the problem, final change, verification and technical limits, and refresh the body against the delivered revision before handoff. Jira records current coordination and pending owner actions. Verify the title and actual Development-panel linkage before claiming it established; Git/PR access is separate from `jira_rest`.
 
-Keep one agent-owned delivery handoff comment on the Subtask, updated for its latest delivered revision/output. Preserve earlier revision identities and evidence links when updating the same operation; distinct QA runs retain their own records. Identify the existing comment and author before editing; preserve other authors' content. If ownership is unclear, report the conflict instead of overwriting or duplicating the record. Use the planning format:
+Write the handoff for the coordinator's next decision, normally 4–6 content lines. Add lines for material gaps, multiple blockers or API phases when needed; there is no length gate. Omit inapplicable fields. Keep detailed commands, counts, logs, hashes and investigation history in the linked PR/report/evidence.
+
+Keep one agent-owned comment for the same deliverable, updated to its current output. Verify ownership beyond a shared API account, reread live content before editing, preserve human content and read back after saving. If ownership is unclear, report the conflict instead of overwriting or duplicating the record. Preserve earlier output identities with their evidence in linked, versioned history before replacing the summary; an earlier revision's checks do not establish the current result. Distinct QA runs retain separate records. Evidence retains its existing storage, access and retention rules.
 
 ```text
-Delivery handoff
-
-- Repository: signapse-group/signapse-ui
-- Revision/output: <verified commit or report/output identity>
-- Review: <reviewer; both axes and result>
-- Checks/build: <commands/results; runner version, app/suite revisions and scope; contract coverage>
-- Deploy: <environment/revision/result or pending owner action> | Not applicable
-- API contract: <producer OpenAPI/protocol URL and producer revision/environment> | Not applicable
-- Contract live check: <fetch time, revision match/result and evidence> | Not applicable
-- Evidence: <durable links and short summary>
-- Remaining: <none or explicit gaps and human-owned actions>
+Bàn giao dev — <verified outcome>
+- Output: signapse-group/signapse-ui · <revision> · <PR/artifact link>.
+- Xác minh: <local checks/result>; <reviewer/both axes/result>; <required CI result>.
+- Tiếp theo: <owner> — <specific action, including pending delivery when applicable>.
+- Còn lại: <material gap/limit, or no remaining mandatory gap>.
+- Chi tiết: <durable evidence/history link if not covered by the output link>.
 ```
 
-The Development panel is the PR link/status source; the comment holds delivery evidence. Evidence files stay outside Jira with durable links and limits. Deploy is Not applicable only when the deliverable does not require deployment; otherwise record confirmed evidence or the pending owner/action. `Done` additionally requires the coordinator's review/check acceptance, merge when required and deployment/evidence when applicable. Merge and child completion do not automatically satisfy Subtask or parent acceptance.
+For API work, identify the producer contract/environment/revision separately from the FE output and distinguish local verification from live delivery. Link the contract and fetch/revision-match evidence; summarize missing required publication evidence, coverage/discrepancies, breaking changes, affected consumers and pending integration. Schema/business rules stay at the producer. Omit API fields for unrelated work. Runner version, app/suite revisions and selected scope stay in linked check evidence.
 
-The API fields apply when this output integrates or delivers API behavior. Separate
-FE output identity from the producer's delivered contract. Use Not applicable for
-unrelated output; missing required producer revision/publication evidence is a gap.
-Keep schema/business rules at the producer source. Record remaining contract
-coverage/discrepancies, breaking changes, affected consumers and pending integration
-under Remaining when applicable.
+The Development panel is the PR link/status source. Pending human merge/deploy/acceptance has an owner and next action; it does not itself block dev handoff. Required behavior/checks/review/CI remain gates. `Done` additionally needs coordinator acceptance, merge when required and deployment/evidence when applicable; merge/child completion does not establish it.
 
-For local-contract workflow work without Jira, record the same applicable evidence in the PR or requested artifact/session. Do not invent a tracker record.
+For a local-contract workflow without Jira, put the applicable summary/evidence in the requested PR/artifact/session; do not invent a tracker record.
 
 ## Jira lifecycle and writes
 
@@ -106,21 +98,28 @@ Paginate relevant comments and use supported rich text; REST v3 comment bodies u
 
 ### Blocker comments and resume
 
-Investigate the blocker and required human action before stopping. Reread current status/comments, then create or update this agent's comment for the same blocker. Record the actual pre-Blocked status and read the saved comment back before entering Blocked; verify the resulting status. Use the repository's output language:
+Keep the blocker separate from delivery handoff. Investigate missing input/access and finish meaningful independent work first. Reread status/comments and update this agent's record for the same blocker; put the affected output/AC/check and human action first, with concise checks and a detail link. Record actual pre-Blocked status, save/read back before entering Blocked and verify the resulting status under the assigned grant.
 
-```markdown
-**Blocked**
-
-- Reason: <What prevents progress.>
-- Checked: <Attempts/results; evidence when useful.>
-- Needed: <Human action/owner or decision with recommendation.>
-- Pre-Blocked: <actual native status before this blocker>
-- Resume: <condition to proceed>; coordinator restores <pre-Blocked status>.
+```text
+Blocked — <reason and affected output/AC/check>
+- Cần <owner>: <specific action or decision>.
+- Đã kiểm tra: <short result>; <evidence link>.
+- Tiếp tục khi: <verifiable condition>.
+- Pre-Blocked: <actual native status>; coordinator resumes to this step.
 ```
 
-A hard task or failing implementation test alone is not Blocked. Keep comment items concise; the comment is the notification and needs no separate message channel. If saving or verifying it fails, do not transition to Blocked. If the transition is unconfirmed, preserve the comment and report the uncertainty.
+A hard task or implementation/test failure alone is not Blocked. If saving/verifying the comment fails, do not transition; report an unconfirmed transition accurately. A retry is not a reason to append another investigation journal.
 
-The coordinator records resolution and uses Jira's native most-recent-status rule to resume exactly the pre-Blocked status. On resume, verify the resolution and current contract, then continue existing output; a status change alone does not resolve the blocker. Resume to In Review remains idle. A new operation after Done uses a new Subtask decided by the coordinator.
+Coordinator resolution names the blocker that is resolved/superseded, links the owning contract decision/evidence and identifies any remaining blocker and next action. Mark the original blocker's first line with a resolution link only when ownership/edit permission is established; otherwise use an authorized resolution with a backlink. The next handoff identifies the old blocker as resolved, preserving history and human content.
+
+```text
+Đã giải quyết blocker — <blocker comment link>
+- Quyết định/bằng chứng: <result>; <contract/evidence link>.
+- Còn lại: <other blocker, or none for this operation>.
+- Tiếp theo: <owner> — <action/status under the existing gate>.
+```
+
+The coordinator uses Jira's most-recent-status rule to resume exactly the pre-Blocked status. Verify resolution and current contract on resume; a status change alone does not resolve the blocker. Resume to In Review remains idle. A new operation after Done uses a new Subtask decided by the coordinator.
 
 ## Contract changes and evidence
 

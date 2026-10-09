@@ -72,7 +72,8 @@ integration need their applicable review and runtime evidence.
 
 Use the [delivery handoff format](execution-policy.md#pr-and-delivery-handoff) for
 assigned execution, or the requested PR/artifact/session for ordinary work. Identify
-FE output separately from producer contract revision/environment and record the live
-fetch result/time, coverage, discrepancy and pending integration/delivery actions.
-Keep earlier revision identities and evidence links when refreshing a handoff; a later
-contract change invalidates affected checks/review without erasing historical evidence.
+FE output separately from producer contract revision/environment and the local/live phase.
+Keep the live fetch result/time, revision matching and detailed coverage in linked evidence;
+the short handoff exposes discrepancies, missing required publication evidence and pending
+integration/delivery with its owner. Preserve earlier identities/evidence in linked history;
+a later contract change invalidates affected checks/review without erasing earlier evidence.
