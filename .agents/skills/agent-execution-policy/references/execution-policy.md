@@ -47,6 +47,14 @@ Selectors must cover every behavior affected by the contribution. The runner rep
 application revision, suite revision, worktree state, version, and selected scope;
 host activation remains a coordinator action after merge.
 
+## Bug fixes and QA retest
+
+For an assigned fix Subtask under a Bug, reread the accepted expected/basis and latest relevant QA handoff with its report/evidence at start, resume and handoff. Identify case/version, actual, tested build/environment and assigned impacted regression. Apply [QA Retest outcomes](https://github.com/signapse-group/signapse-planing/blob/main/workflow/project-execution-workflow.md#qa-retest-outcomes); a FAIL summary can include Blocked/Not Run checks or a different regression deviation. Implement the assigned fix scope without treating every report failure as the same Bug.
+
+Link the Bug and QA run/report addressed in the fix handoff, with corrected coverage, delivered source revision, local checks/regression and pending merge/deploy owner/action. After deployment, the delivery owner supplies evidence connecting that fix to the tested build/environment for QA; local checks or a build SHA alone do not establish deployment. Pending deployment does not delay a dev In Review handoff whose local gates passed.
+
+The coordinator owns Bug Resolved/Closed/Reopened, QA completion and follow-up assignment. Dev checks do not close the Bug or overwrite QA results/approval. Done is terminal; a later fix/run requires a new coordinator-assigned Subtask. Do not revive a completed contribution or mutate its parent from a QA FAIL summary.
+
 ## Execution and review
 
 1. Read the contract, references, this policy and applicable repository instructions.
