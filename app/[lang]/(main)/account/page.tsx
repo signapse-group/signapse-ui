@@ -1,6 +1,7 @@
 import { currentUser } from "@clerk/nextjs/server"
 
 import { getMe } from "@/app/api/user/action"
+import { isDevAuthModeEnabled } from "@/app/lib/dev-auth-mode"
 
 import {
   AccountProfileForm,
@@ -92,11 +93,14 @@ function getDateInputValue(...values: unknown[]) {
   const month = dateParts.find((part) => part.type === "month")?.value
   const day = dateParts.find((part) => part.type === "day")?.value
 
-  return year && month && day ? `${year}-${month}-${day}` : ""
+  return year && month && day ? `${year.padStart(4, "0")}-${month}-${day}` : ""
 }
 
 export default async function AccountPage() {
-  const [profile, clerkUser] = await Promise.all([getMe(), currentUser()])
+  const [profile, clerkUser] = await Promise.all([
+    getMe(),
+    isDevAuthModeEnabled() ? null : currentUser(),
+  ])
   const nameParts = getNameParts(
     profile.firstName,
     profile.lastName,
