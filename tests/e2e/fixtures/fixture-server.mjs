@@ -202,6 +202,10 @@ function createState() {
     notes: [note(31, "Morning brief", "Review the fixture market brief.")],
     feedback: feedbackRecords(),
     contactRequests: contactRequestRecords(),
+    profile: {
+      birthday: "1990-01-02T00:00:00.000Z",
+      phone: "+1 555 0100",
+    },
     smtpConfiguration: {
       configured: true,
       enabled: false,
@@ -1153,6 +1157,24 @@ function responseForRoute(state, method, pathname, url, body) {
       email: FEEDBACK_OWNER.email,
       firstName: FEEDBACK_OWNER.firstName,
       lastName: FEEDBACK_OWNER.lastName,
+      birthday: state.profile.birthday,
+      phone: state.profile.phone,
+      role_name: "Fixture",
+      currentWorkspace: { id: 1, name: "Workspace Alpha" },
+      mainImage: null,
+      permissions: state.permissions,
+    }
+  }
+
+  if (method === "PATCH" && pathname === "/me") {
+    state.profile = { birthday: body.birthday, phone: body.phone }
+    return {
+      id: FEEDBACK_OWNER_ID,
+      email: FEEDBACK_OWNER.email,
+      firstName: body.firstName,
+      lastName: body.lastName,
+      birthday: state.profile.birthday,
+      phone: state.profile.phone,
       role_name: "Fixture",
       currentWorkspace: { id: 1, name: "Workspace Alpha" },
       mainImage: null,
@@ -1599,6 +1621,7 @@ const server = createServer(async (request, response) => {
     testRunId,
     locale: request.headers["accept-language"] ?? null,
     hasAuthHeader,
+    ...(method === "PATCH" && url.pathname === "/me" ? { body } : {}),
   }
   state.requests.push(logEntry)
   await appendLog(logEntry)
