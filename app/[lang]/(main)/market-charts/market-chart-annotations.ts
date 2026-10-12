@@ -421,7 +421,8 @@ export function createMarketChartEconomicCalendarEventGroups(
 
 export function createMarketChartWarmAnnotationGroups(
   annotations: MarketChartAnnotationResponse[],
-  candles: MarketChartCandleItemResponse[]
+  candles: MarketChartCandleItemResponse[],
+  timeframe: MarketChartTimeframe
 ): MarketChartAnnotationGroup[] {
   const candleTimes = candles
     .filter(isValidMarketChartCandle)
@@ -434,7 +435,14 @@ export function createMarketChartWarmAnnotationGroups(
   }
 
   const firstTime = Number(candleTimes[0])
-  const lastTime = Number(candleTimes[candleTimes.length - 1])
+  const lastCandleTime = candleTimes.at(-1)
+  const lastCandleIntervalEnd =
+    lastCandleTime === undefined
+      ? null
+      : getMarketChartCandleEndBoundary(timeframe, lastCandleTime)
+  const lastCandleIntervalEndTime = lastCandleIntervalEnd
+    ? Date.parse(lastCandleIntervalEnd)
+    : null
 
   return annotations
     .filter(isValidMarketChartAnnotation)
@@ -451,7 +459,12 @@ export function createMarketChartWarmAnnotationGroups(
       const start = Math.min(Number(periodStart), Number(periodEnd))
       const end = Math.max(Number(periodStart), Number(periodEnd))
 
-      if (end < firstTime || start > lastTime) {
+      if (
+        end < firstTime ||
+        lastCandleIntervalEndTime === null ||
+        !Number.isFinite(lastCandleIntervalEndTime) ||
+        start >= lastCandleIntervalEndTime
+      ) {
         return []
       }
 

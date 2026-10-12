@@ -114,6 +114,22 @@ const MARKET_CHART_CALENDAR_VISIBILITY_STORAGE_KEY =
 const MARKET_CHART_COMPACT_WIDTH_PX = 768
 const MARKET_CHART_COMPACT_HEIGHT_PX = 720
 
+function getSafeEvidenceHref(value: string | null | undefined) {
+  if (!value?.trim()) {
+    return null
+  }
+
+  try {
+    const url = new URL(value)
+
+    return url.protocol === "http:" || url.protocol === "https:"
+      ? url.href
+      : null
+  } catch {
+    return null
+  }
+}
+
 function readStoredMarketChartCalendarVisibility(): boolean | null {
   if (typeof window === "undefined") {
     return null
@@ -1144,7 +1160,6 @@ function ChartSurface({
   selectedAsset,
   quickDetailEntity,
   onAnnotationEventOpen,
-  onAnnotationArticleOpen,
   selectedAnnotationGroup,
   timeframeLabels,
   watchlistAssets,
@@ -1193,7 +1208,6 @@ function ChartSurface({
   selectedAsset: WorkspaceWatchlistAssetListItemResponse | null
   quickDetailEntity: LocalQuickDetailEntity | null
   onAnnotationEventOpen: (eventId: number, triggerKey: string) => void
-  onAnnotationArticleOpen: (articleId: number, triggerKey: string) => void
   selectedAnnotationGroup: MarketChartAnnotationGroup | null
   timeframeLabels: Record<MarketChartTimeframe, string>
   watchlistAssets: WorkspaceWatchlistAssetListItemResponse[]
@@ -1294,7 +1308,6 @@ function ChartSurface({
           <MarketChartAnnotationDetail
             group={group}
             onEventOpen={onAnnotationEventOpen}
-            onArticleOpen={onAnnotationArticleOpen}
             onOutcomeRangeHover={handleOutcomeRangeHover}
             onOutcomeRangeLeave={handleOutcomeRangeLeave}
           />
@@ -1814,7 +1827,6 @@ function ChartSurface({
                 <MarketChartAnnotationDetail
                   group={selectedAnnotationGroup}
                   onEventOpen={onAnnotationEventOpen}
-                  onArticleOpen={onAnnotationArticleOpen}
                   onOutcomeRangeHover={handleOutcomeRangeHover}
                   onOutcomeRangeLeave={handleOutcomeRangeLeave}
                 />
@@ -2116,13 +2128,11 @@ function MarketChartAnnotationLegend({
 function MarketChartAnnotationDetail({
   group,
   onEventOpen,
-  onArticleOpen,
   onOutcomeRangeHover,
   onOutcomeRangeLeave,
 }: {
   group: MarketChartAnnotationGroup
   onEventOpen: (eventId: number, triggerKey: string) => void
-  onArticleOpen: (articleId: number, triggerKey: string) => void
   onOutcomeRangeHover: (range: MarketChartOutcomeHoverRange) => void
   onOutcomeRangeLeave: () => void
 }) {
@@ -2144,7 +2154,6 @@ function MarketChartAnnotationDetail({
       group={group}
       localization={localization}
       onEventOpen={onEventOpen}
-      onArticleOpen={onArticleOpen}
       onOutcomeRangeHover={onOutcomeRangeHover}
       onOutcomeRangeLeave={onOutcomeRangeLeave}
     />
@@ -2155,14 +2164,12 @@ function MarketChartHotAnnotationDetail({
   group,
   localization,
   onEventOpen,
-  onArticleOpen,
   onOutcomeRangeHover,
   onOutcomeRangeLeave,
 }: {
   group: MarketChartAnnotationGroup
   localization: LocalizationContext
   onEventOpen: (eventId: number, triggerKey: string) => void
-  onArticleOpen: (articleId: number, triggerKey: string) => void
   onOutcomeRangeHover: (range: MarketChartOutcomeHoverRange) => void
   onOutcomeRangeLeave: () => void
 }) {
@@ -2264,9 +2271,9 @@ function MarketChartHotAnnotationDetail({
                             }
                           )
                         : null
-                    const triggerKey = `${group.id}:${annotation.id}:evidence:${index}`
                     const articleId = evidence.newsArticleId
                     const articleUrl = evidence.url?.trim()
+                    const safeArticleUrl = getSafeEvidenceHref(articleUrl)
 
                     return (
                       <div
@@ -2309,16 +2316,16 @@ function MarketChartHotAnnotationDetail({
                         articleId > 0 ? (
                           canReadNewsArticles ? (
                             <Button
-                              type="button"
+                              asChild
                               size="sm"
                               variant="outline"
-                              data-quick-detail-trigger={triggerKey}
                               className="self-start"
-                              onClick={() =>
-                                onArticleOpen(articleId, triggerKey)
-                              }
                             >
-                              {localization.dictionary.events.viewArticle}
+                              <LocalizedLink
+                                href={`/news-articles/${articleId}`}
+                              >
+                                {localization.dictionary.events.viewArticle}
+                              </LocalizedLink>
                             </Button>
                           ) : (
                             <p className="text-xs text-muted-foreground">
@@ -2329,15 +2336,19 @@ function MarketChartHotAnnotationDetail({
                             </p>
                           )
                         ) : null}
-                        {articleUrl ? (
+                        {articleUrl && safeArticleUrl ? (
                           <a
-                            href={articleUrl}
+                            href={safeArticleUrl}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="self-start text-xs font-medium text-primary underline-offset-4 hover:underline"
                           >
                             {localization.dictionary.events.openOriginal}
                           </a>
+                        ) : articleUrl ? (
+                          <span className="self-start break-all text-xs text-muted-foreground">
+                            {articleUrl}
+                          </span>
                         ) : null}
                       </div>
                     )
@@ -3231,7 +3242,8 @@ export function MarketChartWorkbench({
 
     return createMarketChartWarmAnnotationGroups(
       chartData.annotations,
-      chartData.candles
+      chartData.candles,
+      selection.timeframe
     )
   }, [annotationLayerEnabled, chartData, selection.timeframe])
 
@@ -4117,13 +4129,6 @@ export function MarketChartWorkbench({
     handleAnnotationDetailOpen({ id: eventId, kind: "event" }, triggerKey)
   }
 
-  function handleAnnotationArticleOpen(articleId: number, triggerKey: string) {
-    handleAnnotationDetailOpen(
-      { id: articleId, kind: "news-article" },
-      triggerKey
-    )
-  }
-
   function handleQuickDetailBeforeClose() {
     const target = quickDetailReturnTargetRef.current
 
@@ -4278,7 +4283,6 @@ export function MarketChartWorkbench({
         selection={selection}
         selectedAsset={selectedAsset}
         quickDetailEntity={quickDetailEntity}
-        onAnnotationArticleOpen={handleAnnotationArticleOpen}
         selectedAnnotationGroup={selectedAnnotationGroup}
         timeframeLabels={timeframeLabels}
         watchlistAssets={watchlistAssets}

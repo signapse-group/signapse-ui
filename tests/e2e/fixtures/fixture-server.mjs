@@ -643,7 +643,7 @@ function marketChartAnnotations(url, scenario) {
       hotEvent: {
         eventId: index === 124 ? 63 : 61,
         severity: "HIGH",
-        direction: "UP",
+        direction: "BULLISH",
         title: `Fixture annotation ${index + 1}`,
         summary: "Synthetic chart annotation for the browser quality gate.",
         confidence: 0.92,
@@ -653,8 +653,9 @@ function marketChartAnnotations(url, scenario) {
             newsArticleId: 71,
             title: `Fixture evidence ${index + 1}`,
             publisher: "Fixture Wire",
+            url: "https://fixture.invalid/news/71",
             publishedAt: annotationTime,
-            evidenceRole: "PRIMARY_SUBJECT",
+            evidenceRole: "PRIMARY",
             confidence: 0.92,
             evidenceNote: "Synthetic evidence for the browser quality gate.",
           },
@@ -663,6 +664,11 @@ function marketChartAnnotations(url, scenario) {
       },
     }))
   }
+
+  const evidenceUrl =
+    scenario === "annotations-unsafe-evidence-url"
+      ? "javascript:alert(1)"
+      : "https://fixture.invalid/news/71"
 
   return [
     {
@@ -673,7 +679,7 @@ function marketChartAnnotations(url, scenario) {
       hotEvent: {
         eventId: 61,
         severity: "HIGH",
-        direction: "UP",
+        direction: "BULLISH",
         title:
           assetId === 102
             ? "Fixture Gold annotation"
@@ -686,8 +692,9 @@ function marketChartAnnotations(url, scenario) {
             newsArticleId: 71,
             title: "Fixture market update",
             publisher: "Fixture Wire",
+            url: evidenceUrl,
             publishedAt: annotationTime,
-            evidenceRole: "PRIMARY_SUBJECT",
+            evidenceRole: "PRIMARY",
             confidence: 0.92,
             evidenceNote: "Synthetic evidence for the browser quality gate.",
           },

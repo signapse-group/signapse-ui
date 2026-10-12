@@ -73,6 +73,28 @@ const response = {
   ],
 }
 
+const annotationRequest = {
+  assetId: 7,
+  from: "2026-08-19T10:00:00.000Z",
+  to: "2026-08-19T11:00:00.000Z",
+}
+
+const annotationResponse = {
+  id: "event:71:asset:7",
+  annotationType: "HOT_EVENT",
+  assetId: 7,
+  time: "2026-08-19T10:30:00.000Z",
+  hotEvent: {
+    direction: "BULLISH",
+    evidence: [
+      {
+        newsArticleId: 71,
+        evidenceRole: "PRIMARY",
+      },
+    ],
+  },
+}
+
 describe("market chart candle action", () => {
   beforeEach(() => {
     vi.mocked(fetchAuthenticated).mockReset()
@@ -142,6 +164,44 @@ describe("market chart candle action", () => {
     expect(diagnostic).toContain('"outcome":"validation_error"')
     expect(diagnostic).toContain('"validation.issue_codes":"anchor_mismatch"')
     expect(diagnostic).not.toMatch(/assetId=7|2026-08-19|XAUUSD/)
+  })
+})
+
+describe("market chart annotation action", () => {
+  beforeEach(() => {
+    vi.mocked(fetchAuthenticated).mockReset()
+  })
+
+  it("accepts the published direction and evidence-role enums", async () => {
+    vi.mocked(fetchAuthenticated).mockResolvedValue([annotationResponse])
+
+    await expect(
+      getMarketChartAnnotations(annotationRequest)
+    ).resolves.toMatchObject({ success: true, data: [annotationResponse] })
+  })
+
+  it.each([
+    ["direction", { direction: "UP" }],
+    ["evidence role", { evidenceRole: "PRIMARY_SUBJECT" }],
+  ])("rejects an unpublished annotation %s enum value", async (field, invalid) => {
+    const invalidAnnotation = {
+      ...annotationResponse,
+      hotEvent: {
+        ...annotationResponse.hotEvent,
+        ...(field === "direction" ? invalid : {}),
+        evidence: [
+          {
+            ...annotationResponse.hotEvent.evidence[0],
+            ...(field === "evidence role" ? invalid : {}),
+          },
+        ],
+      },
+    }
+    vi.mocked(fetchAuthenticated).mockResolvedValue([invalidAnnotation])
+
+    await expect(
+      getMarketChartAnnotations(annotationRequest)
+    ).resolves.toMatchObject({ success: false })
   })
 })
 

@@ -17,6 +17,7 @@ import {
 import {
   createMarketChartAnnotationGroups,
   createMarketChartEconomicCalendarEventGroups,
+  createMarketChartWarmAnnotationGroups,
   toMarketChartEpochMillis,
 } from "@/app/[lang]/(main)/market-charts/market-chart-annotations"
 import {
@@ -77,6 +78,22 @@ const hotAnnotation = (
     direction,
     severity,
     evidence: [],
+  },
+})
+
+const warmAnnotation = (
+  periodStart: string,
+  periodEnd: string
+): MarketChartAnnotationResponse => ({
+  id: "warm-annotation",
+  annotationType: "WARM_EPISODE",
+  assetId: 1,
+  time: periodStart,
+  warmEpisode: {
+    warmEpisodeId: 1,
+    periodStart,
+    periodEnd,
+    events: [],
   },
 })
 
@@ -394,6 +411,26 @@ describe("market-chart annotation and drawing mappings", () => {
     )
 
     expect(monthlyGroups[0]?.time).toBe(Date.parse(monthlyCandle.time))
+  })
+
+  it("keeps a warm episode that starts inside the final candle interval", () => {
+    const candles = [
+      candle("2026-07-28T00:00:00.000Z", 100),
+      candle("2026-07-29T00:00:00.000Z", 110),
+    ]
+    const periodStart = "2026-07-29T12:00:00.000Z"
+
+    const groups = createMarketChartWarmAnnotationGroups(
+      [warmAnnotation(periodStart, "2026-07-30T12:00:00.000Z")],
+      candles,
+      "1d"
+    )
+
+    expect(groups).toHaveLength(1)
+    expect(groups[0]?.time).toBe(Date.parse(periodStart))
+    expect(groups[0]?.annotations[0]?.warmEpisode?.periodStart).toBe(
+      periodStart
+    )
   })
 
   it("groups high-impact calendar events against the nearest candle", () => {

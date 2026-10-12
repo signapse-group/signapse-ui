@@ -371,4 +371,69 @@ test.describe("P0 market chart workbench", () => {
       page.getByRole("button", { name: "Xem bài viết", exact: true })
     ).toHaveCount(0)
   })
+
+  test("navigates to canonical article detail when permission is granted", async ({
+    page,
+    fixture,
+  }) => {
+    await fixture.setScenario(
+      "/market-charts/candles",
+      "full-then-empty",
+      "GET"
+    )
+    await fixture.setPermissions([
+      "market-chart:read",
+      "watchlist:read",
+      "news-article:read",
+    ])
+    await page.goto("/vi/market-charts?assetId=101&timeframe=1h")
+
+    const annotationMarker = page.getByRole("button", {
+      name: "Mở sự kiện Central bank signals a slower easing path",
+      exact: true,
+    })
+    await expect(annotationMarker).toBeVisible()
+    await annotationMarker.click()
+
+    const annotationDialog = page.getByRole("dialog", { name: "1 sự kiện" })
+    const articleLink = annotationDialog.getByRole("link", {
+      name: "Xem bài viết",
+      exact: true,
+    })
+    await expect(articleLink).toHaveAttribute("href", "/vi/news-articles/71")
+    await articleLink.click()
+
+    await expect(page).toHaveURL(/\/vi\/news-articles\/71$/)
+    await expect(
+      page.getByRole("heading", { name: "Fixture market update", exact: true })
+    ).toBeVisible()
+  })
+
+  test("renders an unsafe evidence URL as text instead of a link", async ({
+    page,
+    fixture,
+  }) => {
+    await fixture.setScenario(
+      "/market-charts/annotations",
+      "annotations-unsafe-evidence-url",
+      "GET"
+    )
+    await fixture.setPermissions(["market-chart:read", "watchlist:read"])
+    await page.goto("/vi/market-charts?assetId=101&timeframe=1h")
+
+    await page
+      .getByRole("button", {
+        name: "Mở sự kiện Central bank signals a slower easing path",
+        exact: true,
+      })
+      .click()
+
+    const annotationDialog = page.getByRole("dialog", { name: "1 sự kiện" })
+    await expect(
+      annotationDialog.getByText("javascript:alert(1)", { exact: true })
+    ).toBeVisible()
+    await expect(
+      annotationDialog.locator('a[href^="javascript:"]')
+    ).toHaveCount(0)
+  })
 })

@@ -80,10 +80,27 @@ export interface MarketChartCandleItemResponse {
   partial?: boolean
 }
 
-export type MarketChartAnnotationDirection =
-  "BULLISH" | "BEARISH" | "MIXED" | "NEUTRAL" | string
+const MARKET_CHART_ANNOTATION_DIRECTIONS = [
+  "BULLISH",
+  "BEARISH",
+  "MIXED",
+  "NEUTRAL",
+] as const
 
-export type MarketChartAnnotationType = "HOT_EVENT" | "WARM_EPISODE" | string
+const MARKET_CHART_ANNOTATION_EVIDENCE_ROLES = [
+  "PRIMARY",
+  "SUPPORTING",
+  "UPDATE",
+  "CONTRADICTING",
+] as const
+
+export type MarketChartAnnotationDirection =
+  (typeof MARKET_CHART_ANNOTATION_DIRECTIONS)[number]
+
+export type MarketChartAnnotationType = "HOT_EVENT" | "WARM_EPISODE"
+
+export type MarketChartAnnotationEvidenceRole =
+  (typeof MARKET_CHART_ANNOTATION_EVIDENCE_ROLES)[number]
 
 export interface MarketChartAnnotationEvidenceResponse {
   newsArticleId?: number | null
@@ -91,7 +108,7 @@ export interface MarketChartAnnotationEvidenceResponse {
   publisher?: string | null
   url?: string | null
   publishedAt?: string | null
-  evidenceRole?: string | null
+  evidenceRole?: MarketChartAnnotationEvidenceRole | null
   confidence?: number | null
   evidenceNote?: string | null
 }
@@ -410,7 +427,10 @@ export const marketChartAnnotationEvidenceResponseSchema = z.object({
   publisher: z.string().nullable().optional(),
   url: z.string().nullable().optional(),
   publishedAt: z.string().nullable().optional(),
-  evidenceRole: z.string().nullable().optional(),
+  evidenceRole: z
+    .enum(MARKET_CHART_ANNOTATION_EVIDENCE_ROLES)
+    .nullable()
+    .optional(),
   confidence: z.number().nullable().optional(),
   evidenceNote: z.string().nullable().optional(),
 }) satisfies z.ZodType<MarketChartAnnotationEvidenceResponse>
@@ -425,7 +445,10 @@ export const marketChartAnnotationOutcomeResponseSchema = z.object({
   evaluationTime: z.string().nullable().optional(),
   evaluationPrice: z.number().nullable().optional(),
   realizedReturn: z.number().nullable().optional(),
-  actualDirection: z.string().nullable().optional(),
+  actualDirection: z
+    .enum(MARKET_CHART_ANNOTATION_DIRECTIONS)
+    .nullable()
+    .optional(),
   alignment: z.string().nullable().optional(),
   evaluatedAt: z.string().nullable().optional(),
   summary: z.string().nullable().optional(),
@@ -433,7 +456,10 @@ export const marketChartAnnotationOutcomeResponseSchema = z.object({
 
 export const marketChartAnnotationReactionResponseSchema = z.object({
   id: z.number().nullable().optional(),
-  direction: z.string().nullable().optional(),
+  direction: z
+    .enum(MARKET_CHART_ANNOTATION_DIRECTIONS)
+    .nullable()
+    .optional(),
   timeHorizon: z.string().nullable().optional(),
   confidence: z.number().nullable().optional(),
   reasoning: z.string().nullable().optional(),
@@ -444,7 +470,10 @@ export const marketChartAnnotationReactionResponseSchema = z.object({
 export const marketChartHotEventAnnotationResponseSchema = z.object({
   eventId: z.number().nullable().optional(),
   severity: z.string().nullable().optional(),
-  direction: z.string().nullable().optional(),
+  direction: z
+    .enum(MARKET_CHART_ANNOTATION_DIRECTIONS)
+    .nullable()
+    .optional(),
   title: z.string().nullable().optional(),
   summary: z.string().nullable().optional(),
   confidence: z.number().nullable().optional(),
@@ -462,7 +491,10 @@ export const marketChartWarmEpisodeEventAnnotationResponseSchema = z.object({
   warmEpisodeEventId: z.number(),
   time: z.string(),
   severity: z.string().nullable().optional(),
-  direction: z.string().nullable().optional(),
+  direction: z
+    .enum(MARKET_CHART_ANNOTATION_DIRECTIONS)
+    .nullable()
+    .optional(),
   title: z.string().nullable().optional(),
   summary: z.string().nullable().optional(),
   confidence: z.number().nullable().optional(),
@@ -474,7 +506,10 @@ export const marketChartWarmEpisodeAnnotationResponseSchema = z.object({
   warmEpisodeId: z.number(),
   periodStart: z.string(),
   periodEnd: z.string(),
-  direction: z.string().nullable().optional(),
+  direction: z
+    .enum(MARKET_CHART_ANNOTATION_DIRECTIONS)
+    .nullable()
+    .optional(),
   summary: z.string().nullable().optional(),
   outcome: marketChartAnnotationOutcomeResponseSchema.nullable().optional(),
   events: z
