@@ -314,6 +314,7 @@ export function MarketChartCalendarEventList({
                 ) : null}
                 <LocalizedLink
                   href={`/economic-calendar/${event.id}`}
+                  prefetch={false}
                   className="w-fit rounded-sm text-xs font-medium text-primary underline-offset-4 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring/50"
                 >
                   {dictionary.common.detail}

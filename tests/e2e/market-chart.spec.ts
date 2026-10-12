@@ -201,6 +201,28 @@ test.describe("P0 market chart workbench", () => {
     ).toBeVisible()
   })
 
+  test("keeps the full calendar link available when upcoming is empty", async ({
+    page,
+    fixture,
+  }) => {
+    await fixture.setScenario(
+      "/market-charts/economic-calendar-events",
+      "calendar-empty",
+      "GET"
+    )
+    await page.goto("/vi/market-charts?assetId=101&timeframe=1h")
+    await page.getByRole("button", { name: /Mở lịch sắp diễn ra/ }).click()
+    await expect(
+      page.getByText("Chưa có sự kiện lịch kinh tế trong khoảng hiện tại.", {
+        exact: true,
+      })
+    ).toBeVisible()
+
+    await expect(
+      page.getByRole("link", { name: "Mở Lịch kinh tế đầy đủ" })
+    ).toHaveAttribute("href", "/vi/economic-calendar")
+  })
+
   test("shows calendar errors without discarding candle or annotation data", async ({
     page,
     fixture,
