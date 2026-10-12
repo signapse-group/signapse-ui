@@ -2,10 +2,10 @@
 
 import {
   cleanup,
+  fireEvent,
   render,
   screen,
   waitFor,
-  within,
 } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
@@ -96,13 +96,9 @@ describe("AccountProfileForm", () => {
 
     expect(screen.getByRole("textbox", { name: /Last name/ })).toBeRequired()
     expect(screen.getByRole("textbox", { name: /First name/ })).toBeRequired()
-    const dateOfBirth = screen.getByRole("button", {
-      name: /Date of birth.*required.*January 2, 1990/i,
-    })
-    expect(dateOfBirth).toHaveAttribute(
-      "aria-labelledby",
-      "account-date-of-birth-label account-date-of-birth-value"
-    )
+    const dateOfBirth = screen.getByLabelText(/Date of birth/i)
+    expect(dateOfBirth).toHaveAttribute("type", "date")
+    expect(dateOfBirth).toBeRequired()
     expect(screen.getByRole("textbox", { name: /Phone number/ })).toBeRequired()
     expect(
       screen.queryByRole("button", { name: /upload|delete|replace/i })
@@ -123,7 +119,7 @@ describe("AccountProfileForm", () => {
     )
   })
 
-  it("selects a localized calendar date and submits the canonical value", async () => {
+  it("keeps leap-day selection in the API date-time without shifting it", async () => {
     const user = userEvent.setup()
     vi.mocked(updateMyProfile).mockResolvedValue({
       success: true,
@@ -131,24 +127,9 @@ describe("AccountProfileForm", () => {
     })
     renderProfile()
 
-    await user.click(
-      screen.getByRole("button", {
-        name: /Date of birth.*January 2, 1990/i,
-      })
-    )
-    const dateCell = screen
-      .getAllByRole("gridcell", { name: "3" })
-      .find((element) => element.getAttribute("data-day") === "1990-01-03")
-    expect(dateCell).toBeDefined()
-    await user.click(within(dateCell!).getByRole("button"))
-
-    const dateOfBirth = screen.getByRole("button", {
-      name: /Date of birth.*January 3, 1990/i,
-    })
-    expect(dateOfBirth).toHaveAttribute("aria-expanded", "false")
-    expect(dateOfBirth).toHaveAccessibleName(
-      /Date of birth.*required.*January 3, 1990/i
-    )
+    const dateOfBirth = screen.getByLabelText(/Date of birth/i)
+    fireEvent.change(dateOfBirth, { target: { value: "2000-02-29" } })
+    expect(dateOfBirth).toHaveValue("2000-02-29")
 
     await user.click(
       screen.getByRole("button", { name: en.accountProfile.saveChanges })
@@ -158,9 +139,53 @@ describe("AccountProfileForm", () => {
     expect(updateMyProfile).toHaveBeenCalledWith({
       firstName: initialData.firstName,
       lastName: initialData.lastName,
-      birthday: "1990-01-03",
+      birthday: "2000-02-29T00:00:00.000Z",
       phone: initialData.phoneNumber,
     })
+  })
+
+  it("accepts a date before 1900 without an age cutoff", async () => {
+    const user = userEvent.setup()
+    vi.mocked(updateMyProfile).mockResolvedValue({
+      success: true,
+      data: {} as never,
+    })
+    renderProfile()
+
+    const dateOfBirth = screen.getByLabelText(/Date of birth/i)
+    fireEvent.change(dateOfBirth, { target: { value: "0001-01-01" } })
+    expect(dateOfBirth).toHaveValue("0001-01-01")
+    const save = screen.getByRole("button", {
+      name: en.accountProfile.saveChanges,
+    })
+    await waitFor(() => expect(save).toBeEnabled())
+
+    await user.click(save)
+    await waitFor(() => expect(updateMyProfile).toHaveBeenCalledTimes(1))
+    expect(updateMyProfile).toHaveBeenCalledWith({
+      firstName: initialData.firstName,
+      lastName: initialData.lastName,
+      birthday: "0001-01-01T00:00:00.000Z",
+      phone: initialData.phoneNumber,
+    })
+  })
+
+  it("rejects a future date before saving", async () => {
+    renderProfile()
+
+    const dateOfBirth = screen.getByLabelText(/Date of birth/i)
+    fireEvent.change(dateOfBirth, { target: { value: "2100-01-01" } })
+
+    await waitFor(() => {
+      expect(dateOfBirth).toHaveAttribute("aria-invalid", "true")
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        en.accountProfile.dateOfBirthInvalid
+      )
+    })
+    expect(
+      screen.getByRole("button", { name: en.accountProfile.saveChanges })
+    ).toBeDisabled()
+    expect(updateMyProfile).not.toHaveBeenCalled()
   })
 
   it("restores dirty edits without mutation and normalizes a successful update", async () => {
@@ -202,7 +227,7 @@ describe("AccountProfileForm", () => {
     expect(updateMyProfile).toHaveBeenCalledWith({
       firstName: "Ada Prime",
       lastName: initialData.lastName,
-      birthday: initialData.dateOfBirth,
+      birthday: `${initialData.dateOfBirth}T00:00:00.000Z`,
       phone: initialData.phoneNumber,
     })
     expect(save).toBeDisabled()

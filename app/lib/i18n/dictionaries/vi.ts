@@ -289,7 +289,6 @@ export const vi = {
     firstName: "Tên",
     lastName: "Họ",
     dateOfBirth: "Ngày sinh",
-    dateOfBirthPlaceholder: "Chọn ngày",
     requiredLabel: "bắt buộc",
     email: "Địa chỉ email",
     emailReadOnlyDescription: "Email đăng nhập không thể chỉnh sửa tại đây.",
