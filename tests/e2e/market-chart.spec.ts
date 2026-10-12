@@ -7,8 +7,14 @@ test.describe("P0 market chart workbench", () => {
   }) => {
     test.setTimeout(180_000)
     await fixture.setScenario("/market-charts/live", "reconnect", "GET")
+    await fixture.setScenario("/market-charts/candles", "empty", "GET")
     await page.goto("/vi/market-charts?assetId=101&timeframe=1h")
 
+    await expect(
+      page.getByText("Không có dữ liệu nến cho tài sản đã chọn", {
+        exact: true,
+      })
+    ).toBeVisible()
     await expect(page.locator("#market-chart-asset")).toBeVisible()
     await expect(page.getByRole("button", { name: "1 giờ" })).toHaveAttribute(
       "aria-pressed",
@@ -37,12 +43,16 @@ test.describe("P0 market chart workbench", () => {
     await expect(
       page.getByText("Giá hiện tại: 110,50", { exact: true })
     ).toBeVisible()
+    await expect(
+      page.getByText("Không có dữ liệu nến cho tài sản đã chọn", {
+        exact: true,
+      })
+    ).toBeVisible()
     const initialRequests = await fixture.state()
-    expect(
-      initialRequests.requests.filter(
-        (request) => request.path === "/market-charts/candles"
-      )
-    ).toHaveLength(1)
+    const candleRequestCount = initialRequests.requests.filter(
+      (request) => request.path === "/market-charts/candles"
+    ).length
+    expect(candleRequestCount).toBe(1)
 
     const fourHourButton = page.getByRole("button", { name: "4 giờ" })
     await expect(fourHourButton).toBeEnabled()

@@ -1665,7 +1665,10 @@ const server = createServer(async (request, response) => {
     sendJson(response, 504, errorPayload("Fixture request timed out", "FIXTURE_TIMEOUT"))
     return
   }
-  if (scenario === "outage") {
+  if (
+    scenario === "outage" &&
+    !(method === "GET" && url.pathname === "/market-charts/live")
+  ) {
     sendJson(response, 503, errorPayload("Fixture backend is unavailable", "FIXTURE_OUTAGE"))
     return
   }
