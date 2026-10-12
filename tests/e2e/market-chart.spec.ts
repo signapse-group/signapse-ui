@@ -275,6 +275,12 @@ test.describe("P0 market chart workbench", () => {
       "annotations-delayed-old-scope",
       "GET"
     )
+    const oldScopeRequestCount = (await fixture.state()).requests.filter(
+      (request) =>
+        request.method === "GET" &&
+        request.path === "/market-charts/annotations" &&
+        String(request.query).includes("assetId=101")
+    ).length
     await setAnnotationsVisible(page, false)
     const oldScopeResponse = page.waitForResponse((response) => {
       const request = response.request()
@@ -287,7 +293,23 @@ test.describe("P0 market chart workbench", () => {
         postData.includes('"assetId":101')
       )
     })
+    let oldScopeResponseCompleted = false
+    void oldScopeResponse.then(() => {
+      oldScopeResponseCompleted = true
+    })
     await setAnnotationsVisible(page, true)
+    await expect
+      .poll(
+        async () =>
+          (await fixture.state()).requests.filter(
+            (request) =>
+              request.method === "GET" &&
+              request.path === "/market-charts/annotations" &&
+              String(request.query).includes("assetId=101")
+          ).length,
+        { timeout: 10_000 }
+      )
+      .toBeGreaterThan(oldScopeRequestCount)
     await page.locator("#market-chart-asset").click()
     await page.getByRole("option", { name: "XAUUSD - Gold" }).click()
 
@@ -296,6 +318,7 @@ test.describe("P0 market chart workbench", () => {
       exact: true,
     })
     await expect(goldAnnotation).toBeVisible({ timeout: 15_000 })
+    expect(oldScopeResponseCompleted).toBe(false)
     await oldScopeResponse
     await expect(goldAnnotation).toBeVisible()
     await expect(

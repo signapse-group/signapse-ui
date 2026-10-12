@@ -1707,7 +1707,7 @@ const server = createServer(async (request, response) => {
     url.pathname === "/market-charts/annotations" &&
     Number(url.searchParams.get("assetId")) === 101
   ) {
-    await new Promise((resolve) => setTimeout(resolve, 750))
+    await new Promise((resolve) => setTimeout(resolve, 5000))
   }
   if (scenario === "validation-error") {
     sendJson(response, 422, errorPayload("Fixture validation failed", "FIXTURE_VALIDATION"))
