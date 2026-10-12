@@ -48,7 +48,8 @@ type FixtureController = {
       | "calendar-empty"
       | "calendar-upcoming"
       | "calendar-awaiting"
-      | "calendar-available",
+      | "calendar-available"
+      | "chart-later-page",
     method?: string
   ): Promise<void>
   state(): Promise<{

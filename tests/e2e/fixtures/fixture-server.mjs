@@ -1270,7 +1270,36 @@ function responseForRoute(state, method, pathname, url, body) {
   if (method === "GET" && pathname === "/graph-view") return graphView(state)
 
   if (method === "GET" && (pathname === "/watchlists" || pathname === "/watchlists/assets")) {
-    return slicePage(state.assets.map((item) => ({ ...item, lastModifiedDate: undefined })), url)
+    const assets = state.assets.map((item) => ({
+      ...item,
+      lastModifiedDate: undefined,
+    }))
+
+    if (
+      pathname === "/watchlists" &&
+      getScenario(state, method, pathname) === "chart-later-page"
+    ) {
+      assets.push(
+        ...Array.from({ length: 98 }, (_, index) => ({
+          id: 1000 + index,
+          assetId: 1000 + index,
+          assetName: `Fixture asset ${index + 1}`,
+          assetSymbol: `FX${index + 1}`,
+          assetType: "CRYPTO",
+          createdDate: NOW,
+        })),
+        {
+          id: 9999,
+          assetId: 9999,
+          assetName: "Later page asset",
+          assetSymbol: "LATE",
+          assetType: "CRYPTO",
+          createdDate: NOW,
+        }
+      )
+    }
+
+    return slicePage(assets, url)
   }
 
   if (method === "POST" && pathname === "/watchlists/assets") {
@@ -1656,7 +1685,12 @@ const server = createServer(async (request, response) => {
     return
   }
   if (scenario === "delayed") {
-    await new Promise((resolve) => setTimeout(resolve, 350))
+    await new Promise((resolve) =>
+      setTimeout(
+        resolve,
+        url.pathname === "/market-charts/candles" ? 1_500 : 350
+      )
+    )
   }
   if (scenario === "validation-error") {
     sendJson(response, 422, errorPayload("Fixture validation failed", "FIXTURE_VALIDATION"))

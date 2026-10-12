@@ -47,10 +47,20 @@ async function MarketChartsContent() {
   let watchlistError: string | null = null
 
   try {
-    const watchlistPage = await getWorkspaceWatchlistAssets(
+    const firstPage = await getWorkspaceWatchlistAssets(
       WATCHLIST_CHART_ASSET_SEARCH
     )
-    watchlistAssets = watchlistPage.content ?? []
+    const assets = [...(firstPage.content ?? [])]
+
+    for (let page = 1; page < firstPage.totalPages; page++) {
+      const nextPage = await getWorkspaceWatchlistAssets({
+        ...WATCHLIST_CHART_ASSET_SEARCH,
+        page,
+      })
+      assets.push(...(nextPage.content ?? []))
+    }
+
+    watchlistAssets = assets
   } catch (error: unknown) {
     watchlistError =
       error instanceof Error

@@ -1667,6 +1667,7 @@ export const vi = {
       assetLabel: "Tài sản watchlist",
       assetPlaceholder: "Chọn tài sản",
       timeframeLabel: "Khung thời gian",
+      timezoneLabel: "Múi giờ trình duyệt",
       annotationsLabel: "Sự kiện",
       annotationsAria: "Hiển thị sự kiện trên biểu đồ",
       calendarLabel: "Lịch kinh tế",

@@ -690,6 +690,7 @@ function MarketChartTopToolbar({
   calendarLayerEnabled,
   selectedCalendarImpacts,
   errors,
+  browserTimeZone,
   hasCandles,
   hasWatchlistAssets,
   isBusy,
@@ -723,6 +724,7 @@ function MarketChartTopToolbar({
   calendarLayerEnabled: boolean
   selectedCalendarImpacts: EconomicCalendarImpactLevel[]
   errors: FormErrors
+  browserTimeZone: string | null
   hasCandles: boolean
   hasWatchlistAssets: boolean
   isBusy: boolean
@@ -758,7 +760,7 @@ function MarketChartTopToolbar({
 }) {
   const { dictionary } = useLocalization()
   const hasChartData = phase === "success" && hasCandles
-  const controlsDisabled = isBusy || !!watchlistError || !hasWatchlistAssets
+  const controlsDisabled = !!watchlistError || !hasWatchlistAssets
   const chartCommandsDisabled = isBusy || !!watchlistError || !hasChartData
 
   function handleIndicatorToggle(
@@ -856,6 +858,11 @@ function MarketChartTopToolbar({
             </ToggleGroup>
             <FieldError>{errors.timeframe}</FieldError>
           </Field>
+
+          <p className="px-1 text-xs leading-5 text-muted-foreground">
+            {dictionary.marketCharts.controls.timezoneLabel}:{" "}
+            <span className="font-mono">{browserTimeZone}</span>
+          </p>
 
           <Separator orientation="vertical" className="hidden lg:block" />
 
@@ -1216,9 +1223,14 @@ function ChartSurface({
 }) {
   const localization = useLocalization()
   const { dictionary, formatMessage } = localization
+  const [browserTimeZone, setBrowserTimeZone] = useState<string | null>(null)
   const chartCanvasRef = useRef<MarketChartCanvasHandle | null>(null)
   const [activeOutcomeHoverRange, setActiveOutcomeHoverRange] =
     useState<MarketChartOutcomeHoverRange | null>(null)
+
+  useEffect(() => {
+    setBrowserTimeZone(Intl.DateTimeFormat().resolvedOptions().timeZone)
+  }, [])
 
   function handleAnnotationClose() {
     setActiveOutcomeHoverRange(null)
@@ -1481,6 +1493,7 @@ function ChartSurface({
           calendarLayerEnabled={calendarLayerEnabled}
           selectedCalendarImpacts={selectedCalendarImpacts}
           errors={errors}
+          browserTimeZone={browserTimeZone}
           hasCandles={hasCandles}
           hasWatchlistAssets={hasWatchlistAssets}
           isBusy={isBusy}
@@ -3678,6 +3691,9 @@ export function MarketChartWorkbench({
         }
 
         pendingRouteSelectionRef.current = null
+        if (findWatchlistAsset(watchlistAssets, assetId ?? "")) {
+          return
+        }
       }
 
       if (timeframeParam && !isMarketChartTimeframe(timeframeParam)) {
@@ -3783,6 +3799,14 @@ export function MarketChartWorkbench({
       "",
       `${pathname}?${createQueryString(nextSelection)}`
     )
+    const asset = findWatchlistAsset(watchlistAssets, nextSelection.assetId)
+    if (asset) {
+      void loadCandles(
+        asset,
+        nextSelection.timeframe,
+        annotationLayerEnabledRef.current
+      )
+    }
   }
 
   function handleAssetChange(assetId: string) {
@@ -3923,6 +3947,22 @@ export function MarketChartWorkbench({
   async function handleLoadOlderCandles(
     request: MarketChartCandleRequest
   ): Promise<ActionResult<MarketChartLoadedData>> {
+    if (
+      phase !== "success" ||
+      request.assetId !== selectedAssetId ||
+      request.timeframe !== selection.timeframe
+    ) {
+      return {
+        success: true,
+        data: {
+          annotations: [],
+          candles: [],
+          economicCalendarEvents: [],
+          from: request.to,
+        },
+      }
+    }
+
     const result = await getMarketChartCandles(request)
 
     if (!result.success) {
