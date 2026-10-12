@@ -422,7 +422,7 @@ describe("market-chart calendar lookahead helpers", () => {
     impact: "HIGH",
   })
 
-  it("builds a seven-day half-open future request", () => {
+  it("builds a seven-day upcoming request with the waiting overlap", () => {
     expect(
       createMarketChartFutureCalendarRequest({
         assetId: 7,
@@ -431,7 +431,7 @@ describe("market-chart calendar lookahead helpers", () => {
       })
     ).toEqual({
       assetId: 7,
-      from: "2026-09-08T10:00:00.000Z",
+      from: "2026-09-08T09:00:00.000Z",
       to: "2026-09-15T10:00:00.000Z",
       impact: ["HIGH", "MEDIUM"],
     })
@@ -456,12 +456,35 @@ describe("market-chart calendar lookahead helpers", () => {
   })
 
   it("classifies upcoming, awaiting, published, expired, and invalid events", () => {
+    const eventAtSchedule = event(6, new Date(currentTimestamp).toISOString())
+
     expect(
       getMarketChartCalendarEventState(
         event(1, "2026-09-08T11:00:00.000Z"),
         currentTimestamp
       )
     ).toBe("UPCOMING")
+    expect(
+      getMarketChartCalendarEventState(eventAtSchedule, currentTimestamp)
+    ).toBe("AWAITING_PUBLICATION")
+    expect(
+      getAwaitingMarketChartCalendarEvents({
+        currentTimestamp,
+        events: [eventAtSchedule],
+      })
+    ).toEqual([eventAtSchedule])
+    expect(
+      getMarketChartCalendarEventState(
+        eventAtSchedule,
+        currentTimestamp + MARKET_CHART_CALENDAR_WAITING_WINDOW_MS - 1
+      )
+    ).toBe("AWAITING_PUBLICATION")
+    expect(
+      getMarketChartCalendarEventState(
+        eventAtSchedule,
+        currentTimestamp + MARKET_CHART_CALENDAR_WAITING_WINDOW_MS
+      )
+    ).toBe("EXPIRED")
     expect(
       getMarketChartCalendarEventState(
         event(2, "2026-09-08T09:30:00.000Z"),
