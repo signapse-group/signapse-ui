@@ -16,6 +16,8 @@ jobs:
   check:
     if: github.event_name != 'workflow_dispatch' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    container:
+      image: node:22.11.0-bookworm@sha256:ec878c763e9fad09d22aae86e2edcb7a05b397dfe8411c16e2b90158d595e2ce
     timeout-minutes: 30
     env:
       NEXT_TELEMETRY_DISABLED: "1"

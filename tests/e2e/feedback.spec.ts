@@ -108,19 +108,30 @@ test.describe("P0 feedback HTTP integration", () => {
   test("loads personal detail and withdraws a pending submission", async ({
     page,
   }) => {
+    // Preload the destination route so its first compile does not race the action.
+    await page.goto("/vi/feedback")
     await page.goto("/vi/feedback/1")
     await expect(page.locator("h1")).toHaveText("Chi tiết phản hồi")
     await expect(
       page.getByRole("complementary").getByText("Đã tiếp nhận", { exact: true })
     ).toBeVisible()
-    await page
-      .getByRole("button", { name: "Rút phản hồi", exact: true })
-      .click()
-    await page
-      .getByRole("alertdialog")
-      .getByRole("button", { name: "Rút phản hồi", exact: true })
-      .click()
-    await expect(page).toHaveURL(/\/vi\/feedback$/)
+    const withdrawTrigger = page.getByRole("button", {
+      name: "Rút phản hồi",
+      exact: true,
+    })
+    await waitForClientHandler(withdrawTrigger)
+    await withdrawTrigger.click()
+
+    const withdrawDialog = page.getByRole("alertdialog")
+    await expect(withdrawDialog).toBeVisible()
+    const confirmWithdraw = withdrawDialog.getByRole("button", {
+      name: "Rút phản hồi",
+      exact: true,
+    })
+    await waitForClientHandler(confirmWithdraw)
+    await confirmWithdraw.click()
+    await expect(page.getByText("Đã rút phản hồi.", { exact: true })).toBeVisible()
+    await expect(page).toHaveURL(/\/vi\/feedback$/, { timeout: 30_000 })
     await expect(
       page.getByRole("link", { name: /Biểu đồ không giữ bộ lọc/ })
     ).toHaveCount(0)
