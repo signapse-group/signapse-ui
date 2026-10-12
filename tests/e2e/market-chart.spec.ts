@@ -246,7 +246,8 @@ test.describe("P0 market chart workbench", () => {
         request.method() === "POST" &&
         new URL(response.url()).pathname.endsWith("/market-charts") &&
         postData.includes('"from"') &&
-        postData.includes('"assetId":101')
+        postData.includes('"assetId":101') &&
+        !postData.includes('"impact"')
       )
     })
     await setAnnotationsVisible(page, true)
@@ -290,7 +291,8 @@ test.describe("P0 market chart workbench", () => {
         request.method() === "POST" &&
         new URL(response.url()).pathname.endsWith("/market-charts") &&
         postData.includes('"from"') &&
-        postData.includes('"assetId":101')
+        postData.includes('"assetId":101') &&
+        !postData.includes('"impact"')
       )
     })
     let oldScopeResponseCompleted = false
@@ -320,7 +322,6 @@ test.describe("P0 market chart workbench", () => {
     expect(oldScopeResponseCompleted).toBe(false)
     await oldScopeResponse
     await expect(goldAnnotation).toBeVisible({ timeout: 15_000 })
-    await expect(goldAnnotation).toBeVisible()
     await expect(
       page.getByRole("button", {
         name: "Mở sự kiện Central bank signals a slower easing path",

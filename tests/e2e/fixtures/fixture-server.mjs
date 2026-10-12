@@ -1707,6 +1707,8 @@ const server = createServer(async (request, response) => {
     url.pathname === "/market-charts/annotations" &&
     Number(url.searchParams.get("assetId")) === 101
   ) {
+    // Hold one old-scope response; chart history paging can request annotations repeatedly.
+    state.scenarios[`GET ${url.pathname}`] = "success"
     await new Promise((resolve) => setTimeout(resolve, 5000))
   }
   if (scenario === "validation-error") {
