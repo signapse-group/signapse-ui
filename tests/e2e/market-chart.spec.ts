@@ -3,13 +3,19 @@ import type { Page } from "@playwright/test"
 import { expect, test } from "./fixtures"
 
 async function setAnnotationsVisible(page: Page, visible: boolean) {
-  const annotationSwitch = page.locator(
-    "#market-chart-event-settings-annotations"
-  )
+  const annotationSwitch = page.getByRole("switch", {
+    name: "Sự kiện",
+    exact: true,
+  })
+  const settingsButton = page.getByRole("button", {
+    name: "Mở tùy chỉnh sự kiện",
+  })
+  const openedSettings = !(await annotationSwitch.isVisible())
 
-  if (!(await annotationSwitch.isVisible())) {
-    await page.getByRole("button", { name: "Mở tùy chỉnh sự kiện" }).click()
+  if (openedSettings) {
+    await settingsButton.click()
   }
+  await expect(annotationSwitch).toBeVisible()
 
   if (
     (await annotationSwitch.getAttribute("aria-checked")) !== String(visible)
@@ -21,6 +27,11 @@ async function setAnnotationsVisible(page: Page, visible: boolean) {
     "aria-checked",
     String(visible)
   )
+
+  if (openedSettings) {
+    await settingsButton.click()
+    await expect(annotationSwitch).toBeHidden()
+  }
 }
 
 test.describe("P0 market chart workbench", () => {
@@ -149,6 +160,11 @@ test.describe("P0 market chart workbench", () => {
     fixture,
   }) => {
     await fixture.setScenario(
+      "/market-charts/candles",
+      "full-then-empty",
+      "GET"
+    )
+    await fixture.setScenario(
       "/market-charts/annotations",
       "annotations-many",
       "GET"
@@ -181,10 +197,10 @@ test.describe("P0 market chart workbench", () => {
     ).toBeVisible()
 
     await page.getByRole("button", { name: "Đóng", exact: true }).click()
-    await annotationMarker.click()
     const finalEvidenceAction = page
       .getByRole("button", { name: "Xem bài viết", exact: true })
       .last()
+    await expect(finalEvidenceAction).toBeVisible()
     await finalEvidenceAction.scrollIntoViewIfNeeded()
     await finalEvidenceAction.click()
     await expect(
@@ -196,6 +212,11 @@ test.describe("P0 market chart workbench", () => {
     page,
     fixture,
   }) => {
+    await fixture.setScenario(
+      "/market-charts/candles",
+      "full-then-empty",
+      "GET"
+    )
     await page.goto("/vi/market-charts?assetId=101&timeframe=1h")
 
     const annotationMarker = page.getByRole("button", {
@@ -229,6 +250,11 @@ test.describe("P0 market chart workbench", () => {
     page,
     fixture,
   }) => {
+    await fixture.setScenario(
+      "/market-charts/candles",
+      "full-then-empty",
+      "GET"
+    )
     await page.goto("/vi/market-charts?assetId=101&timeframe=1h")
     await expect(
       page.getByRole("button", {
@@ -245,10 +271,13 @@ test.describe("P0 market chart workbench", () => {
     await setAnnotationsVisible(page, false)
     const oldScopeResponse = page.waitForResponse((response) => {
       const request = response.request()
+      const postData = request.postData() ?? ""
 
       return (
         request.method() === "POST" &&
-        new URL(response.url()).pathname.endsWith("/market-charts")
+        new URL(response.url()).pathname.endsWith("/market-charts") &&
+        postData.includes('"from"') &&
+        postData.includes('"assetId":101')
       )
     })
     await setAnnotationsVisible(page, true)
@@ -274,6 +303,11 @@ test.describe("P0 market chart workbench", () => {
     page,
     fixture,
   }) => {
+    await fixture.setScenario(
+      "/market-charts/candles",
+      "full-then-empty",
+      "GET"
+    )
     await fixture.setPermissions(["market-chart:read"])
     await page.goto("/vi/market-charts?assetId=101&timeframe=1h")
 
