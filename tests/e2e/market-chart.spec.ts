@@ -326,13 +326,13 @@ test.describe("P0 market chart workbench", () => {
     await annotationMarker.click()
 
     await expect(
-      page.getByText("Fixture market update", { exact: true })
+      page.getByText("Fixture market update", { exact: true }).first()
     ).toBeVisible()
     await expect(
-      page.getByText("Không có quyền xem sự kiện", { exact: true })
+      page.getByText("Không có quyền xem sự kiện", { exact: true }).first()
     ).toBeVisible()
     await expect(
-      page.getByText("Không có quyền xem bài viết", { exact: true })
+      page.getByText("Không có quyền xem bài viết", { exact: true }).first()
     ).toBeVisible()
     await expect(annotationMarker).toBeVisible()
     await expect(
