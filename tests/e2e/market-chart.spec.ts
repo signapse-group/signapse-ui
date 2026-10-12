@@ -198,11 +198,16 @@ test.describe("P0 market chart workbench", () => {
 
     await page.getByRole("button", { name: "Đóng", exact: true }).click()
     const finalEvidenceAction = page
-      .getByRole("button", { name: "Xem bài viết", exact: true })
+      .getByRole("link", { name: "Xem bài viết", exact: true })
       .last()
     await expect(finalEvidenceAction).toBeVisible()
+    await expect(finalEvidenceAction).toHaveAttribute(
+      "href",
+      "/vi/news-articles/71"
+    )
     await finalEvidenceAction.scrollIntoViewIfNeeded()
     await finalEvidenceAction.click()
+    await expect(page).toHaveURL(/\/vi\/news-articles\/71$/)
     await expect(
       page.getByRole("heading", { name: "Fixture market update", exact: true })
     ).toBeVisible()
