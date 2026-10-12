@@ -325,14 +325,16 @@ test.describe("P0 market chart workbench", () => {
     await expect(annotationMarker).toBeVisible()
     await annotationMarker.click()
 
+    const annotationDialog = page.getByRole("dialog", { name: "1 sự kiện" })
+    await expect(annotationDialog).toBeVisible()
     await expect(
-      page.getByText("Fixture market update", { exact: true }).first()
+      annotationDialog.getByText("Fixture market update", { exact: true })
     ).toBeVisible()
     await expect(
-      page.getByText("Không có quyền xem sự kiện", { exact: true }).first()
+      annotationDialog.getByText("Không có quyền xem sự kiện", { exact: true })
     ).toBeVisible()
     await expect(
-      page.getByText("Không có quyền xem bài viết", { exact: true }).first()
+      annotationDialog.getByText("Không có quyền xem bài viết", { exact: true })
     ).toBeVisible()
     await expect(annotationMarker).toBeVisible()
     await expect(
