@@ -3588,7 +3588,7 @@ export function MarketChartWorkbench({
           transportState: null,
         }))
       },
-      onTransportError() {
+      onTransportError(state) {
         if (!active) {
           return
         }
@@ -3596,7 +3596,7 @@ export function MarketChartWorkbench({
         setLiveState((current) => ({
           ...current,
           status: null,
-          transportState: "RECONNECTING",
+          transportState: state,
         }))
       },
     })

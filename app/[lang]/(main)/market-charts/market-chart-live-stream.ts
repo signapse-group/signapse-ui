@@ -22,7 +22,7 @@ type MarketChartLiveStreamHandlers = {
   onPrice: (value: MarketChartLiveQuoteResponse) => void
   onSnapshot: (value: MarketChartLiveSnapshotResponse) => void
   onStatus: (value: MarketChartLiveStatusResponse) => void
-  onTransportError: () => void
+  onTransportError: (state: "RECONNECTING" | "ERROR") => void
 }
 
 type OpenMarketChartLiveStreamParams = {
@@ -154,15 +154,25 @@ export function createMarketChartLiveStreamOpener(
       handleEvent(event, marketChartLiveStatusResponseSchema, onStatus)
     })
     source.addEventListener("error", (event) => {
+      if (explicitlyClosed) {
+        return
+      }
+
       if (event instanceof MessageEvent && event.data) {
         handleEvent(event, marketChartLiveErrorResponseSchema, onErrorEvent)
         return
       }
 
-      if (!explicitlyClosed) {
+      if (source.readyState === EventSource.CONNECTING) {
         beginReconnectAttempt()
+        onTransportError("RECONNECTING")
+      } else {
+        connectMeasurement?.finish("network_error")
+        firstDataMeasurement?.finish("network_error")
+        connectMeasurement = null
+        firstDataMeasurement = null
+        onTransportError("ERROR")
       }
-      onTransportError()
     })
 
     return {

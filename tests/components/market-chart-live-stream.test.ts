@@ -13,9 +13,12 @@ import type { MarketChartTimeframe } from "@/app/lib/market-charts/definitions"
 type Listener = (event: Event) => void
 
 class FakeEventSource {
+  static readonly CONNECTING = 0
+  static readonly CLOSED = 2
   static current: FakeEventSource | null = null
   readonly listeners = new Map<string, Listener[]>()
   readonly url: string
+  readyState = FakeEventSource.CONNECTING
   close = vi.fn()
 
   constructor(url: string | URL) {
@@ -68,7 +71,7 @@ function createFixture(timeframe: MarketChartTimeframe = "1h") {
   })
   const source = FakeEventSource.current!
 
-  return { finishes, handlers, source, stream }
+  return { finishes, handlers, source, start, stream }
 }
 
 function message(data: unknown) {
@@ -222,7 +225,9 @@ describe("Market Chart live stream observability", () => {
     fixture.source.emit("open")
     fixture.source.emit("price", message({ ...price, price: 101 }))
 
-    expect(fixture.handlers.onTransportError).toHaveBeenCalledOnce()
+    expect(fixture.handlers.onTransportError).toHaveBeenCalledWith(
+      "RECONNECTING"
+    )
     expect(fixture.finishes.slice(-2)).toEqual([
       expect.objectContaining({
         operation: "signapse.market_chart.live_connect",
@@ -239,6 +244,25 @@ describe("Market Chart live stream observability", () => {
           "connection.kind": "reconnect",
         }),
       }),
+    ])
+  })
+
+  it("reports a terminal transport error without starting reconnect measurements", () => {
+    const fixture = createFixture()
+
+    fixture.source.readyState = FakeEventSource.CLOSED
+    fixture.source.emit("error")
+
+    expect(fixture.handlers.onTransportError).toHaveBeenCalledWith("ERROR")
+    expect(
+      fixture.start.mock.calls.map(([, attributes]) => attributes)
+    ).toEqual([
+      { feature: "market_chart", "connection.kind": "initial" },
+      { feature: "market_chart", "connection.kind": "initial" },
+    ])
+    expect(fixture.finishes.map(({ outcome }) => outcome)).toEqual([
+      "network_error",
+      "network_error",
     ])
   })
 

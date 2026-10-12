@@ -183,6 +183,28 @@ test.describe("P0 market chart workbench", () => {
     await expect(page.getByText(/^Cập nhật /)).toHaveCount(0)
   })
 
+  test("shows a provider 503 before SSE opens as a terminal live error", async ({
+    page,
+    fixture,
+  }) => {
+    await fixture.setScenario(
+      "/market-charts/live",
+      "preopen-unavailable",
+      "GET"
+    )
+    await page.goto("/vi/market-charts?assetId=101&timeframe=1h")
+
+    await expect(
+      page.getByText("Lỗi dữ liệu trực tiếp", { exact: true })
+    ).toBeVisible()
+    await expect(
+      page.getByText("Đang kết nối lại", { exact: true })
+    ).toHaveCount(0)
+    await expect
+      .poll(async () => (await fixture.state()).streamConnections)
+      .toBe(0)
+  })
+
   test("shows the upcoming calendar list through the next-event summary", async ({
     page,
     fixture,

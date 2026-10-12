@@ -1666,6 +1666,21 @@ const server = createServer(async (request, response) => {
     return
   }
   if (
+    scenario === "preopen-unavailable" &&
+    method === "GET" &&
+    url.pathname === "/market-charts/live"
+  ) {
+    sendJson(
+      response,
+      503,
+      errorPayload(
+        "Fixture provider is unavailable",
+        "FIXTURE_PROVIDER_UNAVAILABLE"
+      )
+    )
+    return
+  }
+  if (
     scenario === "outage" &&
     !(method === "GET" && url.pathname === "/market-charts/live")
   ) {
