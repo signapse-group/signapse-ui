@@ -128,7 +128,7 @@ test.describe("P0 market chart workbench", () => {
     page,
     fixture,
   }) => {
-    await page.clock.install({ time: new Date(MARKET_CHART_FIXTURE_NOW) })
+    await page.clock.setFixedTime(new Date(MARKET_CHART_FIXTURE_NOW))
     await fixture.setPermissions(["market-chart:read", "watchlist:read"])
     await fixture.setScenario(
       "/market-charts/economic-calendar-events",
