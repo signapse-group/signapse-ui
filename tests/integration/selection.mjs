@@ -177,13 +177,19 @@ export function buildPlaywrightSelectionArgs(selected, suiteRoot) {
 export const integrationRunnerVersion = "2"
 
 export function readSourceIdentity(root) {
-  const revisionResult = spawnSync("git", ["-C", root, "rev-parse", "HEAD"], {
+  const gitArgs = [
+    "-c",
+    `safe.directory=${resolve(root).replaceAll("\\", "/")}`,
+    "-C",
+    root,
+  ]
+  const revisionResult = spawnSync("git", [...gitArgs, "rev-parse", "HEAD"], {
     encoding: "utf8",
     stdio: ["ignore", "pipe", "ignore"],
   })
   const statusResult = spawnSync(
     "git",
-    ["-C", root, "status", "--porcelain", "--untracked-files=normal"],
+    [...gitArgs, "status", "--porcelain", "--untracked-files=normal"],
     { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }
   )
   if (
