@@ -3697,9 +3697,6 @@ export function MarketChartWorkbench({
           return
         }
 
-        if (findWatchlistAsset(watchlistAssets, assetId ?? "")) {
-          return
-        }
         pendingRouteSelectionRef.current = null
       }
 
@@ -3809,18 +3806,6 @@ export function MarketChartWorkbench({
       "",
       `${pathname}?${createQueryString(nextSelection)}`
     )
-    const asset = findWatchlistAsset(watchlistAssets, nextSelection.assetId)
-    if (asset) {
-      void loadCandles(
-        asset,
-        nextSelection.timeframe,
-        annotationLayerEnabledRef.current
-      ).finally(() => {
-        if (pendingRouteSelectionRef.current === nextSelection) {
-          pendingRouteSelectionRef.current = null
-        }
-      })
-    }
   }
 
   function handleAssetChange(assetId: string) {
