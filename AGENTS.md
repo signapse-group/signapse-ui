@@ -40,6 +40,8 @@ For direct work, complete the requested output with applicable verification; tra
 
 ## Architecture
 
+For marketing implementation documentation and current landing ownership, use the [signapse-landing documentation index](../signapse-landing/docs/README.md).
+
 Signapse UI is an admin dashboard built with **Next.js 16 App Router** for an AI-integrated trading signal system.
 
 - **Stack:** Clerk, shadcn/ui, Tailwind CSS v4, Lucide icons, Geist, Geist Mono, and Zod v4.
