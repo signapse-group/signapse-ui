@@ -178,12 +178,12 @@ test.describe("P0 market chart workbench", () => {
     await annotationMarker.click()
     await expect(
       page.getByRole("button", {
-        name: /^Mở sự kiện Fixture annotation \d+$/,
+        name: /^Fixture annotation \d+$/,
       })
     ).toHaveCount(125)
 
     const finalEvent = page.getByRole("button", {
-      name: "Mở sự kiện Fixture annotation 125",
+      name: "Fixture annotation 125",
       exact: true,
     })
     await expect(finalEvent).toBeVisible()
@@ -237,9 +237,20 @@ test.describe("P0 market chart workbench", () => {
     ).toHaveCount(0)
 
     await fixture.setScenario("/market-charts/annotations", "success", "GET")
-    await page
-      .getByRole("button", { name: "Tải lại dữ liệu mới nhất", exact: true })
-      .click()
+    await setAnnotationsVisible(page, false)
+    const successfulRefresh = page.waitForResponse((response) => {
+      const request = response.request()
+      const postData = request.postData() ?? ""
+
+      return (
+        request.method() === "POST" &&
+        new URL(response.url()).pathname.endsWith("/market-charts") &&
+        postData.includes('"from"') &&
+        postData.includes('"assetId":101')
+      )
+    })
+    await setAnnotationsVisible(page, true)
+    await successfulRefresh
     await expect(annotationMarker).toBeVisible()
     await expect(
       page.getByText("Không thể tải chú thích biểu đồ.", { exact: true })
@@ -250,11 +261,7 @@ test.describe("P0 market chart workbench", () => {
     page,
     fixture,
   }) => {
-    await fixture.setScenario(
-      "/market-charts/candles",
-      "full-then-empty",
-      "GET"
-    )
+    await fixture.setScenario("/market-charts/candles", "success", "GET")
     await page.goto("/vi/market-charts?assetId=101&timeframe=1h")
     await expect(
       page.getByRole("button", {
@@ -308,7 +315,7 @@ test.describe("P0 market chart workbench", () => {
       "full-then-empty",
       "GET"
     )
-    await fixture.setPermissions(["market-chart:read"])
+    await fixture.setPermissions(["market-chart:read", "watchlist:read"])
     await page.goto("/vi/market-charts?assetId=101&timeframe=1h")
 
     const annotationMarker = page.getByRole("button", {
@@ -327,9 +334,10 @@ test.describe("P0 market chart workbench", () => {
     await expect(
       page.getByText("Không có quyền xem bài viết", { exact: true })
     ).toBeVisible()
+    await expect(annotationMarker).toBeVisible()
     await expect(
       page.getByRole("button", {
-        name: "Mở sự kiện Central bank signals a slower easing path",
+        name: "Central bank signals a slower easing path",
         exact: true,
       })
     ).toHaveCount(0)
