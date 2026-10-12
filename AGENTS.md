@@ -24,7 +24,7 @@ When framework versions, the UI preset, CI, or repository ownership change, refr
 
 ## Dev handoff boundary
 
-For direct work, complete the requested output with applicable verification; tracker/review/PR/CI workflow steps activate only when assigned. For an activated workflow, apply the repository's [local handoff and live acceptance policy](.agents/skills/agent-execution-policy/references/execution-policy.md#local-handoff-and-live-acceptance). Pending QA, merge/deploy of this contribution or owner acceptance does not itself stop dev work. Missing behavior, required checks or necessary producer/input access remains a contribution gap; keep doing meaningful independent work.
+For direct work, complete the requested output with applicable verification; tracker/review/PR/CI workflow steps activate only when assigned. For an activated workflow, apply the repository's [local handoff and live acceptance policy](.agents/skills/agent-execution-policy/references/execution-policy.md#local-handoff-and-live-acceptance). Apply its phase-specific handoff and the [delivery runbook](docs/delivery.md): Implement hands off before its deployment; the assigned Review session completes merge/delivery/Done only after the gates. Pending QA/parent acceptance alone does not stop an otherwise complete contribution. Missing behavior, required checks or necessary producer/input access remains a contribution gap; keep doing meaningful independent work.
 
 ## Commands
 
@@ -44,7 +44,7 @@ Signapse UI is an admin dashboard built with **Next.js 16 App Router** for an AI
 
 - **Stack:** Clerk, shadcn/ui, Tailwind CSS v4, Lucide icons, Geist, Geist Mono, and Zod v4.
 - **Route groups:** `app/[lang]/(main)/` is the protected app, `app/[lang]/(auth)/` is Clerk auth, and `app/api/[feature]/action.ts` contains server actions by feature.
-- **Public scope:** Only localized `sign-in/**` pages are public. Locale roots redirect to the protected dashboard. Marketing landing and public articles are maintained in a separate repository; do not restore them or standalone editor/dashboard samples here.
+- **Public scope:** Localized `sign-in/**` pages and the read-only `/api/build-revision` operational endpoint are public. Locale roots redirect to the protected dashboard. Marketing landing and public articles are maintained in a separate repository; do not restore them or standalone editor/dashboard samples here.
 
 ## Feature Structure
 

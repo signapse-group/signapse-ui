@@ -48,17 +48,9 @@ Verify native Subtask metadata/parent and exactly one recognized route. Preserve
 business labels; title prefix or assignee does not determine repository routing.
 Keep malformed or missing profiles unready instead of widening selection.
 
-Map verified states to `dispatch_states: [Ready, Progress]`,
-`active_states: [Ready, Progress]`, `review_state: In Review`,
-`terminal_states: [Done]`. Open, In Review and Blocked remain outside execution;
-Done is terminal. Progress discovery recovers authorized work after restart/review/
-blocker resume, reusing its output. Coordinator owns Open → Ready, Blocked resume
-to the actual previous status, Done and parent acceptance.
+Apply the [planning FE/landing profile](https://github.com/signapse-group/signapse-planing/blob/main/workflow/project-execution-workflow.md#profile-fe-và-landing) and [repository phase procedure](../agent-execution-policy/references/execution-policy.md#execution-and-review). Configure dispatch/active `[Ready, Progress, In Review]`, review `In Review`, additional session boundary `[Ready]`, terminal `[Done]`. Separate Survey, Implement and Review prompts and permissions; coordinator keeps initial dispatch, Blocked resume and parent acceptance. No-PR operations are outside this profile.
 
-Confirm dependency admission for Ready and Progress: native blockers must be in
-Jira category done; unreadable blockers and Resolved in an active category do not
-qualify. Source/profile readiness does not establish installed-worker support or
-authorize live dispatch. Record a gap if Jira/runtime support differs from the profile.
+Verify native dependency admission and installed support for fresh phase sessions in the same workspace, with the old claim retained until exit. Missing support remains an activation gap, not permission to widen selection. Open/Blocked/Done remain outside execution; restart/review/resume keep output/history.
 
 Use repository/tracker/host evidence for names, commands, CI, delivery conditions
 and owners. Derive bootstrap from committed package/lock files and use established
@@ -107,15 +99,11 @@ with source-code impact analysis rather than a maintained mapping document.
 ## Draft before writing
 
 Summarize verified facts, gaps and assumptions and show the complete proposed
-`WORKFLOW.md` when drafting an unapproved configuration. Its prompt reads repository
-instructions, loads local policy and invokes implement, supplies immutable issue
-ID/type/parent context, and rereads live contracts through jira_rest. State granted
-operations and the non-terminal In Review boundary. Credential values stay in host
+`WORKFLOW.md` when drafting an unapproved configuration. Its prompt reads repository instructions/local policy, invokes the skill for the rendered phase, supplies ID/type/parent context and rereads live contracts through jira_rest. Keep phase grants/stop guards explicit. Credential values stay in host
 environment variables/helpers.
 
 Before showing the `WORKFLOW.md`, summarize the proposed mapping as `dispatch`, `active`,
-`review handoff`, and `terminal`. The review handoff must be non-terminal and excluded from
-`active_states` when Symphony should stop while a human owns the next action.
+`review`, `session boundaries` and `terminal`. In Review is active for autonomous Review/delivery in this profile; do not restore the historical human-wait mapping.
 
 Obtain acceptance before writing a new proposal; an explicit request to implement
 an already-approved plan supplies that acceptance. Do not ask again for agreed

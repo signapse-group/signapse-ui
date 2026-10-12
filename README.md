@@ -7,7 +7,8 @@ A modern Next.js application with shadcn/ui, featuring real-time market data vis
 This repository serves the authenticated Signapse dashboard. The marketing landing
 and public articles are maintained and deployed in a separate repository.
 `/` negotiates the locale, and `/[lang]` enters the protected dashboard. Anonymous
-visitors are redirected to the localized sign-in page; only `sign-in/**` is public.
+visitors are redirected to the localized sign-in page; `sign-in/**` and the read-only
+`/api/build-revision` deployment identity endpoint are public.
 The application emits `noindex, nofollow` metadata.
 
 The editor and dashboard prototype routes have been retired. The shared Plate
@@ -24,14 +25,15 @@ defines hierarchy, routing and human acceptance. This repository's
 
 [Repository-owned execution skills](.agents/skills/agent-execution-policy/SKILL.md)
 are committed under `.agents/skills` and available after clone, independently of
-Symphony releases. Agents hand off at `In Review`; the coordinator completes
-`Done` after the applicable review, merge and deployment/evidence gates. A PR's
+Symphony releases. The dev-with-PR profile uses separate Ready survey, Progress implementation and In Review independent review/delivery sessions. The reviewer completes Done after applicable gates under [delivery](docs/delivery.md); coordinator retains initial dispatch, Blocked resume and parent acceptance. A PR's
 Jira key in its title links it to the Subtask's Development panel.
 
 Configuration changes require operator verification before activation: confirm
 the installed Symphony revision, worker credentials/tools and a separate FE
 workspace root; drain the previous worker, reconcile existing work and verify a
-coordinator-authorized canary. See the [adaptation plan](docs/jira-workflow-adaptation-plan.md).
+coordinator-authorized canary assigned after preparation and Symphony deployment.
+See [delivery prerequisites](docs/delivery.md#ci-and-vercel-setup) and the
+[current planning cutover](https://github.com/signapse-group/signapse-planing/blob/main/workflow/project-execution-workflow.md#preflight-và-cutover-fe-và-landing).
 
 ## Local Development
 

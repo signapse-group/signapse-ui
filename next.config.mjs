@@ -1,5 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  env: {
+    SIGNAPSE_BUILD_REVISION:
+      process.env.SIGNAPSE_BUILD_REVISION ??
+      process.env.VERCEL_GIT_COMMIT_SHA ??
+      "",
+  },
   images: {
     remotePatterns: [
       {

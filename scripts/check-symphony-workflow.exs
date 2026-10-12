@@ -30,9 +30,10 @@ assert Enum.sort(settings.tracker.provider["routing_labels"]) ==
          )
 
 assert settings.tracker.required_labels == ["route-frontend"]
-assert settings.tracker.dispatch_states == ["Ready", "Progress"]
-assert settings.tracker.active_states == ["Ready", "Progress"]
+assert settings.tracker.dispatch_states == ["Ready", "Progress", "In Review"]
+assert settings.tracker.active_states == ["Ready", "Progress", "In Review"]
 assert settings.tracker.review_state == "In Review"
+assert settings.tracker.session_boundary_states == ["Ready"]
 assert settings.tracker.terminal_states == ["Done"]
 
 assert String.contains?(
@@ -76,7 +77,7 @@ assert Client.normalize_issue_for_test(
          settings.tracker
        ) == nil
 
-for state <- ["Ready", "Progress"],
+for state <- ["Ready", "Progress", "In Review"],
     {status, category, expected} <-
       [{"Closed", "done", true}, {"Resolved", "indeterminate", false}, {"Unknown", nil, false}] do
   blocker = %{
@@ -100,23 +101,46 @@ refute Client.normalize_issue_for_test(
          settings.tracker
        ).admission_ready
 
-for attempt <- [nil, 2],
-    description <- [nil, "Offline accepted contract"],
-    native_ref <- [nil, issue.native_ref] do
-  rendered =
-    PromptBuilder.build_prompt(%{issue | description: description, native_ref: native_ref},
-      attempt: attempt
-    )
+fixtures =
+  for state <- ["Ready", "Progress", "In Review", "Open", "Blocked", "Done"],
+      attempt <- [nil, 2],
+      description <- [nil, "", "Offline accepted contract"],
+      native_ref <- [nil, %{issue_type: nil, parent: nil}, issue.native_ref] do
+    candidate = %{issue | state: state, description: description, native_ref: native_ref}
+    rendered = PromptBuilder.build_prompt(candidate, attempt: attempt)
+    assert String.contains?(rendered, issue.identifier)
+    assert String.contains?(rendered, issue.id)
+    if native_ref && native_ref.parent, do: assert(String.contains?(rendered, "SIGN-90000"))
+    if description && description != "", do: assert(String.contains?(rendered, description))
+    if attempt, do: assert(String.contains?(rendered, "Follow-up attempt #2"))
 
-  assert String.contains?(rendered, issue.identifier)
-  assert String.contains?(rendered, issue.id)
-  if native_ref, do: assert(String.contains?(rendered, "SIGN-90000"))
-  if description, do: assert(String.contains?(rendered, description))
-  if attempt, do: assert(String.contains?(rendered, "follow-up attempt #2"))
-end
+    phase = %{"Ready" => "Survey", "Progress" => "Implement", "In Review" => "Review"}[state] || "Stop"
+    assert String.contains?(rendered, "## Phase: #{phase}")
+    for other <- ["Survey", "Implement", "Review", "Stop"] -- [phase] do
+      refute String.contains?(rendered, "## Phase: #{other}")
+    end
 
+    case state do
+      "Ready" ->
+        assert String.contains?(rendered, "No versioned source/test/config edits")
+        assert String.contains?(rendered, "do not use $implement")
+        refute String.contains?(rendered, "Grant: scoped edits")
+        refute String.contains?(rendered, "Grant: own feedback/handoff, merge")
+      "Progress" ->
+        assert String.contains?(rendered, "Grant: scoped edits")
+        assert String.contains?(rendered, "Review/merge/Done belong")
+        refute String.contains?(rendered, "Grant: own feedback/handoff, merge")
+      "In Review" ->
+        assert String.contains?(rendered, "do not spawn a replacement")
+        assert String.contains?(rendered, "Grant: own feedback/handoff, merge")
+        assert String.contains?(rendered, "In Review → Progress/Blocked/Done")
+      _ ->
+        refute String.contains?(rendered, "Grant:")
+    end
+    assert String.contains?(rendered, "changed route/ownership stops work")
+    phase
+  end
+
+assert length(fixtures) == 108
 assert Process.whereis(SymphonyElixir.Supervisor) == nil
-
-IO.puts(
-  "FE workflow: config, routing, dependency admission and 8 strict Liquid fixtures passed offline."
-)
+IO.puts("Consumer workflow: config/routing/dependency admission and 108 strict phase/permission fixtures passed offline.")

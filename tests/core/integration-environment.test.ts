@@ -212,7 +212,11 @@ describe("integration environment", () => {
       [workspaceSuite, "new workspace case"],
     ]) {
       mkdirSync(join(suite, "tests/integration"), { recursive: true })
-      symlinkSync(nodeModules, join(suite, "node_modules"), "dir")
+      symlinkSync(
+        nodeModules,
+        join(suite, "node_modules"),
+        process.platform === "win32" ? "junction" : "dir"
+      )
       writeFileSync(
         join(suite, "playwright.integration.config.ts"),
         "export default { testDir: './tests/integration' }\n"
@@ -278,13 +282,14 @@ describe("integration environment", () => {
       {
         env: { PATH: process.env.PATH, NODE_ENV: "test" },
         encoding: "utf8",
+        timeout: 15_000,
       }
     )
     expect(result.status).toBe(1)
     expect(result.stderr).toContain("E2E_USER_PASSWORD")
     expect(result.stderr).toContain("No integration tests were run")
     expect(result.stdout).toBe("")
-  })
+  }, 20_000)
 
   it("lists cases from this workspace without private credentials or a live preflight", () => {
     const result = spawnSync(

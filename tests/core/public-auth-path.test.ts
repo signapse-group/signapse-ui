@@ -5,6 +5,7 @@ import { negotiateLocale } from "@/app/lib/i18n/routing"
 
 describe("public authentication boundary", () => {
   it.each([
+    "/api/build-revision",
     "/vi/sign-in",
     "/en/sign-in/",
     "/vi/sign-in/factor-one",
@@ -28,6 +29,8 @@ describe("public authentication boundary", () => {
     "/vi/editor",
     "/en/dashboard-prototype",
     "/api/user",
+    "/api/build-revision/extra",
+    "/api/build-revision-evil",
     "/trpc/workspaces",
   ])("requires authentication: %s", (pathname) => {
     expect(isPublicAuthPathname(pathname)).toBe(false)

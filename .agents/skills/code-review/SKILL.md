@@ -28,16 +28,15 @@ Exclude unrelated changes only with clear ownership evidence. Report ambiguous s
 
 ## One Independent Reviewer
 
-The coordinating agent delegates one read-only review to a reviewer that did not implement the change. Provide raw source locations/issue identity, base/HEAD, ownership context and check outputs; do not supply a predetermined verdict. The reviewer reads the source contract and code itself.
+In the autonomous dev-with-PR profile, the fresh In Review agent performs the independent assessment directly from contract/code/evidence. Do not delegate another reviewer when assigned this role. Review is read-only for implementation; feedback, merge/delivery and own Subtask transitions use WORKFLOW's separate grant and [phase procedure](../agent-execution-policy/references/execution-policy.md#review--implement-sửa).
 
-The delegated reviewer executes the two axes directly and returns its findings; it must not spawn another review coordinator. If already running as that independent reviewer, do not delegate again. If delegation is unavailable, disclose the unmet independent-review requirement rather than claiming a self-review is independent.
+For other scopes requiring independence, a coordinating implementer delegates one read-only review to an agent that did not implement the change, supplying raw contract/base/HEAD/ownership/check evidence without a predetermined verdict. The reviewer reads sources and returns both axes directly without another review coordinator. If independence is unavailable, report the unmet requirement instead of calling self-review independent.
 
 ## Review Both Axes
 
 **Requirement adherence:** map Acceptance Criteria or Expected Behavior to the actual final behavior and suitable evidence. Check omissions, scope creep, accepted contract changes, and related regression risks. Existing implementation can satisfy a criterion without appearing in the diff. Tests passing alone do not establish full coverage.
 
-For a local implementation handoff, require only the applicable local checks, review,
-and CI. A protected page or reused authenticated transport does not alone add live
+Assess the applicable evidence for the current phase: local checks/CI before In Review, independent review before merge, delivery before Done. A protected page or reused authenticated transport does not alone add live
 smoke; require it when the accepted assignment names the operation, scope, and inputs.
 Check that scoped selectors still cover every affected behavior, and report baseline
 gaps and pending live acceptance separately from contribution findings.
@@ -57,4 +56,4 @@ Make each finding actionable and traceable to its axis, location and evidence. S
 
 Report a separate result for each axis and one handoff conclusion. A nonblocking suggestion does not keep the contribution in execution. The implementer may challenge findings with evidence; reassess them rather than requiring unnecessary changes. Escalate unresolved material contract/risk disagreements to the human.
 
-After fixes, review the changed parts and affected surrounding behavior; broaden only if warranted. A later code, contract or base change invalidates affected evidence. Return the result for the assigned Jira Subtask's delivery handoff comment, or the requested local-contract PR/artifact/session. Identify applicable pending human-owned delivery actions; the reviewer does not transition issues or claim coordinator acceptance. No mandatory repository report, snapshot or fingerprint is needed.
+After fixes, review the changed parts and affected surrounding behavior; broaden only if warranted. Code/contract changes or specific base impacts invalidate affected evidence; main advancing alone does not require re-review of unchanged head. Return the result for the assigned Jira Subtask's delivery handoff comment, or the requested local-contract PR/artifact/session. Assigned Review saves/read backs findings and follows the phase procedure for Progress/Blocked/Done; a standalone review grants no remote writes. Delivery/merge gates follow the [runbook](../../../docs/delivery.md), and contribution Done never claims parent acceptance. No mandatory repository report, snapshot or fingerprint is needed.

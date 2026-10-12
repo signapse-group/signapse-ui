@@ -23,6 +23,10 @@ The fixture mode is a stricter submode of the existing non-production dev-auth m
 
 Each test receives a unique `testRunId`. The browser context carries it through the cookie and request header; the fixture resets and namespaces mutable state by that ID. Requests without the ID, authenticated requests, unregistered routes, or unexpected external browser requests fail the P0 test.
 
+## CI and delivery
+
+[Verify](../../.github/workflows/verify.yml) runs the full secret-free quality lane on PR/current revision and main before [Vercel delivery](../delivery.md). Fixture P0, live feature acceptance and served build identity are separate evidence. A successful PR check alone does not establish post-merge publication or live auth/backend behavior.
+
 ## Selecting checks by change scope
 
 | Change                                                | Focused evidence                                                                  | Completion check                                                                                               |

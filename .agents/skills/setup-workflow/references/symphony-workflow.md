@@ -49,15 +49,9 @@ owns the accepted routing map and native lifecycle.
 - `provider.issue_types` selects native Subtasks. `provider.routing_labels` carries
   the full recognized route set; `required_labels` identifies this worker's single
   route. Runtime verifies native type/parent and rejects conflicting/missing routes.
-- Ready and Progress are dispatch/active states. Progress polling recovers already
-  authorized output; In Review and Blocked stay idle, Done is terminal.
-- Routed dependency admission checks native Blocks links and blocker category done
-  before starting/retrying Ready or Progress work; it does not interrupt an already
-  running worker merely because a dependency changes.
-- The prompt includes ID/key/type/parent plus title/state/URL/labels/description,
-  reads live contracts/comments through jira_rest and loads local execution skills.
-  It states permissions through In Review; coordinator retains approval/resume/Done
-  and parent acceptance. Git/PR tooling is provisioned separately.
+- Apply the repository's [phase procedure](../../agent-execution-policy/references/execution-policy.md#execution-and-review) and planning delegated profile. Ready, Progress and In Review are dispatch/active; review state In Review plus session_boundary_states [Ready] opens fresh Survey/Implement/Review sessions. Open/Blocked are idle, Done terminal.
+- Native dependency admission applies before dispatch/retry in active phases; done category satisfies it, unreadable/active blockers do not. It does not interrupt a running worker merely because a blocker changes.
+- Prompt context includes ID/key/type/parent/title/state/URL/labels/description and rereads live inputs through jira_rest. Render only the phase's grants; coordinator retains initial dispatch/resume, parent/QA lifecycle and acceptance. Preserve host settings and output on phase changes.
 
 Keep behavior details in [execution policy](../../agent-execution-policy/references/execution-policy.md).
 For API work, keep the [API consumer policy](../../agent-execution-policy/references/api-handoff.md)
@@ -66,16 +60,15 @@ Jira, and usages from FE source. API handoff includes producer revision/environm
 and live-check evidence; prompt refresh must preserve those boundaries.
 Jira key in PR title links to Development panel; delivery evidence goes in one
 agent-owned Jira handoff comment. Review/build, merge when required and deployment/
-evidence when applicable define the coordinator's Done gate.
+evidence when applicable define the assigned Review session's Done gate; parent acceptance stays coordinator-owned.
 
 Before writing, check these invariants:
 
-- dispatch states select only work that is ready for autonomous implementation;
+- dispatch states select only assigned profile work for the matching phase;
 - active states keep intended continuation attempts running and exclude human-wait states;
 - terminal states cannot be redispatched;
 - the prompt's authorized state transitions match the tracker configuration and verified repository delivery condition;
-- the review handoff state is a non-terminal human-owned boundary and is excluded from
-  `active_states` when Symphony should stop there;
+- Survey/Implement/Review grants and session boundaries match the delegated profile; review is active, and terminal or out-of-profile work stops;
 - the prompt reads repository/scoped instructions and points to committed local policy/skills;
 - the resulting YAML parses and contains no unresolved placeholder in a required runtime field.
 

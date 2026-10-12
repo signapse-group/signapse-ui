@@ -6,7 +6,7 @@ Apply this policy to assigned Jira Subtask runs or an explicitly activated local
 
 [Planning's execution workflow](https://github.com/signapse-group/signapse-planing/blob/main/workflow/project-execution-workflow.md) owns hierarchy, routing, dispatch authorization and acceptance. Its [Subtask format](https://github.com/signapse-group/signapse-planing/blob/main/workflow/issue-types/subtask.md) and [tracker policy](https://github.com/signapse-group/signapse-planing/blob/main/workflow/issue-tracker.md) define operation completion and handoff. `WORKFLOW.md`, `AGENTS.md`, scoped instructions and these repository-owned skills define UI execution. Symphony supplies runtime orchestration independently of the skills.
 
-Assigned Subtask and accepted parent requirements → implementation/investigation and verification → independent review → findings resolved → delivery handoff → coordinator acceptance.
+The [planning FE/landing profile](https://github.com/signapse-group/signapse-planing/blob/main/workflow/project-execution-workflow.md#profile-fe-và-landing) grants three sessions for native dev Subtasks with a PR into main: Survey (Ready) → Implement (Progress) → independent Review/delivery (In Review) → Done. This repository delivers to `https://dev.signapse.cloud`. Ordinary requests and no-PR operations retain their assigned boundary.
 
 Read the live Subtask, its native parent, relevant accepted comments, dependencies and approved references at start, resume and handoff. Verify project `SIGN`, native Subtask type, parent Story/Task/Bug, exactly one recognized route matching `route-frontend`, and Deliverable ownership in `signapse-group/signapse-ui`. Use the routing set in `WORKFLOW.md`; other business labels may coexist. Parent readiness and assignee do not replace the Subtask's dispatch gate or native dependency links.
 
@@ -21,116 +21,107 @@ that the accepted scope explicitly requires.
 
 ## Local handoff and live acceptance
 
-The default agent handoff covers the assigned implementation with applicable local
-checks, independent review, required PR/CI, and saved evidence. A protected page or
-reuse of authenticated transport does not by itself require private live smoke.
-Require live execution only when the accepted assignment names the operation, scope,
-and inputs needed to run it. Report local fixture evidence separately from live
-acceptance; fixtures never count as an authentication or backend pass.
+Implement handoff covers required behavior, applicable local checks, current-head PR CI and accessible candidate evidence. Independent review and delivery follow in the new In Review session. Complete the repository's required full checks; baseline failures cannot be converted into a scoped Pass. Missing producer contract, required reference, output/publication access, required comment-save or transition access remains a gap; continue independent work where meaningful.
 
-Separate contribution failures from baseline gaps, pending live acceptance, and
-missing live inputs. A baseline mismatch outside a selected scope remains visible in
-full-mode results without failing an unrelated scoped result. Block only when an
-explicitly assigned operation cannot proceed for lack of input/access and no useful
-independent work remains. A required output that does not exist is still a gap. When
-the revision/output exists and is reviewable, the coordinator may own metadata or
-link verification that the agent cannot write; record that action as pending and do
-not claim verification succeeded.
+Done additionally requires approved review, merge and delivery/live revision/basic app loading under the [runbook](../../../../docs/delivery.md). Pending QA/parent acceptance or private QA credentials alone does not prevent contribution completion. Metadata/link verification may be coordinator-owned when output exists and is reviewable; report pending rather than claim linkage verified. This does not waive requirement completion or native dependency admission.
 
-QA case preparation/approval/runs, merge/deployment of this contribution and owner acceptance are separate gates; record their owner and next action as pending. Parent acceptance or an unfinished QA ticket does not by itself block an authorized dev contribution. An unresolved choice solely about who performs QA goes to the coordinator without stopping independent implementation; a choice changing expected behavior or required dev verification blocks the affected work. This does not waive planning's requirement-completion gate before ticket publication or native dependency admission.
+Live feature execution is a gate only when the assignment identifies operation, scope, expected result and inputs/access. Public forms, protected pages, auth transport reuse or SSR technology alone do not add live acceptance. Local fixtures prove their observed boundary, not producer publication, authentication, hosted behavior or external effects. Approved design, accessibility and local SSR checks remain mandatory for affected UI. Docs-only output needs artifact/version/review/checks, not app deployment; workflow/runtime activation is required only when assigned.
 
-Required behavior, local checks, independent review and required CI remain handoff gates. Fix contribution failures in Progress; use Blocked only for necessary external input/access when no meaningful independent work remains. Record the affected output/AC/check and resume condition. Baseline failures outside the selected scope remain visible; a failed required full check or CI is never converted into a scoped pass. Missing mandatory output, publication access, saved handoff or status-write access remains a gap; metadata pending does not establish a successful transition.
-
-Use the versioned workspace runner and exact operation/case selectors described in
-the [scope and evidence guide](../../../../docs/testing/browser-tests.md#runner-scopes-and-evidence).
-Selectors must cover every behavior affected by the contribution. The runner reports
-application revision, suite revision, worktree state, version, and selected scope;
-host activation remains a coordinator action after merge.
+Use the [runner scope/evidence guide](../../../../docs/testing/browser-tests.md#runner-scopes-and-evidence) and selectors covering all affected behavior. On Symphony use `/opt/apps/symphony/runtime/run-fe-quality "$PWD"` and read the host testing guide. The before_run hook refreshes ignored `.env.local` from `$SIGNAPSE_UI_APP_ENV`; private account inputs stay only in `$SIGNAPSE_UI_E2E_ENV`, never in workspace env/logs/evidence.
 
 ## Bug fixes and QA retest
 
 For an assigned fix Subtask under a Bug, reread the accepted expected/basis and latest relevant QA handoff with its report/evidence at start, resume and handoff. Identify case/version, actual, tested build/environment and assigned impacted regression. Apply [QA Retest outcomes](https://github.com/signapse-group/signapse-planing/blob/main/workflow/project-execution-workflow.md#qa-retest-outcomes); a FAIL summary can include Blocked/Not Run checks or a different regression deviation. Implement the assigned fix scope without treating every report failure as the same Bug.
 
-Link the Bug and QA run/report addressed in the fix handoff, with corrected coverage, delivered source revision, local checks/regression and pending merge/deploy owner/action. After deployment, the delivery owner supplies evidence connecting that fix to the tested build/environment for QA; local checks or a build SHA alone do not establish deployment. Pending deployment does not delay a dev In Review handoff whose local gates passed.
+Link the Bug and QA run/report addressed in the fix handoff, with corrected coverage, delivered source revision, local checks/regression and required delivery evidence. After deployment, the delivery owner supplies evidence connecting that fix to the tested build/environment for QA; local checks or a build SHA alone do not establish deployment. Pending deployment does not delay a dev In Review handoff whose local gates passed.
 
 The coordinator owns Bug Resolved/Closed/Reopened, QA completion and follow-up assignment. Dev checks do not close the Bug or overwrite QA results/approval. Done is terminal; a later fix/run requires a new coordinator-assigned Subtask. Do not revive a completed contribution or mutate its parent from a QA FAIL summary.
 
 ## Execution and review
 
-1. Read the contract, references, this policy and applicable repository instructions.
-2. Inspect branch, base, existing output/PR and ownership of dirty files. State scope, verification seam and material risks.
-3. Implement the smallest accepted change and run focused checks, then repository-required completion checks.
-4. Have one independent reviewer inspect committed and relevant uncommitted work, reporting Requirement adherence separately from Correctness & Standards.
-5. Resolve blocking findings, reverify affected behavior and re-review affected parts.
-6. Deliver the verified output, resolve required CI when a PR is used, and read back the saved handoff before entering `In Review`.
+The autonomous dev-with-PR profile uses three separate sessions. Direct requests and no-PR operations keep their assigned boundary; this profile does not activate their Jira/PR workflow.
 
-Reuse the same workspace, branch and PR for a contribution's retries and review fixes. Repository-file changes require one PR targeting the default branch. Read-only investigation/report output does not require a PR, but still requires applicable review and evidence. Missing required implementation checks, review or access is not a pass. Human-owned merge, deployment and acceptance may remain pending at `In Review`; identify them clearly rather than marking their gates complete.
+### Khảo sát → Implement
+
+Ready authorizes survey only. Read the live contract/parent/decisions, native dependencies, approved references and existing workspace/output. Trace affected code/callers/consumers, reusable patterns, required new work and the smallest implementation/verification approach. Read the API consumer policy for API work and approved visual references for UI work. Existing code is evidence of current behavior, not expected behavior.
+
+Run existing checks only when needed to answer a concrete question on isolated local data. Do not edit versioned source/tests/config, commit/push/create a PR, merge/deploy or affect shared environments. A baseline failure within scope may be handed to Implement with a grounded diagnosis; current code need not pass the new AC before Progress.
+
+You may clarify wording/references in the assigned Subtask body only from already accepted requirements. Preserve format, concurrent content and source decisions; do not change meaning/scope/AC, edit the parent, decide a new business/design rule or copy the parent contract. Reread the live body before mutation, reconcile concurrent edits, save/read back required additions before transition. Unsettled requirements return to the coordinator.
+
+Comment only when code/reuse/verification information must survive into the new session; record file/symbol/revision and separate observed facts from recommendations. No additions means no survey confirmation comment. Preserve the survey record independently of review/delivery records.
+
+Ready → Progress requires settled contract, matching route, dependencies/readiness, relevant survey, an implementation/verification approach, no unanswered required decision, and saved/read-back updates when necessary. Resolve the live destination, transition/read back Progress and end the survey session. No manual survey approval or extra ticket is needed. The fresh Implement session consumes and reconciles this result; absence of a survey comment is not a blocker.
+
+### Implement → Review
+
+Progress authorizes scoped edits, local checks, commits/push/PR and CI follow-up. Reuse the workspace/branch/PR and survey/feedback; reinvestigate only affected changes. Repository-file changes in this profile need a PR into main. Keep one PR for unmerged work; after merge, an in-scope fix before Done uses a follow-up branch/PR from current main with old PR/evidence retained. Stage only contribution-owned files.
+
+Complete applicable local checks and current-head PR CI under the [delivery runbook](../../../../docs/delivery.md#review-evidence-and-pr-gate). The PR/evidence must identify source contract, candidate and actual coverage/results/limits. Include the Subtask key in the PR title and verify Development-panel linkage before claiming it. CI success alone does not establish local checks or AC coverage.
+
+Independent review belongs to the fresh In Review session; Implement does not call a reviewer as an In Review admission gate. If linkage/candidate/evidence is clear and accessible, no Jira handoff comment is required. Comment only for a review-relevant exception, uncertain linkage/candidate/access or concrete owner action; link the detail rather than copying PR checks/logs. A missing mandatory check is not a handoff exception that waives the gate.
+
+Save/read back necessary records, resolve the live transition, Progress → In Review/read back and end Implement. Do not wait for this contribution's deployment or continue Review/delivery in the Implement session.
+
+### Review → Implement sửa
+
+The fresh In Review session directly uses [Code Review](../../code-review/SKILL.md) for separate Requirement adherence and Correctness & Standards verdicts. Inspect final code, callers and required evidence; compare affected rendered UI with approved design when applicable. Implement summaries are input, never an approval verdict. The reviewer does not edit code or resolve conflicts, and does not delegate another reviewer when already assigned this role.
+
+For blocking findings, conflicts or in-scope required check gaps, save/read back actionable PR feedback tied to the assessed candidate: location/check → problem/impact → required outcome. Transition/read back In Review → Progress and end Review. Implement resumes the existing output; do not reset Ready. Optional suggestions do not keep work in execution. An unclear requirement returns to its owner, not to Implement to guess.
+
+Jira comments are conditional on uncertain access/linkage/candidate or separate owner action; do not duplicate review findings. Feedback still must be durably saved/read back before transition even without a Jira comment. After fixes, reassess changed code and affected surrounding behavior; do not repeat unrelated valid checks.
 
 ## PR and delivery handoff
 
-GitHub hosts source, PRs and CI. For assigned Jira work, reread the current Subtask key/title and set the PR title to `[<Jira-key>] <current Subtask title>`. Follow the repository PR template/conventions: explain the problem, final change, verification and technical limits, and refresh the body against the delivered revision before handoff. Jira records current coordination and pending owner actions. Verify the title and actual Development-panel linkage before claiming it established; Git/PR access is separate from `jira_rest`.
+PR descriptions own the problem, final change, verification and technical limits; refresh them against the delivered candidate. Jira holds coordination and owner actions. Apply [common comment ownership/history rules](https://github.com/signapse-group/signapse-planing/blob/main/workflow/issue-tracker.md#delivery-handoff-comment): preserve other authors' content and prior candidate/evidence, identify ownership beyond a shared account, reread before edits and read back writes. Ambiguous writes require remote readback before retry; no duplicate comments for pushes, green CI, polls or transitions.
 
-Write the handoff for the coordinator's next decision, normally 4–6 content lines. Add lines for material gaps, multiple blockers or API phases when needed; there is no length gate. Omit inapplicable fields. Keep detailed commands, counts, logs, hashes and investigation history in the linked PR/report/evidence.
+### Review và delivery handoff
 
-Keep one agent-owned comment for the same deliverable, updated to its current output. Verify ownership beyond a shared API account, reread live content before editing, preserve human content and read back after saving. If ownership is unclear, report the conflict instead of overwriting or duplicating the record. Preserve earlier output identities with their evidence in linked, versioned history before replacing the summary; an earlier revision's checks do not establish the current result. Distinct QA runs retain separate records. Evidence retains its existing storage, access and retention rules.
+Review approves the current candidate, merges and verifies delivery under the [runbook](../../../../docs/delivery.md). PR already merged means reconcile its actual merge/review/checks and resume delivery; do not merge again. A merged candidate without an independent assessment still needs that review before Done. Missing required delivery evidence prevents Done; QA/parent acceptance is separately owned.
+
+Before Done, save/read back the assigned Subtask's delivery handoff:
 
 ```text
-Bàn giao dev — <verified outcome>
-- Output: signapse-group/signapse-ui · <revision> · <PR/artifact link>.
-- Xác minh: <local checks/result>; <reviewer/both axes/result>; <required CI result>.
-- Tiếp theo: <owner> — <specific action, including pending delivery when applicable>.
-- Còn lại: <material gap/limit, or no remaining mandatory gap>.
-- Chi tiết: <durable evidence/history link if not covered by the output link>.
+Đã bàn giao trên <môi trường>: <build/revision đã xác minh>.
+Delivery: <link evidence nối contribution với build và các gate áp dụng>.
+Lưu ý: <điểm ảnh hưởng trực tiếp integration/test — chỉ khi có>.
+Cần <owner>: <hành động cụ thể — chỉ khi có>.
 ```
 
-For API work, identify the producer contract/environment/revision separately from the FE output and distinguish local verification from live delivery. Link the contract and fetch/revision-match evidence; summarize missing required publication evidence, coverage/discrepancies, breaking changes, affected consumers and pending integration. Schema/business rules stay at the producer. Omit API fields for unrelated work. Runner version, app/suite revisions and selected scope stay in linked check evidence.
+Use artifact location/version for output that does not need app deployment. Keep detailed checks, review, CI/run IDs, source/merge/build relation, fetch time and live results in linked evidence. API handoff distinguishes consumer output from published producer contract/environment/revision, breaking changes and pending integration. Do not keep a parallel API schema in comments. Omit inapplicable lines; do not add generic pending-QA statements.
 
-The Development panel is the PR link/status source. Pending human merge/deploy/acceptance has an owner and next action; it does not itself block dev handoff. Required behavior/checks/review/CI remain gates. `Done` additionally needs coordinator acceptance, merge when required and deployment/evidence when applicable; merge/child completion does not establish it.
-
-For a local-contract workflow without Jira, put the applicable summary/evidence in the requested PR/artifact/session; do not invent a tracker record.
+Resolve the live destination, In Review → Done/read back after every applicable gate. Done confirms this contribution and delivery, not QA/product/parent acceptance. For direct or no-PR operations use their assigned artifact/session/owner without inventing a Jira record or extending this profile's grants.
 
 ## Jira lifecycle and writes
 
-| Status    | Meaning and next-action owner                                                                                         |
-| --------- | --------------------------------------------------------------------------------------------------------------------- |
-| Open      | Outside dispatch; coordinator defines and approves the operation.                                                     |
-| Ready     | Coordinator-authorized queue; agent rechecks contract/route/dependencies, then enters Progress before implementation. |
-| Progress  | Agent executes/resumes the same contribution, verification and review fixes.                                          |
-| In Review | Human handoff; stop execution. Coordinator/reviewer may return feedback to Progress.                                  |
-| Blocked   | External input/access prevents all meaningful independent progress; coordinator resolves and resumes.                 |
-| Done      | Terminal; coordinator completes the applicable delivery gate. Stop.                                                   |
+| Status | Profile operation and owner |
+| --- | --- |
+| Open | Outside dispatch; coordinator settles and assigns the contribution. |
+| Ready | Survey only; worker may clarify accepted wording/references and transition Progress or Blocked under the survey gate. |
+| Progress | Implement, checks, PR/CI, in-scope fixes; worker transitions In Review or Blocked under the applicable gate. |
+| In Review | Fresh independent Review, merge and delivery; worker may return Progress, record Blocked or complete Done. |
+| Blocked | Stop; coordinator resolves and resumes the actual previous status after verifying the condition. |
+| Done | Terminal; new work requires a new coordinator-assigned contribution. |
 
-Use `jira_rest` in Symphony or the authorized Jira connector in other sessions. Resolve the current available transition by destination status and operation; never guess IDs or bypass native workflow conditions. The unattended prompt permits Ready → Progress, Progress → In Review and active-state → Blocked under their gates. Coordinator-owned Open → Ready, Blocked resume, Done and parent transitions remain outside that grant. Merge, deployment, requirement edits and additional tickets require explicit authorization for the current scope.
+Coordinator retains priority/scope, new ticket publication, Open → Ready, Blocked resume, parent/QA lifecycle, Bug triage and acceptance. Workers mutate only the assigned Subtask and their own records under WORKFLOW's phase grant. Scope/API/design decisions remain with their owners. No autonomous rollback, infra/secrets/indexing/DNS changes or shared live feature operation beyond assignment.
 
-Paginate relevant comments and use supported rich text; REST v3 comment bodies use ADF. Verify saved comments and status writes. After a timeout or ambiguous mutation, reread the remote issue/comment/PR before retrying so an already-successful write does not create a duplicate. Credentials remain outside Git and evidence. Prompt rules do not reduce the Jira credential's API permissions.
+Use jira_rest in Symphony, current native transitions by destination and ADF for REST v3 bodies; paginate relevant comments. Reread live issue/parent/decisions/references/dependencies at start/resume and before mutation/handoff. Read back status writes. A phase change ends the session so Symphony can render a new prompt in the same workspace; Open/Blocked/Done or changed route/ownership stops work. Prompt rules do not restrict the credential's API permissions.
 
 ### Blocker comments and resume
 
-Keep the blocker separate from delivery handoff. Investigate missing input/access and finish meaningful independent work first. Reread status/comments and update this agent's record for the same blocker; put the affected output/AC/check and human action first, with concise checks and a detail link. Record actual pre-Blocked status, save/read back before entering Blocked and verify the resulting status under the assigned grant.
+Use Blocked only for required external input/access/decision when no meaningful independent work remains. Implementation/check failures belong in Progress; pending valid delivery stays In Review under the bounded wait procedure. Save/read back a separate blocker record before transition:
 
 ```text
-Blocked — <reason and affected output/AC/check>
-- Cần <owner>: <specific action or decision>.
-- Đã kiểm tra: <short result>; <evidence link>.
-- Tiếp tục khi: <verifiable condition>.
-- Pre-Blocked: <actual native status>; coordinator resumes to this step.
+Blocked — <vướng mắc và output/AC/check bị chặn>.
+Cần <owner>: <hành động hoặc quyết định cụ thể>.
+Tiếp tục tại <status trước Blocked> khi <điều kiện kiểm chứng được>.
+Bằng chứng: <link tới kết quả liên quan — chỉ khi cần>.
 ```
 
-A hard task or implementation/test failure alone is not Blocked. If saving/verifying the comment fails, do not transition; report an unconfirmed transition accurately. A retry is not a reason to append another investigation journal.
-
-Coordinator resolution names the blocker that is resolved/superseded, links the owning contract decision/evidence and identifies any remaining blocker and next action. Mark the original blocker's first line with a resolution link only when ownership/edit permission is established; otherwise use an authorized resolution with a backlink. The next handoff identifies the old blocker as resolved, preserving history and human content.
-
-```text
-Đã giải quyết blocker — <blocker comment link>
-- Quyết định/bằng chứng: <result>; <contract/evidence link>.
-- Còn lại: <other blocker, or none for this operation>.
-- Tiếp theo: <owner> — <action/status under the existing gate>.
-```
-
-The coordinator uses Jira's most-recent-status rule to resume exactly the pre-Blocked status. Verify resolution and current contract on resume; a status change alone does not resolve the blocker. Resume to In Review remains idle. A new operation after Done uses a new Subtask decided by the coordinator.
+Take the previous status from the live issue. Update the same owned blocker, retain history and preserve human content; if ownership/write/readback is unavailable, report the unconfirmed step rather than claiming transition success. Coordinator records resolution with evidence/contract reference, any remaining blocker and the next action; annotate the old blocker only when owned/authorized, otherwise backlink it. Verify resolution on resume; a status change alone does not prove the blocker cleared. Resume In Review continues Review/delivery in a fresh session. Do not self-resume Blocked or reopen Done.
 
 ## Contract changes and evidence
 
-Investigate discoverable facts before invoking [decision-gate.md](decision-gate.md) for a material unresolved decision. Routine implementation choices remain with the implementer. Accepted changes within the same contribution update the plan and invalidate only affected checks/review. A different deliverable requires a human replacement/cancellation decision.
+Investigate discoverable facts before invoking [decision-gate.md](decision-gate.md). Routine implementation choices stay within accepted scope/repository standards; acceptance-significant changes return to the owner. Accepted changes within the same contribution invalidate affected checks/review. A different deliverable needs a human replacement/cancellation decision.
 
-Re-read live contracts before handoff. Code, contract, dependency or base changes invalidate affected evidence; use the delivered revision's results. Evidence belongs in the session, PR and Jira handoff, without a parallel snapshot/fingerprint requirement. Use Vietnamese for status/handoff communication and preserve repository language in code/documents. Ordinary skill invocations retain their requested boundary without implicitly publishing, transitioning or activating this workflow.
+Reread contracts before handoff. Head/contract changes or specific base impacts require reassessment; main advancing alone does not invalidate unchanged-head evidence. Store evidence in existing session/PR/Jira/durable locations, without mandatory snapshots/fingerprints. Use Vietnamese for collaboration; retain repository document/code language and applicable VI/EN copy rules.

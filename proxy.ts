@@ -1,5 +1,5 @@
 import { clerkMiddleware } from "@clerk/nextjs/server"
-import { NextRequest, NextResponse } from "next/server"
+import { NextRequest, NextResponse, type NextFetchEvent } from "next/server"
 
 import {
   getPathLocale,
@@ -78,9 +78,16 @@ function createAuthenticatedProxy() {
   })
 }
 
-export default isP0FixtureModeEnabled()
+const applicationProxy = isP0FixtureModeEnabled()
   ? fixtureProxy
   : createAuthenticatedProxy()
+
+export default function proxy(req: NextRequest, event: NextFetchEvent) {
+  if (req.nextUrl.pathname === "/api/build-revision") {
+    return NextResponse.next()
+  }
+  return applicationProxy(req, event)
+}
 
 export const config = {
   matcher: [
