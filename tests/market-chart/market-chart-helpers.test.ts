@@ -21,7 +21,6 @@ import {
 } from "@/app/[lang]/(main)/market-charts/market-chart-annotations"
 import {
   createKLineData,
-  deriveLiveCandleItemFromQuote,
   mergeCandleItems,
   normalizeCandleItems,
 } from "@/app/[lang]/(main)/market-charts/market-chart-candle-helpers"
@@ -99,47 +98,6 @@ describe("market-chart candle and history helpers", () => {
     expect(createKLineData([replacement])[0]).toMatchObject({
       timestamp: Date.parse(replacement.time),
       volume: 20,
-    })
-  })
-
-  it("updates the active candle or creates the next quote bucket", () => {
-    const current = [candle("2026-07-29T01:00:00.000Z", 100)]
-    const updated = deriveLiveCandleItemFromQuote({
-      current,
-      quote: {
-        assetId: 1,
-        symbol: "GOLD",
-        price: 105,
-        providerTime: "2026-07-29T01:30:00.000Z",
-        receivedAt: "2026-07-29T01:30:01.000Z",
-        stale: false,
-      },
-      timeframe: "1h",
-    })
-    const next = deriveLiveCandleItemFromQuote({
-      current,
-      quote: {
-        assetId: 1,
-        symbol: "GOLD",
-        price: 110,
-        providerTime: "2026-07-29T02:00:00.000Z",
-        receivedAt: "2026-07-29T02:00:01.000Z",
-        stale: false,
-      },
-      timeframe: "1h",
-    })
-
-    expect(updated).toMatchObject({
-      time: current[0]?.time,
-      high: 105,
-      close: 105,
-    })
-    expect(next).toMatchObject({
-      time: "2026-07-29T02:00:00.000Z",
-      open: 110,
-      high: 110,
-      low: 110,
-      close: 110,
     })
   })
 

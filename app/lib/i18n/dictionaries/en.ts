@@ -1911,10 +1911,11 @@ export const en: Dictionary = {
     },
     live: {
       connecting: "Connecting live price",
+      currentPrice: "Current price: {price}",
       live: "Live price",
+      marketClosed: "Market closed",
       reconnecting: "Reconnecting",
       stale: "Live data is stale",
-      disconnected: "Live stream disconnected",
       error: "Live data error",
       invalidPayload: "Live data is in an unexpected format.",
       requestInvalid: "The live market chart request is invalid.",

@@ -1898,10 +1898,11 @@ export const vi = {
     },
     live: {
       connecting: "Đang kết nối giá trực tiếp",
+      currentPrice: "Giá hiện tại: {price}",
       live: "Giá trực tiếp",
+      marketClosed: "Thị trường đã đóng",
       reconnecting: "Đang kết nối lại",
       stale: "Dữ liệu trực tiếp chậm",
-      disconnected: "Mất kết nối trực tiếp",
       error: "Lỗi dữ liệu trực tiếp",
       invalidPayload: "Dữ liệu trực tiếp không đúng định dạng.",
       requestInvalid: "Yêu cầu dữ liệu trực tiếp không hợp lệ.",

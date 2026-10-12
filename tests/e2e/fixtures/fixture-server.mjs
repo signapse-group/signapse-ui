@@ -763,17 +763,17 @@ function candles(url) {
   }
 }
 
-function liveSnapshot(assetId, state = "CONNECTED") {
+function liveSnapshot(assetId, state = "SUBSCRIBED", timeframe = "1h") {
   const symbol = assetId === 102 ? "XAUUSD" : "BTCUSD"
-  const quote = {
-    assetId,
-    symbol,
-    price: 110.5,
-    volume: 1200,
-    providerTime: NOW,
-    receivedAt: NOW,
-    stale: state !== "CONNECTED",
-  }
+  const quote = ["CONNECTING", "MARKET_CLOSED"].includes(state)
+    ? null
+    : {
+        assetId,
+        symbol,
+        price: assetId === 102 ? 2500.25 : 110.5,
+        receivedAt: NOW,
+        stale: state === "STALE",
+      }
   return {
     asset: {
       id: assetId,
@@ -783,22 +783,14 @@ function liveSnapshot(assetId, state = "CONNECTED") {
       pricePrecision: 2,
     },
     symbol,
-    timeframe: "1h",
+    timeframe,
     quote,
-    candle: {
-      time: NOW,
-      open: 110,
-      high: 112,
-      low: 109,
-      close: 110.5,
-      volume: 1200,
-    },
     status: {
       assetId,
       symbol,
       state,
-      message: state === "CONNECTED" ? "Fixture stream connected" : "Fixture stream recovering",
-      stale: state !== "CONNECTED",
+      message: null,
+      stale: state === "STALE",
       observedAt: NOW,
     },
   }
@@ -819,7 +811,12 @@ async function streamLive(response, state, url, scenario) {
   })
 
   if (scenario === "outage") {
-    writeSse(response, "error", { code: "FIXTURE_STREAM_OUTAGE", message: "Fixture stream outage" })
+    writeSse(response, "error", {
+      assetId,
+      symbol: assetId === 102 ? "XAUUSD" : "BTCUSD",
+      message: "Fixture stream outage",
+      observedAt: NOW,
+    })
     response.end()
     return
   }
@@ -831,10 +828,27 @@ async function streamLive(response, state, url, scenario) {
     return
   }
 
-  const snapshot = liveSnapshot(assetId, "CONNECTED")
+  const liveState =
+    {
+      "market-closed": "MARKET_CLOSED",
+      "no-quote": "CONNECTING",
+      stale: "STALE",
+    }[scenario] ?? "SUBSCRIBED"
+  const snapshot = liveSnapshot(
+    assetId,
+    liveState,
+    url.searchParams.get("timeframe") ?? "1h"
+  )
   writeSse(response, "status", snapshot.status)
   writeSse(response, "snapshot", snapshot)
-  writeSse(response, "price", snapshot.quote)
+  if (snapshot.quote && liveState !== "STALE") {
+    writeSse(response, "price", snapshot.quote)
+  }
+  if (
+    ["market-closed", "no-quote", "reconnect", "stale"].includes(scenario)
+  ) {
+    return
+  }
   setTimeout(() => response.end(), 400)
 }
 

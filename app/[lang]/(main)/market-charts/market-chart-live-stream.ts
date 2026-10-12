@@ -1,11 +1,9 @@
 import {
-  type MarketChartLiveCandleResponse,
   type MarketChartLiveErrorResponse,
   type MarketChartLiveQuoteResponse,
   type MarketChartLiveSnapshotResponse,
   type MarketChartLiveStatusResponse,
   type MarketChartTimeframe,
-  marketChartLiveCandleResponseSchema,
   marketChartLiveErrorResponseSchema,
   marketChartLiveQuoteResponseSchema,
   marketChartLiveSnapshotResponseSchema,
@@ -18,7 +16,6 @@ import {
 import { OBSERVABILITY_OPERATIONS } from "@/app/lib/observability/semantic"
 
 type MarketChartLiveStreamHandlers = {
-  onCandle: (value: MarketChartLiveCandleResponse) => void
   onErrorEvent: (value: MarketChartLiveErrorResponse) => void
   onInvalidEvent: (message: string) => void
   onOpen: () => void
@@ -49,7 +46,6 @@ export function createMarketChartLiveStreamOpener(
   return function openMarketChartLiveStream({
     assetId,
     timeframe,
-    onCandle,
     onErrorEvent,
     onInvalidEvent,
     onOpen,
@@ -79,7 +75,7 @@ export function createMarketChartLiveStreamOpener(
       )
     let explicitlyClosed = false
 
-    function completeFirstData(eventKind: "snapshot" | "price" | "candle") {
+    function completeFirstData(eventKind: "snapshot" | "price") {
       firstDataMeasurement?.finish("success", {
         "market.event_kind": eventKind,
       })
@@ -117,7 +113,7 @@ export function createMarketChartLiveStreamOpener(
         ) => { success: true; data: T } | { success: false }
       },
       onValid: (value: T) => void,
-      liveEventKind?: "snapshot" | "price" | "candle"
+      liveEventKind?: "snapshot" | "price"
     ) {
       try {
         const parsed = parse.safeParse(parseEventData(event))
@@ -153,14 +149,6 @@ export function createMarketChartLiveStreamOpener(
     })
     source.addEventListener("price", (event) => {
       handleEvent(event, marketChartLiveQuoteResponseSchema, onPrice, "price")
-    })
-    source.addEventListener("candle", (event) => {
-      handleEvent(
-        event,
-        marketChartLiveCandleResponseSchema,
-        onCandle,
-        "candle"
-      )
     })
     source.addEventListener("status", (event) => {
       handleEvent(event, marketChartLiveStatusResponseSchema, onStatus)
