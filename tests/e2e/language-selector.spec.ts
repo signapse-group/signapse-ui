@@ -10,6 +10,9 @@ test("selecting English changes the account locale without writing preferences",
   await page.goto("/vi/account")
   await expect(page.locator("html")).toHaveAttribute("lang", "vi")
 
+  const preferenceBeforeSwitch = (await fixture.getLanguages()).preferredLanguage
+  expect(preferenceBeforeSwitch?.isoCode).toBe("vi")
+
   const requestsBeforeSwitch = (await fixture.state()).requests.length
   const browserWrites: string[] = []
   page.on("request", (request) => {
@@ -43,6 +46,10 @@ test("selecting English changes the account locale without writing preferences",
       exact: true,
     })
   ).toHaveAttribute("aria-checked", "true")
+
+  expect((await fixture.getLanguages()).preferredLanguage).toEqual(
+    preferenceBeforeSwitch
+  )
 
   const backendWrites = (await fixture.state()).requests
     .slice(requestsBeforeSwitch)
