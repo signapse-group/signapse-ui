@@ -810,14 +810,13 @@ async function streamLive(response, state, url, scenario) {
     "Access-Control-Allow-Origin": "*",
   })
 
-  if (scenario === "outage") {
+  if (scenario === "post-open-error") {
     writeSse(response, "error", {
       assetId,
       symbol: assetId === 102 ? "XAUUSD" : "BTCUSD",
       message: "Fixture stream outage",
       observedAt: NOW,
     })
-    response.end()
     return
   }
 

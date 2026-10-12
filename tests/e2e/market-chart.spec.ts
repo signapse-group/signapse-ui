@@ -175,7 +175,7 @@ test.describe("P0 market chart workbench", () => {
     ).toBeVisible()
     await expect(page.getByText(/^Cập nhật /)).toBeVisible()
 
-    await fixture.setScenario("/market-charts/live", "outage", "GET")
+    await fixture.setScenario("/market-charts/live", "post-open-error", "GET")
     await page.reload()
     await expect(
       page.getByText("Lỗi dữ liệu trực tiếp", { exact: true })
