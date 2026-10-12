@@ -193,6 +193,7 @@ test.describe("P0 market chart workbench", () => {
       "href",
       "/vi/economic-calendar/902"
     )
+    await page.clock.setFixedTime(new Date())
     await detailLink.click()
     await expect(page).toHaveURL(/\/vi\/economic-calendar\/902/)
     await expect(

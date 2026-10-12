@@ -29,7 +29,9 @@ test("market chart calendar reads the live range for a watchlist asset", async (
   await expect(page.locator("#market-chart-asset")).toBeVisible()
   await page.getByRole("button", { name: /Mở lịch sắp diễn ra/ }).click()
   await expect(
-    page.getByText(vi.marketCharts.calendar.legendLabel, { exact: true })
+    page
+      .getByRole("dialog")
+      .getByText(vi.marketCharts.calendar.legendLabel, { exact: true })
   ).toBeVisible()
 
   const assetId = new URL(page.url()).searchParams.get("assetId")
