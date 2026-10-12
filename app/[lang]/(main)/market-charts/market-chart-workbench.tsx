@@ -66,7 +66,7 @@ import { AppTimeMetadata } from "@/components/app-time-metadata"
 import { LocalizedLink } from "@/components/localized-link"
 import { useHasAnyPermission } from "@/components/permission-provider"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
   Empty,
@@ -2315,18 +2315,16 @@ function MarketChartHotAnnotationDetail({
                         Number.isInteger(articleId) &&
                         articleId > 0 ? (
                           canReadNewsArticles ? (
-                            <Button
-                              asChild
-                              size="sm"
-                              variant="outline"
-                              className="self-start"
+                            <LocalizedLink
+                              href={`/news-articles/${articleId}`}
+                              className={buttonVariants({
+                                size: "sm",
+                                variant: "outline",
+                                className: "self-start",
+                              })}
                             >
-                              <LocalizedLink
-                                href={`/news-articles/${articleId}`}
-                              >
-                                {localization.dictionary.events.viewArticle}
-                              </LocalizedLink>
-                            </Button>
+                              {localization.dictionary.events.viewArticle}
+                            </LocalizedLink>
                           ) : (
                             <p className="text-xs text-muted-foreground">
                               {

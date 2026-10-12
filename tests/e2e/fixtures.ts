@@ -50,6 +50,7 @@ type FixtureController = {
       | "calendar-awaiting"
       | "calendar-available"
       | "annotations-many"
+      | "annotations-unsafe-evidence-url"
       | "annotations-delayed-old-scope",
     method?: string
   ): Promise<void>
