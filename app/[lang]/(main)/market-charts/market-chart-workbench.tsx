@@ -6,6 +6,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
   useTransition,
 } from "react"
 import {
@@ -1119,6 +1120,11 @@ function MarketChartTopToolbar({
   )
 }
 
+const subscribeToBrowserTimeZone = () => () => {}
+const getBrowserTimeZone = () =>
+  Intl.DateTimeFormat().resolvedOptions().timeZone
+const getServerBrowserTimeZone = () => null
+
 function ChartSurface({
   annotationLayerEnabled,
   annotationGroups,
@@ -1223,14 +1229,14 @@ function ChartSurface({
 }) {
   const localization = useLocalization()
   const { dictionary, formatMessage } = localization
-  const [browserTimeZone, setBrowserTimeZone] = useState<string | null>(null)
+  const browserTimeZone = useSyncExternalStore(
+    subscribeToBrowserTimeZone,
+    getBrowserTimeZone,
+    getServerBrowserTimeZone
+  )
   const chartCanvasRef = useRef<MarketChartCanvasHandle | null>(null)
   const [activeOutcomeHoverRange, setActiveOutcomeHoverRange] =
     useState<MarketChartOutcomeHoverRange | null>(null)
-
-  useEffect(() => {
-    setBrowserTimeZone(Intl.DateTimeFormat().resolvedOptions().timeZone)
-  }, [])
 
   function handleAnnotationClose() {
     setActiveOutcomeHoverRange(null)
