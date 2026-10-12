@@ -317,9 +317,9 @@ test.describe("P0 market chart workbench", () => {
       name: "Mở sự kiện Fixture Gold annotation",
       exact: true,
     })
-    await expect(goldAnnotation).toBeVisible({ timeout: 15_000 })
     expect(oldScopeResponseCompleted).toBe(false)
     await oldScopeResponse
+    await expect(goldAnnotation).toBeVisible({ timeout: 15_000 })
     await expect(goldAnnotation).toBeVisible()
     await expect(
       page.getByRole("button", {
