@@ -45,6 +45,7 @@ type FixtureController = {
       | "outage"
       | "mutation-failure"
       | "reconnect"
+      | "error-reconnect"
       | "preopen-unavailable"
       | "market-closed"
       | "no-quote"
