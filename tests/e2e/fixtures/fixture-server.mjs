@@ -821,6 +821,26 @@ async function streamLive(response, state, url, scenario) {
     return
   }
 
+  if (scenario === "error-reconnect" && state.streamConnections === 1) {
+    response.write("retry: 3000\n\n")
+    const snapshot = liveSnapshot(
+      assetId,
+      "SUBSCRIBED",
+      url.searchParams.get("timeframe") ?? "1h"
+    )
+    writeSse(response, "status", snapshot.status)
+    writeSse(response, "snapshot", snapshot)
+    if (snapshot.quote) writeSse(response, "price", snapshot.quote)
+    writeSse(response, "error", {
+      assetId,
+      symbol: snapshot.symbol,
+      message: "Fixture stream error before reconnect",
+      observedAt: NOW,
+    })
+    response.end()
+    return
+  }
+
   if (scenario === "reconnect" && state.streamConnections === 1) {
     response.write("retry: 50\n\n")
     writeSse(response, "status", liveSnapshot(assetId, "RECONNECTING").status)
@@ -845,7 +865,13 @@ async function streamLive(response, state, url, scenario) {
     writeSse(response, "price", snapshot.quote)
   }
   if (
-    ["market-closed", "no-quote", "reconnect", "stale"].includes(scenario)
+    [
+      "error-reconnect",
+      "market-closed",
+      "no-quote",
+      "reconnect",
+      "stale",
+    ].includes(scenario)
   ) {
     return
   }

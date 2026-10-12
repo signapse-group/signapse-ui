@@ -205,6 +205,29 @@ test.describe("P0 market chart workbench", () => {
       .toBe(0)
   })
 
+  test("shows reconnecting after an SSE error while EventSource retries", async ({
+    page,
+    fixture,
+  }) => {
+    await fixture.setScenario("/market-charts/live", "error-reconnect", "GET")
+    await page.goto("/vi/market-charts?assetId=101&timeframe=1h")
+
+    await expect(
+      page.getByText("Giá hiện tại: 110,50", { exact: true })
+    ).toBeVisible()
+    await expect(
+      page.getByText("Đang kết nối lại", { exact: true })
+    ).toBeVisible()
+    expect((await fixture.state()).streamConnections).toBe(1)
+
+    await expect
+      .poll(async () => (await fixture.state()).streamConnections, {
+        timeout: 10_000,
+      })
+      .toBe(2)
+    await expect(page.getByText("Giá trực tiếp", { exact: true })).toBeVisible()
+  })
+
   test("shows the upcoming calendar list through the next-event summary", async ({
     page,
     fixture,
