@@ -42,6 +42,7 @@ type FixtureController = {
       | "validation-error"
       | "timeout"
       | "delayed"
+      | "delayed-outage"
       | "outage"
       | "mutation-failure"
       | "reconnect"

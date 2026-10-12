@@ -1680,17 +1680,20 @@ const server = createServer(async (request, response) => {
     sendJson(response, 504, errorPayload("Fixture request timed out", "FIXTURE_TIMEOUT"))
     return
   }
-  if (scenario === "outage") {
+  if (scenario === "delayed" || scenario === "delayed-outage") {
+    const delayMs =
+      url.pathname === "/market-charts/candles"
+        ? scenario === "delayed-outage"
+          ? 1_500
+          : 3_000
+        : 350
+    await new Promise((resolve) =>
+      setTimeout(resolve, delayMs)
+    )
+  }
+  if (scenario === "outage" || scenario === "delayed-outage") {
     sendJson(response, 503, errorPayload("Fixture backend is unavailable", "FIXTURE_OUTAGE"))
     return
-  }
-  if (scenario === "delayed") {
-    await new Promise((resolve) =>
-      setTimeout(
-        resolve,
-        url.pathname === "/market-charts/candles" ? 1_500 : 350
-      )
-    )
   }
   if (scenario === "validation-error") {
     sendJson(response, 422, errorPayload("Fixture validation failed", "FIXTURE_VALIDATION"))

@@ -1613,7 +1613,7 @@ function ChartSurface({
           ) : null}
 
           {/* Overlay states on top of canvas (only when non-success) */}
-          {selectedAsset && !(phase === "success" && hasCandles) ? (
+          {!selectedAsset || !(phase === "success" && hasCandles) ? (
             <div className="absolute inset-0 z-10 bg-card">
               {watchlistError ? (
                 <Empty className="h-full min-h-[32rem] border-0 bg-transparent">
