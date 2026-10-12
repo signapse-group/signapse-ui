@@ -3646,10 +3646,9 @@ export function MarketChartWorkbench({
     }
 
     const timeoutId = window.setTimeout(() => {
-      initialLoadObserverRef.current.cancelCurrent()
-      loadGenerationRef.current += 1
-
       if (watchlistError) {
+        initialLoadObserverRef.current.cancelCurrent()
+        loadGenerationRef.current += 1
         setData(null)
         setLoadedData(null)
         setErrors({ form: watchlistError })
@@ -3663,6 +3662,8 @@ export function MarketChartWorkbench({
       }
 
       if (!hasWatchlistAssets) {
+        initialLoadObserverRef.current.cancelCurrent()
+        loadGenerationRef.current += 1
         setSelection(createDefaultSelection(watchlistAssets))
         setData(null)
         setLoadedData(null)
@@ -3701,6 +3702,9 @@ export function MarketChartWorkbench({
           return
         }
       }
+
+      initialLoadObserverRef.current.cancelCurrent()
+      loadGenerationRef.current += 1
 
       if (timeframeParam && !isMarketChartTimeframe(timeframeParam)) {
         setSelection({
