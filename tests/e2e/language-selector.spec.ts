@@ -16,10 +16,12 @@ test("selecting English changes the account locale without writing preferences",
   const requestsBeforeSwitch = (await fixture.state()).requests.length
   const browserWrites: string[] = []
   page.on("request", (request) => {
-    if (["POST", "PUT", "PATCH", "DELETE"].includes(request.method())) {
-      browserWrites.push(
-        `${request.method()} ${new URL(request.url()).pathname}`
-      )
+    const pathname = new URL(request.url()).pathname
+    if (
+      ["POST", "PUT", "PATCH", "DELETE"].includes(request.method()) &&
+      pathname !== "/__nextjs_original-stack-frames"
+    ) {
+      browserWrites.push(`${request.method()} ${pathname}`)
     }
   })
 
