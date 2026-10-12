@@ -3697,10 +3697,10 @@ export function MarketChartWorkbench({
           return
         }
 
-        pendingRouteSelectionRef.current = null
         if (findWatchlistAsset(watchlistAssets, assetId ?? "")) {
           return
         }
+        pendingRouteSelectionRef.current = null
       }
 
       initialLoadObserverRef.current.cancelCurrent()
@@ -3815,7 +3815,11 @@ export function MarketChartWorkbench({
         asset,
         nextSelection.timeframe,
         annotationLayerEnabledRef.current
-      )
+      ).finally(() => {
+        if (pendingRouteSelectionRef.current === nextSelection) {
+          pendingRouteSelectionRef.current = null
+        }
+      })
     }
   }
 
