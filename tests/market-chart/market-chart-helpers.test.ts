@@ -334,7 +334,8 @@ describe("market-chart annotation and drawing mappings", () => {
         hotAnnotation("b", "2026-07-29T00:20:00.000Z", "BEARISH", "LOW"),
         hotAnnotation("outside", "2026-07-29T02:00:00.000Z", "BULLISH"),
       ],
-      candles
+      candles,
+      "1h"
     )
 
     expect(groups).toHaveLength(1)
@@ -347,6 +348,52 @@ describe("market-chart annotation and drawing mappings", () => {
     })
     expect(groups[0]?.annotations.map(({ id }) => id)).toEqual(["a", "b"])
     expect(toMarketChartEpochMillis("invalid")).toBeNull()
+  })
+
+  it("keeps every annotation in the final candle interval grouped on that candle", () => {
+    const candles = [
+      candle("2026-07-29T00:00:00.000Z", 100),
+      candle("2026-07-29T01:00:00.000Z", 110),
+    ]
+    const finalIntervalTime = "2026-07-29T01:59:59.999Z"
+    const annotations = Array.from({ length: 125 }, (_, index) =>
+      hotAnnotation(`annotation-${index + 1}`, finalIntervalTime, "BULLISH")
+    )
+
+    const groups = createMarketChartAnnotationGroups(
+      [
+        ...annotations,
+        hotAnnotation(
+          "at-exclusive-end",
+          "2026-07-29T02:00:00.000Z",
+          "BEARISH"
+        ),
+      ],
+      candles,
+      "1h"
+    )
+
+    expect(groups).toHaveLength(1)
+    expect(groups[0]?.time).toBe(Date.parse(candles[1]!.time))
+    expect(groups[0]?.annotations.map(({ id }) => id)).toEqual(
+      annotations.map(({ id }) => id)
+    )
+    expect(groups[0]?.annotations.at(-1)?.time).toBe(finalIntervalTime)
+
+    const monthlyCandle = candle("2026-03-01T00:00:00.000Z", 120)
+    const monthlyGroups = createMarketChartAnnotationGroups(
+      [
+        hotAnnotation(
+          "monthly-final-interval",
+          "2026-03-31T23:59:59.999Z",
+          "BULLISH"
+        ),
+      ],
+      [monthlyCandle],
+      "1mo"
+    )
+
+    expect(monthlyGroups[0]?.time).toBe(Date.parse(monthlyCandle.time))
   })
 
   it("groups high-impact calendar events against the nearest candle", () => {

@@ -1,4 +1,27 @@
+import type { Page } from "@playwright/test"
+
 import { expect, test } from "./fixtures"
+
+async function setAnnotationsVisible(page: Page, visible: boolean) {
+  const annotationSwitch = page.locator(
+    "#market-chart-event-settings-annotations"
+  )
+
+  if (!(await annotationSwitch.isVisible())) {
+    await page.getByRole("button", { name: "Mở tùy chỉnh sự kiện" }).click()
+  }
+
+  if (
+    (await annotationSwitch.getAttribute("aria-checked")) !== String(visible)
+  ) {
+    await annotationSwitch.click()
+  }
+
+  await expect(annotationSwitch).toHaveAttribute(
+    "aria-checked",
+    String(visible)
+  )
+}
 
 test.describe("P0 market chart workbench", () => {
   test("loads controls, changes timeframe, and recovers the live SSE stream", async ({
@@ -119,5 +142,165 @@ test.describe("P0 market chart workbench", () => {
     expect(String(calendarRequest?.query)).toContain("impact=HIGH")
     expect(String(calendarRequest?.query)).toContain("from=")
     expect(String(calendarRequest?.query)).toContain("to=")
+  })
+
+  test("keeps all grouped annotations accessible and opens their evidence article", async ({
+    page,
+    fixture,
+  }) => {
+    await fixture.setScenario(
+      "/market-charts/annotations",
+      "annotations-many",
+      "GET"
+    )
+    await page.goto("/vi/market-charts?assetId=101&timeframe=1h")
+
+    const annotationMarker = page.getByRole("button", {
+      name: /Mở 125 sự kiện tại/,
+    })
+    await expect(annotationMarker).toBeVisible()
+    await annotationMarker.click()
+    await expect(
+      page.getByRole("button", {
+        name: /^Mở sự kiện Fixture annotation \d+$/,
+      })
+    ).toHaveCount(125)
+
+    const finalEvent = page.getByRole("button", {
+      name: "Mở sự kiện Fixture annotation 125",
+      exact: true,
+    })
+    await expect(finalEvent).toBeVisible()
+    await finalEvent.scrollIntoViewIfNeeded()
+    await finalEvent.click()
+    await expect(
+      page.getByRole("heading", {
+        name: "Macro liquidity conditions stabilize",
+        exact: true,
+      })
+    ).toBeVisible()
+
+    await page.getByRole("button", { name: "Đóng", exact: true }).click()
+    await annotationMarker.click()
+    const finalEvidenceAction = page
+      .getByRole("button", { name: "Xem bài viết", exact: true })
+      .last()
+    await finalEvidenceAction.scrollIntoViewIfNeeded()
+    await finalEvidenceAction.click()
+    await expect(
+      page.getByRole("heading", { name: "Fixture market update", exact: true })
+    ).toBeVisible()
+  })
+
+  test("keeps the chart and valid annotations when an annotation refresh fails", async ({
+    page,
+    fixture,
+  }) => {
+    await page.goto("/vi/market-charts?assetId=101&timeframe=1h")
+
+    const annotationMarker = page.getByRole("button", {
+      name: "Mở sự kiện Central bank signals a slower easing path",
+      exact: true,
+    })
+    await expect(annotationMarker).toBeVisible()
+    await setAnnotationsVisible(page, false)
+    await fixture.setScenario("/market-charts/annotations", "outage", "GET")
+    await setAnnotationsVisible(page, true)
+
+    await expect(
+      page.getByText("Không thể tải chú thích biểu đồ.", { exact: true })
+    ).toBeVisible()
+    await expect(annotationMarker).toBeVisible()
+    await expect(
+      page.getByText("Chưa có sự kiện trong khoảng hiện tại.", { exact: true })
+    ).toHaveCount(0)
+
+    await fixture.setScenario("/market-charts/annotations", "success", "GET")
+    await page
+      .getByRole("button", { name: "Tải lại dữ liệu mới nhất", exact: true })
+      .click()
+    await expect(annotationMarker).toBeVisible()
+    await expect(
+      page.getByText("Không thể tải chú thích biểu đồ.", { exact: true })
+    ).toHaveCount(0)
+  })
+
+  test("does not apply a delayed annotation response after changing assets", async ({
+    page,
+    fixture,
+  }) => {
+    await page.goto("/vi/market-charts?assetId=101&timeframe=1h")
+    await expect(
+      page.getByRole("button", {
+        name: "Mở sự kiện Central bank signals a slower easing path",
+        exact: true,
+      })
+    ).toBeVisible()
+
+    await fixture.setScenario(
+      "/market-charts/annotations",
+      "annotations-delayed-old-scope",
+      "GET"
+    )
+    await setAnnotationsVisible(page, false)
+    const oldScopeResponse = page.waitForResponse((response) => {
+      const request = response.request()
+
+      return (
+        request.method() === "POST" &&
+        new URL(response.url()).pathname.endsWith("/market-charts")
+      )
+    })
+    await setAnnotationsVisible(page, true)
+    await page.locator("#market-chart-asset").click()
+    await page.getByRole("option", { name: "XAUUSD - Gold" }).click()
+
+    const goldAnnotation = page.getByRole("button", {
+      name: "Mở sự kiện Fixture Gold annotation",
+      exact: true,
+    })
+    await expect(goldAnnotation).toBeVisible({ timeout: 15_000 })
+    await oldScopeResponse
+    await expect(goldAnnotation).toBeVisible()
+    await expect(
+      page.getByRole("button", {
+        name: "Mở sự kiện Central bank signals a slower easing path",
+        exact: true,
+      })
+    ).toHaveCount(0)
+  })
+
+  test("keeps context visible and gates event/article details by permission", async ({
+    page,
+    fixture,
+  }) => {
+    await fixture.setPermissions(["market-chart:read"])
+    await page.goto("/vi/market-charts?assetId=101&timeframe=1h")
+
+    const annotationMarker = page.getByRole("button", {
+      name: "Mở sự kiện Central bank signals a slower easing path",
+      exact: true,
+    })
+    await expect(annotationMarker).toBeVisible()
+    await annotationMarker.click()
+
+    await expect(
+      page.getByText("Fixture market update", { exact: true })
+    ).toBeVisible()
+    await expect(
+      page.getByText("Không có quyền xem sự kiện", { exact: true })
+    ).toBeVisible()
+    await expect(
+      page.getByText("Không có quyền xem bài viết", { exact: true })
+    ).toBeVisible()
+    await expect(
+      page.getByRole("button", {
+        name: "Mở sự kiện Central bank signals a slower easing path",
+        exact: true,
+      })
+    ).toHaveCount(0)
+    await expect(
+      page.getByRole("button", { name: "Xem bài viết", exact: true })
+    ).toHaveCount(0)
   })
 })

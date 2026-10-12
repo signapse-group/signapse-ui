@@ -629,28 +629,69 @@ function graphView(state) {
   }
 }
 
-function marketChartAnnotations(url) {
+function marketChartAnnotations(url, scenario) {
   const assetId = Number(url.searchParams.get("assetId") ?? 101)
   const anchorTime = url.searchParams.get("to") ?? NOW
-  const annotationTime = new Date(
-    Date.parse(anchorTime) - 2 * 60 * 60 * 1000
-  )
+  const annotationTime = new Date(Date.parse(anchorTime) - 1000).toISOString()
+
+  if (scenario === "annotations-many") {
+    return Array.from({ length: 125 }, (_, index) => ({
+      id: `fixture-hot-event-${index + 1}`,
+      annotationType: "HOT_EVENT",
+      assetId,
+      time: annotationTime,
+      hotEvent: {
+        eventId: index === 124 ? 63 : 61,
+        severity: "HIGH",
+        direction: "UP",
+        title: `Fixture annotation ${index + 1}`,
+        summary: "Synthetic chart annotation for the browser quality gate.",
+        confidence: 0.92,
+        marketReactions: [],
+        evidence: [
+          {
+            newsArticleId: 71,
+            title: `Fixture evidence ${index + 1}`,
+            publisher: "Fixture Wire",
+            publishedAt: annotationTime,
+            evidenceRole: "PRIMARY_SUBJECT",
+            confidence: 0.92,
+            evidenceNote: "Synthetic evidence for the browser quality gate.",
+          },
+        ],
+        links: { eventDetail: `/events/${index === 124 ? 63 : 61}` },
+      },
+    }))
+  }
 
   return [
     {
       id: "fixture-hot-event-61",
       annotationType: "HOT_EVENT",
       assetId,
-      time: annotationTime.toISOString(),
+      time: annotationTime,
       hotEvent: {
         eventId: 61,
         severity: "HIGH",
         direction: "UP",
-        title: "Central bank signals a slower easing path",
+        title:
+          assetId === 102
+            ? "Fixture Gold annotation"
+            : "Central bank signals a slower easing path",
         summary: "Synthetic chart annotation for the browser quality gate.",
         confidence: 0.92,
         marketReactions: [],
-        evidence: [],
+        evidence: [
+          {
+            newsArticleId: 71,
+            title: "Fixture market update",
+            publisher: "Fixture Wire",
+            publishedAt: annotationTime,
+            evidenceRole: "PRIMARY_SUBJECT",
+            confidence: 0.92,
+            evidenceNote: "Synthetic evidence for the browser quality gate.",
+          },
+        ],
         links: { eventDetail: "/events/61" },
       },
     },
@@ -1460,7 +1501,9 @@ function responseForRoute(state, method, pathname, url, body) {
   }
 
   if (method === "GET" && pathname === "/market-charts/candles") return candles(url)
-  if (method === "GET" && pathname === "/market-charts/annotations") return marketChartAnnotations(url)
+  if (method === "GET" && pathname === "/market-charts/annotations") {
+    return marketChartAnnotations(url, getScenario(state, method, pathname))
+  }
   if (method === "GET" && pathname === "/market-charts/economic-calendar-events") {
     return marketChartEconomicCalendarEvents(
       url,
@@ -1657,6 +1700,14 @@ const server = createServer(async (request, response) => {
   }
   if (scenario === "delayed") {
     await new Promise((resolve) => setTimeout(resolve, 350))
+  }
+  if (
+    scenario === "annotations-delayed-old-scope" &&
+    method === "GET" &&
+    url.pathname === "/market-charts/annotations" &&
+    Number(url.searchParams.get("assetId")) === 101
+  ) {
+    await new Promise((resolve) => setTimeout(resolve, 750))
   }
   if (scenario === "validation-error") {
     sendJson(response, 422, errorPayload("Fixture validation failed", "FIXTURE_VALIDATION"))

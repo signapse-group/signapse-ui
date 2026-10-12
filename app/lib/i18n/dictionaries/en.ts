@@ -1843,6 +1843,7 @@ export const en: Dictionary = {
       legendLabel: "Event marker legend",
       eventMarkers: "{count} event markers",
       noEvents: "No events in the current range.",
+      loadError: "Could not load chart annotations.",
       confidenceBadge: "Confidence {value}",
       eventCount: "{count} events",
       warmEpisodeLabel: "Period",
@@ -2645,7 +2646,8 @@ export const en: Dictionary = {
       fromAddressInvalid: "Enter a valid email address.",
       passwordRequired: "Enter an SMTP password before saving or testing.",
       passwordBlank: "Leave the password empty to keep the saved password.",
-      versionRequired: "The configuration version is unavailable. Reload and try again.",
+      versionRequired:
+        "The configuration version is unavailable. Reload and try again.",
       invalidRequest: "Check the SMTP configuration fields and try again.",
     },
   },

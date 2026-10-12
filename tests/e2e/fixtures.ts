@@ -48,7 +48,9 @@ type FixtureController = {
       | "calendar-empty"
       | "calendar-upcoming"
       | "calendar-awaiting"
-      | "calendar-available",
+      | "calendar-available"
+      | "annotations-many"
+      | "annotations-delayed-old-scope",
     method?: string
   ): Promise<void>
   state(): Promise<{

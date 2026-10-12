@@ -1830,6 +1830,7 @@ export const vi = {
       legendLabel: "Chú giải sự kiện",
       eventMarkers: "{count} mốc sự kiện",
       noEvents: "Chưa có sự kiện trong khoảng hiện tại.",
+      loadError: "Không thể tải chú thích biểu đồ.",
       confidenceBadge: "Tin cậy {value}",
       eventCount: "{count} sự kiện",
       warmEpisodeLabel: "Giai đoạn",
@@ -2549,7 +2550,8 @@ export const vi = {
   smtpConfiguration: {
     readDenied: "Bạn không có quyền xem cấu hình gửi email hệ thống.",
     pageTitle: "Gửi email hệ thống",
-    pageDescription: "Một tài khoản SMTP dùng chung cho email hệ thống Signapse.",
+    pageDescription:
+      "Một tài khoản SMTP dùng chung cho email hệ thống Signapse.",
     formTitle: "Kết nối và xác thực",
     formDescription:
       "Thông tin kết nối email hệ thống. Các trường có dấu * là bắt buộc.",
@@ -2630,7 +2632,8 @@ export const vi = {
       fromAddressInvalid: "Vui lòng nhập địa chỉ email hợp lệ.",
       passwordRequired: "Nhập mật khẩu SMTP trước khi lưu hoặc kiểm tra.",
       passwordBlank: "Để trống mật khẩu để giữ mật khẩu đã lưu.",
-      versionRequired: "Không tìm thấy phiên bản cấu hình. Hãy tải lại và thử lại.",
+      versionRequired:
+        "Không tìm thấy phiên bản cấu hình. Hãy tải lại và thử lại.",
       invalidRequest: "Hãy kiểm tra các trường cấu hình SMTP rồi thử lại.",
     },
   },

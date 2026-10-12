@@ -33,9 +33,11 @@ vi.mock("@/app/lib/i18n/server", () => ({
 import { fetchAuthenticated } from "@/app/api/auth/action"
 import {
   getMarketChartCandles,
+  getMarketChartAnnotations,
   getMarketChartEconomicCalendarEvents,
 } from "@/app/api/market-charts/action"
 import type {
+  MarketChartAnnotationRequest,
   MarketChartCandleRequest,
   MarketChartEconomicCalendarEventRequest,
 } from "@/app/lib/market-charts/definitions"
@@ -182,5 +184,54 @@ describe("market chart economic calendar action", () => {
       getMarketChartEconomicCalendarEvents({ ...request, impact: [] })
     ).resolves.toMatchObject({ success: false })
     expect(fetchAuthenticated).not.toHaveBeenCalled()
+  })
+})
+
+describe("market chart annotation action", () => {
+  const request: MarketChartAnnotationRequest = {
+    assetId: 7,
+    from: "2026-08-19T10:00:00.000Z",
+    to: "2026-08-19T11:00:00.000Z",
+  }
+
+  beforeEach(() => {
+    vi.mocked(fetchAuthenticated).mockReset()
+  })
+
+  it("serializes the half-open range and keeps the complete annotation array", async () => {
+    const annotations = Array.from({ length: 125 }, (_, index) => ({
+      id: `annotation-${index + 1}`,
+      annotationType: "HOT_EVENT",
+      assetId: 7,
+      time: "2026-08-19T10:30:00.000Z",
+      hotEvent: { eventId: index + 1, evidence: [] },
+    }))
+    vi.mocked(fetchAuthenticated).mockResolvedValue(annotations)
+
+    const result = await getMarketChartAnnotations(request)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data).toHaveLength(125)
+      expect(result.data.at(-1)?.id).toBe("annotation-125")
+    }
+    expect(fetchAuthenticated).toHaveBeenCalledWith(
+      "/market-charts/annotations?assetId=7&from=2026-08-19T10%3A00%3A00.000Z&to=2026-08-19T11%3A00%3A00.000Z"
+    )
+  })
+
+  it("rejects annotation types outside the published contract", async () => {
+    vi.mocked(fetchAuthenticated).mockResolvedValue([
+      {
+        id: "annotation-1",
+        annotationType: "UNSUPPORTED",
+        assetId: 7,
+        time: "2026-08-19T10:30:00.000Z",
+      },
+    ])
+
+    await expect(getMarketChartAnnotations(request)).resolves.toMatchObject({
+      success: false,
+      error: testDictionary.marketCharts.responseInvalid,
+    })
   })
 })

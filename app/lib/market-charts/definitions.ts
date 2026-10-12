@@ -40,11 +40,7 @@ export function getMarketChartTimeframeLabels(
 export const DEFAULT_MARKET_CHART_TIMEFRAME: MarketChartTimeframe = "1h"
 
 export type MarketChartAssetType =
-  | "COMMODITY"
-  | "CRYPTO"
-  | "FX"
-  | "INDEX"
-  | string
+  "COMMODITY" | "CRYPTO" | "FX" | "INDEX" | string
 
 export interface MarketChartCandleRequest {
   assetId: number
@@ -85,11 +81,7 @@ export interface MarketChartCandleItemResponse {
 }
 
 export type MarketChartAnnotationDirection =
-  | "BULLISH"
-  | "BEARISH"
-  | "MIXED"
-  | "NEUTRAL"
-  | string
+  "BULLISH" | "BEARISH" | "MIXED" | "NEUTRAL" | string
 
 export type MarketChartAnnotationType = "HOT_EVENT" | "WARM_EPISODE" | string
 
@@ -137,7 +129,6 @@ export interface MarketChartHotEventAnnotationResponse {
   title?: string | null
   summary?: string | null
   confidence?: number | null
-  outcome?: MarketChartAnnotationOutcomeResponse | null
   topMarketReaction?: MarketChartAnnotationReactionResponse | null
   marketReactions?: MarketChartAnnotationReactionResponse[]
   evidence: MarketChartAnnotationEvidenceResponse[]
@@ -457,7 +448,6 @@ export const marketChartHotEventAnnotationResponseSchema = z.object({
   title: z.string().nullable().optional(),
   summary: z.string().nullable().optional(),
   confidence: z.number().nullable().optional(),
-  outcome: marketChartAnnotationOutcomeResponseSchema.nullable().optional(),
   topMarketReaction: marketChartAnnotationReactionResponseSchema
     .nullable()
     .optional(),
@@ -494,9 +484,9 @@ export const marketChartWarmEpisodeAnnotationResponseSchema = z.object({
 
 export const marketChartAnnotationResponseSchema = z.object({
   id: z.string(),
-  annotationType: z.string(),
-  assetId: z.number(),
-  time: z.string(),
+  annotationType: z.enum(["HOT_EVENT", "WARM_EPISODE"]),
+  assetId: z.number().int(),
+  time: z.string().refine(isValidDateTime),
   hotEvent: marketChartHotEventAnnotationResponseSchema.nullable().optional(),
   warmEpisode: marketChartWarmEpisodeAnnotationResponseSchema
     .nullable()
