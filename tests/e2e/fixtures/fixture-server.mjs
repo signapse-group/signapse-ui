@@ -1827,41 +1827,6 @@ const server = createServer(async (request, response) => {
     return
   }
 
-  if (
-    scenario === "short-then-empty-per-timeframe" &&
-    method === "GET" &&
-    result &&
-    Array.isArray(result.candles)
-  ) {
-    const requestAssetId = url.searchParams.get("assetId")
-    const requestTimeframe = url.searchParams.get("timeframe")
-    const candleRequestCount = state.requests.filter((request) => {
-      if (request.path !== "/market-charts/candles") return false
-
-      const query = new URLSearchParams(request.query)
-      return (
-        query.get("assetId") === requestAssetId &&
-        query.get("timeframe") === requestTimeframe
-      )
-    }).length
-
-    if (candleRequestCount > 1) {
-      const anchor = url.searchParams.get("to") ?? result.to
-      sendJson(response, 200, {
-        ...result,
-        from: anchor,
-        to: anchor,
-        candles: [],
-      })
-    } else {
-      sendJson(response, 200, {
-        ...result,
-        candles: result.candles.slice(-1),
-      })
-    }
-    return
-  }
-
   sendJson(response, status, result)
 })
 

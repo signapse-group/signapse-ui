@@ -40,7 +40,6 @@ type FixtureController = {
       | "short"
       | "short-then-empty"
       | "full-then-empty"
-      | "short-then-empty-per-timeframe"
       | "validation-error"
       | "timeout"
       | "delayed"

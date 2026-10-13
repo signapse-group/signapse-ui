@@ -8,10 +8,11 @@ test.describe("P0 market chart workbench", () => {
     fixture,
   }) => {
     test.setTimeout(180_000)
+    await page.clock.install({ time: new Date(MARKET_CHART_FIXTURE_NOW) })
     await fixture.setScenario("/market-charts/live", "reconnect", "GET")
     await fixture.setScenario(
       "/market-charts/candles",
-      "short-then-empty-per-timeframe",
+      "success",
       "GET"
     )
     await page.goto("/vi/market-charts?assetId=101&timeframe=1h")
@@ -41,6 +42,7 @@ test.describe("P0 market chart workbench", () => {
     await expect(page.getByText("Giá trực tiếp", { exact: true })).toBeVisible({
       timeout: 30_000,
     })
+    await expect(page.locator("#market-chart-asset")).toBeEnabled()
     const fourHourButton = page.getByRole("button", { name: "4 giờ" })
     await expect(fourHourButton).toBeEnabled()
     await fourHourButton.click()
