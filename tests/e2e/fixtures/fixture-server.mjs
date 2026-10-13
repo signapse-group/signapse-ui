@@ -714,12 +714,15 @@ function marketChartEconomicCalendarEvents(url, scenario) {
   const fixtureNow = Date.parse(NOW)
   const waiting =
     scenario === "calendar-awaiting" || scenario === "calendar-available"
+  const historical = scenario === "calendar-historical"
   const status = scenario === "calendar-available" ? "AVAILABLE" : "PENDING"
   const events = [
     {
-      id: 901,
-      time: fixtureNow + (waiting ? -30 : 120) * 60 * 1000,
-      title: "Fixture inflation release",
+      id: historical ? 903 : 901,
+      time: fixtureNow + (historical ? -360 : waiting ? -30 : 120) * 60 * 1000,
+      title: historical
+        ? "Fixture historical inflation release"
+        : "Fixture inflation release",
       impact: "HIGH",
       status,
     },
@@ -749,7 +752,7 @@ function marketChartEconomicCalendarEvents(url, scenario) {
       time: new Date(event.time).toISOString(),
       scheduledAt: new Date(event.time).toISOString(),
       currencyCode: "USD",
-      type: event.id === 901 ? "INFLATION" : "EMPLOYMENT",
+      type: event.id === 902 ? "EMPLOYMENT" : "INFLATION",
       forecastValue: "3.0",
       previousValue: "3.1",
       actualValue: event.status === "AVAILABLE" ? "3.0" : null,
