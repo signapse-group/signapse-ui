@@ -222,6 +222,7 @@ function createState() {
     },
     permissions: ["*"],
     feedbackScenarios: {},
+    preferredLanguage: { id: 1, isoCode: "vi", name: "Tiếng Việt" },
     assets: [
       {
         id: 101,
@@ -1397,7 +1398,9 @@ function responseForRoute(state, method, pathname, url, body) {
   if (method === "GET" && pathname === "/telegram/destinations") return state.destinations
   if (method === "GET" && pathname === "/telegram/feature-settings") return state.featureSettings
   if (method === "GET" && pathname === "/telegram/market-analysis-schedules") return state.schedules
-  if (method === "GET" && pathname === "/languages") return { languages: state.languages }
+  if (method === "GET" && pathname === "/languages") {
+    return { languages: state.languages, preferredLanguage: state.preferredLanguage }
+  }
 
   if (method === "POST" && pathname === "/telegram/bot-connections") {
     return {
