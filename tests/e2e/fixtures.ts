@@ -40,7 +40,6 @@ type FixtureController = {
       | "short"
       | "short-then-empty"
       | "full-then-empty"
-      | "short-then-empty-per-timeframe"
       | "validation-error"
       | "timeout"
       | "delayed"
@@ -61,7 +60,8 @@ type FixtureController = {
       | "calendar-upcoming"
       | "calendar-upcoming-window"
       | "calendar-awaiting"
-      | "calendar-available",
+      | "calendar-available"
+      | "calendar-historical",
     method?: string
   ): Promise<void>
   state(): Promise<{

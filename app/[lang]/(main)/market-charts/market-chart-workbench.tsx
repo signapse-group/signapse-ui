@@ -1596,7 +1596,7 @@ function ChartSurface({
                     symbol={displaySymbol}
                     annotationGroups={annotationGroups}
                     calendarEventGroups={calendarEventGroups}
-                    calendarEvents={calendarMarkerEvents}
+                    calendarEvents={calendarEvents}
                     calendarLayerEnabled={calendarLayerEnabled}
                     warmAnnotationGroups={warmAnnotationGroups}
                     renderAnnotationPopup={renderAnnotationPopup}
@@ -3020,7 +3020,6 @@ export function MarketChartWorkbench({
     useState<MarketChartCalendarLookaheadDays>(7)
   const [currentCalendarTimestamp, setCurrentCalendarTimestamp] = useState(0)
   const annotationLayerEnabledRef = useRef(annotationLayerEnabled)
-  const calendarLayerEnabledRef = useRef(calendarLayerEnabled)
   const selectedCalendarImpactsRef = useRef(selectedCalendarImpacts)
   const futureCalendarGenerationRef = useRef(0)
   const futureCalendarAssetIdRef = useRef<number | null>(null)
@@ -3205,10 +3204,6 @@ export function MarketChartWorkbench({
   useEffect(() => {
     annotationLayerEnabledRef.current = annotationLayerEnabled
   }, [annotationLayerEnabled])
-
-  useEffect(() => {
-    calendarLayerEnabledRef.current = calendarLayerEnabled
-  }, [calendarLayerEnabled])
 
   useEffect(() => {
     selectedCalendarImpactsRef.current = selectedCalendarImpacts
@@ -3953,12 +3948,10 @@ export function MarketChartWorkbench({
     const annotations = annotationLayerEnabledRef.current
       ? await loadAnnotations(displayedRange)
       : []
-    const economicCalendarEvents = calendarLayerEnabledRef.current
-      ? await loadEconomicCalendarEvents(
-          displayedRange,
-          selectedCalendarImpactsRef.current
-        )
-      : []
+    const economicCalendarEvents = await loadEconomicCalendarEvents(
+      displayedRange,
+      selectedCalendarImpactsRef.current
+    )
 
     return {
       success: true,

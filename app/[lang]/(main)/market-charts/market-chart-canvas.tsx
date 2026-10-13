@@ -786,7 +786,6 @@ export const MarketChartCanvas = forwardRef<
   const activeDrawingDraftIdRef = useRef<string | null>(null)
   const activeDrawingToolRef = useRef<MarketChartDrawingTool | null>(null)
   const annotationLayerEnabledRef = useRef(annotationLayerEnabled)
-  const calendarLayerEnabledRef = useRef(calendarLayerEnabled)
   const annotationsRef = useRef(annotations)
   const annotationGroupsRef = useRef(annotationGroups)
   const calendarEventGroupsRef = useRef(calendarEventGroups)
@@ -846,10 +845,9 @@ export const MarketChartCanvas = forwardRef<
   }, [annotations, annotationLayerEnabled])
 
   useEffect(() => {
-    calendarLayerEnabledRef.current = calendarLayerEnabled
     calendarEventsRef.current = calendarEvents
-    loadedCalendarEventsRef.current = calendarLayerEnabled ? calendarEvents : []
-  }, [calendarEvents, calendarLayerEnabled])
+    loadedCalendarEventsRef.current = calendarEvents
+  }, [calendarEvents])
 
   useEffect(() => {
     candlesRef.current = candles
@@ -1437,9 +1435,7 @@ export const MarketChartCanvas = forwardRef<
     loadedAnnotationsRef.current = annotationLayerEnabledRef.current
       ? annotationsRef.current
       : []
-    loadedCalendarEventsRef.current = calendarLayerEnabledRef.current
-      ? calendarEventsRef.current
-      : []
+    loadedCalendarEventsRef.current = calendarEventsRef.current
     loadedCandlesRef.current = normalizeCandleItems(candlesRef.current)
 
     // Update drawing group ID for new data source
@@ -1559,13 +1555,10 @@ export const MarketChartCanvas = forwardRef<
         )
       }
 
-      if (calendarLayerEnabledRef.current) {
-        loadedCalendarEventsRef.current =
-          mergeMarketChartEconomicCalendarEvents(
-            loadedCalendarEventsRef.current,
-            result.data.economicCalendarEvents
-          )
-      }
+      loadedCalendarEventsRef.current = mergeMarketChartEconomicCalendarEvents(
+        loadedCalendarEventsRef.current,
+        result.data.economicCalendarEvents
+      )
 
       onLoadedDataChangeRef.current?.({
         annotations: loadedAnnotationsRef.current,

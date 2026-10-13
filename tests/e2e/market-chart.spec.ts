@@ -8,12 +8,9 @@ test.describe("P0 market chart workbench", () => {
     fixture,
   }) => {
     test.setTimeout(180_000)
+    await page.clock.install({ time: new Date(MARKET_CHART_FIXTURE_NOW) })
     await fixture.setScenario("/market-charts/live", "reconnect", "GET")
-    await fixture.setScenario(
-      "/market-charts/candles",
-      "short-then-empty-per-timeframe",
-      "GET"
-    )
+    await fixture.setScenario("/market-charts/candles", "success", "GET")
     await page.goto("/vi/market-charts?assetId=101&timeframe=1h")
 
     await expect(page.locator("#market-chart-asset")).toBeVisible()
@@ -44,6 +41,7 @@ test.describe("P0 market chart workbench", () => {
     await expect(
       page.getByText("Giá hiện tại: 110,50", { exact: true })
     ).toBeVisible()
+    await expect(page.locator("#market-chart-asset")).toBeEnabled()
     const fourHourButton = page.getByRole("button", { name: "4 giờ" })
     await expect(fourHourButton).toBeEnabled()
     await fourHourButton.click()
@@ -492,6 +490,81 @@ test.describe("P0 market chart workbench", () => {
     ).toBeVisible()
     await expect(
       page.getByRole("dialog").getByText("1 mốc sự kiện", { exact: true })
+    ).toBeVisible()
+  })
+
+  test("loads historical calendar markers when older candles load with markers hidden", async ({
+    page,
+    fixture,
+  }) => {
+    await page.clock.install({ time: new Date(MARKET_CHART_FIXTURE_NOW) })
+    await fixture.setScenario(
+      "/market-charts/economic-calendar-events",
+      "calendar-historical",
+      "GET"
+    )
+    await page.goto("/vi/market-charts?assetId=101&timeframe=1h")
+
+    await expect(page.locator("#market-chart-asset")).toBeEnabled()
+    await page.getByRole("button", { name: "Mở tùy chỉnh sự kiện" }).click()
+    const markerSwitch = page.getByRole("switch", {
+      name: "Hiện lịch trên biểu đồ",
+    })
+    await expect(markerSwitch).toHaveAttribute("aria-checked", "true")
+    await markerSwitch.click()
+    await expect(markerSwitch).toHaveAttribute("aria-checked", "false")
+    await page.keyboard.press("Escape")
+
+    const chartCanvas = page.locator("canvas").first()
+    const chartBounds = await chartCanvas.boundingBox()
+    if (!chartBounds) {
+      throw new Error("Market chart canvas was not laid out")
+    }
+
+    await page.mouse.move(
+      chartBounds.x + chartBounds.width * 0.4,
+      chartBounds.y + chartBounds.height * 0.5
+    )
+    await page.mouse.down()
+    await page.mouse.move(
+      chartBounds.x + chartBounds.width * 0.9,
+      chartBounds.y + chartBounds.height * 0.5,
+      { steps: 10 }
+    )
+    await page.mouse.up()
+
+    const historicalEventTime =
+      Date.parse(MARKET_CHART_FIXTURE_NOW) - 6 * 60 * 60 * 1000
+    await expect
+      .poll(async () => {
+        const requests = (await fixture.state()).requests.filter(
+          (request) =>
+            request.path === "/market-charts/economic-calendar-events"
+        )
+
+        return requests.some((request) => {
+          const query = new URLSearchParams(String(request.query))
+          const from = Date.parse(query.get("from") ?? "")
+          const to = Date.parse(query.get("to") ?? "")
+
+          return from <= historicalEventTime && historicalEventTime < to
+        })
+      })
+      .toBe(true)
+
+    await page.getByRole("button", { name: "Mở tùy chỉnh sự kiện" }).click()
+    await markerSwitch.click()
+    await expect(markerSwitch).toHaveAttribute("aria-checked", "true")
+    await page.keyboard.press("Escape")
+    const historicalMarker = page.getByRole("button", {
+      name: "Mở sự kiện lịch kinh tế Fixture historical inflation release",
+    })
+    await expect(historicalMarker).toBeVisible()
+    await historicalMarker.click()
+    await expect(
+      page.getByRole("heading", {
+        name: "Fixture historical inflation release",
+      })
     ).toBeVisible()
   })
 
