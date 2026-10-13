@@ -177,6 +177,15 @@ describe("market chart economic calendar action", () => {
     )
   })
 
+  it("accepts calendar response fields omitted by the OpenAPI schema", async () => {
+    const response = [{ scheduledAt: "2026-09-08T12:00:00.000Z" }]
+    vi.mocked(fetchAuthenticated).mockResolvedValue(response)
+
+    await expect(
+      getMarketChartEconomicCalendarEvents(request)
+    ).resolves.toEqual({ success: true, data: response })
+  })
+
   it("rejects an empty impact selection before transport", async () => {
     await expect(
       getMarketChartEconomicCalendarEvents({ ...request, impact: [] })

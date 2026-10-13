@@ -3415,7 +3415,7 @@ export function MarketChartWorkbench({
           loadAnnotationData && displayedRange
             ? loadAnnotations(displayedRange)
             : Promise.resolve([]),
-          calendarLayerEnabledRef.current && displayedRange
+          displayedRange
             ? loadEconomicCalendarEvents(
                 displayedRange,
                 selectedCalendarImpactsRef.current

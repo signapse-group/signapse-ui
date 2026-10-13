@@ -94,16 +94,6 @@ function isValidMarketChartAnnotation(
   )
 }
 
-function isValidMarketChartEconomicCalendarEvent(
-  event: unknown
-): event is MarketChartEconomicCalendarEventResponse {
-  return (
-    isRecord(event) &&
-    typeof event.id === "number" &&
-    toMarketChartEpochMillis(event.time) !== null
-  )
-}
-
 function isValidMarketChartCandle(
   candle: unknown
 ): candle is MarketChartCandleItemResponse {
@@ -155,24 +145,36 @@ export function mergeMarketChartEconomicCalendarEvents(
   current: MarketChartEconomicCalendarEventResponse[],
   incoming: MarketChartEconomicCalendarEventResponse[]
 ): MarketChartEconomicCalendarEventResponse[] {
-  const eventsById = new Map<number, MarketChartEconomicCalendarEventResponse>()
+  const eventsByKey = new Map<
+    string,
+    MarketChartEconomicCalendarEventResponse
+  >()
 
-  for (const event of current.filter(isValidMarketChartEconomicCalendarEvent)) {
-    eventsById.set(event.id, event)
+  for (const event of [...current, ...incoming]) {
+    const timestamp = getMarketChartCalendarEventTimestamp(event)
+
+    if (timestamp === null) {
+      continue
+    }
+
+    const key =
+      event.id === undefined
+        ? `anonymous:${JSON.stringify([
+            timestamp,
+            event.assetId,
+            event.title,
+            event.currencyCode,
+            event.type,
+          ])}`
+        : `id:${event.id}`
+    eventsByKey.set(key, event)
   }
 
-  for (const event of incoming.filter(
-    isValidMarketChartEconomicCalendarEvent
-  )) {
-    eventsById.set(event.id, event)
-  }
-
-  return [...eventsById.values()].sort((left, right) => {
-    const leftTime = toMarketChartEpochMillis(left.time) ?? 0
-    const rightTime = toMarketChartEpochMillis(right.time) ?? 0
-
-    return leftTime - rightTime
-  })
+  return [...eventsByKey.values()].sort(
+    (left, right) =>
+      (getMarketChartCalendarEventTimestamp(left) ?? 0) -
+      (getMarketChartCalendarEventTimestamp(right) ?? 0)
+  )
 }
 
 export function toMarketChartEpochMillis(
@@ -366,7 +368,7 @@ export function createMarketChartEconomicCalendarEventGroups(
     }
   }
 
-  for (const event of events.filter(isValidMarketChartEconomicCalendarEvent)) {
+  for (const event of events) {
     const eventTime = getMarketChartCalendarEventTimestamp(event)
 
     if (eventTime === null) {

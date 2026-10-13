@@ -222,6 +222,7 @@ function createState() {
     },
     permissions: ["*"],
     feedbackScenarios: {},
+    preferredLanguage: { id: 1, isoCode: "vi", name: "Tiếng Việt" },
     assets: [
       {
         id: 101,
@@ -696,35 +697,67 @@ function marketChartAnnotations(url) {
 
 function marketChartEconomicCalendarEvents(url, scenario) {
   if (scenario === "calendar-empty") return []
+  if (scenario === "calendar-error") {
+    return {
+      __status: 503,
+      payload: errorPayload(
+        "Calendar fixture unavailable",
+        "SERVICE_UNAVAILABLE"
+      ),
+    }
+  }
 
   const assetId = Number(url.searchParams.get("assetId") ?? 101)
-  const now = Date.now()
-  const eventTime =
+  const from = Date.parse(url.searchParams.get("from") ?? "")
+  const to = Date.parse(url.searchParams.get("to") ?? "")
+  const impacts = url.searchParams.getAll("impact")
+  const fixtureNow = Date.parse(NOW)
+  const waiting =
     scenario === "calendar-awaiting" || scenario === "calendar-available"
-      ? now - 30 * 60 * 1000
-      : now + 2 * 60 * 60 * 1000
   const status = scenario === "calendar-available" ? "AVAILABLE" : "PENDING"
-
-  return [
+  const events = [
     {
       id: 901,
-      assetId,
-      time: new Date(eventTime).toISOString(),
-      scheduledAt: new Date(eventTime).toISOString(),
+      time: fixtureNow + (waiting ? -30 : 120) * 60 * 1000,
       title: "Fixture inflation release",
-      currencyCode: "USD",
-      type: "INFLATION",
       impact: "HIGH",
+      status,
+    },
+    ...(scenario === "calendar-upcoming-window"
+      ? [
+          {
+            id: 902,
+            time: fixtureNow + 48 * 60 * 60 * 1000,
+            title: "Fixture employment release",
+            impact: "MEDIUM",
+            status: "PENDING",
+          },
+        ]
+      : []),
+  ]
+
+  return events
+    .filter(
+      (event) =>
+        event.time >= from &&
+        event.time < to &&
+        (!impacts.length || impacts.includes(event.impact))
+    )
+    .map((event) => ({
+      ...event,
+      assetId,
+      time: new Date(event.time).toISOString(),
+      scheduledAt: new Date(event.time).toISOString(),
+      currencyCode: "USD",
+      type: event.id === 901 ? "INFLATION" : "EMPLOYMENT",
       forecastValue: "3.0",
       previousValue: "3.1",
-      actualValue: status === "AVAILABLE" ? "3.0" : null,
+      actualValue: event.status === "AVAILABLE" ? "3.0" : null,
       revision: null,
       actualBetterWorse: null,
       revisionBetterWorse: null,
-      description: "Synthetic upcoming calendar event.",
-      status,
-    },
-  ]
+      description: "Synthetic calendar event.",
+    }))
 }
 
 function candles(url) {
@@ -1436,7 +1469,9 @@ function responseForRoute(state, method, pathname, url, body) {
   if (method === "GET" && pathname === "/telegram/destinations") return state.destinations
   if (method === "GET" && pathname === "/telegram/feature-settings") return state.featureSettings
   if (method === "GET" && pathname === "/telegram/market-analysis-schedules") return state.schedules
-  if (method === "GET" && pathname === "/languages") return { languages: state.languages }
+  if (method === "GET" && pathname === "/languages") {
+    return { languages: state.languages, preferredLanguage: state.preferredLanguage }
+  }
 
   if (method === "POST" && pathname === "/telegram/bot-connections") {
     return {

@@ -237,7 +237,9 @@ export function MarketChartCalendarEventList({
           )
 
           return (
-            <Fragment key={event.id}>
+            <Fragment
+              key={event.id ?? `${eventTimestamp ?? "unknown"}-${index}`}
+            >
               <article className="flex flex-col gap-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <AppTimeMetadata icon={CalendarClock}>
@@ -267,11 +269,11 @@ export function MarketChartCalendarEventList({
                   <Badge
                     variant={getEconomicCalendarStatusVariant(event.status)}
                   >
-                    {
-                      dictionary.marketCharts.calendar.statusLabels[
-                        event.status
-                      ]
-                    }
+                    {event.status
+                      ? dictionary.marketCharts.calendar.statusLabels[
+                          event.status
+                        ]
+                      : dictionary.common.notAvailable}
                   </Badge>
                 </div>
                 {releaseValues.length > 0 ? (
@@ -308,12 +310,15 @@ export function MarketChartCalendarEventList({
                     {event.description}
                   </p>
                 ) : null}
-                <LocalizedLink
-                  href={`/economic-calendar/${event.id}`}
-                  className="w-fit rounded-sm text-xs font-medium text-primary underline-offset-4 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring/50"
-                >
-                  {dictionary.common.detail}
-                </LocalizedLink>
+                {event.id !== undefined ? (
+                  <LocalizedLink
+                    href={`/economic-calendar/${event.id}`}
+                    prefetch={false}
+                    className="w-fit rounded-sm text-xs font-medium text-primary underline-offset-4 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring/50"
+                  >
+                    {dictionary.common.detail}
+                  </LocalizedLink>
+                ) : null}
               </article>
               {index < events.length - 1 ? (
                 <Separator className="my-2" />

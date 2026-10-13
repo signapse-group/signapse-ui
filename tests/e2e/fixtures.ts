@@ -2,6 +2,7 @@
 import { randomUUID } from "node:crypto"
 
 import { expect, test as base, type Locator } from "@playwright/test"
+import type { LanguageCatalogResponse } from "@/app/lib/languages/definitions"
 
 export async function waitForClientHandler(
   locator: Locator,
@@ -30,6 +31,7 @@ const testRunCookie = "signapse_test_run_id"
 
 type FixtureController = {
   reset(): Promise<void>
+  getLanguages(): Promise<LanguageCatalogResponse>
   setScenario(
     route: string,
     scenario:
@@ -53,7 +55,9 @@ type FixtureController = {
       | "no-quote"
       | "stale"
       | "calendar-empty"
+      | "calendar-error"
       | "calendar-upcoming"
+      | "calendar-upcoming-window"
       | "calendar-awaiting"
       | "calendar-available",
     method?: string
@@ -148,6 +152,13 @@ export const test = base.extend<Fixtures>({
       const fixture: FixtureController = {
         async reset() {
           await postControl("/__test/reset", { testRunId })
+        },
+        async getLanguages() {
+          const response = await apiRequest.get(`${fixtureBaseUrl}/languages`, {
+            headers: { "x-signapse-test-run-id": testRunId },
+          })
+          await expectOk(response)
+          return response.json()
         },
         async setScenario(route, scenario, method) {
           await postControl("/__test/scenario", {
