@@ -212,6 +212,20 @@ test.describe("P0 market chart workbench", () => {
     ).toBeVisible()
     await expect(page.getByText(/^Cập nhật /)).toBeVisible()
 
+    for (const [scenario, state] of [
+      ["connecting-stale", "Đang kết nối giá trực tiếp"],
+      ["reconnecting-stale", "Đang kết nối lại"],
+    ] as const) {
+      await fixture.setScenario("/market-charts/live", scenario, "GET")
+      await page.reload()
+
+      await expect(page.getByText(state, { exact: true })).toBeVisible()
+      await expect(
+        page.getByText("Giá hiện tại: 110,50", { exact: true })
+      ).toBeVisible()
+      await expect(page.getByText(/^Cập nhật .* \(dữ liệu cũ\)$/)).toBeVisible()
+    }
+
     await fixture.setScenario("/market-charts/live", "post-open-error", "GET")
     await page.reload()
     await expect(
@@ -423,9 +437,11 @@ test.describe("P0 market chart workbench", () => {
     await page.goto("/vi/market-charts?assetId=101&timeframe=1h")
     await page.getByRole("button", { name: /Mở lịch sắp diễn ra/ }).click()
     await expect(
-      page.getByText("Chưa có sự kiện lịch kinh tế trong khoảng hiện tại.", {
-        exact: true,
-      })
+      page
+        .getByRole("main")
+        .getByText("Chưa có sự kiện lịch kinh tế trong khoảng hiện tại.", {
+          exact: true,
+        })
     ).toBeVisible()
 
     await expect(

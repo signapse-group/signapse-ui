@@ -1927,6 +1927,7 @@ export const en: Dictionary = {
       notAvailable: "Not available",
       selectedFallback: "Not selected",
       updatedAt: "Updated {time}",
+      updatedAtStale: "Updated {time} (stale)",
       from: "From {time}",
       to: "To {time}",
     },

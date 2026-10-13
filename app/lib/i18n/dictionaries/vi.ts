@@ -1914,6 +1914,7 @@ export const vi = {
       notAvailable: "Chưa có",
       selectedFallback: "Chưa chọn",
       updatedAt: "Cập nhật {time}",
+      updatedAtStale: "Cập nhật {time} (dữ liệu cũ)",
       from: "Từ {time}",
       to: "Đến {time}",
     },

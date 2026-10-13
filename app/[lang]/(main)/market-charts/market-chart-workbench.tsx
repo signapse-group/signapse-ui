@@ -560,7 +560,11 @@ function getFreshnessLabel(
   }
 
   return localization.formatMessage(
-    localization.dictionary.marketCharts.format.updatedAt,
+    liveState.quote?.stale ||
+      liveState.status?.stale ||
+      liveState.status?.state === "STALE"
+      ? localization.dictionary.marketCharts.format.updatedAtStale
+      : localization.dictionary.marketCharts.format.updatedAt,
     {
       time: updatedAt,
     }
@@ -609,14 +613,6 @@ function getLiveStatusState(
         ? "STALE"
         : "SUBSCRIBED"
       : null
-  }
-
-  if (status.state === "MARKET_CLOSED" || status.state === "ERROR") {
-    return status.state
-  }
-
-  if (status.state === "STALE" || status.stale || liveState.quote?.stale) {
-    return "STALE"
   }
 
   return status.state

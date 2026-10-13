@@ -833,16 +833,22 @@ function candles(url) {
   }
 }
 
-function liveSnapshot(assetId, state = "SUBSCRIBED", timeframe = "1h") {
+function liveSnapshot(
+  assetId,
+  state = "SUBSCRIBED",
+  timeframe = "1h",
+  staleQuote = state === "STALE"
+) {
   const symbol = assetId === 102 ? "XAUUSD" : "BTCUSD"
-  const quote = ["CONNECTING", "MARKET_CLOSED"].includes(state)
+  const quote =
+    state === "MARKET_CLOSED" || (state === "CONNECTING" && !staleQuote)
     ? null
     : {
         assetId,
         symbol,
         price: assetId === 102 ? 2500.25 : 110.5,
         receivedAt: NOW,
-        stale: state === "STALE",
+        stale: staleQuote,
       }
   return {
     asset: {
@@ -860,7 +866,7 @@ function liveSnapshot(assetId, state = "SUBSCRIBED", timeframe = "1h") {
       symbol,
       state,
       message: null,
-      stale: state === "STALE",
+      stale: staleQuote,
       observedAt: NOW,
     },
   }
@@ -920,18 +926,22 @@ async function streamLive(response, state, url, scenario) {
 
   const liveState =
     {
+      "connecting-stale": "CONNECTING",
       "market-closed": "MARKET_CLOSED",
       "no-quote": "CONNECTING",
+      "reconnecting-stale": "RECONNECTING",
       stale: "STALE",
     }[scenario] ?? "SUBSCRIBED"
   const snapshot = liveSnapshot(
     assetId,
     liveState,
-    url.searchParams.get("timeframe") ?? "1h"
+    url.searchParams.get("timeframe") ?? "1h",
+    ["connecting-stale", "reconnecting-stale"].includes(scenario) ||
+      liveState === "STALE"
   )
   writeSse(response, "status", snapshot.status)
   writeSse(response, "snapshot", snapshot)
-  if (snapshot.quote && liveState !== "STALE") {
+  if (snapshot.quote && !snapshot.quote.stale) {
     writeSse(response, "price", snapshot.quote)
   }
   if (
@@ -940,6 +950,8 @@ async function streamLive(response, state, url, scenario) {
       "market-closed",
       "no-quote",
       "reconnect",
+      "connecting-stale",
+      "reconnecting-stale",
       "stale",
     ].includes(scenario)
   ) {

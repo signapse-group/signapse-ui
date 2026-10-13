@@ -54,6 +54,8 @@ type FixtureController = {
       | "market-closed"
       | "no-quote"
       | "stale"
+      | "connecting-stale"
+      | "reconnecting-stale"
       | "calendar-empty"
       | "calendar-error"
       | "calendar-upcoming"
