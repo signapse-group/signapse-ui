@@ -9,6 +9,11 @@ test.describe("P0 market chart workbench", () => {
   }) => {
     test.setTimeout(180_000)
     await fixture.setScenario("/market-charts/live", "reconnect", "GET")
+    await fixture.setScenario(
+      "/market-charts/candles",
+      "short-then-empty-per-timeframe",
+      "GET"
+    )
     await page.goto("/vi/market-charts?assetId=101&timeframe=1h")
 
     await expect(page.locator("#market-chart-asset")).toBeVisible()
@@ -131,6 +136,11 @@ test.describe("P0 market chart workbench", () => {
     await page.clock.setFixedTime(new Date(MARKET_CHART_FIXTURE_NOW))
     await fixture.setPermissions(["market-chart:read", "watchlist:read"])
     await fixture.setScenario(
+      "/market-charts/candles",
+      "short-then-empty",
+      "GET"
+    )
+    await fixture.setScenario(
       "/market-charts/economic-calendar-events",
       "calendar-upcoming-window",
       "GET"
@@ -193,7 +203,6 @@ test.describe("P0 market chart workbench", () => {
       "href",
       "/vi/economic-calendar/902"
     )
-    await page.clock.setFixedTime(new Date())
     await detailLink.click()
     await expect(page).toHaveURL(/\/vi\/economic-calendar\/902/)
     await expect(

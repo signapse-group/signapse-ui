@@ -178,9 +178,9 @@ export interface MarketChartAnnotationResponse {
 export type MarketChartEconomicCalendarEventStatus = "PENDING" | "AVAILABLE"
 
 export interface MarketChartEconomicCalendarEventResponse {
-  id: number
-  assetId: number
-  time: string
+  id?: number
+  assetId?: number
+  time?: string
   title?: string | null
   currencyCode?: string | null
   type?: string | null
@@ -192,7 +192,7 @@ export interface MarketChartEconomicCalendarEventResponse {
   actualBetterWorse?: string | null
   revisionBetterWorse?: string | null
   description?: string | null
-  status: MarketChartEconomicCalendarEventStatus
+  status?: MarketChartEconomicCalendarEventStatus
   scheduledAt?: string | null
 }
 
@@ -509,9 +509,9 @@ export const marketChartEconomicCalendarEventStatusSchema = z.enum([
 ]) satisfies z.ZodType<MarketChartEconomicCalendarEventStatus>
 
 export const marketChartEconomicCalendarEventResponseSchema = z.object({
-  id: z.number(),
-  assetId: z.number(),
-  time: z.string(),
+  id: z.number().optional(),
+  assetId: z.number().optional(),
+  time: z.string().optional(),
   title: z.string().nullable().optional(),
   currencyCode: z.string().nullable().optional(),
   type: z.string().nullable().optional(),
@@ -523,7 +523,7 @@ export const marketChartEconomicCalendarEventResponseSchema = z.object({
   actualBetterWorse: z.string().nullable().optional(),
   revisionBetterWorse: z.string().nullable().optional(),
   description: z.string().nullable().optional(),
-  status: marketChartEconomicCalendarEventStatusSchema,
+  status: marketChartEconomicCalendarEventStatusSchema.optional(),
   scheduledAt: z.string().nullable().optional(),
 }) satisfies z.ZodType<MarketChartEconomicCalendarEventResponse>
 

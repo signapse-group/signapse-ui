@@ -17,6 +17,7 @@ import {
 import {
   createMarketChartAnnotationGroups,
   createMarketChartEconomicCalendarEventGroups,
+  mergeMarketChartEconomicCalendarEvents,
   toMarketChartEpochMillis,
 } from "@/app/[lang]/(main)/market-charts/market-chart-annotations"
 import {
@@ -393,6 +394,27 @@ describe("market-chart annotation and drawing mappings", () => {
     })
   })
 
+  it("keeps and updates events without optional identity fields", () => {
+    const pending = {
+      scheduledAt: "2026-07-30T00:00:00.000Z",
+      title: "Employment report",
+      status: "PENDING" as const,
+    }
+    const available = { ...pending, status: "AVAILABLE" as const }
+
+    expect(
+      mergeMarketChartEconomicCalendarEvents([pending], [available])
+    ).toEqual([available])
+    expect(
+      createMarketChartEconomicCalendarEventGroups(
+        [pending],
+        [candle("2026-07-29T00:00:00.000Z", 100)]
+      )
+    ).toMatchObject([
+      { events: [pending], time: Date.parse(pending.scheduledAt) },
+    ])
+  })
+
   it("keeps drawing tool mappings vendor-independent", () => {
     expect(MARKET_CHART_DRAWING_TOOL_OVERLAYS["horizontal-line"]).toBe(
       "horizontalStraightLine"
@@ -511,6 +533,18 @@ describe("market-chart calendar lookahead helpers", () => {
     expect(
       getMarketChartCalendarEventState(event(5, "invalid"), currentTimestamp)
     ).toBe("INVALID")
+    expect(
+      getMarketChartCalendarEventState(
+        { scheduledAt: eventAtSchedule.time },
+        currentTimestamp
+      )
+    ).toBe("INVALID")
+    expect(
+      getAwaitingMarketChartCalendarEvents({
+        currentTimestamp,
+        events: [{ scheduledAt: eventAtSchedule.time }],
+      })
+    ).toEqual([])
   })
 
   it("selects and orders upcoming and awaiting events", () => {

@@ -22,7 +22,7 @@ export function getMarketChartCalendarEventTimestamp(
     return scheduledAt
   }
 
-  const time = Date.parse(event.time)
+  const time = event.time ? Date.parse(event.time) : NaN
 
   return Number.isFinite(time) ? time : null
 }
@@ -65,6 +65,10 @@ export function getMarketChartCalendarEventState(
 
   if (event.status === "AVAILABLE") {
     return "PUBLISHED"
+  }
+
+  if (event.status !== "PENDING") {
+    return "INVALID"
   }
 
   if (currentTimestamp < eventTimestamp) {
