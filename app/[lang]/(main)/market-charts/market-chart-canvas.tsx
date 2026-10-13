@@ -14,7 +14,6 @@ import {
   init,
   type Chart,
   type DataLoaderGetBarsParams,
-  type DataLoaderSubscribeBarParams,
   type DeepPartial,
   type KLineData,
   type Overlay,
@@ -94,10 +93,8 @@ import {
   getCandleTimestamp,
   getFiniteVolume,
   hasUsableVolume,
-  hasUsableVolumeData,
   isValidMarketChartCandle,
   mergeCandleItems,
-  mergeLiveCandleItem,
   normalizeCandleItems,
 } from "./market-chart-candle-helpers"
 import {
@@ -173,7 +170,6 @@ interface MarketChartCanvasProps {
   calendarLayerEnabled: boolean
   warmAnnotationGroups?: MarketChartAnnotationGroup[]
   annotationLayerEnabled: boolean
-  liveCandle?: MarketChartCandleItemResponse | null
   selectedAnnotationGroupId?: string | null
   activeOutcomeHoverRange?: MarketChartOutcomeHoverRange | null
   activeIndicators?: MarketChartIndicatorName[]
@@ -762,7 +758,6 @@ export const MarketChartCanvas = forwardRef<
     dataVersion = 0,
     className,
     drawingToolActive = false,
-    liveCandle = null,
     onAnnotationClose,
     onAnnotationSelect,
     onDrawingSelectionChange,
@@ -811,11 +806,6 @@ export const MarketChartCanvas = forwardRef<
     MarketChartEconomicCalendarEventResponse[]
   >([])
   const loadedCandlesRef = useRef<MarketChartCandleItemResponse[]>([])
-  const liveCandleRef = useRef<MarketChartCandleItemResponse | null>(liveCandle)
-  const liveCandleSubscriberRef = useRef<
-    DataLoaderSubscribeBarParams["callback"] | null
-  >(null)
-  const liveCandleSubscriberLoadIdRef = useRef<number | null>(null)
   const historyExhaustedRef = useRef(false)
   const onDrawingSelectionChangeRef = useRef(onDrawingSelectionChange)
   const onDrawingToolCompleteRef = useRef(onDrawingToolComplete)
@@ -893,22 +883,6 @@ export const MarketChartCanvas = forwardRef<
     activeOutcomeHoverRangeRef.current = activeOutcomeHoverRange
     scheduleMarkerPositionUpdateRef.current()
   }, [activeOutcomeHoverRange])
-
-  useEffect(() => {
-    liveCandleRef.current = liveCandle
-    if (
-      liveCandle &&
-      liveCandleSubscriberLoadIdRef.current === chartLoadIdRef.current &&
-      liveCandleSubscriberRef.current
-    ) {
-      const [liveData] = createKLineData([liveCandle])
-
-      if (liveData) {
-        liveCandleSubscriberRef.current(liveData)
-      }
-    }
-    scheduleMarkerPositionUpdateRef.current()
-  }, [liveCandle])
 
   useEffect(() => {
     onLoadedDataChangeRef.current = onLoadedDataChange
@@ -1341,8 +1315,6 @@ export const MarketChartCanvas = forwardRef<
       chart.unsubscribeAction("onZoom", scheduleMarkerPositionUpdate)
       resizeObserver.disconnect()
       scheduleMarkerPositionUpdateRef.current = () => {}
-      liveCandleSubscriberRef.current = null
-      liveCandleSubscriberLoadIdRef.current = null
       activeDrawingDraftIdRef.current = null
       activeDrawingToolRef.current = null
       selectedDrawingIdRef.current = null
@@ -1505,13 +1477,9 @@ export const MarketChartCanvas = forwardRef<
       type,
     }: DataLoaderGetBarsParams) {
       if (type === "init") {
-        const displayed = mergeLiveCandleItem(
-          loadedCandlesRef.current,
-          liveCandleRef.current
-        )
-        callback(createKLineData(displayed), {
+        callback(createKLineData(loadedCandlesRef.current), {
           backward: false,
-          forward: displayed.length > 0,
+          forward: loadedCandlesRef.current.length > 0,
         })
         scheduleMarkerPositionUpdateRef.current()
         return
@@ -1614,18 +1582,8 @@ export const MarketChartCanvas = forwardRef<
       getBars(params) {
         void loadBars(params)
       },
-      subscribeBar(params) {
-        liveCandleSubscriberRef.current = params.callback
-        liveCandleSubscriberLoadIdRef.current = loadId
-        const [liveData] = createKLineData(
-          liveCandleRef.current ? [liveCandleRef.current] : []
-        )
-        if (liveData) params.callback(liveData)
-      },
-      unsubscribeBar() {
-        liveCandleSubscriberRef.current = null
-        liveCandleSubscriberLoadIdRef.current = null
-      },
+      subscribeBar() {},
+      unsubscribeBar() {},
     })
   }, [assetId, dataVersion, dictionary.marketCharts.responseInvalid, timeframe])
 

@@ -156,7 +156,7 @@ describe("P0 fixture response lifetime", () => {
         expect(chunk.done).toBe(false)
         events += new TextDecoder().decode(chunk.value)
       }
-      expect(events).toContain("CONNECTED")
+      expect(events).toContain("SUBSCRIBED")
       let settled = false
       const next = reader.read().then((chunk) => {
         settled = true

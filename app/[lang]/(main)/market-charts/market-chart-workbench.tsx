@@ -48,7 +48,6 @@ import {
   type MarketChartAnnotationResponse,
   MarketChartCandleRequest,
   MarketChartCandleResponse,
-  MarketChartCandleItemResponse,
   MarketChartEconomicCalendarEventRequest,
   MarketChartEconomicCalendarEventResponse,
   type MarketChartLiveQuoteResponse,
@@ -205,7 +204,6 @@ import {
   type MarketChartDrawingStyle,
 } from "./market-chart-drawing-style"
 import {
-  deriveLiveCandleItemFromQuote,
   hasUsableVolumeData,
   normalizeCandleItems,
 } from "./market-chart-candle-helpers"
@@ -230,12 +228,13 @@ type FormErrors = Partial<Record<keyof MarketChartSelectionState, string>> & {
   form?: string
 }
 
+type MarketChartLiveTransportState = "CONNECTING" | "RECONNECTING" | "ERROR"
+
 type MarketChartLiveRuntimeState = {
-  candle: MarketChartCandleItemResponse | null
   error: string | null
   quote: MarketChartLiveQuoteResponse | null
   status: MarketChartLiveStatusResponse | null
-  transportState: MarketChartLiveStreamState | null
+  transportState: MarketChartLiveTransportState | null
 }
 
 type MarketChartDisplayData = MarketChartCandleResponse & {
@@ -287,7 +286,6 @@ const DEFAULT_MARKET_CHART_DRAWING_STATE: MarketChartDrawingState = {
   selectedTools: DEFAULT_MARKET_CHART_DRAWING_PALETTE_TOOLS,
 }
 const DEFAULT_MARKET_CHART_LIVE_STATE: MarketChartLiveRuntimeState = {
-  candle: null,
   error: null,
   quote: null,
   status: null,
@@ -546,15 +544,12 @@ function isWarmAnnotationGroup(group: MarketChartAnnotationGroup) {
 }
 
 function getFreshnessLabel(
-  data: MarketChartCandleResponse | null,
-  phase: WorkbenchPhase,
   liveState: MarketChartLiveRuntimeState,
   localization: LocalizationContext
 ) {
-  const timestamp =
-    liveState.quote?.receivedAt || liveState.quote?.providerTime || data?.to
+  const timestamp = liveState.quote?.receivedAt
 
-  if (phase !== "success" || !timestamp) {
+  if (!timestamp) {
     return null
   }
 
@@ -565,11 +560,62 @@ function getFreshnessLabel(
   }
 
   return localization.formatMessage(
-    localization.dictionary.marketCharts.format.updatedAt,
+    liveState.quote?.stale ||
+      liveState.status?.stale ||
+      liveState.status?.state === "STALE"
+      ? localization.dictionary.marketCharts.format.updatedAtStale
+      : localization.dictionary.marketCharts.format.updatedAt,
     {
       time: updatedAt,
     }
   )
+}
+
+function getCurrentPriceLabel(
+  liveState: MarketChartLiveRuntimeState,
+  pricePrecision: number | null | undefined,
+  localization: LocalizationContext
+) {
+  const quote = liveState.quote
+
+  if (!quote) {
+    return null
+  }
+
+  const price = localization.formatNumber(
+    quote.price,
+    pricePrecision == null
+      ? undefined
+      : {
+          minimumFractionDigits: pricePrecision,
+          maximumFractionDigits: pricePrecision,
+        }
+  )
+
+  return localization.formatMessage(
+    localization.dictionary.marketCharts.live.currentPrice,
+    { price }
+  )
+}
+
+function getLiveStatusState(
+  liveState: MarketChartLiveRuntimeState
+): MarketChartLiveStreamState | null {
+  if (liveState.transportState) {
+    return liveState.transportState
+  }
+
+  const status = liveState.status
+
+  if (!status) {
+    return liveState.quote
+      ? liveState.quote.stale
+        ? "STALE"
+        : "SUBSCRIBED"
+      : null
+  }
+
+  return status.state
 }
 
 function getLiveStatusLabel(
@@ -582,22 +628,19 @@ function getLiveStatusLabel(
     return live.error
   }
 
-  const state = liveState.status?.state ?? liveState.transportState
+  const state = getLiveStatusState(liveState)
 
   switch (state) {
     case "CONNECTING":
       return live.connecting
-    case "CONNECTED":
     case "SUBSCRIBED":
       return live.live
     case "RECONNECTING":
       return live.reconnecting
     case "STALE":
-    case "MARKET_CLOSED":
       return live.stale
-    case "DISCONNECTED":
-    case "UNSUBSCRIBED":
-      return live.disconnected
+    case "MARKET_CLOSED":
+      return live.marketClosed
     case "ERROR":
       return live.error
     default:
@@ -610,9 +653,9 @@ function getLiveStatusTone(liveState: MarketChartLiveRuntimeState) {
     return "error" as const
   }
 
-  const state = liveState.status?.state ?? liveState.transportState
+  const state = getLiveStatusState(liveState)
 
-  if (state === "CONNECTED" || state === "SUBSCRIBED") {
+  if (state === "SUBSCRIBED") {
     return "live" as const
   }
 
@@ -624,11 +667,7 @@ function getLiveStatusTone(liveState: MarketChartLiveRuntimeState) {
     return "stale" as const
   }
 
-  if (
-    state === "ERROR" ||
-    state === "DISCONNECTED" ||
-    state === "UNSUBSCRIBED"
-  ) {
+  if (state === "ERROR") {
     return "error" as const
   }
 
@@ -1129,9 +1168,9 @@ function ChartSurface({
   data,
   error,
   errors,
+  currentPriceLabel,
   freshnessLabel,
   isBusy,
-  liveCandle,
   liveStatusLabel,
   liveStatusTone,
   phase,
@@ -1177,9 +1216,9 @@ function ChartSurface({
   data: MarketChartDisplayData | null
   error: string | null
   errors: FormErrors
+  currentPriceLabel: string | null
   freshnessLabel: string | null
   isBusy: boolean
-  liveCandle: MarketChartCandleItemResponse | null
   liveStatusLabel: string | null
   liveStatusTone: "error" | "live" | "pending" | "stale"
   phase: WorkbenchPhase
@@ -1310,8 +1349,8 @@ function ChartSurface({
     useState<MarketChartDrawingSelection | null>(null)
   const [isFullscreen, setIsFullscreen] = useState(false)
 
-  const hasCandles = (data?.candles.length ?? 0) > 0 || !!liveCandle
-  const volumeAvailable = hasUsableVolumeData(data?.candles, liveCandle)
+  const hasCandles = (data?.candles.length ?? 0) > 0
+  const volumeAvailable = hasUsableVolumeData(data?.candles)
   const availableActiveIndicators = volumeAvailable
     ? activeIndicators
     : activeIndicators.filter((indicator) => indicator !== "VOL")
@@ -1552,7 +1591,6 @@ function ChartSurface({
                     drawingToolActive={!!drawingState.activeTool}
                     annotationLayerEnabled={annotationLayerEnabled}
                     activeOutcomeHoverRange={activeOutcomeHoverRange}
-                    liveCandle={liveCandle}
                     pricePrecision={data?.asset.pricePrecision}
                     timeframe={selection.timeframe}
                     symbol={displaySymbol}
@@ -1737,6 +1775,7 @@ function ChartSurface({
           calendarEvents={calendarMarkerEvents}
           calendarLayerEnabled={calendarLayerEnabled}
           calendarLoadError={calendarLoadError}
+          currentPriceLabel={currentPriceLabel}
           freshnessLabel={freshnessLabel}
           groups={annotationGroups}
           isLoading={phase === "loading" || calendarLoading}
@@ -2798,6 +2837,7 @@ function MarketChartAnnotationControls({
   calendarEvents,
   calendarLayerEnabled,
   calendarLoadError,
+  currentPriceLabel,
   freshnessLabel,
   groups,
   isLoading,
@@ -2808,6 +2848,7 @@ function MarketChartAnnotationControls({
   calendarEvents: MarketChartEconomicCalendarEventResponse[]
   calendarLayerEnabled: boolean
   calendarLoadError: string | null
+  currentPriceLabel: string | null
   freshnessLabel: string | null
   groups: MarketChartAnnotationGroup[]
   isLoading: boolean
@@ -2842,7 +2883,7 @@ function MarketChartAnnotationControls({
 
   return (
     <div className="border-t bg-muted/10 px-3 py-1.5">
-      <div className="flex min-h-7 min-w-0 items-center gap-2 text-xs font-medium text-muted-foreground">
+      <div className="flex min-h-7 min-w-0 flex-wrap items-center gap-2 text-xs font-medium text-muted-foreground">
         {label || calendarLabel ? (
           <>
             <div
@@ -2894,10 +2935,10 @@ function MarketChartAnnotationControls({
           calendarLayerEnabled={calendarLayerEnabled}
           groups={groups}
         />
-        {freshnessLabel || liveStatusLabel ? (
-          <div className="ml-auto flex min-w-0 shrink-0 flex-wrap items-center justify-end gap-x-3 gap-y-1 text-right">
+        {currentPriceLabel || freshnessLabel || liveStatusLabel ? (
+          <div className="ml-auto flex w-full min-w-0 flex-wrap items-center justify-end gap-x-3 gap-y-1 text-right sm:w-auto sm:shrink-0">
             {liveStatusLabel ? (
-              <span className="flex items-center gap-2">
+              <span aria-live="polite" className="flex items-center gap-2">
                 <span
                   className={cn(
                     "size-2 rounded-full",
@@ -2913,6 +2954,7 @@ function MarketChartAnnotationControls({
                 {liveStatusLabel}
               </span>
             ) : null}
+            {currentPriceLabel ? <span>{currentPriceLabel}</span> : null}
             {freshnessLabel ? (
               <AppTimeMetadata icon={RefreshCw}>
                 {freshnessLabel}
@@ -3000,10 +3042,13 @@ export function MarketChartWorkbench({
   const selectedAssetId = selectedAsset?.assetId ?? null
   const isBusy = phase === "loading" || isPending
   const timeframeLabels = getMarketChartTimeframeLabels(dictionary)
-  const freshnessLabel = getFreshnessLabel(data, phase, liveState, localization)
   const chartData = loadedData ?? data
-  const chartCandlesRef = useRef(chartData?.candles ?? [])
-  const liveCandleItem = liveState.candle
+  const currentPriceLabel = getCurrentPriceLabel(
+    liveState,
+    chartData?.asset.pricePrecision,
+    localization
+  )
+  const freshnessLabel = getFreshnessLabel(liveState, localization)
   const liveStatusLabel = getLiveStatusLabel(liveState, localization)
   const liveStatusTone = getLiveStatusTone(liveState)
   const annotationGroups = useMemo(() => {
@@ -3017,9 +3062,6 @@ export function MarketChartWorkbench({
     )
   }, [annotationLayerEnabled, chartData])
 
-  useEffect(() => {
-    chartCandlesRef.current = chartData?.candles ?? []
-  }, [chartData?.candles])
   useEffect(() => {
     if (phase === "success" && loadedData) {
       initialLoadObserverRef.current.finish(
@@ -3396,14 +3438,10 @@ export function MarketChartWorkbench({
 
       setData(nextData)
       setLoadedData(nextData)
-      setLiveState(
-        candles.length > 0
-          ? {
-              ...DEFAULT_MARKET_CHART_LIVE_STATE,
-              transportState: "CONNECTING",
-            }
-          : DEFAULT_MARKET_CHART_LIVE_STATE
-      )
+      setLiveState({
+        ...DEFAULT_MARKET_CHART_LIVE_STATE,
+        transportState: "CONNECTING",
+      })
       setDataVersion((v) => v + 1)
       setPhase("success")
     },
@@ -3470,11 +3508,7 @@ export function MarketChartWorkbench({
   ])
 
   useEffect(() => {
-    if (
-      phase !== "success" ||
-      selectedAssetId === null ||
-      chartCandlesRef.current.length === 0
-    ) {
+    if (phase !== "success" || selectedAssetId === null) {
       return
     }
 
@@ -3483,17 +3517,6 @@ export function MarketChartWorkbench({
     const stream = openMarketChartLiveStream({
       assetId: selectedAssetId,
       timeframe: selection.timeframe,
-      onCandle(value) {
-        if (!active) {
-          return
-        }
-
-        setLiveState((current) => ({
-          ...current,
-          candle: value,
-          error: null,
-        }))
-      },
       onErrorEvent(value) {
         if (!active) {
           return
@@ -3521,11 +3544,7 @@ export function MarketChartWorkbench({
           return
         }
 
-        setLiveState((current) => ({
-          ...current,
-          error: null,
-          transportState: "CONNECTED",
-        }))
+        setLiveState((current) => ({ ...current, error: null }))
       },
       onPrice(value) {
         if (!active) {
@@ -3534,18 +3553,10 @@ export function MarketChartWorkbench({
 
         setLiveState((current) => ({
           ...current,
-          candle:
-            deriveLiveCandleItemFromQuote({
-              current: current.candle
-                ? [current.candle]
-                : chartCandlesRef.current,
-              quote: value,
-              timeframe: selection.timeframe,
-            }) ?? current.candle,
           error: null,
           quote: value,
           status: null,
-          transportState: value.stale ? "STALE" : "CONNECTED",
+          transportState: null,
         }))
       },
       onSnapshot(value) {
@@ -3553,34 +3564,13 @@ export function MarketChartWorkbench({
           return
         }
 
-        setLiveState((current) => {
-          const quoteConfirmsLive =
-            value.quote?.stale === false &&
-            (value.status.state === "CONNECTING" ||
-              value.status.state === "RECONNECTING")
-
-          return {
-            ...current,
-            candle:
-              value.candle ??
-              (value.quote
-                ? deriveLiveCandleItemFromQuote({
-                    current: current.candle
-                      ? [current.candle]
-                      : chartCandlesRef.current,
-                    quote: value.quote,
-                    timeframe: selection.timeframe,
-                  })
-                : null) ??
-              current.candle,
-            error: null,
-            quote: value.quote ?? current.quote,
-            status: quoteConfirmsLive ? null : value.status,
-            transportState: quoteConfirmsLive
-              ? "CONNECTED"
-              : value.status.state,
-          }
-        })
+        setLiveState((current) => ({
+          ...current,
+          error: null,
+          quote: value.quote,
+          status: value.status,
+          transportState: null,
+        }))
       },
       onStatus(value) {
         if (!active) {
@@ -3589,23 +3579,21 @@ export function MarketChartWorkbench({
 
         setLiveState((current) => ({
           ...current,
-          error:
-            value.state === "ERROR" ? (value.message ?? current.error) : null,
+          error: value.state === "ERROR" ? value.message : null,
           status: value,
-          transportState: value.state,
+          transportState: null,
         }))
       },
-      onTransportError() {
+      onTransportError(state) {
         if (!active) {
           return
         }
 
         setLiveState((current) => ({
           ...current,
-          transportState:
-            current.transportState === "CONNECTING"
-              ? "CONNECTING"
-              : "RECONNECTING",
+          error: state === "RECONNECTING" ? null : current.error,
+          status: null,
+          transportState: state,
         }))
       },
     })
@@ -4027,9 +4015,9 @@ export function MarketChartWorkbench({
         data={chartData}
         error={loadError}
         errors={errors}
+        currentPriceLabel={currentPriceLabel}
         freshnessLabel={freshnessLabel}
         isBusy={isBusy}
-        liveCandle={liveCandleItem}
         liveStatusLabel={liveStatusLabel}
         liveStatusTone={liveStatusTone}
         phase={phase}

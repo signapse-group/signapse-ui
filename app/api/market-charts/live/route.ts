@@ -59,6 +59,35 @@ export async function GET(request: NextRequest) {
     if (!response.ok) {
       const errorText = await response.text()
 
+      if (response.status === 503) {
+        try {
+          const errorBody: unknown = JSON.parse(errorText)
+
+          if (
+            typeof errorBody === "object" &&
+            errorBody !== null &&
+            "code" in errorBody &&
+            errorBody.code === "USER_PROVISIONING_PENDING"
+          ) {
+            const retryAfterSeconds = Number(
+              response.headers.get("Retry-After")
+            )
+            const retryAfterMilliseconds =
+              Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0
+                ? Math.ceil(retryAfterSeconds * 1000)
+                : 2000
+
+            return new Response(`retry: ${retryAfterMilliseconds}\n\n`, {
+              headers: {
+                "Cache-Control": "no-cache, no-transform",
+                Connection: "keep-alive",
+                "Content-Type": "text/event-stream",
+              },
+            })
+          }
+        } catch {}
+      }
+
       return new NextResponse(errorText || messages.openError, {
         status: response.status,
       })

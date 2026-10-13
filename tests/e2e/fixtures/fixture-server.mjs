@@ -833,17 +833,23 @@ function candles(url) {
   }
 }
 
-function liveSnapshot(assetId, state = "CONNECTED") {
+function liveSnapshot(
+  assetId,
+  state = "SUBSCRIBED",
+  timeframe = "1h",
+  staleQuote = state === "STALE"
+) {
   const symbol = assetId === 102 ? "XAUUSD" : "BTCUSD"
-  const quote = {
-    assetId,
-    symbol,
-    price: 110.5,
-    volume: 1200,
-    providerTime: NOW,
-    receivedAt: NOW,
-    stale: state !== "CONNECTED",
-  }
+  const quote =
+    state === "MARKET_CLOSED" || (state === "CONNECTING" && !staleQuote)
+    ? null
+    : {
+        assetId,
+        symbol,
+        price: assetId === 102 ? 2500.25 : 110.5,
+        receivedAt: NOW,
+        stale: staleQuote,
+      }
   return {
     asset: {
       id: assetId,
@@ -853,22 +859,14 @@ function liveSnapshot(assetId, state = "CONNECTED") {
       pricePrecision: 2,
     },
     symbol,
-    timeframe: "1h",
+    timeframe,
     quote,
-    candle: {
-      time: NOW,
-      open: 110,
-      high: 112,
-      low: 109,
-      close: 110.5,
-      volume: 1200,
-    },
     status: {
       assetId,
       symbol,
       state,
-      message: state === "CONNECTED" ? "Fixture stream connected" : "Fixture stream recovering",
-      stale: state !== "CONNECTED",
+      message: null,
+      stale: staleQuote,
       observedAt: NOW,
     },
   }
@@ -887,9 +885,34 @@ async function streamLive(response, state, url, scenario) {
     Connection: "keep-alive",
     "Access-Control-Allow-Origin": "*",
   })
+  trackResponse(state, response)
 
-  if (scenario === "outage") {
-    writeSse(response, "error", { code: "FIXTURE_STREAM_OUTAGE", message: "Fixture stream outage" })
+  if (scenario === "post-open-error") {
+    writeSse(response, "error", {
+      assetId,
+      symbol: assetId === 102 ? "XAUUSD" : "BTCUSD",
+      message: "Fixture stream outage",
+      observedAt: NOW,
+    })
+    return
+  }
+
+  if (scenario === "error-reconnect" && state.streamConnections === 1) {
+    response.write("retry: 3000\n\n")
+    const snapshot = liveSnapshot(
+      assetId,
+      "SUBSCRIBED",
+      url.searchParams.get("timeframe") ?? "1h"
+    )
+    writeSse(response, "status", snapshot.status)
+    writeSse(response, "snapshot", snapshot)
+    if (snapshot.quote) writeSse(response, "price", snapshot.quote)
+    writeSse(response, "error", {
+      assetId,
+      symbol: snapshot.symbol,
+      message: "Fixture stream error before reconnect",
+      observedAt: NOW,
+    })
     response.end()
     return
   }
@@ -901,11 +924,39 @@ async function streamLive(response, state, url, scenario) {
     return
   }
 
-  const snapshot = liveSnapshot(assetId, "CONNECTED")
+  const liveState =
+    {
+      "connecting-stale": "CONNECTING",
+      "market-closed": "MARKET_CLOSED",
+      "no-quote": "CONNECTING",
+      "reconnecting-stale": "RECONNECTING",
+      stale: "STALE",
+    }[scenario] ?? "SUBSCRIBED"
+  const snapshot = liveSnapshot(
+    assetId,
+    liveState,
+    url.searchParams.get("timeframe") ?? "1h",
+    ["connecting-stale", "reconnecting-stale"].includes(scenario) ||
+      liveState === "STALE"
+  )
   writeSse(response, "status", snapshot.status)
   writeSse(response, "snapshot", snapshot)
-  writeSse(response, "price", snapshot.quote)
-  trackResponse(state, response)
+  if (snapshot.quote && !snapshot.quote.stale) {
+    writeSse(response, "price", snapshot.quote)
+  }
+  if (
+    [
+      "error-reconnect",
+      "market-closed",
+      "no-quote",
+      "reconnect",
+      "connecting-stale",
+      "reconnecting-stale",
+      "stale",
+    ].includes(scenario)
+  ) {
+    return
+  }
 }
 
 function hasFixturePermission(state, permission) {
@@ -1728,7 +1779,45 @@ const server = createServer(async (request, response) => {
     sendJson(response, 504, errorPayload("Fixture request timed out", "FIXTURE_TIMEOUT"))
     return
   }
-  if (scenario === "outage") {
+  if (
+    scenario === "preopen-unavailable" &&
+    method === "GET" &&
+    url.pathname === "/market-charts/live"
+  ) {
+    sendJson(
+      response,
+      503,
+      errorPayload(
+        "Fixture provider is unavailable",
+        "FIXTURE_PROVIDER_UNAVAILABLE"
+      )
+    )
+    return
+  }
+  if (
+    scenario === "provisioning-pending" &&
+    method === "GET" &&
+    url.pathname === "/market-charts/live" &&
+    state.requests.filter(
+      (request) =>
+        request.method === "GET" && request.path === "/market-charts/live"
+    ).length === 1
+  ) {
+    response.writeHead(503, { ...jsonHeaders(), "Retry-After": "2" })
+    response.end(
+      JSON.stringify(
+        errorPayload(
+          "Account provisioning is still in progress.",
+          "USER_PROVISIONING_PENDING"
+        )
+      )
+    )
+    return
+  }
+  if (
+    scenario === "outage" &&
+    !(method === "GET" && url.pathname === "/market-charts/live")
+  ) {
     sendJson(response, 503, errorPayload("Fixture backend is unavailable", "FIXTURE_OUTAGE"))
     return
   }
