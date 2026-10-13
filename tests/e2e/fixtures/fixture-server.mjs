@@ -1748,6 +1748,26 @@ const server = createServer(async (request, response) => {
     return
   }
   if (
+    scenario === "provisioning-pending" &&
+    method === "GET" &&
+    url.pathname === "/market-charts/live" &&
+    state.requests.filter(
+      (request) =>
+        request.method === "GET" && request.path === "/market-charts/live"
+    ).length === 1
+  ) {
+    response.writeHead(503, { ...jsonHeaders(), "Retry-After": "2" })
+    response.end(
+      JSON.stringify(
+        errorPayload(
+          "Account provisioning is still in progress.",
+          "USER_PROVISIONING_PENDING"
+        )
+      )
+    )
+    return
+  }
+  if (
     scenario === "outage" &&
     !(method === "GET" && url.pathname === "/market-charts/live")
   ) {

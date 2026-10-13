@@ -48,6 +48,7 @@ type FixtureController = {
       | "error-reconnect"
       | "post-open-error"
       | "preopen-unavailable"
+      | "provisioning-pending"
       | "market-closed"
       | "no-quote"
       | "stale"

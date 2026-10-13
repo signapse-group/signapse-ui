@@ -104,6 +104,40 @@ test.describe("P0 market chart workbench", () => {
     ).toBe(true)
   })
 
+  test("keeps live quote details inside a narrow viewport", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 360, height: 800 })
+    await page.goto("/vi/market-charts?assetId=101&timeframe=1h")
+
+    await expect(page.getByText("Giá trực tiếp", { exact: true })).toBeVisible({
+      timeout: 30_000,
+    })
+    await expect(
+      page.getByText("Giá hiện tại: 110,50", { exact: true })
+    ).toBeVisible()
+    await expect(page.getByText(/^Cập nhật /)).toBeVisible()
+
+    const bounds = await page
+      .locator('span[aria-live="polite"]')
+      .filter({ hasText: "Giá trực tiếp" })
+      .locator("..")
+      .evaluate((element) => {
+        const rect = element.getBoundingClientRect()
+        return {
+          left: rect.left,
+          right: rect.right,
+          viewportWidth: document.documentElement.clientWidth,
+          clientWidth: element.clientWidth,
+          scrollWidth: element.scrollWidth,
+        }
+      })
+
+    expect(bounds.left).toBeGreaterThanOrEqual(0)
+    expect(bounds.right).toBeLessThanOrEqual(bounds.viewportWidth)
+    expect(bounds.scrollWidth).toBeLessThanOrEqual(bounds.clientWidth)
+  })
+
   test("retries exact empty history and loads sparse count-back candles", async ({
     page,
     fixture,
@@ -205,6 +239,38 @@ test.describe("P0 market chart workbench", () => {
     await expect
       .poll(async () => (await fixture.state()).streamConnections)
       .toBe(0)
+  })
+
+  test("retries a live stream while Clerk provisioning is pending", async ({
+    page,
+    fixture,
+  }) => {
+    await fixture.setScenario(
+      "/market-charts/live",
+      "provisioning-pending",
+      "GET"
+    )
+    await page.goto("/vi/market-charts?assetId=101&timeframe=1h")
+
+    await expect(
+      page.getByText("Đang kết nối lại", { exact: true })
+    ).toBeVisible()
+    await expect
+      .poll(
+        async () =>
+          (await fixture.state()).requests.filter(
+            (request) =>
+              request.method === "GET" && request.path === "/market-charts/live"
+          ).length,
+        { timeout: 10_000 }
+      )
+      .toBeGreaterThanOrEqual(2)
+    await expect(page.getByText("Giá trực tiếp", { exact: true })).toBeVisible({
+      timeout: 10_000,
+    })
+    await expect(
+      page.getByText("Giá hiện tại: 110,50", { exact: true })
+    ).toBeVisible()
   })
 
   test("shows reconnecting after an SSE error while EventSource retries", async ({

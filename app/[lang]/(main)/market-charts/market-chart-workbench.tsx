@@ -2887,7 +2887,7 @@ function MarketChartAnnotationControls({
 
   return (
     <div className="border-t bg-muted/10 px-3 py-1.5">
-      <div className="flex min-h-7 min-w-0 items-center gap-2 text-xs font-medium text-muted-foreground">
+      <div className="flex min-h-7 min-w-0 flex-wrap items-center gap-2 text-xs font-medium text-muted-foreground">
         {label || calendarLabel ? (
           <>
             <div
@@ -2940,7 +2940,7 @@ function MarketChartAnnotationControls({
           groups={groups}
         />
         {currentPriceLabel || freshnessLabel || liveStatusLabel ? (
-          <div className="ml-auto flex min-w-0 shrink-0 flex-wrap items-center justify-end gap-x-3 gap-y-1 text-right">
+          <div className="ml-auto flex w-full min-w-0 flex-wrap items-center justify-end gap-x-3 gap-y-1 text-right sm:w-auto sm:shrink-0">
             {liveStatusLabel ? (
               <span aria-live="polite" className="flex items-center gap-2">
                 <span
