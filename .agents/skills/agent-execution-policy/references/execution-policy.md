@@ -21,13 +21,13 @@ that the accepted scope explicitly requires.
 
 ## Local handoff and live acceptance
 
-Implement handoff covers required behavior, applicable local checks, current-head PR CI and accessible candidate evidence. Independent review and delivery follow in the new In Review session. Complete the repository's required full checks; baseline failures cannot be converted into a scoped Pass. Missing producer contract, required reference, output/publication access, required comment-save or transition access remains a gap; continue independent work where meaningful.
+Implement handoff covers required behavior, focused local checks, current-head lightweight PR CI and Vercel Preview build under the delivery runbook. Independent review and Production delivery follow in the new In Review session. CI owns the full lightweight gate; do not repeat full build/browser regression locally for every change. Required failures cannot be converted into a scoped Pass. Missing producer contract, required reference, output/publication access, required comment-save or transition access remains a gap; continue independent work where meaningful.
 
-Done additionally requires approved review, merge and delivery/live revision/basic app loading under the [runbook](../../../../docs/delivery.md). Pending QA/parent acceptance or private QA credentials alone does not prevent contribution completion. Metadata/link verification may be coordinator-owned when output exists and is reviewable; report pending rather than claim linkage verified. This does not waive requirement completion or native dependency admission.
+Done additionally requires approved review, merge and confirmed Vercel Production deployment containing the contribution under the [runbook](../../../../docs/delivery.md). Website/domain/feature verification belongs to owner/QA. Pending QA/parent acceptance or private QA credentials alone does not prevent contribution completion. Metadata/link verification may be coordinator-owned when output exists and is reviewable; report pending rather than claim linkage verified. This does not waive requirement completion or native dependency admission.
 
-Live feature execution is a gate only when the assignment identifies operation, scope, expected result and inputs/access. Public forms, protected pages, auth transport reuse or SSR technology alone do not add live acceptance. Local fixtures prove their observed boundary, not producer publication, authentication, hosted behavior or external effects. Approved design, accessibility and local SSR checks remain mandatory for affected UI. Docs-only output needs artifact/version/review/checks, not app deployment; workflow/runtime activation is required only when assigned.
+Owner/QA executes live website/feature checks under their assigned scope and inputs; these are not a dev delivery gate. Local fixtures prove their observed boundary, not producer publication, authentication, hosted behavior or external effects. Approved design, accessibility and local SSR checks remain mandatory for affected UI. Docs-only output needs artifact/version/review/checks, not app deployment; workflow/runtime activation is required only when assigned.
 
-Use the [runner scope/evidence guide](../../../../docs/testing/browser-tests.md#runner-scopes-and-evidence) and selectors covering all affected behavior. On Symphony use `/opt/apps/symphony/runtime/run-fe-quality "$PWD"` and read the host testing guide. The before_run hook refreshes ignored `.env.local` from `$SIGNAPSE_UI_APP_ENV`; private account inputs stay only in `$SIGNAPSE_UI_E2E_ENV`, never in workspace env/logs/evidence.
+Use the [testing guide](../../../../docs/testing/browser-tests.md#selecting-checks-by-change-scope) for affected coverage. When browser/live checks are required on Symphony, read the host testing guide and use its existing wrapper/lock. The before_run hook refreshes ignored `.env.local` from `$SIGNAPSE_UI_APP_ENV`; private account inputs stay only in `$SIGNAPSE_UI_E2E_ENV`, never in workspace env/logs/evidence.
 
 ## Bug fixes and QA retest
 
@@ -61,7 +61,7 @@ Complete applicable local checks and current-head PR CI under the [delivery runb
 
 Independent review belongs to the fresh In Review session; Implement does not call a reviewer as an In Review admission gate. If linkage/candidate/evidence is clear and accessible, no Jira handoff comment is required. Comment only for a review-relevant exception, uncertain linkage/candidate/access or concrete owner action; link the detail rather than copying PR checks/logs. A missing mandatory check is not a handoff exception that waives the gate.
 
-Save/read back necessary records, resolve the live transition, Progress → In Review/read back and end Implement. Do not wait for this contribution's deployment or continue Review/delivery in the Implement session.
+Save/read back necessary records, resolve the live transition, Progress → In Review/read back and end Implement. Preview is a PR build gate; do not wait for this contribution's Production deployment or continue Review/delivery in the Implement session.
 
 ### Review → Implement sửa
 
@@ -88,7 +88,7 @@ Lưu ý: <điểm ảnh hưởng trực tiếp integration/test — chỉ khi c�
 Cần <owner>: <hành động cụ thể — chỉ khi có>.
 ```
 
-Use artifact location/version for output that does not need app deployment. Keep detailed checks, review, CI/run IDs, source/merge/build relation, fetch time and live results in linked evidence. API handoff distinguishes consumer output from published producer contract/environment/revision, breaking changes and pending integration. Do not keep a parallel API schema in comments. Omit inapplicable lines; do not add generic pending-QA statements.
+Use artifact location/version for output that does not need app deployment. Keep detailed checks, review, CI/run IDs, source/merge/deployed build relation, Vercel environment/URL and confirmation time in linked evidence. Do not claim website/feature verification from deployment status. API handoff distinguishes consumer output from published producer contract/environment/revision, breaking changes and pending integration. Do not keep a parallel API schema in comments. Omit inapplicable lines; do not add generic pending-QA statements.
 
 Resolve the live destination, In Review → Done/read back after every applicable gate. Done confirms this contribution and delivery, not QA/product/parent acceptance. For direct or no-PR operations use their assigned artifact/session/owner without inventing a Jira record or extending this profile's grants.
 
