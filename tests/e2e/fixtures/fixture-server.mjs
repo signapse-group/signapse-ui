@@ -369,6 +369,8 @@ function createState() {
       },
     ],
     scenarios: {},
+    responses: new Set(),
+    pendingRequests: new Map(),
     streamConnections: 0,
     requests: [],
     violations: [],
@@ -381,6 +383,41 @@ function getState(testRunId) {
     testRuns.set(testRunId, createState())
   }
   return testRuns.get(testRunId)
+}
+
+function trackResponse(state, response) {
+  state.responses.add(response)
+  response.once("close", () => state.responses.delete(response))
+}
+
+function isPending(state, method, pathname) {
+  return getScenario(state, method, pathname) === "delayed" ||
+    feedbackScenarioFor(state, method, pathname) === "pending"
+}
+
+function holdResponse(state, response, method, pathname) {
+  if (response.destroyed) return Promise.resolve(false)
+  trackResponse(state, response)
+  return new Promise((resolve) => {
+    const onClose = () => resume(false)
+    const resume = (released) => {
+      state.pendingRequests.delete(response)
+      response.removeListener("close", onClose)
+      resolve(released)
+    }
+    state.pendingRequests.set(response, { method, pathname, resume })
+    response.once("close", onClose)
+  })
+}
+
+function releasePending(state) {
+  for (const pending of state.pendingRequests.values()) {
+    if (!isPending(state, pending.method, pending.pathname)) pending.resume(true)
+  }
+}
+
+function closeResponses(state) {
+  for (const response of state.responses) response.end()
 }
 
 function jsonHeaders() {
@@ -835,7 +872,7 @@ async function streamLive(response, state, url, scenario) {
   writeSse(response, "status", snapshot.status)
   writeSse(response, "snapshot", snapshot)
   writeSse(response, "price", snapshot.quote)
-  setTimeout(() => response.end(), 400)
+  trackResponse(state, response)
 }
 
 function hasFixturePermission(state, permission) {
@@ -1498,6 +1535,8 @@ async function handleControl(request, response, url, body) {
       sendJson(response, 400, errorPayload("testRunId is required", "TEST_RUN_ID_REQUIRED"))
       return true
     }
+    const previous = testRuns.get(String(testRunId))
+    if (previous) closeResponses(previous)
     testRuns.set(String(testRunId), createState())
     sendJson(response, 200, { testRunId, reset: true })
     return true
@@ -1512,6 +1551,7 @@ async function handleControl(request, response, url, body) {
     const state = getState(String(testRunId))
     const key = body.route ?? "*"
     state.scenarios[body.method ? `${body.method} ${key}` : key] = body.scenario
+    releasePending(state)
     sendJson(response, 200, { testRunId, route: key, scenario: body.scenario })
     return true
   }
@@ -1524,6 +1564,7 @@ async function handleControl(request, response, url, body) {
     }
     const state = getState(String(testRunId))
     state.feedbackScenarios[body.kind ?? "feedback"] = body.scenario
+    releasePending(state)
     sendJson(response, 200, { testRunId, kind: body.kind ?? "feedback", scenario: body.scenario })
     return true
   }
@@ -1572,6 +1613,7 @@ async function handleControl(request, response, url, body) {
       permissions: state.permissions,
       smtpConfiguration: smtpConfigurationResponse(state.smtpConfiguration),
       streamConnections: state.streamConnections,
+      pendingRequests: state.pendingRequests.size,
       requests: state.requests,
       violations: state.violations,
     })
@@ -1641,11 +1683,11 @@ const server = createServer(async (request, response) => {
     return
   }
 
-  const scenario = getScenario(state, method, url.pathname)
-  const feedbackScenario = feedbackScenarioFor(state, method, url.pathname)
-  if (feedbackScenario === "pending") {
-    await new Promise((resolve) => setTimeout(resolve, 350))
+  if (isPending(state, method, url.pathname)) {
+    const released = await holdResponse(state, response, method, url.pathname)
+    if (!released || response.destroyed) return
   }
+  const scenario = getScenario(state, method, url.pathname)
   if (scenario === "timeout") {
     await new Promise((resolve) => setTimeout(resolve, 250))
     sendJson(response, 504, errorPayload("Fixture request timed out", "FIXTURE_TIMEOUT"))
@@ -1654,9 +1696,6 @@ const server = createServer(async (request, response) => {
   if (scenario === "outage") {
     sendJson(response, 503, errorPayload("Fixture backend is unavailable", "FIXTURE_OUTAGE"))
     return
-  }
-  if (scenario === "delayed") {
-    await new Promise((resolve) => setTimeout(resolve, 350))
   }
   if (scenario === "validation-error") {
     sendJson(response, 422, errorPayload("Fixture validation failed", "FIXTURE_VALIDATION"))
@@ -1796,7 +1835,9 @@ server.listen(port, "127.0.0.1", () => {
 })
 
 function shutdown() {
+  for (const state of testRuns.values()) closeResponses(state)
   server.close(() => process.exit(0))
+  server.closeIdleConnections()
 }
 
 process.on("SIGINT", shutdown)

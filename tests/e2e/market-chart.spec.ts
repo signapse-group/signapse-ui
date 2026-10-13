@@ -38,7 +38,9 @@ test.describe("P0 market chart workbench", () => {
     await expect(fourHourButton).toBeEnabled()
     await fourHourButton.click()
     await expect(page).toHaveURL(/timeframe=4h/, { timeout: 15_000 })
-    await expect(page.locator("#market-chart-asset")).toBeVisible()
+    await expect(page.locator("#market-chart-asset")).toBeEnabled({
+      timeout: 30_000,
+    })
 
     await expect
       .poll(

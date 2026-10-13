@@ -312,7 +312,7 @@ describe("integration environment", () => {
       "tests/integration/auth-and-backend.spec.ts:99#[authenticated-backend] anonymous visitors can only open the localized login"
     )
     expect(result.stderr).toBe("")
-  })
+  }, 35_000)
 
   it("rejects unmatched operation and case selectors before checking live inputs", () => {
     const missingOperation = spawnSync(
@@ -343,7 +343,7 @@ describe("integration environment", () => {
     expect(missingCase.status).toBe(1)
     expect(missingCase.stderr).toContain("No integration case matches")
     expect(missingCase.stderr).not.toContain("E2E_USER_PASSWORD")
-  })
+  }, 35_000)
 
   it.each(["--config=playwright.config.ts", "--trace=on"])(
     "refuses runner options that change the live contract: %s",

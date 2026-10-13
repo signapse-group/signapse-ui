@@ -23,6 +23,8 @@ The fixture mode is a stricter submode of the existing non-production dev-auth m
 
 Each test receives a unique `testRunId`. The browser context carries it through the cookie and request header; the fixture resets and namespaces mutable state by that ID. Requests without the ID, authenticated requests, unregistered routes, or unexpected external browser requests fail the P0 test.
 
+The `delayed` HTTP and feedback `pending` scenarios hold responses until the test changes the matching scenario (normally to `success`). Assert the pending UI first, then change the scenario in `finally`; a wall-clock delay does not release it. Reset/teardown closes held responses. Successful SSE connections stay open until the client disconnects or the fixture resets; `reconnect` closes only the first connection deliberately.
+
 ## CI and delivery
 
 [Verify](../../.github/workflows/verify.yml) runs the full secret-free quality lane on PR/current revision and main before [Vercel delivery](../delivery.md). Fixture P0, live feature acceptance and served build identity are separate evidence. A successful PR check alone does not establish post-merge publication or live auth/backend behavior.
@@ -48,7 +50,7 @@ authenticated entry and logout with Clerk enabled.
 
 The suite covers the application shell/workspace, canonical list URL/search/pagination/history behavior, Personal Notes save/retry/delete flows, Telegram configuration and Test message states, market-chart controls and SSE recovery, accessibility, and selected stable visual regions. Dynamic chart canvas pixels and full-page snapshots are intentionally excluded.
 
-Failed P0 browser runs retain Playwright traces, screenshots, videos, HTML reports, fixture state, and application/fixture logs under the ignored `test-results/`. A configured P0 CI lane may upload that directory on failure without protected credentials. Live integration artifacts follow the stricter rules below.
+Failed P0 browser attempts retain Playwright traces, screenshots, videos, HTML reports, fixture state, and application/fixture logs under the ignored `test-results/`. Verify uploads these P0 paths plus the CI Vitest JUnit report for seven days on non-cancelled runs, including a successful retry after a failed attempt. The upload allowlist excludes live integration artifacts and auth state. Live integration artifacts follow the stricter rules below.
 
 P0 does not prove real authentication. The live integration smoke below verifies password
 authentication and backend access. The broader disposable-environment permission matrix,
