@@ -250,10 +250,15 @@ test.describe("P0 contact request read dashboard", () => {
     const navigation = page.goto("/vi/contact-requests", {
       waitUntil: "commit",
     })
-    await expect(
-      page.getByRole("status", { name: "Đang tải yêu cầu liên hệ" })
-    ).toBeVisible()
+    try {
+      await expect(
+        page.getByRole("status", { name: "Đang tải yêu cầu liên hệ" })
+      ).toBeVisible()
+    } finally {
+      await fixture.setScenario("/contact-requests", "success", "GET")
+    }
     await navigation
+    await expect(page.locator("[data-contact-request-row]")).toHaveCount(10)
 
     await fixture.setScenario("/contact-requests", "empty", "GET")
     await page.goto("/vi/contact-requests")
