@@ -22,7 +22,7 @@ export function getMarketChartCalendarEventTimestamp(
     return scheduledAt
   }
 
-  const time = Date.parse(event.time)
+  const time = event.time ? Date.parse(event.time) : NaN
 
   return Number.isFinite(time) ? time : null
 }
@@ -42,7 +42,9 @@ export function createMarketChartFutureCalendarRequest({
 
   return {
     assetId,
-    from: new Date(currentTimestamp).toISOString(),
+    from: new Date(
+      currentTimestamp - MARKET_CHART_CALENDAR_WAITING_WINDOW_MS
+    ).toISOString(),
     to: new Date(
       currentTimestamp +
         MARKET_CHART_CALENDAR_LOOKAHEAD_DAYS * MARKET_CHART_CALENDAR_DAY_MS
@@ -63,6 +65,10 @@ export function getMarketChartCalendarEventState(
 
   if (event.status === "AVAILABLE") {
     return "PUBLISHED"
+  }
+
+  if (event.status !== "PENDING") {
+    return "INVALID"
   }
 
   if (currentTimestamp < eventTimestamp) {

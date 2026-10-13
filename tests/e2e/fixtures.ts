@@ -48,7 +48,9 @@ type FixtureController = {
       | "mutation-failure"
       | "reconnect"
       | "calendar-empty"
+      | "calendar-error"
       | "calendar-upcoming"
+      | "calendar-upcoming-window"
       | "calendar-awaiting"
       | "calendar-available",
     method?: string
