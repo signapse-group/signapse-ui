@@ -5,7 +5,10 @@ import { useState } from "react"
 import { Save } from "lucide-react"
 
 import { updateMyPreferredLanguage } from "@/app/api/user/action"
-import type { LanguageCatalogResponse } from "@/app/lib/languages/definitions"
+import {
+  isSelectableLanguage,
+  type LanguageCatalogResponse,
+} from "@/app/lib/languages/definitions"
 import { useLocalization } from "@/app/lib/i18n/provider"
 import { Button } from "@/components/ui/button"
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field"
@@ -30,30 +33,32 @@ export function AccountTelegramLanguageForm({
   const { dictionary, formatMessage } = useLocalization()
   const t = dictionary.accountTelegramLanguage
   const initialPreference = catalog?.preferredLanguage ?? null
-  const [selectedIsoCode, setSelectedIsoCode] = useState(
-    initialPreference ?? ""
-  )
-  const [savedIsoCode, setSavedIsoCode] = useState(initialPreference)
+  const [selectedIsoCodeOverride, setSelectedIsoCode] = useState<string>()
+  const [savedIsoCodeOverride, setSavedIsoCode] = useState<string | null>()
+  const selectedIsoCode = selectedIsoCodeOverride ?? initialPreference ?? ""
+  const savedIsoCode =
+    savedIsoCodeOverride === undefined
+      ? initialPreference
+      : savedIsoCodeOverride
   const [feedback, setFeedback] = useState<"success" | "error" | null>(null)
   const [isPending, setIsPending] = useState(false)
+  const languages = catalog?.languages.filter(isSelectableLanguage) ?? []
   const savedLanguage = catalog?.languages.find(
     (language) => language.isoCode === savedIsoCode
   )
-  const getLanguageName = (isoCode: string, name: string) => {
+  const getLanguageName = (isoCode: string, name?: string) => {
     if (isoCode === "en") return dictionary.locale.english
-    if (isoCode === "vi") return dictionary.locale.vietnamese
-    return name
+    if (isoCode === "vi") return t.optionVietnamese
+    return name || isoCode
   }
-  const savedLanguageName = savedLanguage
+  const savedLanguageName = savedLanguage?.isoCode
     ? getLanguageName(savedLanguage.isoCode, savedLanguage.name)
     : savedIsoCode
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (
-      !catalog?.languages.some(
-        (language) => language.isoCode === selectedIsoCode
-      ) ||
+      !languages.some((language) => language.isoCode === selectedIsoCode) ||
       selectedIsoCode === savedIsoCode ||
       isPending
     ) {
@@ -105,8 +110,8 @@ export function AccountTelegramLanguageForm({
                 {t.languageLabel}
               </FieldLabel>
               <Select
-                disabled={isPending}
-                items={catalog.languages.map((language) => ({
+                disabled={isPending || languages.length === 0}
+                items={languages.map((language) => ({
                   label: getLanguageName(language.isoCode, language.name),
                   value: language.isoCode,
                 }))}
@@ -125,7 +130,7 @@ export function AccountTelegramLanguageForm({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
-                    {catalog.languages.map((language) => (
+                    {languages.map((language) => (
                       <SelectItem
                         key={language.isoCode}
                         value={language.isoCode}

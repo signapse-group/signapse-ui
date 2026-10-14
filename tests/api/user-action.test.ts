@@ -48,7 +48,7 @@ describe("updateMyPreferredLanguage", () => {
   it("updates only the authenticated user's preference", async () => {
     const updatedUser = {
       id: 42,
-      preferredLanguage: { id: 2, isoCode: "en", name: "English" },
+      preferredLanguage: { isoCode: "en", name: "English" },
     }
     vi.mocked(fetchAuthenticated).mockResolvedValue(updatedUser)
 

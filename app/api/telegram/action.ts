@@ -9,6 +9,7 @@ import { ActionResult } from "@/app/lib/definitions"
 import { getDictionary } from "@/app/lib/i18n/dictionaries"
 import type { Dictionary } from "@/app/lib/i18n/dictionary-types"
 import { getRequestLocale } from "@/app/lib/i18n/server"
+import { isSelectableLanguage } from "@/app/lib/languages/definitions"
 import {
   CreateTelegramBotConnectionRequest,
   CreateTelegramLinkTokenRequest,
@@ -48,9 +49,9 @@ async function validateScheduleRequest(
   if (normalized.outputLanguageIsoCode) {
     try {
       const catalog = await getLanguages()
-      supportedLanguageIsoCodes = catalog.languages.map(
-        (language) => language.isoCode
-      )
+      supportedLanguageIsoCodes = catalog.languages
+        .filter(isSelectableLanguage)
+        .map((language) => language.isoCode)
     } catch {
       return {
         success: false as const,

@@ -18,6 +18,7 @@ import {
 } from "@/app/api/telegram/action"
 import type { Dictionary } from "@/app/lib/i18n/dictionary-types"
 import { useLocalization } from "@/app/lib/i18n/provider"
+import { isSelectableLanguage } from "@/app/lib/languages/definitions"
 import type { LanguageResponse } from "@/app/lib/languages/definitions"
 import {
   getSaveTelegramMarketAnalysisScheduleSchema,
@@ -134,6 +135,7 @@ type DestinationOption = {
 }
 
 type LanguageOption = LanguageResponse & {
+  isoCode: string
   unavailable?: boolean
 }
 
@@ -267,6 +269,20 @@ function getTimezoneGroups(dictionary: Dictionary): TimezoneGroup[] {
     }))
 }
 
+function getSelectableLanguageIsoCodes(
+  languages: LanguageResponse[],
+  currentOutputLanguage?: LanguageResponse
+): string[] {
+  return [
+    ...languages
+      .filter(isSelectableLanguage)
+      .map((language) => language.isoCode),
+    ...(currentOutputLanguage && isSelectableLanguage(currentOutputLanguage)
+      ? [currentOutputLanguage.isoCode]
+      : []),
+  ]
+}
+
 function getScheduleFormErrors(
   values: ScheduleFormValues,
   currentWorkspaceId: number | undefined,
@@ -316,10 +332,7 @@ function getScheduleFormErrors(
     dictionary,
     languageCatalogError
       ? undefined
-      : [
-          ...languages.map((language) => language.isoCode),
-          ...(currentOutputLanguage ? [currentOutputLanguage.isoCode] : []),
-        ]
+      : getSelectableLanguageIsoCodes(languages, currentOutputLanguage)
   ).safeParse(request)
 
   if (!parsed.success) {
@@ -357,10 +370,7 @@ function getValidatedRequest(
     dictionary,
     languageCatalogError
       ? undefined
-      : [
-          ...languages.map((language) => language.isoCode),
-          ...(currentOutputLanguage ? [currentOutputLanguage.isoCode] : []),
-        ]
+      : getSelectableLanguageIsoCodes(languages, currentOutputLanguage)
   ).safeParse(request)
 }
 
@@ -465,12 +475,13 @@ function ScheduleFormFields({
     return options
   }, [activeDestinations, currentDestination])
   const languageOptions = useMemo<LanguageOption[]>(() => {
-    const options: LanguageOption[] = languages.map((language) => ({
-      ...language,
-    }))
+    const options: LanguageOption[] = languages
+      .filter(isSelectableLanguage)
+      .map((language) => ({ ...language }))
 
     if (
       currentOutputLanguage &&
+      isSelectableLanguage(currentOutputLanguage) &&
       !languages.some(
         (language) => language.isoCode === currentOutputLanguage.isoCode
       )
@@ -744,7 +755,7 @@ function ScheduleFormFields({
                 },
                 ...languageOptions.map((language) => ({
                   value: language.isoCode,
-                  label: `${language.name} (${language.isoCode})${
+                  label: `${language.name || language.isoCode} (${language.isoCode})${
                     language.unavailable
                       ? ` — ${t.schedule.languageUnavailable}`
                       : ""
@@ -775,7 +786,7 @@ function ScheduleFormFields({
                   </SelectItem>
                   {languageOptions.map((language) => (
                     <SelectItem key={language.isoCode} value={language.isoCode}>
-                      {language.name} ({language.isoCode})
+                      {language.name || language.isoCode} ({language.isoCode})
                       {language.unavailable
                         ? ` — ${t.schedule.languageUnavailable}`
                         : ""}

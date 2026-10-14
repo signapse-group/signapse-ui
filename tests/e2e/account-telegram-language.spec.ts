@@ -38,12 +38,14 @@ test("saves the Telegram language independently of dirty profile data", async ({
   const languageSelect = page.getByRole("combobox", {
     name: enDictionary.accountTelegramLanguage.languageLabel,
   })
-  await expect(languageSelect).toContainText(enDictionary.locale.vietnamese)
+  await expect(languageSelect).toContainText(
+    enDictionary.accountTelegramLanguage.optionVietnamese
+  )
   await expect(
     page.getByText(
       enDictionary.accountTelegramLanguage.savedLanguage.replace(
         "{language}",
-        enDictionary.locale.vietnamese
+        enDictionary.accountTelegramLanguage.optionVietnamese
       ),
       { exact: true }
     )
@@ -153,19 +155,20 @@ test("keeps the profile usable when the language catalog is unavailable", async 
   fixture,
   page,
 }) => {
+  await fixture.setPreferredLanguage("vi")
   await fixture.setScenario("/languages", "outage", "GET")
   await page.goto("/en/account")
 
+  const firstName = page.getByRole("textbox", {
+    name: enDictionary.accountProfile.firstName,
+  })
   await expect(
     page
       .getByRole("alert")
       .getByText(enDictionary.accountTelegramLanguage.loadError)
   ).toBeVisible()
-  await expect(
-    page.getByRole("textbox", {
-      name: enDictionary.accountProfile.firstName,
-    })
-  ).toBeVisible()
+  await expect(firstName).toBeVisible()
+  await firstName.clear()
 
   await fixture.setScenario("/languages", "success", "GET")
   await page
@@ -177,6 +180,21 @@ test("keeps the profile usable when the language catalog is unavailable", async 
       name: enDictionary.accountTelegramLanguage.languageLabel,
     })
   ).toBeVisible()
+  await expect(
+    page.getByRole("combobox", {
+      name: enDictionary.accountTelegramLanguage.languageLabel,
+    })
+  ).toContainText(enDictionary.accountTelegramLanguage.optionVietnamese)
+  await expect(
+    page.getByText(
+      enDictionary.accountTelegramLanguage.savedLanguage.replace(
+        "{language}",
+        enDictionary.accountTelegramLanguage.optionVietnamese
+      ),
+      { exact: true }
+    )
+  ).toBeVisible()
+  await expect(firstName).toHaveValue("")
 })
 
 test("fits the Telegram language control on a narrow viewport", async ({

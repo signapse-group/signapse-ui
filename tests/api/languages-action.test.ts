@@ -16,7 +16,7 @@ describe("getLanguages", () => {
     const catalog = {
       currentLanguage: "en",
       preferredLanguage: "vi",
-      languages: [{ id: 1, isoCode: "vi", name: "Tiếng Việt" }],
+      languages: [{ isoCode: "vi", name: "Tiếng Việt" }],
     }
     vi.mocked(fetchAuthenticated).mockResolvedValue(catalog)
 
@@ -31,5 +31,16 @@ describe("getLanguages", () => {
     })
 
     await expect(getLanguages()).rejects.toThrow()
+  })
+
+  it("accepts language properties omitted by the published response schema", async () => {
+    const catalog = {
+      currentLanguage: "en",
+      preferredLanguage: "vi",
+      languages: [{}],
+    }
+    vi.mocked(fetchAuthenticated).mockResolvedValue(catalog)
+
+    await expect(getLanguages()).resolves.toEqual(catalog)
   })
 })

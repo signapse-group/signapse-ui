@@ -45,6 +45,12 @@ test("selecting English changes the account locale without writing preferences",
     .click()
   await expect(
     page.getByRole("menuitemradio", {
+      name: "Tiếng Việt",
+      exact: true,
+    })
+  ).toBeVisible()
+  await expect(
+    page.getByRole("menuitemradio", {
       name: enDictionary.locale.english,
       exact: true,
     })

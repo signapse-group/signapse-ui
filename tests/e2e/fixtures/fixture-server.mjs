@@ -222,7 +222,7 @@ function createState() {
     },
     permissions: ["*"],
     feedbackScenarios: {},
-    preferredLanguage: { id: 1, isoCode: "vi", name: "Tiếng Việt" },
+    preferredLanguage: { isoCode: "vi", name: "Tiếng Việt" },
     assets: [
       {
         id: 101,
@@ -319,8 +319,8 @@ function createState() {
       },
     ],
     languages: [
-      { id: 1, isoCode: "vi", name: "Tiếng Việt" },
-      { id: 2, isoCode: "en", name: "English" },
+      { isoCode: "vi", name: "Tiếng Việt" },
+      { isoCode: "en", name: "English" },
     ],
     events: [
       {

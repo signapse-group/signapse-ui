@@ -310,6 +310,7 @@ export const vi = {
   accountTelegramLanguage: {
     sectionTitle: "Ngôn ngữ mặc định Telegram",
     languageLabel: "Ngôn ngữ mặc định Telegram",
+    optionVietnamese: "Tiếng Việt",
     languageDescription:
       "Dùng khi cảnh báo Telegram hoặc lịch của bạn được đặt là Mặc định. Ngôn ngữ giao diện vẫn giữ nguyên.",
     savedLanguage: "Ngôn ngữ đã lưu: {language}",
