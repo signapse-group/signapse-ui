@@ -1680,6 +1680,7 @@ export const en: Dictionary = {
       assetLabel: "Watchlist asset",
       assetPlaceholder: "Choose asset",
       timeframeLabel: "Timeframe",
+      timezoneLabel: "Browser timezone",
       annotationsLabel: "Events",
       annotationsAria: "Show events on the chart",
       calendarLabel: "Calendar",

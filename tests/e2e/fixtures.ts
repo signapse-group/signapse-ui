@@ -43,6 +43,7 @@ type FixtureController = {
       | "validation-error"
       | "timeout"
       | "delayed"
+      | "delayed-outage"
       | "outage"
       | "mutation-failure"
       | "reconnect"
@@ -61,6 +62,7 @@ type FixtureController = {
       | "calendar-upcoming-window"
       | "calendar-awaiting"
       | "calendar-available"
+      | "chart-later-page"
       | "calendar-historical",
     method?: string
   ): Promise<void>

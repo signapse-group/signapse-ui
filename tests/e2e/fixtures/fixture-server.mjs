@@ -1394,7 +1394,36 @@ function responseForRoute(state, method, pathname, url, body) {
   if (method === "GET" && pathname === "/graph-view") return graphView(state)
 
   if (method === "GET" && (pathname === "/watchlists" || pathname === "/watchlists/assets")) {
-    return slicePage(state.assets.map((item) => ({ ...item, lastModifiedDate: undefined })), url)
+    const assets = state.assets.map((item) => ({
+      ...item,
+      lastModifiedDate: undefined,
+    }))
+
+    if (
+      pathname === "/watchlists" &&
+      getScenario(state, method, pathname) === "chart-later-page"
+    ) {
+      assets.push(
+        ...Array.from({ length: 98 }, (_, index) => ({
+          id: 1000 + index,
+          assetId: 1000 + index,
+          assetName: `Fixture asset ${index + 1}`,
+          assetSymbol: `FX${index + 1}`,
+          assetType: "CRYPTO",
+          createdDate: NOW,
+        })),
+        {
+          id: 9999,
+          assetId: 9999,
+          assetName: "Later page asset",
+          assetSymbol: "LATE",
+          assetType: "CRYPTO",
+          createdDate: NOW,
+        }
+      )
+    }
+
+    return slicePage(assets, url)
   }
 
   if (method === "POST" && pathname === "/watchlists/assets") {
@@ -1782,6 +1811,17 @@ const server = createServer(async (request, response) => {
     sendJson(response, 504, errorPayload("Fixture request timed out", "FIXTURE_TIMEOUT"))
     return
   }
+  if (scenario === "delayed" || scenario === "delayed-outage") {
+    const delayMs =
+      url.pathname === "/market-charts/candles"
+        ? scenario === "delayed-outage"
+          ? 1_500
+          : 3_000
+        : 350
+    await new Promise((resolve) =>
+      setTimeout(resolve, delayMs)
+    )
+  }
   if (
     scenario === "preopen-unavailable" &&
     method === "GET" &&
@@ -1818,7 +1858,7 @@ const server = createServer(async (request, response) => {
     return
   }
   if (
-    scenario === "outage" &&
+    (scenario === "outage" || scenario === "delayed-outage") &&
     !(method === "GET" && url.pathname === "/market-charts/live")
   ) {
     sendJson(response, 503, errorPayload("Fixture backend is unavailable", "FIXTURE_OUTAGE"))
