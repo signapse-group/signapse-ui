@@ -313,6 +313,22 @@ export const en: Dictionary = {
     errorDescription: "Please try again to load account information.",
     loadingLabel: "Loading account profile",
   },
+  accountTelegramLanguage: {
+    sectionTitle: "Default Telegram language",
+    languageLabel: "Default Telegram language",
+    optionVietnamese: "Vietnamese",
+    languageDescription:
+      "Used when your Telegram alerts or schedules are set to Default. Your interface language stays the same.",
+    savedLanguage: "Saved language: {language}",
+    chooseLanguage: "Choose a language",
+    systemDefault: "No preference is set. Telegram uses the system default.",
+    saveLanguage: "Save language",
+    saving: "Saving language",
+    saveSuccess: "Default Telegram language updated.",
+    saveError: "Could not save the default Telegram language. Try again.",
+    loadError: "Could not load supported languages.",
+    retry: "Retry",
+  },
   usageLimits: {
     title: "Usage limits",
     usedLimit: "Used / limit",

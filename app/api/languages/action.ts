@@ -1,8 +1,10 @@
 "use server"
 
 import { fetchAuthenticated } from "@/app/api/auth/action"
-import { LanguageCatalogResponse } from "@/app/lib/languages/definitions"
+import { LanguageCatalogResponseSchema } from "@/app/lib/languages/definitions"
 
-export async function getLanguages(): Promise<LanguageCatalogResponse> {
-  return fetchAuthenticated<LanguageCatalogResponse>("/languages")
+export async function getLanguages() {
+  const response = await fetchAuthenticated<unknown>("/languages")
+
+  return LanguageCatalogResponseSchema.parse(response)
 }

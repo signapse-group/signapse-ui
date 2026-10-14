@@ -19,6 +19,7 @@ import {
 } from "@/app/api/telegram/action"
 import type { Dictionary } from "@/app/lib/i18n/dictionary-types"
 import { useLocalization } from "@/app/lib/i18n/provider"
+import { isSelectableLanguage } from "@/app/lib/languages/definitions"
 import type { LanguageResponse } from "@/app/lib/languages/definitions"
 import {
   TELEGRAM_FEATURE_KEYS,
@@ -907,15 +908,19 @@ function FeatureRouteControls({
     )
   }
 
-  const languageOptions = [...languages]
+  const languageOptions = languages.filter(isSelectableLanguage)
   const currentOutputLanguage = route.setting?.outputLanguage
-  const hasCurrentLanguageInCatalog = currentOutputLanguage
+  const hasCurrentLanguageInCatalog = currentOutputLanguage?.isoCode
     ? languages.some(
         (language) => language.isoCode === currentOutputLanguage.isoCode
       )
     : true
 
-  if (currentOutputLanguage && !hasCurrentLanguageInCatalog) {
+  if (
+    currentOutputLanguage &&
+    isSelectableLanguage(currentOutputLanguage) &&
+    !hasCurrentLanguageInCatalog
+  ) {
     languageOptions.unshift(currentOutputLanguage)
   }
 
@@ -926,7 +931,7 @@ function FeatureRouteControls({
     },
     ...languageOptions.map((language) => ({
       value: language.isoCode,
-      label: `${language.name} (${language.isoCode})${
+      label: `${language.name || language.isoCode} (${language.isoCode})${
         !hasCurrentLanguageInCatalog &&
         language.isoCode === currentOutputLanguage?.isoCode
           ? ` — ${t.routing.languageUnavailable}`
@@ -1008,7 +1013,7 @@ function FeatureRouteControls({
                   </SelectItem>
                   {languageOptions.map((language) => (
                     <SelectItem key={language.isoCode} value={language.isoCode}>
-                      {language.name} ({language.isoCode})
+                      {language.name || language.isoCode} ({language.isoCode})
                       {!hasCurrentLanguageInCatalog &&
                       language.isoCode === currentOutputLanguage?.isoCode
                         ? ` — ${t.routing.languageUnavailable}`

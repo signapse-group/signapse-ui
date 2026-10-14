@@ -307,6 +307,23 @@ export const vi = {
     errorDescription: "Vui lòng thử lại để tải thông tin tài khoản.",
     loadingLabel: "Đang tải hồ sơ tài khoản",
   },
+  accountTelegramLanguage: {
+    sectionTitle: "Ngôn ngữ mặc định Telegram",
+    languageLabel: "Ngôn ngữ mặc định Telegram",
+    optionVietnamese: "Tiếng Việt",
+    languageDescription:
+      "Dùng khi cảnh báo Telegram hoặc lịch của bạn được đặt là Mặc định. Ngôn ngữ giao diện vẫn giữ nguyên.",
+    savedLanguage: "Ngôn ngữ đã lưu: {language}",
+    chooseLanguage: "Chọn ngôn ngữ",
+    systemDefault:
+      "Bạn chưa đặt ngôn ngữ. Telegram đang dùng ngôn ngữ mặc định của hệ thống.",
+    saveLanguage: "Lưu ngôn ngữ",
+    saving: "Đang lưu ngôn ngữ",
+    saveSuccess: "Đã cập nhật ngôn ngữ mặc định Telegram.",
+    saveError: "Không thể lưu ngôn ngữ mặc định Telegram. Hãy thử lại.",
+    loadError: "Không thể tải danh sách ngôn ngữ được hỗ trợ.",
+    retry: "Thử lại",
+  },
   usageLimits: {
     title: "Giới hạn sử dụng",
     usedLimit: "Đã dùng / giới hạn",
