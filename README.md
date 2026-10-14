@@ -23,19 +23,30 @@ defines hierarchy, routing and human acceptance. This repository's
 [WORKFLOW.md](WORKFLOW.md) configures its Symphony worker for native Subtasks with
 `route-frontend`; GitHub hosts code, PRs and CI.
 
-[Repository-owned execution skills](.agents/skills/agent-execution-policy/SKILL.md)
-are committed under `.agents/skills` and available after clone, independently of
-Symphony releases. The dev-with-PR profile uses separate Ready survey, Progress implementation and In Review independent review/delivery sessions. The reviewer completes Done after applicable gates under [delivery](docs/delivery.md); coordinator retains initial dispatch, Blocked resume and parent acceptance. A PR's
-Jira key in its title links it to the Subtask's Development panel.
+[WORKFLOW.md](WORKFLOW.md) is the execution entrypoint for assigned phases.
+[CONTRIBUTING.md](CONTRIBUTING.md) owns shared implementation, verification and review
+standards. Technical skills under `.agents/skills` are available after clone,
+independently of Symphony releases, and are selected when the task needs them.
 
 Configuration changes require operator verification before activation: confirm
 the installed Symphony revision, worker credentials/tools and a separate FE
 workspace root; drain the previous worker, reconcile existing work and verify a
 coordinator-authorized canary assigned after preparation and Symphony deployment.
-See [delivery prerequisites](docs/delivery.md#ci-and-vercel-setup) and the
+See [CI/Vercel prerequisites](docs/delivery.md#ci-and-vercel-setup) and the
 [current planning cutover](https://github.com/signapse-group/signapse-planing/blob/main/workflow/project-execution-workflow.md#preflight-và-cutover-fe-và-landing).
 
 ## Local Development
+
+Use the repository's pnpm scripts:
+
+| Command | Purpose |
+| --- | --- |
+| `pnpm dev` | Start the local development server. |
+| `pnpm build` | Build the production application. |
+| `pnpm start` | Run the production server. |
+| `pnpm lint` | Check lint rules. |
+| `pnpm typecheck` | Generate Next.js types and check TypeScript. |
+| `pnpm format` | Format TS/TSX files. |
 
 Copy `.env.example` to the ignored `.env.local` and supply your backend URL and Clerk keys, or use
 your operator-provided application environment file. Real configuration and test accounts belong

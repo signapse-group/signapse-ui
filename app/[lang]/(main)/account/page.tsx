@@ -1,5 +1,6 @@
 import { currentUser } from "@clerk/nextjs/server"
 
+import { getLanguages } from "@/app/api/languages/action"
 import { getMe } from "@/app/api/user/action"
 import { isDevAuthModeEnabled } from "@/app/lib/dev-auth-mode"
 
@@ -7,6 +8,7 @@ import {
   AccountProfileForm,
   AccountProfileInitialData,
 } from "./account-profile-form"
+import { AccountTelegramLanguageForm } from "./account-telegram-language-form"
 
 function getDisplayName(firstName?: string | null, lastName?: string | null) {
   return [lastName, firstName].filter(Boolean).join(" ").trim()
@@ -97,9 +99,10 @@ function getDateInputValue(...values: unknown[]) {
 }
 
 export default async function AccountPage() {
-  const [profile, clerkUser] = await Promise.all([
+  const [profile, clerkUser, catalog] = await Promise.all([
     getMe(),
     isDevAuthModeEnabled() ? null : currentUser(),
+    getLanguages().catch(() => null),
   ])
   const nameParts = getNameParts(
     profile.firstName,
@@ -132,16 +135,19 @@ export default async function AccountPage() {
     ),
   }
   return (
-    <AccountProfileForm
-      key={[
-        initialData.firstName,
-        initialData.lastName,
-        initialData.dateOfBirth,
-        initialData.email,
-        initialData.phoneNumber,
-        initialData.avatarUrl,
-      ].join("|")}
-      initialData={initialData}
-    />
+    <>
+      <AccountProfileForm
+        key={[
+          initialData.firstName,
+          initialData.lastName,
+          initialData.dateOfBirth,
+          initialData.email,
+          initialData.phoneNumber,
+          initialData.avatarUrl,
+        ].join("|")}
+        initialData={initialData}
+      />
+      <AccountTelegramLanguageForm catalog={catalog} />
+    </>
   )
 }

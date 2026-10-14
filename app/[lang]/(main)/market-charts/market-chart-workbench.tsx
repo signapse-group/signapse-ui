@@ -6,6 +6,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
   useTransition,
 } from "react"
 import {
@@ -740,6 +741,7 @@ function MarketChartTopToolbar({
   calendarLayerEnabled,
   selectedCalendarImpacts,
   errors,
+  browserTimeZone,
   hasCandles,
   hasWatchlistAssets,
   isBusy,
@@ -773,6 +775,7 @@ function MarketChartTopToolbar({
   calendarLayerEnabled: boolean
   selectedCalendarImpacts: EconomicCalendarImpactLevel[]
   errors: FormErrors
+  browserTimeZone: string | null
   hasCandles: boolean
   hasWatchlistAssets: boolean
   isBusy: boolean
@@ -808,7 +811,7 @@ function MarketChartTopToolbar({
 }) {
   const { dictionary } = useLocalization()
   const hasChartData = phase === "success" && hasCandles
-  const controlsDisabled = isBusy || !!watchlistError || !hasWatchlistAssets
+  const controlsDisabled = !!watchlistError || !hasWatchlistAssets
   const chartCommandsDisabled = isBusy || !!watchlistError || !hasChartData
 
   function handleIndicatorToggle(
@@ -906,6 +909,11 @@ function MarketChartTopToolbar({
             </ToggleGroup>
             <FieldError>{errors.timeframe}</FieldError>
           </Field>
+
+          <p className="px-1 text-xs leading-5 text-muted-foreground">
+            {dictionary.marketCharts.controls.timezoneLabel}:{" "}
+            <span className="font-mono">{browserTimeZone}</span>
+          </p>
 
           <Separator orientation="vertical" className="hidden lg:block" />
 
@@ -1162,6 +1170,11 @@ function MarketChartTopToolbar({
   )
 }
 
+const subscribeToBrowserTimeZone = () => () => {}
+const getBrowserTimeZone = () =>
+  Intl.DateTimeFormat().resolvedOptions().timeZone
+const getServerBrowserTimeZone = () => null
+
 function ChartSurface({
   annotationLayerEnabled,
   annotationLoadError,
@@ -1268,6 +1281,11 @@ function ChartSurface({
 }) {
   const localization = useLocalization()
   const { dictionary, formatMessage } = localization
+  const browserTimeZone = useSyncExternalStore(
+    subscribeToBrowserTimeZone,
+    getBrowserTimeZone,
+    getServerBrowserTimeZone
+  )
   const chartCanvasRef = useRef<MarketChartCanvasHandle | null>(null)
   const [activeOutcomeHoverRange, setActiveOutcomeHoverRange] =
     useState<MarketChartOutcomeHoverRange | null>(null)
@@ -1533,6 +1551,7 @@ function ChartSurface({
           calendarLayerEnabled={calendarLayerEnabled}
           selectedCalendarImpacts={selectedCalendarImpacts}
           errors={errors}
+          browserTimeZone={browserTimeZone}
           hasCandles={hasCandles}
           hasWatchlistAssets={hasWatchlistAssets}
           isBusy={isBusy}
@@ -1645,7 +1664,7 @@ function ChartSurface({
           ) : null}
 
           {/* Overlay states on top of canvas (only when non-success) */}
-          {selectedAsset && !(phase === "success" && hasCandles) ? (
+          {!selectedAsset || !(phase === "success" && hasCandles) ? (
             <div className="absolute inset-0 z-10 bg-card">
               {watchlistError ? (
                 <Empty className="h-full min-h-[32rem] border-0 bg-transparent">
@@ -3798,10 +3817,9 @@ export function MarketChartWorkbench({
     }
 
     const timeoutId = window.setTimeout(() => {
-      initialLoadObserverRef.current.cancelCurrent()
-      loadGenerationRef.current += 1
-
       if (watchlistError) {
+        initialLoadObserverRef.current.cancelCurrent()
+        loadGenerationRef.current += 1
         setData(null)
         setLoadedData(null)
         setErrors({ form: watchlistError })
@@ -3815,6 +3833,8 @@ export function MarketChartWorkbench({
       }
 
       if (!hasWatchlistAssets) {
+        initialLoadObserverRef.current.cancelCurrent()
+        loadGenerationRef.current += 1
         setSelection(createDefaultSelection(watchlistAssets))
         setData(null)
         setLoadedData(null)
@@ -3850,6 +3870,9 @@ export function MarketChartWorkbench({
 
         pendingRouteSelectionRef.current = null
       }
+
+      initialLoadObserverRef.current.cancelCurrent()
+      loadGenerationRef.current += 1
 
       if (timeframeParam && !isMarketChartTimeframe(timeframeParam)) {
         setSelection({
@@ -4136,6 +4159,22 @@ export function MarketChartWorkbench({
     request: MarketChartCandleRequest
   ): Promise<ActionResult<MarketChartLoadedData>> {
     const loadGeneration = loadGenerationRef.current
+    if (
+      phase !== "success" ||
+      request.assetId !== selectedAssetId ||
+      request.timeframe !== selection.timeframe
+    ) {
+      return {
+        success: true,
+        data: {
+          annotations: [],
+          candles: [],
+          economicCalendarEvents: [],
+          from: request.to,
+        },
+      }
+    }
+
     const result = await getMarketChartCandles(request)
 
     if (!result.success) {

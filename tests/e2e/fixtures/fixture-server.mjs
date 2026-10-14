@@ -222,7 +222,7 @@ function createState() {
     },
     permissions: ["*"],
     feedbackScenarios: {},
-    preferredLanguage: { id: 1, isoCode: "vi", name: "Tiếng Việt" },
+    preferredLanguage: { isoCode: "vi", name: "Tiếng Việt" },
     assets: [
       {
         id: 101,
@@ -319,8 +319,8 @@ function createState() {
       },
     ],
     languages: [
-      { id: 1, isoCode: "vi", name: "Tiếng Việt" },
-      { id: 2, isoCode: "en", name: "English" },
+      { isoCode: "vi", name: "Tiếng Việt" },
+      { isoCode: "en", name: "English" },
     ],
     events: [
       {
@@ -1360,6 +1360,7 @@ function responseForRoute(state, method, pathname, url, body) {
       lastName: FEEDBACK_OWNER.lastName,
       birthday: state.profile.birthday,
       phone: state.profile.phone,
+      preferredLanguage: state.preferredLanguage,
       role_name: "Fixture",
       currentWorkspace: { id: 1, name: "Workspace Alpha" },
       mainImage: null,
@@ -1376,6 +1377,33 @@ function responseForRoute(state, method, pathname, url, body) {
       lastName: body.lastName,
       birthday: state.profile.birthday,
       phone: state.profile.phone,
+      preferredLanguage: state.preferredLanguage,
+      role_name: "Fixture",
+      currentWorkspace: { id: 1, name: "Workspace Alpha" },
+      mainImage: null,
+      permissions: state.permissions,
+    }
+  }
+
+  if (method === "PATCH" && pathname === "/me/preferred-language") {
+    const language = state.languages.find(
+      (option) => option.isoCode === body?.isoCode
+    )
+    if (!language) {
+      return {
+        __status: 400,
+        payload: errorPayload("Choose an enabled language", "INVALID_LANGUAGE"),
+      }
+    }
+    state.preferredLanguage = language
+    return {
+      id: FEEDBACK_OWNER_ID,
+      email: FEEDBACK_OWNER.email,
+      firstName: FEEDBACK_OWNER.firstName,
+      lastName: FEEDBACK_OWNER.lastName,
+      birthday: state.profile.birthday,
+      phone: state.profile.phone,
+      preferredLanguage: state.preferredLanguage,
       role_name: "Fixture",
       currentWorkspace: { id: 1, name: "Workspace Alpha" },
       mainImage: null,
@@ -1471,7 +1499,36 @@ function responseForRoute(state, method, pathname, url, body) {
   if (method === "GET" && pathname === "/graph-view") return graphView(state)
 
   if (method === "GET" && (pathname === "/watchlists" || pathname === "/watchlists/assets")) {
-    return slicePage(state.assets.map((item) => ({ ...item, lastModifiedDate: undefined })), url)
+    const assets = state.assets.map((item) => ({
+      ...item,
+      lastModifiedDate: undefined,
+    }))
+
+    if (
+      pathname === "/watchlists" &&
+      getScenario(state, method, pathname) === "chart-later-page"
+    ) {
+      assets.push(
+        ...Array.from({ length: 98 }, (_, index) => ({
+          id: 1000 + index,
+          assetId: 1000 + index,
+          assetName: `Fixture asset ${index + 1}`,
+          assetSymbol: `FX${index + 1}`,
+          assetType: "CRYPTO",
+          createdDate: NOW,
+        })),
+        {
+          id: 9999,
+          assetId: 9999,
+          assetName: "Later page asset",
+          assetSymbol: "LATE",
+          assetType: "CRYPTO",
+          createdDate: NOW,
+        }
+      )
+    }
+
+    return slicePage(assets, url)
   }
 
   if (method === "POST" && pathname === "/watchlists/assets") {
@@ -1562,7 +1619,11 @@ function responseForRoute(state, method, pathname, url, body) {
   if (method === "GET" && pathname === "/telegram/feature-settings") return state.featureSettings
   if (method === "GET" && pathname === "/telegram/market-analysis-schedules") return state.schedules
   if (method === "GET" && pathname === "/languages") {
-    return { languages: state.languages, preferredLanguage: state.preferredLanguage }
+    return {
+      currentLanguage: "vi",
+      languages: state.languages,
+      preferredLanguage: state.preferredLanguage?.isoCode ?? null,
+    }
   }
 
   if (method === "POST" && pathname === "/telegram/bot-connections") {
@@ -1710,6 +1771,24 @@ async function handleControl(request, response, url, body) {
     return true
   }
 
+  if (url.pathname === "/__test/preferred-language" && request.method === "POST") {
+    const testRunId = body?.testRunId ?? request.headers["x-signapse-test-run-id"]
+    if (!testRunId || !(body?.isoCode === null || typeof body?.isoCode === "string")) {
+      sendJson(response, 400, errorPayload("testRunId and isoCode are required", "PREFERRED_LANGUAGE_REQUIRED"))
+      return true
+    }
+    const state = getState(String(testRunId))
+    state.preferredLanguage = body.isoCode === null
+      ? null
+      : state.languages.find((language) => language.isoCode === body.isoCode) ?? null
+    if (body.isoCode !== null && !state.preferredLanguage) {
+      sendJson(response, 400, errorPayload("Language is not in the catalog", "INVALID_LANGUAGE"))
+      return true
+    }
+    sendJson(response, 200, { testRunId, preferredLanguage: state.preferredLanguage })
+    return true
+  }
+
   if (url.pathname === "/__test/scenario" && request.method === "POST") {
     const testRunId = body?.testRunId ?? request.headers["x-signapse-test-run-id"]
     if (!testRunId || typeof body?.scenario !== "string") {
@@ -1831,7 +1910,10 @@ const server = createServer(async (request, response) => {
     testRunId,
     locale: request.headers["accept-language"] ?? null,
     hasAuthHeader,
-    ...(method === "PATCH" && url.pathname === "/me" ? { body } : {}),
+    ...(method === "PATCH" &&
+    ["/me", "/me/preferred-language"].includes(url.pathname)
+      ? { body }
+      : {}),
   }
   state.requests.push(logEntry)
   await appendLog(logEntry)
@@ -1860,6 +1942,17 @@ const server = createServer(async (request, response) => {
     await new Promise((resolve) => setTimeout(resolve, 250))
     sendJson(response, 504, errorPayload("Fixture request timed out", "FIXTURE_TIMEOUT"))
     return
+  }
+  if (scenario === "delayed" || scenario === "delayed-outage") {
+    const delayMs =
+      url.pathname === "/market-charts/candles"
+        ? scenario === "delayed-outage"
+          ? 1_500
+          : 3_000
+        : 350
+    await new Promise((resolve) =>
+      setTimeout(resolve, delayMs)
+    )
   }
   if (
     scenario === "preopen-unavailable" &&
@@ -1897,7 +1990,7 @@ const server = createServer(async (request, response) => {
     return
   }
   if (
-    scenario === "outage" &&
+    (scenario === "outage" || scenario === "delayed-outage") &&
     !(method === "GET" && url.pathname === "/market-charts/live")
   ) {
     sendJson(response, 503, errorPayload("Fixture backend is unavailable", "FIXTURE_OUTAGE"))

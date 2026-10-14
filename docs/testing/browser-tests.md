@@ -29,7 +29,7 @@ The `delayed` HTTP and feedback `pending` scenarios hold responses until the tes
 
 ## CI and delivery
 
-[Verify](../../.github/workflows/verify.yml) runs lightweight checks on PRs into main and main pushes; its main `deployment` job confirms Vercel Production delivery using a read-only GitHub token. Vercel owns builds; the [delivery runbook](../delivery.md) owns Preview/main checks and deployment evidence. Owner/QA verifies the live website and features. The full fixture browser suite is available explicitly, not required for every PR. Fixture P0, deployment evidence and live feature acceptance remain separate evidence.
+[Verify](../../.github/workflows/verify.yml) runs lightweight checks on PRs into main and main pushes; its main `deployment` job confirms Vercel Production delivery using a read-only GitHub token. Vercel owns builds; use [shared verification standards](../../CONTRIBUTING.md#verification) and [WORKFLOW](../../WORKFLOW.md) for assigned execution. [CI/Vercel setup](../delivery.md) remains an operator/technical reference. Owner/QA verifies the live website and features. The full fixture browser suite is available explicitly, not required for every PR. Fixture P0, deployment evidence and live feature acceptance remain separate evidence.
 
 ## Selecting checks by change scope
 
@@ -119,7 +119,7 @@ suite with placeholder inputs; it performs no live fetch. Unavailable/invalid co
 or in-scope mismatches fail without a local fallback. Source/time and discrepancies
 are reported separately from P0. This is a structural check; schemas, business
 semantics, authorization and delivered revision still need applicable evidence under
-the [API consumer policy](../../.agents/skills/agent-execution-policy/references/api-handoff.md).
+the [API consumer standards](../api-consumer.md).
 
 The same public contract check can run without account credentials:
 

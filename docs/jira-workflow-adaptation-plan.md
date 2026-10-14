@@ -1,5 +1,7 @@
 # Kế hoạch adapt Signapse UI với Planning, Jira và Symphony
 
+Historical migration record. Current execution enters through [WORKFLOW.md](../WORKFLOW.md); shared standards are in [CONTRIBUTING.md](../CONTRIBUTING.md). Historical policy/skill links below are pinned to the verified pre-organization UI revision; this record does not define current permissions or prove worker activation.
+
 Khảo sát ngày 2026-10-06; consumer adaptation được người dùng chấp nhận triển khai
 ngày 2026-10-06. Workflow và skills UI đã được cập nhật theo phạm vi dưới đây.
 Installed-runtime rollout, Jira writes và canary live là bước vận hành riêng.
@@ -207,7 +209,7 @@ khi UI ghi 28/9 và phản ánh việc tách public landing. Đây là drift tà
 verification của API live ngày 6/10. Đoạn này giữ evidence khảo sát lịch sử.
 Theo [API adaptation đã chốt](api-contract-workflow-adaptation-plan.md) ngày 7/10,
 APIMAPPING và `api-mapping-sync` được retire, gồm bản mapping cũ ở planning.
-Hướng dẫn current API lookup nằm trong [API consumer policy](../.agents/skills/agent-execution-policy/references/api-handoff.md):
+Hướng dẫn current API lookup nằm trong [API consumer policy](api-consumer.md):
 đọc contract producer trực tiếp và trace usages trong source FE. Các bản mapping cũ
 không còn là nguồn contract hoặc hướng dẫn sync. DESIGN vẫn theo ownership/pointers
 tại [frontend docs index][planning-frontend] và [scoped ownership][planning-policy].

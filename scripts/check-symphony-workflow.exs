@@ -101,6 +101,16 @@ refute Client.normalize_issue_for_test(
          settings.tracker
        ).admission_ready
 
+runbooks = %{
+  "Survey" => "docs/runbooks/survey.md",
+  "Implement" => "docs/runbooks/implement.md",
+  "Review" => "docs/runbooks/review-and-delivery.md"
+}
+
+for path <- Map.values(runbooks) do
+  assert File.regular?(Path.join(Path.dirname(Path.expand(workflow_path)), path))
+end
+
 fixtures =
   for state <- ["Ready", "Progress", "In Review", "Open", "Blocked", "Done"],
       attempt <- [nil, 2],
@@ -120,27 +130,32 @@ fixtures =
       refute String.contains?(rendered, "## Phase: #{other}")
     end
 
-    case state do
-      "Ready" ->
-        assert String.contains?(rendered, "No versioned source/test/config edits")
-        assert String.contains?(rendered, "do not use $implement")
-        refute String.contains?(rendered, "Grant: scoped edits")
-        refute String.contains?(rendered, "Grant: own feedback/handoff, merge")
-      "Progress" ->
-        assert String.contains?(rendered, "Grant: scoped edits")
-        assert String.contains?(rendered, "Review/merge/Done belong")
-        refute String.contains?(rendered, "Grant: own feedback/handoff, merge")
-      "In Review" ->
-        assert String.contains?(rendered, "do not spawn a replacement")
-        assert String.contains?(rendered, "Grant: own feedback/handoff, merge")
-        assert String.contains?(rendered, "In Review → Progress/Blocked/Done")
-      _ ->
-        refute String.contains?(rendered, "Grant:")
+    for {name, path} <- runbooks do
+      assert String.contains?(rendered, "](#{path})") == (phase == name)
     end
-    assert String.contains?(rendered, "changed route/ownership stops work")
+    refute String.contains?(rendered, "Grant:")
+    refute Regex.match?(~r/\$(implement|code-review|agent-execution-policy)\b/, rendered)
+    refute String.contains?(rendered, "execution-policy.md")
+    refute String.contains?(rendered, "docs/delivery.md")
+    if phase == "Stop", do: assert(String.contains?(rendered, "Stop autonomous work"))
     phase
   end
 
 assert length(fixtures) == 108
+
+for {state, phase} <- [
+      {" ready ", "Survey"},
+      {" PROGRESS ", "Implement"},
+      {" in REVIEW ", "Review"},
+      {"Waiting", "Stop"},
+      {"", "Stop"}
+    ] do
+  rendered = PromptBuilder.build_prompt(%{issue | state: state})
+  assert String.contains?(rendered, "## Phase: #{phase}")
+  for {name, path} <- runbooks do
+    assert String.contains?(rendered, "](#{path})") == (phase == name)
+  end
+end
+
 assert Process.whereis(SymphonyElixir.Supervisor) == nil
-IO.puts("Consumer workflow: config/routing/dependency admission and 108 strict phase/permission fixtures passed offline.")
+IO.puts("Consumer workflow: config/routing/dependency admission, 108 strict runbook-selection fixtures and 5 normalized/unsupported states passed offline.")

@@ -1082,3 +1082,167 @@ test.describe("P0 market chart workbench", () => {
     await expect(awaitingLabel).toBeHidden()
   })
 })
+
+test.describe("P0 market chart history selection", () => {
+  test.use({ timezoneId: "Asia/Bangkok" })
+
+  test("resolves a URL asset from a later watchlist page and labels timezone", async ({
+    page,
+    fixture,
+  }) => {
+    await fixture.setScenario("/watchlists", "chart-later-page", "GET")
+    await page.goto("/vi/market-charts?assetId=9999&timeframe=1h")
+
+    await expect(page.locator("#market-chart-asset")).toContainText(
+      "LATE - Later page asset"
+    )
+    await expect(
+      page.getByText("Múi giờ trình duyệt: Asia/Bangkok", { exact: true })
+    ).toBeVisible()
+    await expect
+      .poll(async () => {
+        const state = await fixture.state()
+        return state.requests.some(
+          (request) => request.path === "/market-charts/candles"
+        )
+      })
+      .toBe(true)
+
+    const state = await fixture.state()
+    const watchlistPages = state.requests
+      .filter((request) => request.path === "/watchlists")
+      .map((request) => new URLSearchParams(String(request.query)).get("page"))
+
+    expect(watchlistPages).toEqual(["0", "1"])
+    const candleRequest = state.requests.find(
+      (request) => request.path === "/market-charts/candles"
+    )
+    const query = new URLSearchParams(String(candleRequest?.query))
+    expect(query.get("assetId")).toBe("9999")
+    expect(query.get("to")).toMatch(/Z$/)
+  })
+
+  test("keeps empty and out-of-watchlist URLs out of chart history", async ({
+    page,
+    fixture,
+  }) => {
+    await fixture.setScenario("/watchlists", "empty", "GET")
+    await page.goto("/vi/market-charts")
+
+    await expect(
+      page.getByText("Chưa có tài sản trong watchlist", { exact: true })
+    ).toBeVisible()
+
+    await fixture.reset()
+    await page.goto("/vi/market-charts?assetId=9999&timeframe=1h")
+
+    await expect(
+      page.getByText(
+        "Tài sản trên URL không nằm trong watchlist của workspace.",
+        { exact: true }
+      )
+    ).toBeVisible()
+    await expect(page.locator("canvas")).toHaveCount(0)
+
+    const state = await fixture.state()
+    expect(
+      state.requests.some(
+        (request) => request.path === "/market-charts/candles"
+      )
+    ).toBe(false)
+  })
+
+  test("allows changing asset while the prior candle request is pending", async ({
+    page,
+    fixture,
+  }) => {
+    await page.goto("/vi/market-charts?assetId=101&timeframe=1h")
+    await expect(page.locator("canvas").first()).toBeVisible()
+
+    await fixture.setScenario("/market-charts/candles", "delayed-outage", "GET")
+    const staleResponse = page.waitForResponse((response) => {
+      const url = new URL(response.url())
+      return (
+        response.request().method() === "POST" &&
+        url.pathname === "/vi/market-charts" &&
+        url.searchParams.get("assetId") === "101" &&
+        url.searchParams.get("timeframe") === "4h"
+      )
+    })
+    await page.getByRole("button", { name: "4 giờ" }).click()
+    await expect(page).toHaveURL(/timeframe=4h/)
+    await expect
+      .poll(async () => {
+        const state = await fixture.state()
+        return state.requests.some((request) => {
+          if (request.path !== "/market-charts/candles") return false
+          return (
+            new URLSearchParams(String(request.query)).get("timeframe") === "4h"
+          )
+        })
+      })
+      .toBe(true)
+
+    const assetSelector = page.locator("#market-chart-asset")
+    const workbenchBusy = await assetSelector.evaluate((element) =>
+      element.closest("[aria-busy]")?.getAttribute("aria-busy")
+    )
+    expect(workbenchBusy).toBe("true")
+    expect(await assetSelector.isEnabled()).toBe(true)
+    await fixture.setScenario("/market-charts/candles", "delayed", "GET")
+    await assetSelector.click()
+    await page.getByRole("option", { name: "XAUUSD - Gold" }).click()
+    await expect(page).toHaveURL(/assetId=102/)
+    await expect(assetSelector).toContainText("XAUUSD - Gold")
+
+    await expect
+      .poll(async () => {
+        const state = await fixture.state()
+        return state.requests.some((request) => {
+          if (request.path !== "/market-charts/candles") return false
+          const query = new URLSearchParams(String(request.query))
+          return (
+            query.get("assetId") === "102" && query.get("timeframe") === "4h"
+          )
+        })
+      })
+      .toBe(true)
+
+    await staleResponse
+    expect(
+      await assetSelector.evaluate((element) =>
+        element.closest("[aria-busy]")?.getAttribute("aria-busy")
+      )
+    ).toBe("true")
+    await expect(
+      page.getByText("Fixture backend is unavailable", { exact: true })
+    ).toHaveCount(0)
+    await expect(
+      page.getByText("Đang tải dữ liệu biểu đồ giá.", { exact: true })
+    ).toBeVisible()
+  })
+
+  test("shows candle errors separately from empty history and retries", async ({
+    page,
+    fixture,
+  }) => {
+    await fixture.setScenario("/market-charts/candles", "outage", "GET")
+    await page.goto("/vi/market-charts?assetId=102&timeframe=1h")
+
+    await expect(
+      page.getByText("Fixture backend is unavailable").first()
+    ).toBeVisible()
+    await expect(
+      page.getByText("Không có dữ liệu nến cho tài sản đã chọn", {
+        exact: true,
+      })
+    ).toHaveCount(0)
+
+    await fixture.setScenario("/market-charts/candles", "success", "GET")
+    await page.getByRole("button", { name: "Tải lại dữ liệu mới nhất" }).click()
+    await expect(
+      page.getByText("Fixture backend is unavailable", { exact: true })
+    ).toHaveCount(0)
+    await expect(page.locator("canvas").first()).toBeVisible()
+  })
+})

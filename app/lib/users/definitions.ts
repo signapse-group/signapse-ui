@@ -1,4 +1,5 @@
 import type { Page } from "@/app/lib/definitions"
+import type { LanguageResponse } from "@/app/lib/languages/definitions"
 import type { PermissionResponse } from "@/app/lib/roles/definitions"
 
 export interface BackendWorkspaceSummary {
@@ -32,7 +33,7 @@ export interface UserResponse {
   phone: string | number | null
   birthday: string | number | null
   currentWorkspace: BackendWorkspaceSummary | null
-  preferredLanguage: string | null
+  preferredLanguage: LanguageResponse | null
   mainImage: BackendMediaResponse | null
   role_name: string | null
   permissions: PermissionResponse[]
@@ -61,6 +62,7 @@ export interface BackendMeResponse {
   mobilePhone?: string | number | null
   role_name: string | null
   currentWorkspace: BackendWorkspaceSummary | null
+  preferredLanguage: LanguageResponse | null
   mainImage: BackendMediaResponse | null
   permissions: string[]
 }
