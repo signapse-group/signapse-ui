@@ -85,12 +85,63 @@ const annotationResponse = {
   assetId: 7,
   time: "2026-08-19T10:30:00.000Z",
   hotEvent: {
+    eventId: 71,
+    severity: null,
     direction: "BULLISH",
-    topMarketReaction: { timeHorizon: "INTRADAY" },
+    title: null,
+    summary: null,
+    confidence: null,
+    topMarketReaction: {
+      id: 81,
+      direction: null,
+      timeHorizon: "INTRADAY",
+      confidence: null,
+      reasoning: null,
+      observedAt: null,
+      outcome: null,
+    },
+    marketReactions: [],
     evidence: [
       {
         newsArticleId: 71,
+        title: "Fixture article",
+        publisher: "Fixture Wire",
+        url: "https://fixture.invalid/news/71",
+        publishedAt: null,
         evidenceRole: "PRIMARY",
+        confidence: null,
+        evidenceNote: null,
+      },
+    ],
+    links: { eventDetail: "/events/71" },
+  },
+  warmEpisode: null,
+}
+
+const warmAnnotationResponse = {
+  id: "warm-episode:4:asset:7",
+  annotationType: "WARM_EPISODE",
+  assetId: 7,
+  time: "2026-08-19T10:00:00.000Z",
+  hotEvent: null,
+  warmEpisode: {
+    warmEpisodeId: 4,
+    periodStart: "2026-08-19T10:00:00.000Z",
+    periodEnd: "2026-08-19T11:00:00.000Z",
+    direction: null,
+    summary: null,
+    outcome: null,
+    events: [
+      {
+        warmEpisodeEventId: 41,
+        time: "2026-08-19T10:30:00.000Z",
+        severity: null,
+        direction: null,
+        title: null,
+        summary: null,
+        confidence: null,
+        relationType: "PRIMARY_SUBJECT",
+        reaction: null,
       },
     ],
   },
@@ -174,24 +225,6 @@ describe("market chart annotation action", () => {
   })
 
   it("accepts the published annotation enums", async () => {
-    const warmAnnotationResponse = {
-      id: "warm-episode:4:asset:7",
-      annotationType: "WARM_EPISODE",
-      assetId: 7,
-      time: "2026-08-19T10:00:00.000Z",
-      warmEpisode: {
-        warmEpisodeId: 4,
-        periodStart: "2026-08-19T10:00:00.000Z",
-        periodEnd: "2026-08-19T11:00:00.000Z",
-        events: [
-          {
-            warmEpisodeEventId: 41,
-            time: "2026-08-19T10:30:00.000Z",
-            relationType: "PRIMARY_SUBJECT",
-          },
-        ],
-      },
-    }
     const annotations = [annotationResponse, warmAnnotationResponse]
     vi.mocked(fetchAuthenticated).mockResolvedValue(annotations)
 
@@ -200,12 +233,39 @@ describe("market chart annotation action", () => {
     ).resolves.toMatchObject({ success: true, data: annotations })
   })
 
+  it("accepts null context and empty evidence without filling in claims", async () => {
+    const sparseAnnotation = {
+      ...annotationResponse,
+      hotEvent: {
+        ...annotationResponse.hotEvent,
+        direction: null,
+        title: null,
+        summary: null,
+        confidence: null,
+        topMarketReaction: null,
+        marketReactions: [],
+        evidence: [],
+      },
+    }
+    vi.mocked(fetchAuthenticated).mockResolvedValue([sparseAnnotation])
+
+    await expect(
+      getMarketChartAnnotations(annotationRequest)
+    ).resolves.toMatchObject({
+      success: true,
+      data: [sparseAnnotation],
+    })
+  })
+
   it("rejects an unpublished reaction horizon", async () => {
     const invalidAnnotation = {
       ...annotationResponse,
       hotEvent: {
         ...annotationResponse.hotEvent,
-        topMarketReaction: { timeHorizon: "LONGER_TERM" },
+        topMarketReaction: {
+          ...annotationResponse.hotEvent.topMarketReaction,
+          timeHorizon: "LONGER_TERM",
+        },
       },
     }
     vi.mocked(fetchAuthenticated).mockResolvedValue([invalidAnnotation])
@@ -217,20 +277,13 @@ describe("market chart annotation action", () => {
 
   it("rejects an unpublished warm-event relation type", async () => {
     const invalidAnnotation = {
-      ...annotationResponse,
-      annotationType: "WARM_EPISODE",
-      hotEvent: undefined,
+      ...warmAnnotationResponse,
       warmEpisode: {
-        warmEpisodeId: 17,
-        periodStart: "2026-08-19T10:00:00.000Z",
-        periodEnd: "2026-08-19T11:00:00.000Z",
-        events: [
-          {
-            warmEpisodeEventId: 18,
-            time: "2026-08-19T10:30:00.000Z",
-            relationType: "UNRELATED",
-          },
-        ],
+        ...warmAnnotationResponse.warmEpisode,
+        events: warmAnnotationResponse.warmEpisode.events.map((event) => ({
+          ...event,
+          relationType: "UNRELATED",
+        })),
       },
     }
     vi.mocked(fetchAuthenticated).mockResolvedValue([invalidAnnotation])
@@ -241,28 +294,52 @@ describe("market chart annotation action", () => {
   })
 
   it.each([
-    ["direction", { direction: "UP" }],
-    ["evidence role", { evidenceRole: "PRIMARY_SUBJECT" }],
-  ])("rejects an unpublished annotation %s enum value", async (field, invalid) => {
-    const invalidAnnotation = {
-      ...annotationResponse,
-      hotEvent: {
-        ...annotationResponse.hotEvent,
-        ...(field === "direction" ? invalid : {}),
-        evidence: [
-          {
-            ...annotationResponse.hotEvent.evidence[0],
-            ...(field === "evidence role" ? invalid : {}),
-          },
-        ],
+    ["missing HOT_EVENT context", { ...annotationResponse, hotEvent: null }],
+    [
+      "missing WARM_EPISODE context",
+      { ...warmAnnotationResponse, warmEpisode: null },
+    ],
+    [
+      "missing evidence list",
+      {
+        ...annotationResponse,
+        hotEvent: { ...annotationResponse.hotEvent, evidence: undefined },
       },
-    }
+    ],
+  ])("rejects an annotation with %s", async (_case, invalidAnnotation) => {
     vi.mocked(fetchAuthenticated).mockResolvedValue([invalidAnnotation])
 
     await expect(
       getMarketChartAnnotations(annotationRequest)
     ).resolves.toMatchObject({ success: false })
   })
+
+  it.each([
+    ["direction", { direction: "UP" }],
+    ["evidence role", { evidenceRole: "PRIMARY_SUBJECT" }],
+  ])(
+    "rejects an unpublished annotation %s enum value",
+    async (field, invalid) => {
+      const invalidAnnotation = {
+        ...annotationResponse,
+        hotEvent: {
+          ...annotationResponse.hotEvent,
+          ...(field === "direction" ? invalid : {}),
+          evidence: [
+            {
+              ...annotationResponse.hotEvent.evidence[0],
+              ...(field === "evidence role" ? invalid : {}),
+            },
+          ],
+        },
+      }
+      vi.mocked(fetchAuthenticated).mockResolvedValue([invalidAnnotation])
+
+      await expect(
+        getMarketChartAnnotations(annotationRequest)
+      ).resolves.toMatchObject({ success: false })
+    }
+  )
 })
 
 describe("market chart economic calendar action", () => {
@@ -329,11 +406,9 @@ describe("market chart annotation action", () => {
 
   it("serializes the half-open range and keeps the complete annotation array", async () => {
     const annotations = Array.from({ length: 125 }, (_, index) => ({
+      ...annotationResponse,
       id: `annotation-${index + 1}`,
-      annotationType: "HOT_EVENT",
-      assetId: 7,
-      time: "2026-08-19T10:30:00.000Z",
-      hotEvent: { eventId: index + 1, evidence: [] },
+      hotEvent: { ...annotationResponse.hotEvent, eventId: index + 1 },
     }))
     vi.mocked(fetchAuthenticated).mockResolvedValue(annotations)
 
@@ -351,10 +426,8 @@ describe("market chart annotation action", () => {
   it("rejects annotation types outside the published contract", async () => {
     vi.mocked(fetchAuthenticated).mockResolvedValue([
       {
-        id: "annotation-1",
+        ...annotationResponse,
         annotationType: "UNSUPPORTED",
-        assetId: 7,
-        time: "2026-08-19T10:30:00.000Z",
       },
     ])
 

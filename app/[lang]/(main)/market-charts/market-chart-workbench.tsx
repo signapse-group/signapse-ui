@@ -2375,7 +2375,7 @@ function MarketChartHotAnnotationDetail({
                             {localization.dictionary.events.openOriginal}
                           </a>
                         ) : articleUrl ? (
-                          <span className="self-start break-all text-xs text-muted-foreground">
+                          <span className="self-start text-xs break-all text-muted-foreground">
                             {articleUrl}
                           </span>
                         ) : null}
@@ -2553,7 +2553,7 @@ function MarketChartAnnotationReactionSection({
   localization: LocalizationContext
   onOutcomeRangeHover: (range: MarketChartOutcomeHoverRange) => void
   onOutcomeRangeLeave: () => void
-  reaction: MarketChartAnnotationReactionResponse
+  reaction: Pick<MarketChartAnnotationReactionResponse, "direction" | "outcome">
 }) {
   const { dictionary } = localization
   const labels = dictionary.marketCharts.annotations

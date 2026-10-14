@@ -75,10 +75,18 @@ const hotAnnotation = (
   assetId: 1,
   time,
   hotEvent: {
-    direction,
+    eventId: 1,
     severity,
+    direction,
+    title: null,
+    summary: null,
+    confidence: null,
+    topMarketReaction: null,
+    marketReactions: [],
     evidence: [],
+    links: { eventDetail: "/events/1" },
   },
+  warmEpisode: null,
 })
 
 const warmAnnotation = (
@@ -89,10 +97,14 @@ const warmAnnotation = (
   annotationType: "WARM_EPISODE",
   assetId: 1,
   time: periodStart,
+  hotEvent: null,
   warmEpisode: {
     warmEpisodeId: 1,
     periodStart,
     periodEnd,
+    direction: null,
+    summary: null,
+    outcome: null,
     events: [],
   },
 })

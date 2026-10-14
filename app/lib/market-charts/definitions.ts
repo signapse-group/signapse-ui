@@ -118,85 +118,94 @@ export type MarketChartWarmEpisodeRelationType =
   (typeof MARKET_CHART_WARM_EPISODE_RELATION_TYPES)[number]
 
 export interface MarketChartAnnotationEvidenceResponse {
-  newsArticleId?: number | null
-  title?: string | null
-  publisher?: string | null
-  url?: string | null
-  publishedAt?: string | null
-  evidenceRole?: MarketChartAnnotationEvidenceRole | null
-  confidence?: number | null
-  evidenceNote?: string | null
+  newsArticleId: number
+  title: string | null
+  publisher: string
+  url: string
+  publishedAt: string | null
+  evidenceRole: MarketChartAnnotationEvidenceRole
+  confidence: number | null
+  evidenceNote: string | null
 }
 
 export interface MarketChartAnnotationLinksResponse {
-  eventDetail?: string | null
+  eventDetail: string
 }
 
 export interface MarketChartAnnotationOutcomeResponse {
-  anchorTime?: string | null
-  anchorPrice?: number | null
-  evaluationTime?: string | null
-  evaluationPrice?: number | null
-  realizedReturn?: number | null
-  actualDirection?: MarketChartAnnotationDirection | null
-  alignment?: string | null
-  evaluatedAt?: string | null
-  summary?: string | null
+  anchorTime: string | null
+  anchorPrice: number | null
+  evaluationTime: string | null
+  evaluationPrice: number | null
+  realizedReturn: number | null
+  actualDirection: MarketChartAnnotationDirection | null
+  alignment: string | null
+  evaluatedAt: string | null
+  summary: string | null
 }
 
 export interface MarketChartAnnotationReactionResponse {
-  id?: number | null
-  direction?: MarketChartAnnotationDirection | null
-  timeHorizon?: MarketChartAnnotationTimeHorizon | null
-  confidence?: number | null
-  reasoning?: string | null
-  observedAt?: string | null
-  outcome?: MarketChartAnnotationOutcomeResponse | null
+  id: number | null
+  direction: MarketChartAnnotationDirection | null
+  timeHorizon: MarketChartAnnotationTimeHorizon | null
+  confidence: number | null
+  reasoning: string | null
+  observedAt: string | null
+  outcome: MarketChartAnnotationOutcomeResponse | null
 }
 
 export interface MarketChartHotEventAnnotationResponse {
-  eventId?: number | null
-  severity?: string | null
-  direction?: MarketChartAnnotationDirection | null
-  title?: string | null
-  summary?: string | null
-  confidence?: number | null
-  topMarketReaction?: MarketChartAnnotationReactionResponse | null
-  marketReactions?: MarketChartAnnotationReactionResponse[]
+  eventId: number
+  severity: string | null
+  direction: MarketChartAnnotationDirection | null
+  title: string | null
+  summary: string | null
+  confidence: number | null
+  topMarketReaction: MarketChartAnnotationReactionResponse | null
+  marketReactions: MarketChartAnnotationReactionResponse[]
   evidence: MarketChartAnnotationEvidenceResponse[]
-  links?: MarketChartAnnotationLinksResponse | null
+  links: MarketChartAnnotationLinksResponse
 }
 
 export interface MarketChartWarmEpisodeEventAnnotationResponse {
   warmEpisodeEventId: number
   time: string
-  severity?: string | null
-  direction?: MarketChartAnnotationDirection | null
-  title?: string | null
-  summary?: string | null
-  confidence?: number | null
-  relationType?: MarketChartWarmEpisodeRelationType | null
-  reaction?: MarketChartAnnotationReactionResponse | null
+  severity: string | null
+  direction: MarketChartAnnotationDirection | null
+  title: string | null
+  summary: string | null
+  confidence: number | null
+  relationType: MarketChartWarmEpisodeRelationType | null
+  reaction: MarketChartAnnotationReactionResponse | null
 }
 
 export interface MarketChartWarmEpisodeAnnotationResponse {
   warmEpisodeId: number
   periodStart: string
   periodEnd: string
-  direction?: MarketChartAnnotationDirection | null
-  summary?: string | null
-  outcome?: MarketChartAnnotationOutcomeResponse | null
+  direction: MarketChartAnnotationDirection | null
+  summary: string | null
+  outcome: MarketChartAnnotationOutcomeResponse | null
   events: MarketChartWarmEpisodeEventAnnotationResponse[]
 }
 
-export interface MarketChartAnnotationResponse {
+interface MarketChartAnnotationBaseResponse {
   id: string
-  annotationType: MarketChartAnnotationType
   assetId: number
   time: string
-  hotEvent?: MarketChartHotEventAnnotationResponse | null
-  warmEpisode?: MarketChartWarmEpisodeAnnotationResponse | null
 }
+
+export type MarketChartAnnotationResponse =
+  | (MarketChartAnnotationBaseResponse & {
+      annotationType: "HOT_EVENT"
+      hotEvent: MarketChartHotEventAnnotationResponse
+      warmEpisode: null
+    })
+  | (MarketChartAnnotationBaseResponse & {
+      annotationType: "WARM_EPISODE"
+      hotEvent: null
+      warmEpisode: MarketChartWarmEpisodeAnnotationResponse
+    })
 
 export type MarketChartEconomicCalendarEventStatus = "PENDING" | "AVAILABLE"
 
@@ -416,118 +425,103 @@ export const marketChartCandleItemResponseSchema = z.object({
   partial: z.boolean().optional(),
 }) satisfies z.ZodType<MarketChartCandleItemResponse>
 
+const marketChartAnnotationDateTimeSchema = z.string().refine(isValidDateTime)
+
 export const marketChartAnnotationEvidenceResponseSchema = z.object({
-  newsArticleId: z.number().nullable().optional(),
-  title: z.string().nullable().optional(),
-  publisher: z.string().nullable().optional(),
-  url: z.string().nullable().optional(),
-  publishedAt: z.string().nullable().optional(),
-  evidenceRole: z
-    .enum(MARKET_CHART_ANNOTATION_EVIDENCE_ROLES)
-    .nullable()
-    .optional(),
-  confidence: z.number().nullable().optional(),
-  evidenceNote: z.string().nullable().optional(),
+  newsArticleId: z.number().int(),
+  title: z.string().nullable(),
+  publisher: z.string(),
+  url: z.string(),
+  publishedAt: marketChartAnnotationDateTimeSchema.nullable(),
+  evidenceRole: z.enum(MARKET_CHART_ANNOTATION_EVIDENCE_ROLES),
+  confidence: z.number().nullable(),
+  evidenceNote: z.string().nullable(),
 }) satisfies z.ZodType<MarketChartAnnotationEvidenceResponse>
 
 export const marketChartAnnotationLinksResponseSchema = z.object({
-  eventDetail: z.string().nullable().optional(),
+  eventDetail: z.string(),
 }) satisfies z.ZodType<MarketChartAnnotationLinksResponse>
 
 export const marketChartAnnotationOutcomeResponseSchema = z.object({
-  anchorTime: z.string().nullable().optional(),
-  anchorPrice: z.number().nullable().optional(),
-  evaluationTime: z.string().nullable().optional(),
-  evaluationPrice: z.number().nullable().optional(),
-  realizedReturn: z.number().nullable().optional(),
-  actualDirection: z
-    .enum(MARKET_CHART_ANNOTATION_DIRECTIONS)
-    .nullable()
-    .optional(),
-  alignment: z.string().nullable().optional(),
-  evaluatedAt: z.string().nullable().optional(),
-  summary: z.string().nullable().optional(),
+  anchorTime: marketChartAnnotationDateTimeSchema.nullable(),
+  anchorPrice: z.number().nullable(),
+  evaluationTime: marketChartAnnotationDateTimeSchema.nullable(),
+  evaluationPrice: z.number().nullable(),
+  realizedReturn: z.number().nullable(),
+  actualDirection: z.enum(MARKET_CHART_ANNOTATION_DIRECTIONS).nullable(),
+  alignment: z.string().nullable(),
+  evaluatedAt: marketChartAnnotationDateTimeSchema.nullable(),
+  summary: z.string().nullable(),
 }) satisfies z.ZodType<MarketChartAnnotationOutcomeResponse>
 
 export const marketChartAnnotationReactionResponseSchema = z.object({
-  id: z.number().nullable().optional(),
-  direction: z
-    .enum(MARKET_CHART_ANNOTATION_DIRECTIONS)
-    .nullable()
-    .optional(),
-  timeHorizon: z
-    .enum(MARKET_CHART_ANNOTATION_TIME_HORIZONS)
-    .nullable()
-    .optional(),
-  confidence: z.number().nullable().optional(),
-  reasoning: z.string().nullable().optional(),
-  observedAt: z.string().nullable().optional(),
-  outcome: marketChartAnnotationOutcomeResponseSchema.nullable().optional(),
+  id: z.number().int().nullable(),
+  direction: z.enum(MARKET_CHART_ANNOTATION_DIRECTIONS).nullable(),
+  timeHorizon: z.enum(MARKET_CHART_ANNOTATION_TIME_HORIZONS).nullable(),
+  confidence: z.number().nullable(),
+  reasoning: z.string().nullable(),
+  observedAt: marketChartAnnotationDateTimeSchema.nullable(),
+  outcome: marketChartAnnotationOutcomeResponseSchema.nullable(),
 }) satisfies z.ZodType<MarketChartAnnotationReactionResponse>
 
 export const marketChartHotEventAnnotationResponseSchema = z.object({
-  eventId: z.number().nullable().optional(),
-  severity: z.string().nullable().optional(),
-  direction: z
-    .enum(MARKET_CHART_ANNOTATION_DIRECTIONS)
-    .nullable()
-    .optional(),
-  title: z.string().nullable().optional(),
-  summary: z.string().nullable().optional(),
-  confidence: z.number().nullable().optional(),
-  topMarketReaction: marketChartAnnotationReactionResponseSchema
-    .nullable()
-    .optional(),
-  marketReactions: z
-    .array(marketChartAnnotationReactionResponseSchema)
-    .default([]),
-  evidence: z.array(marketChartAnnotationEvidenceResponseSchema).default([]),
-  links: marketChartAnnotationLinksResponseSchema.nullable().optional(),
+  eventId: z.number().int(),
+  severity: z.string().nullable(),
+  direction: z.enum(MARKET_CHART_ANNOTATION_DIRECTIONS).nullable(),
+  title: z.string().nullable(),
+  summary: z.string().nullable(),
+  confidence: z.number().nullable(),
+  topMarketReaction: marketChartAnnotationReactionResponseSchema.nullable(),
+  marketReactions: z.array(marketChartAnnotationReactionResponseSchema),
+  evidence: z.array(marketChartAnnotationEvidenceResponseSchema),
+  links: marketChartAnnotationLinksResponseSchema,
 }) satisfies z.ZodType<MarketChartHotEventAnnotationResponse>
 
 export const marketChartWarmEpisodeEventAnnotationResponseSchema = z.object({
-  warmEpisodeEventId: z.number(),
-  time: z.string(),
-  severity: z.string().nullable().optional(),
-  direction: z
-    .enum(MARKET_CHART_ANNOTATION_DIRECTIONS)
-    .nullable()
-    .optional(),
-  title: z.string().nullable().optional(),
-  summary: z.string().nullable().optional(),
-  confidence: z.number().nullable().optional(),
-  relationType: z
-    .enum(MARKET_CHART_WARM_EPISODE_RELATION_TYPES)
-    .nullable()
-    .optional(),
-  reaction: marketChartAnnotationReactionResponseSchema.nullable().optional(),
+  warmEpisodeEventId: z.number().int(),
+  time: marketChartAnnotationDateTimeSchema,
+  severity: z.string().nullable(),
+  direction: z.enum(MARKET_CHART_ANNOTATION_DIRECTIONS).nullable(),
+  title: z.string().nullable(),
+  summary: z.string().nullable(),
+  confidence: z.number().nullable(),
+  relationType: z.enum(MARKET_CHART_WARM_EPISODE_RELATION_TYPES).nullable(),
+  reaction: marketChartAnnotationReactionResponseSchema.nullable(),
 }) satisfies z.ZodType<MarketChartWarmEpisodeEventAnnotationResponse>
 
 export const marketChartWarmEpisodeAnnotationResponseSchema = z.object({
-  warmEpisodeId: z.number(),
-  periodStart: z.string(),
-  periodEnd: z.string(),
-  direction: z
-    .enum(MARKET_CHART_ANNOTATION_DIRECTIONS)
-    .nullable()
-    .optional(),
-  summary: z.string().nullable().optional(),
-  outcome: marketChartAnnotationOutcomeResponseSchema.nullable().optional(),
-  events: z
-    .array(marketChartWarmEpisodeEventAnnotationResponseSchema)
-    .default([]),
+  warmEpisodeId: z.number().int(),
+  periodStart: marketChartAnnotationDateTimeSchema,
+  periodEnd: marketChartAnnotationDateTimeSchema,
+  direction: z.enum(MARKET_CHART_ANNOTATION_DIRECTIONS).nullable(),
+  summary: z.string().nullable(),
+  outcome: marketChartAnnotationOutcomeResponseSchema.nullable(),
+  events: z.array(marketChartWarmEpisodeEventAnnotationResponseSchema),
 }) satisfies z.ZodType<MarketChartWarmEpisodeAnnotationResponse>
 
-export const marketChartAnnotationResponseSchema = z.object({
+const marketChartAnnotationBaseSchema = {
   id: z.string(),
-  annotationType: z.enum(["HOT_EVENT", "WARM_EPISODE"]),
   assetId: z.number().int(),
-  time: z.string().refine(isValidDateTime),
-  hotEvent: marketChartHotEventAnnotationResponseSchema.nullable().optional(),
-  warmEpisode: marketChartWarmEpisodeAnnotationResponseSchema
-    .nullable()
-    .optional(),
-}) satisfies z.ZodType<MarketChartAnnotationResponse>
+  time: marketChartAnnotationDateTimeSchema,
+}
+
+export const marketChartAnnotationResponseSchema = z.discriminatedUnion(
+  "annotationType",
+  [
+    z.object({
+      ...marketChartAnnotationBaseSchema,
+      annotationType: z.literal("HOT_EVENT"),
+      hotEvent: marketChartHotEventAnnotationResponseSchema,
+      warmEpisode: z.null(),
+    }),
+    z.object({
+      ...marketChartAnnotationBaseSchema,
+      annotationType: z.literal("WARM_EPISODE"),
+      hotEvent: z.null(),
+      warmEpisode: marketChartWarmEpisodeAnnotationResponseSchema,
+    }),
+  ]
+) satisfies z.ZodType<MarketChartAnnotationResponse>
 
 export const marketChartEconomicCalendarEventStatusSchema = z.enum([
   "PENDING",

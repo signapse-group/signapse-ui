@@ -685,6 +685,7 @@ function marketChartAnnotations(url, scenario) {
         title: `Fixture annotation ${index + 1}`,
         summary: "Synthetic chart annotation for the browser quality gate.",
         confidence: 0.92,
+        topMarketReaction: null,
         marketReactions: [],
         evidence: [
           {
@@ -700,6 +701,7 @@ function marketChartAnnotations(url, scenario) {
         ],
         links: { eventDetail: `/events/${index === 124 ? 63 : 61}` },
       },
+      warmEpisode: null,
     }))
   }
 
@@ -714,12 +716,14 @@ function marketChartAnnotations(url, scenario) {
         annotationType: "WARM_EPISODE",
         assetId,
         time: periodStart,
+        hotEvent: null,
         warmEpisode: {
           warmEpisodeId: 42,
           periodStart,
           periodEnd: anchorTime,
           direction: "NEUTRAL",
           summary: "Fixture warm episode",
+          outcome: null,
           events: [],
         },
       },
@@ -747,6 +751,7 @@ function marketChartAnnotations(url, scenario) {
             : "Central bank signals a slower easing path",
         summary: "Synthetic chart annotation for the browser quality gate.",
         confidence: 0.92,
+        topMarketReaction: null,
         marketReactions: [],
         evidence: [
           {
@@ -762,6 +767,7 @@ function marketChartAnnotations(url, scenario) {
         ],
         links: { eventDetail: "/events/61" },
       },
+      warmEpisode: null,
     },
   ]
 }
