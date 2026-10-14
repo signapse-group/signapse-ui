@@ -851,7 +851,9 @@ test.describe("P0 market chart history selection", () => {
     await expect(
       page.getByText("Fixture backend is unavailable", { exact: true })
     ).toHaveCount(0)
-    await expect(page.locator("canvas").first()).toBeVisible()
+    await expect(
+      page.getByText("Đang tải dữ liệu biểu đồ giá.", { exact: true })
+    ).toBeVisible()
   })
 
   test("shows candle errors separately from empty history and retries", async ({
