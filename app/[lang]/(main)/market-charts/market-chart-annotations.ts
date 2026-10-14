@@ -3,7 +3,9 @@ import type {
   MarketChartAnnotationResponse,
   MarketChartCandleItemResponse,
   MarketChartEconomicCalendarEventResponse,
+  MarketChartTimeframe,
 } from "@/app/lib/market-charts/definitions"
+import { getMarketChartCandleEndBoundary } from "@/app/lib/market-charts/candle-boundaries"
 
 import { getMarketChartCalendarEventTimestamp } from "./market-chart-calendar-helpers"
 
@@ -244,7 +246,8 @@ function hasHighImpactCalendarEvent(
 
 function resolveNearestCandleTime(
   annotationTime: MarketChartEpochMillis,
-  candleTimes: MarketChartEpochMillis[]
+  candleTimes: MarketChartEpochMillis[],
+  lastCandleIntervalEnd?: number
 ) {
   if (!candleTimes.length) {
     return null
@@ -254,8 +257,14 @@ function resolveNearestCandleTime(
   const firstTime = Number(candleTimes[0])
   const lastTime = Number(candleTimes[candleTimes.length - 1])
 
-  if (annotationTimestamp < firstTime || annotationTimestamp > lastTime) {
+  if (annotationTimestamp < firstTime) {
     return null
+  }
+
+  if (annotationTimestamp > lastTime) {
+    return lastCandleIntervalEnd && annotationTimestamp < lastCandleIntervalEnd
+      ? (candleTimes.at(-1) ?? null)
+      : null
   }
 
   let left = 0
@@ -282,7 +291,8 @@ function resolveNearestCandleTime(
 
 export function createMarketChartAnnotationGroups(
   annotations: MarketChartAnnotationResponse[],
-  candles: MarketChartCandleItemResponse[]
+  candles: MarketChartCandleItemResponse[],
+  timeframe: MarketChartTimeframe
 ): MarketChartAnnotationGroup[] {
   const validCandles = candles.filter(isValidMarketChartCandle)
   const validAnnotations = annotations
@@ -292,6 +302,11 @@ export function createMarketChartAnnotationGroups(
     .map((candle) => toMarketChartEpochMillis(candle.time))
     .filter((time): time is MarketChartEpochMillis => time !== null)
     .sort((left, right) => Number(left) - Number(right))
+  const lastCandleTime = candleTimes.at(-1)
+  const lastCandleIntervalEnd =
+    lastCandleTime === undefined
+      ? null
+      : getMarketChartCandleEndBoundary(timeframe, lastCandleTime)
   const candlesByTime = new Map<number, MarketChartCandleItemResponse>()
   const groupsByTime = new Map<number, MarketChartAnnotationResponse[]>()
 
@@ -310,7 +325,11 @@ export function createMarketChartAnnotationGroups(
       continue
     }
 
-    const candleTime = resolveNearestCandleTime(annotationTime, candleTimes)
+    const candleTime = resolveNearestCandleTime(
+      annotationTime,
+      candleTimes,
+      lastCandleIntervalEnd ? Date.parse(lastCandleIntervalEnd) : undefined
+    )
 
     if (candleTime === null) {
       continue
@@ -404,7 +423,8 @@ export function createMarketChartEconomicCalendarEventGroups(
 
 export function createMarketChartWarmAnnotationGroups(
   annotations: MarketChartAnnotationResponse[],
-  candles: MarketChartCandleItemResponse[]
+  candles: MarketChartCandleItemResponse[],
+  timeframe: MarketChartTimeframe
 ): MarketChartAnnotationGroup[] {
   const candleTimes = candles
     .filter(isValidMarketChartCandle)
@@ -417,7 +437,14 @@ export function createMarketChartWarmAnnotationGroups(
   }
 
   const firstTime = Number(candleTimes[0])
-  const lastTime = Number(candleTimes[candleTimes.length - 1])
+  const lastCandleTime = candleTimes.at(-1)
+  const lastCandleIntervalEnd =
+    lastCandleTime === undefined
+      ? null
+      : getMarketChartCandleEndBoundary(timeframe, lastCandleTime)
+  const lastCandleIntervalEndTime = lastCandleIntervalEnd
+    ? Date.parse(lastCandleIntervalEnd)
+    : null
 
   return annotations
     .filter(isValidMarketChartAnnotation)
@@ -434,7 +461,12 @@ export function createMarketChartWarmAnnotationGroups(
       const start = Math.min(Number(periodStart), Number(periodEnd))
       const end = Math.max(Number(periodStart), Number(periodEnd))
 
-      if (end < firstTime || start > lastTime) {
+      if (
+        end < firstTime ||
+        lastCandleIntervalEndTime === null ||
+        !Number.isFinite(lastCandleIntervalEndTime) ||
+        start >= lastCandleIntervalEndTime
+      ) {
         return []
       }
 

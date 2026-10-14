@@ -59,11 +59,14 @@ import {
   isMarketChartWarmBandTimeframe,
   isMarketChartTimeframe,
 } from "@/app/lib/market-charts/definitions"
+import { EVENT_READ_PERMISSIONS } from "@/app/lib/events/permissions"
+import { NEWS_ARTICLE_READ_PERMISSIONS } from "@/app/lib/news-articles/permissions"
 import { WorkspaceWatchlistAssetListItemResponse } from "@/app/lib/watchlists/definitions"
 import { AppTimeMetadata } from "@/components/app-time-metadata"
 import { LocalizedLink } from "@/components/localized-link"
+import { useHasAnyPermission } from "@/components/permission-provider"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
   Empty,
@@ -110,6 +113,22 @@ const MARKET_CHART_CALENDAR_VISIBILITY_STORAGE_KEY =
   "signapse:market-charts:calendar-layer:v1"
 const MARKET_CHART_COMPACT_WIDTH_PX = 768
 const MARKET_CHART_COMPACT_HEIGHT_PX = 720
+
+function getSafeEvidenceHref(value: string | null | undefined) {
+  if (!value?.trim()) {
+    return null
+  }
+
+  try {
+    const url = new URL(value)
+
+    return url.protocol === "http:" || url.protocol === "https:"
+      ? url.href
+      : null
+  } catch {
+    return null
+  }
+}
 
 function readStoredMarketChartCalendarVisibility(): boolean | null {
   if (typeof window === "undefined") {
@@ -534,14 +553,6 @@ function getAnnotationEventId(annotation: MarketChartAnnotationResponse) {
   const match = eventDetail?.match(/^\/events\/([1-9]\d*)\/?(?:[?#].*)?$/)
 
   return match ? Number(match[1]) : null
-}
-
-function isWarmAnnotationGroup(group: MarketChartAnnotationGroup) {
-  const annotation = group.annotations[0]
-
-  return (
-    annotation?.annotationType === "WARM_EPISODE" && !!annotation.warmEpisode
-  )
 }
 
 function getFreshnessLabel(
@@ -1166,6 +1177,7 @@ const getServerBrowserTimeZone = () => null
 
 function ChartSurface({
   annotationLayerEnabled,
+  annotationLoadError,
   annotationGroups,
   calendarEventGroups,
   calendarEvents,
@@ -1213,6 +1225,7 @@ function ChartSurface({
   onTimeframeChange,
 }: {
   annotationLayerEnabled: boolean
+  annotationLoadError: string | null
   annotationGroups: MarketChartAnnotationGroup[]
   calendarEventGroups: MarketChartEconomicCalendarEventGroup[]
   calendarEvents: MarketChartEconomicCalendarEventResponse[]
@@ -1791,6 +1804,7 @@ function ChartSurface({
 
         <MarketChartAnnotationControls
           annotationLayerEnabled={annotationLayerEnabled}
+          annotationLoadError={annotationLoadError}
           calendarEvents={calendarMarkerEvents}
           calendarLayerEnabled={calendarLayerEnabled}
           calendarLoadError={calendarLoadError}
@@ -2209,6 +2223,11 @@ function MarketChartHotAnnotationDetail({
   onOutcomeRangeHover: (range: MarketChartOutcomeHoverRange) => void
   onOutcomeRangeLeave: () => void
 }) {
+  const canReadEvents = useHasAnyPermission(EVENT_READ_PERMISSIONS)
+  const canReadNewsArticles = useHasAnyPermission(NEWS_ARTICLE_READ_PERMISSIONS)
+  const evidenceRoleLabels = localization.dictionary.events
+    .evidenceRoleLabels as Record<string, string>
+
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-3">
@@ -2236,18 +2255,27 @@ function MarketChartHotAnnotationDetail({
               {title ? (
                 <h3 className="line-clamp-2 text-sm font-semibold text-foreground">
                   {eventId ? (
-                    <button
-                      type="button"
-                      data-quick-detail-trigger={triggerKey}
-                      className="rounded-sm text-left underline-offset-4 transition-colors outline-none hover:text-primary hover:underline focus-visible:ring-2 focus-visible:ring-ring/50"
-                      onClick={() => onEventOpen(eventId, triggerKey)}
-                    >
-                      {title}
-                    </button>
+                    canReadEvents ? (
+                      <button
+                        type="button"
+                        data-quick-detail-trigger={triggerKey}
+                        className="rounded-sm text-left underline-offset-4 transition-colors outline-none hover:text-primary hover:underline focus-visible:ring-2 focus-visible:ring-ring/50"
+                        onClick={() => onEventOpen(eventId, triggerKey)}
+                      >
+                        {title}
+                      </button>
+                    ) : (
+                      title
+                    )
                   ) : (
                     title
                   )}
                 </h3>
+              ) : null}
+              {eventId && !canReadEvents ? (
+                <p className="text-xs text-muted-foreground">
+                  {localization.dictionary.events.quickAccessDeniedTitle}
+                </p>
               ) : null}
               {hotEvent.summary ? (
                 <p className="line-clamp-4 text-sm text-muted-foreground">
@@ -2262,6 +2290,123 @@ function MarketChartHotAnnotationDetail({
                   reaction={reaction}
                 />
               ) : null}
+              {hotEvent.evidence.length ? (
+                <section className="flex flex-col gap-2">
+                  <h4 className="text-xs font-medium text-muted-foreground">
+                    {localization.dictionary.events.mainEvidence}
+                  </h4>
+                  {hotEvent.evidence.map((evidence, index) => {
+                    const evidenceTitle =
+                      evidence.title?.trim() ||
+                      localization.dictionary.events.evidenceUntitled
+                    const evidenceRole = evidence.evidenceRole?.trim()
+                    const publishedAt = formatOptionalMarketChartDateTime(
+                      evidence.publishedAt,
+                      localization
+                    )
+                    const confidence =
+                      typeof evidence.confidence === "number" &&
+                      Number.isFinite(evidence.confidence)
+                        ? localization.formatMessage(
+                            localization.dictionary.marketCharts.annotations
+                              .confidenceBadge,
+                            {
+                              value: localization.formatNumber(
+                                evidence.confidence,
+                                {
+                                  maximumFractionDigits: 0,
+                                  style: "percent",
+                                }
+                              ),
+                            }
+                          )
+                        : null
+                    const articleId = evidence.newsArticleId
+                    const articleUrl = evidence.url?.trim()
+                    const safeArticleUrl = getSafeEvidenceHref(articleUrl)
+
+                    return (
+                      <div
+                        key={`${annotation.id}:evidence:${index}`}
+                        className="flex flex-col gap-1 rounded-md border bg-background p-2.5"
+                      >
+                        <p className="text-sm font-medium text-foreground">
+                          {evidenceTitle}
+                        </p>
+                        {evidenceRole || confidence ? (
+                          <div className="flex flex-wrap gap-1">
+                            {evidenceRole ? (
+                              <Badge variant="secondary">
+                                {evidenceRoleLabels[evidenceRole] ??
+                                  evidenceRole}
+                              </Badge>
+                            ) : null}
+                            {confidence ? (
+                              <Badge variant="outline">{confidence}</Badge>
+                            ) : null}
+                          </div>
+                        ) : null}
+                        {evidence.publisher ? (
+                          <p className="text-xs text-muted-foreground">
+                            {evidence.publisher}
+                          </p>
+                        ) : null}
+                        {publishedAt ? (
+                          <AppTimeMetadata icon={CalendarClock}>
+                            {publishedAt}
+                          </AppTimeMetadata>
+                        ) : null}
+                        {evidence.evidenceNote?.trim() ? (
+                          <p className="text-sm text-muted-foreground">
+                            {evidence.evidenceNote}
+                          </p>
+                        ) : null}
+                        {typeof articleId === "number" &&
+                        Number.isInteger(articleId) &&
+                        articleId > 0 ? (
+                          canReadNewsArticles ? (
+                            <LocalizedLink
+                              href={`/news-articles/${articleId}`}
+                              className={buttonVariants({
+                                size: "sm",
+                                variant: "outline",
+                                className: "self-start",
+                              })}
+                            >
+                              {localization.dictionary.events.viewArticle}
+                            </LocalizedLink>
+                          ) : (
+                            <p className="text-xs text-muted-foreground">
+                              {
+                                localization.dictionary.newsArticles
+                                  .quickAccessDeniedTitle
+                              }
+                            </p>
+                          )
+                        ) : null}
+                        {articleUrl && safeArticleUrl ? (
+                          <a
+                            href={safeArticleUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="self-start text-xs font-medium text-primary underline-offset-4 hover:underline"
+                          >
+                            {localization.dictionary.events.openOriginal}
+                          </a>
+                        ) : articleUrl ? (
+                          <span className="self-start text-xs break-all text-muted-foreground">
+                            {articleUrl}
+                          </span>
+                        ) : null}
+                      </div>
+                    )
+                  })}
+                </section>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  {localization.dictionary.events.noEvidenceQuick}
+                </p>
+              )}
             </article>
           )
         })}
@@ -2292,9 +2437,13 @@ function MarketChartWarmEpisodeAnnotationDetail({
   const episodeReaction = warmEpisode.outcome
     ? { direction: warmEpisode.direction, outcome: warmEpisode.outcome }
     : null
+  const episodeTime = formatMarketChartDateTime(annotation.time, localization)
 
   return (
     <div className="flex flex-col gap-3">
+      <AppTimeMetadata icon={CalendarClock}>
+        {formatMessage(labels.warmEpisodePeriodStart, { time: episodeTime })}
+      </AppTimeMetadata>
       {warmEpisode.summary ? (
         <section className="flex flex-col gap-1">
           <h3 className="text-xs font-medium text-muted-foreground">
@@ -2423,7 +2572,7 @@ function MarketChartAnnotationReactionSection({
   localization: LocalizationContext
   onOutcomeRangeHover: (range: MarketChartOutcomeHoverRange) => void
   onOutcomeRangeLeave: () => void
-  reaction: MarketChartAnnotationReactionResponse
+  reaction: Pick<MarketChartAnnotationReactionResponse, "direction" | "outcome">
 }) {
   const { dictionary } = localization
   const labels = dictionary.marketCharts.annotations
@@ -2853,6 +3002,7 @@ function MarketChartUpcomingCalendar({
 
 function MarketChartAnnotationControls({
   annotationLayerEnabled,
+  annotationLoadError,
   calendarEvents,
   calendarLayerEnabled,
   calendarLoadError,
@@ -2864,6 +3014,7 @@ function MarketChartAnnotationControls({
   liveStatusTone,
 }: {
   annotationLayerEnabled: boolean
+  annotationLoadError: string | null
   calendarEvents: MarketChartEconomicCalendarEventResponse[]
   calendarLayerEnabled: boolean
   calendarLoadError: string | null
@@ -2879,11 +3030,12 @@ function MarketChartAnnotationControls({
   const label = annotationLayerEnabled
     ? isLoading
       ? dictionary.marketCharts.annotations.loadingEvents
-      : groups.length > 0
-        ? formatMessage(dictionary.marketCharts.annotations.eventMarkers, {
-            count: formatNumber(groups.length),
-          })
-        : dictionary.marketCharts.annotations.noEvents
+      : (annotationLoadError ??
+        (groups.length > 0
+          ? formatMessage(dictionary.marketCharts.annotations.eventMarkers, {
+              count: formatNumber(groups.length),
+            })
+          : dictionary.marketCharts.annotations.noEvents))
     : null
   const calendarLabel = calendarLayerEnabled
     ? calendarLoadError ||
@@ -2908,17 +3060,24 @@ function MarketChartAnnotationControls({
             <div
               className={cn(
                 "min-w-0 flex-1 flex-wrap items-center gap-x-4 gap-y-1",
-                calendarLoadError ? "flex" : "hidden sm:flex"
+                calendarLoadError || annotationLoadError
+                  ? "flex"
+                  : "hidden sm:flex"
               )}
             >
               {label ? (
-                <span className="flex items-center gap-2">
+                <span
+                  role={annotationLoadError ? "alert" : undefined}
+                  className="flex items-center gap-2"
+                >
                   <span
                     className={cn(
                       "size-2 rounded-full",
-                      hasEvents
-                        ? eventColorClassNames.dot
-                        : "bg-muted-foreground/40"
+                      annotationLoadError
+                        ? "bg-destructive"
+                        : hasEvents
+                          ? eventColorClassNames.dot
+                          : "bg-muted-foreground/40"
                     )}
                   />
                   {label}
@@ -3005,6 +3164,9 @@ export function MarketChartWorkbench({
     null
   )
   const [loadError, setLoadError] = useState<string | null>(null)
+  const [annotationLoadError, setAnnotationLoadError] = useState<string | null>(
+    null
+  )
   const [liveState, setLiveState] = useState<MarketChartLiveRuntimeState>(
     DEFAULT_MARKET_CHART_LIVE_STATE
   )
@@ -3061,6 +3223,10 @@ export function MarketChartWorkbench({
   const isBusy = phase === "loading" || isPending
   const timeframeLabels = getMarketChartTimeframeLabels(dictionary)
   const chartData = loadedData ?? data
+  const chartDataRef = useRef(chartData)
+  useEffect(() => {
+    chartDataRef.current = chartData
+  }, [chartData])
   const currentPriceLabel = getCurrentPriceLabel(
     liveState,
     chartData?.asset.pricePrecision,
@@ -3076,7 +3242,8 @@ export function MarketChartWorkbench({
 
     return createMarketChartAnnotationGroups(
       chartData.annotations,
-      chartData.candles
+      chartData.candles,
+      chartData.timeframe
     )
   }, [annotationLayerEnabled, chartData])
 
@@ -3129,7 +3296,8 @@ export function MarketChartWorkbench({
 
     return createMarketChartWarmAnnotationGroups(
       chartData.annotations,
-      chartData.candles
+      chartData.candles,
+      selection.timeframe
     )
   }, [annotationLayerEnabled, chartData, selection.timeframe])
 
@@ -3231,18 +3399,11 @@ export function MarketChartWorkbench({
   const loadAnnotations = useCallback(async function loadAnnotations(
     request: Pick<MarketChartAnnotationRequest, "assetId" | "from" | "to">
   ) {
-    const result = await getMarketChartAnnotations({
+    return getMarketChartAnnotations({
       assetId: request.assetId,
       from: request.from,
       to: request.to,
     })
-
-    if (!result.success) {
-      toast.error(result.error)
-      return []
-    }
-
-    return result.data
   }, [])
 
   const loadEconomicCalendarEvents = useCallback(
@@ -3334,6 +3495,7 @@ export function MarketChartWorkbench({
     ) {
       initialLoadObserverRef.current.cancelCurrent()
       const loadGeneration = ++loadGenerationRef.current
+      const previousData = chartDataRef.current
       const request = createLatestHistoryRequest({
         assetId: asset.assetId,
         currentTimestamp: Date.now(),
@@ -3342,6 +3504,7 @@ export function MarketChartWorkbench({
 
       setPhase("loading")
       setLoadError(null)
+      setAnnotationLoadError(null)
       setCalendarLoadError(null)
       setLoadedData(null)
       setLiveState(DEFAULT_MARKET_CHART_LIVE_STATE)
@@ -3418,13 +3581,16 @@ export function MarketChartWorkbench({
           }
         : null
 
-      let annotations: MarketChartAnnotationResponse[]
+      let annotationResult: ActionResult<MarketChartAnnotationResponse[]> = {
+        success: true,
+        data: [],
+      }
       let economicCalendarEvents: MarketChartEconomicCalendarEventResponse[]
       try {
         const loadedSupplementalData = await Promise.all([
           loadAnnotationData && displayedRange
             ? loadAnnotations(displayedRange)
-            : Promise.resolve([]),
+            : Promise.resolve({ success: true as const, data: [] }),
           displayedRange
             ? loadEconomicCalendarEvents(
                 displayedRange,
@@ -3432,7 +3598,7 @@ export function MarketChartWorkbench({
               )
             : Promise.resolve([]),
         ])
-        annotations = loadedSupplementalData[0]
+        annotationResult = loadedSupplementalData[0]
         economicCalendarEvents = loadedSupplementalData[1]
       } catch (error) {
         initialLoadObserverRef.current.finish(loadGeneration, "error")
@@ -3442,6 +3608,27 @@ export function MarketChartWorkbench({
       if (loadGenerationRef.current !== loadGeneration) {
         initialLoadObserverRef.current.finish(loadGeneration, "stale")
         return
+      }
+
+      const annotations = annotationResult.success
+        ? annotationResult.data
+        : displayedRange && previousData?.asset.id === request.assetId
+          ? previousData.annotations.filter((annotation) => {
+              const time = Date.parse(annotation.time)
+
+              return (
+                annotation.assetId === request.assetId &&
+                time >= Date.parse(displayedRange.from) &&
+                time < Date.parse(displayedRange.to)
+              )
+            })
+          : []
+
+      if (annotationResult.success) {
+        setAnnotationLoadError(null)
+      } else {
+        setAnnotationLoadError(dictionary.marketCharts.annotations.loadError)
+        toast.error(annotationResult.error)
       }
 
       const nextData = createMarketChartDisplayData(
@@ -3460,6 +3647,7 @@ export function MarketChartWorkbench({
       setPhase("success")
     },
     [
+      dictionary.marketCharts.annotations.loadError,
       dictionary.marketCharts.responseInvalid,
       loadAnnotations,
       loadEconomicCalendarEvents,
@@ -3759,6 +3947,7 @@ export function MarketChartWorkbench({
   function updateRoute(nextSelection: MarketChartSelectionState) {
     initialLoadObserverRef.current.cancelCurrent()
     loadGenerationRef.current += 1
+    setAnnotationLoadError(null)
     pendingRouteSelectionRef.current = nextSelection
     setSelection(nextSelection)
     setErrors({})
@@ -3808,19 +3997,52 @@ export function MarketChartWorkbench({
   }
 
   function handleAnnotationLayerChange(checked: boolean) {
+    annotationLayerEnabledRef.current = checked
     setAnnotationLayerEnabled(checked)
     setSelectedAnnotationGroupId(null)
 
-    if (checked && chartData?.candles.length && selectedAsset) {
-      void loadAnnotations({
+    if (!checked) {
+      setAnnotationLoadError(null)
+      return
+    }
+
+    if (chartData?.candles.length && selectedAsset) {
+      const request = {
         assetId: selectedAsset.assetId,
         from: chartData.from,
         to: chartData.to,
-      }).then((annotations) => {
+      }
+      const loadGeneration = loadGenerationRef.current
+
+      setAnnotationLoadError(null)
+      void loadAnnotations(request).then((result) => {
+        if (
+          loadGenerationRef.current !== loadGeneration ||
+          !annotationLayerEnabledRef.current
+        ) {
+          return
+        }
+
+        if (!result.success) {
+          setAnnotationLoadError(dictionary.marketCharts.annotations.loadError)
+          toast.error(result.error)
+          return
+        }
+
+        setAnnotationLoadError(null)
         setLoadedData((current) => {
           const baseData = current ?? data
 
-          return baseData ? { ...baseData, annotations } : current
+          if (
+            !baseData ||
+            baseData.asset.id !== request.assetId ||
+            Date.parse(baseData.from) !== Date.parse(request.from) ||
+            Date.parse(baseData.to) !== Date.parse(request.to)
+          ) {
+            return current
+          }
+
+          return { ...baseData, annotations: result.data }
         })
       })
     }
@@ -3887,7 +4109,10 @@ export function MarketChartWorkbench({
     setSelectedAnnotationGroupId(null)
   }
 
-  function handleAnnotationEventOpen(eventId: number, triggerKey: string) {
+  function handleAnnotationDetailOpen(
+    entity: LocalQuickDetailEntity,
+    triggerKey: string
+  ) {
     if (!selectedAnnotationGroupId) {
       return
     }
@@ -3897,7 +4122,11 @@ export function MarketChartWorkbench({
       triggerKey,
     }
     setSelectedAnnotationGroupId(null)
-    setQuickDetailEntity({ id: eventId, kind: "event" })
+    setQuickDetailEntity(entity)
+  }
+
+  function handleAnnotationEventOpen(eventId: number, triggerKey: string) {
+    handleAnnotationDetailOpen({ id: eventId, kind: "event" }, triggerKey)
   }
 
   function handleQuickDetailBeforeClose() {
@@ -3929,6 +4158,7 @@ export function MarketChartWorkbench({
   async function handleLoadOlderCandles(
     request: MarketChartCandleRequest
   ): Promise<ActionResult<MarketChartLoadedData>> {
+    const loadGeneration = loadGenerationRef.current
     if (
       phase !== "success" ||
       request.assetId !== selectedAssetId ||
@@ -3984,9 +4214,19 @@ export function MarketChartWorkbench({
       to: displayedInterval.to,
     }
 
-    const annotations = annotationLayerEnabledRef.current
+    const annotationResult = annotationLayerEnabledRef.current
       ? await loadAnnotations(displayedRange)
-      : []
+      : { success: true as const, data: [] }
+    const annotations = annotationResult.success ? annotationResult.data : []
+
+    if (
+      annotationLayerEnabledRef.current &&
+      loadGenerationRef.current === loadGeneration &&
+      !annotationResult.success
+    ) {
+      setAnnotationLoadError(dictionary.marketCharts.annotations.loadError)
+      toast.error(annotationResult.error)
+    }
     const economicCalendarEvents = await loadEconomicCalendarEvents(
       displayedRange,
       selectedCalendarImpactsRef.current
@@ -4031,6 +4271,7 @@ export function MarketChartWorkbench({
 
       <ChartSurface
         annotationLayerEnabled={annotationLayerEnabled}
+        annotationLoadError={annotationLoadError}
         annotationGroups={annotationGroups}
         calendarEventGroups={calendarEventGroups}
         calendarEvents={calendarEvents}

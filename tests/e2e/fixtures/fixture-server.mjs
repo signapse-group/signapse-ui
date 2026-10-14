@@ -667,30 +667,107 @@ function graphView(state) {
   }
 }
 
-function marketChartAnnotations(url) {
+function marketChartAnnotations(url, scenario) {
   const assetId = Number(url.searchParams.get("assetId") ?? 101)
   const anchorTime = url.searchParams.get("to") ?? NOW
-  const annotationTime = new Date(
-    Date.parse(anchorTime) - 2 * 60 * 60 * 1000
-  )
+  const annotationTime = new Date(Date.parse(anchorTime) - 1000).toISOString()
+
+  if (scenario === "annotations-many") {
+    return Array.from({ length: 125 }, (_, index) => ({
+      id: `fixture-hot-event-${index + 1}`,
+      annotationType: "HOT_EVENT",
+      assetId,
+      time: annotationTime,
+      hotEvent: {
+        eventId: index === 124 ? 63 : 61,
+        severity: "HIGH",
+        direction: "BULLISH",
+        title: `Fixture annotation ${index + 1}`,
+        summary: "Synthetic chart annotation for the browser quality gate.",
+        confidence: 0.92,
+        topMarketReaction: null,
+        marketReactions: [],
+        evidence: [
+          {
+            newsArticleId: 71,
+            title: `Fixture evidence ${index + 1}`,
+            publisher: "Fixture Wire",
+            url: "https://fixture.invalid/news/71",
+            publishedAt: annotationTime,
+            evidenceRole: "PRIMARY",
+            confidence: 0.92,
+            evidenceNote: "Synthetic evidence for the browser quality gate.",
+          },
+        ],
+        links: { eventDetail: `/events/${index === 124 ? 63 : 61}` },
+      },
+      warmEpisode: null,
+    }))
+  }
+
+  if (scenario === "annotations-warm-episode") {
+    const periodStart = new Date(
+      Date.parse(anchorTime) - 12 * 60 * 60 * 1000
+    ).toISOString()
+
+    return [
+      {
+        id: "fixture-warm-episode-42",
+        annotationType: "WARM_EPISODE",
+        assetId,
+        time: periodStart,
+        hotEvent: null,
+        warmEpisode: {
+          warmEpisodeId: 42,
+          periodStart,
+          periodEnd: anchorTime,
+          direction: "NEUTRAL",
+          summary: "Fixture warm episode",
+          outcome: null,
+          events: [],
+        },
+      },
+    ]
+  }
+
+  const evidenceUrl =
+    scenario === "annotations-unsafe-evidence-url"
+      ? "javascript:alert(1)"
+      : "https://fixture.invalid/news/71"
 
   return [
     {
       id: "fixture-hot-event-61",
       annotationType: "HOT_EVENT",
       assetId,
-      time: annotationTime.toISOString(),
+      time: annotationTime,
       hotEvent: {
         eventId: 61,
         severity: "HIGH",
-        direction: "UP",
-        title: "Central bank signals a slower easing path",
+        direction: "BULLISH",
+        title:
+          assetId === 102
+            ? "Fixture Gold annotation"
+            : "Central bank signals a slower easing path",
         summary: "Synthetic chart annotation for the browser quality gate.",
         confidence: 0.92,
+        topMarketReaction: null,
         marketReactions: [],
-        evidence: [],
+        evidence: [
+          {
+            newsArticleId: 71,
+            title: "Fixture market update",
+            publisher: "Fixture Wire",
+            url: evidenceUrl,
+            publishedAt: annotationTime,
+            evidenceRole: "PRIMARY",
+            confidence: 0.92,
+            evidenceNote: "Synthetic evidence for the browser quality gate.",
+          },
+        ],
         links: { eventDetail: "/events/61" },
       },
+      warmEpisode: null,
     },
   ]
 }
@@ -1647,7 +1724,9 @@ function responseForRoute(state, method, pathname, url, body) {
   }
 
   if (method === "GET" && pathname === "/market-charts/candles") return candles(url)
-  if (method === "GET" && pathname === "/market-charts/annotations") return marketChartAnnotations(url)
+  if (method === "GET" && pathname === "/market-charts/annotations") {
+    return marketChartAnnotations(url, getScenario(state, method, pathname))
+  }
   if (method === "GET" && pathname === "/market-charts/economic-calendar-events") {
     return marketChartEconomicCalendarEvents(
       url,
@@ -1916,6 +1995,16 @@ const server = createServer(async (request, response) => {
   ) {
     sendJson(response, 503, errorPayload("Fixture backend is unavailable", "FIXTURE_OUTAGE"))
     return
+  }
+  if (
+    scenario === "annotations-delayed-old-scope" &&
+    method === "GET" &&
+    url.pathname === "/market-charts/annotations" &&
+    Number(url.searchParams.get("assetId")) === 101
+  ) {
+    // Hold one old-scope response; chart history paging can request annotations repeatedly.
+    state.scenarios[`GET ${url.pathname}`] = "success"
+    await new Promise((resolve) => setTimeout(resolve, 5000))
   }
   if (scenario === "validation-error") {
     sendJson(response, 422, errorPayload("Fixture validation failed", "FIXTURE_VALIDATION"))
