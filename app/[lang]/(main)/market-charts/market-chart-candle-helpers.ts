@@ -1,23 +1,8 @@
-import type {
-  MarketChartCandleItemResponse,
-  MarketChartLiveQuoteResponse,
-  MarketChartTimeframe,
-} from "@/app/lib/market-charts/definitions"
+import type { MarketChartCandleItemResponse } from "@/app/lib/market-charts/definitions"
 
 export const MINUTE_MS = 60 * 1000
 export const HOUR_MS = 60 * MINUTE_MS
 export const DAY_MS = 24 * HOUR_MS
-const QUOTE_BUCKET_INTERVAL_MS: Record<MarketChartTimeframe, number> = {
-  "1m": MINUTE_MS,
-  "5m": 5 * MINUTE_MS,
-  "15m": 15 * MINUTE_MS,
-  "30m": 30 * MINUTE_MS,
-  "1h": HOUR_MS,
-  "4h": 4 * HOUR_MS,
-  "1d": DAY_MS,
-  "1w": 7 * DAY_MS,
-  "1mo": 30 * DAY_MS,
-}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null
@@ -89,82 +74,6 @@ export function getFiniteVolume(candle: MarketChartCandleItemResponse) {
     : null
 }
 
-export function mergeLiveCandleItem(
-  current: MarketChartCandleItemResponse[],
-  liveCandle: MarketChartCandleItemResponse | null
-) {
-  if (!liveCandle) {
-    return normalizeCandleItems(current)
-  }
-
-  const liveTimestamp = getCandleTimestamp(liveCandle)
-  const newestTimestamp = Math.max(
-    ...current
-      .map((candle) => getCandleTimestamp(candle))
-      .filter((timestamp): timestamp is number => timestamp !== null)
-  )
-
-  if (
-    liveTimestamp === null ||
-    (Number.isFinite(newestTimestamp) && liveTimestamp < newestTimestamp)
-  ) {
-    return normalizeCandleItems(current)
-  }
-
-  return mergeCandleItems(current, [liveCandle])
-}
-
-export function deriveLiveCandleItemFromQuote({
-  current,
-  quote,
-  timeframe,
-}: {
-  current: MarketChartCandleItemResponse[] | null | undefined
-  quote: MarketChartLiveQuoteResponse | null | undefined
-  timeframe: MarketChartTimeframe
-}): MarketChartCandleItemResponse | null {
-  if (!quote || !Number.isFinite(quote.price)) {
-    return null
-  }
-
-  const quoteTime = Date.parse(quote.providerTime || quote.receivedAt)
-  const intervalMs = QUOTE_BUCKET_INTERVAL_MS[timeframe]
-
-  if (!Number.isFinite(quoteTime) || !Number.isFinite(intervalMs)) {
-    return null
-  }
-
-  const quoteBucketTimestamp = Math.floor(quoteTime / intervalMs) * intervalMs
-  const normalizedCurrent = normalizeCandleItems(current ?? [])
-  const latestCandle = normalizedCurrent.at(-1) ?? null
-  const latestTimestamp = latestCandle ? getCandleTimestamp(latestCandle) : null
-
-  if (
-    !latestCandle ||
-    latestTimestamp === null ||
-    quoteBucketTimestamp < latestTimestamp
-  ) {
-    return null
-  }
-
-  if (quoteBucketTimestamp > latestTimestamp) {
-    return {
-      time: new Date(quoteBucketTimestamp).toISOString(),
-      open: quote.price,
-      high: quote.price,
-      low: quote.price,
-      close: quote.price,
-    }
-  }
-
-  return {
-    ...latestCandle,
-    high: Math.max(latestCandle.high, quote.price),
-    low: Math.min(latestCandle.low, quote.price),
-    close: quote.price,
-  }
-}
-
 export function hasUsableVolume(
   candle: Pick<MarketChartCandleItemResponse, "volume"> | null | undefined
 ) {
@@ -172,10 +81,9 @@ export function hasUsableVolume(
 }
 
 export function hasUsableVolumeData(
-  candles: Pick<MarketChartCandleItemResponse, "volume">[] | null | undefined,
-  liveCandle: Pick<MarketChartCandleItemResponse, "volume"> | null | undefined
+  candles: Pick<MarketChartCandleItemResponse, "volume">[] | null | undefined
 ) {
-  return Boolean(candles?.some(hasUsableVolume) || hasUsableVolume(liveCandle))
+  return Boolean(candles?.some(hasUsableVolume))
 }
 
 export interface CreateKLineDataItem {

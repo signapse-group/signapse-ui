@@ -1,28 +1,26 @@
 name: Verify
 
 on:
-  push:
   pull_request:
+    branches: [main]
+  push:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.ref == 'refs/heads/main' && github.sha || 'pr' }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   check:
     if: github.event_name != 'workflow_dispatch' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    container:
-      image: node:22.11.0-bookworm@sha256:ec878c763e9fad09d22aae86e2edcb7a05b397dfe8411c16e2b90158d595e2ce
-    timeout-minutes: 30
+    timeout-minutes: 15
     env:
       NEXT_TELEMETRY_DISABLED: "1"
-      SIGNAPSE_BUILD_REVISION: ${{ github.event.pull_request.head.sha || github.sha }}
-      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_Zml4dHVyZS5jbGVyay5hY2NvdW50cy5kZXYk
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413
@@ -30,53 +28,37 @@ jobs:
           version: 9.13.2
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
-          node-version: "22.11.0"
+          node-version: "24.21.0"
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm test:quality
+      - name: Upload unit test results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: test-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          retention-days: 7
+          if-no-files-found: ignore
+          path: test-results/vitest.xml
 
-  deploy:
+  deployment:
     needs: check
     if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-    env:
-      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-      SIGNAPSE_BUILD_REVISION: ${{ github.sha }}
-      NEXT_TELEMETRY_DISABLED: "1"
+    timeout-minutes: 32
+    permissions:
+      contents: read
+      deployments: read
+      statuses: read
+      actions: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413
         with:
-          version: 9.13.2
+          persist-credentials: false
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
-          node-version: "22.11.0"
-          cache: pnpm
-      - name: Require deployment access
-        run: |
-          test -n "$VERCEL_TOKEN"
-          test -n "$VERCEL_ORG_ID"
-          test -n "$VERCEL_PROJECT_ID"
-      - run: pnpm install --frozen-lockfile
-      - run: npm install --global vercel@63.1.2
-      - run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
-      - run: vercel build --prod --token="$VERCEL_TOKEN"
-      - name: Check main before publishing
-        id: release_head
-        shell: bash
-        run: |
-          current_main=$(git ls-remote origin refs/heads/main | cut -f1)
-          [[ "$current_main" =~ ^[a-f0-9]{40}$ ]]
-          if [[ "$current_main" == "$GITHUB_SHA" ]]; then
-            echo "current=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "current=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::Main advanced; use the checked descendant release."
-          fi
-      - name: Publish checked revision
-        if: steps.release_head.outputs.current == 'true'
-        run: vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN" --meta "signapseRevision=$SIGNAPSE_BUILD_REVISION"
+          node-version: "24.21.0"
+      - name: Confirm Vercel Production deployment
+        run: node scripts/verify-deploy.mjs "$GITHUB_SHA"
+        env:
+          GH_TOKEN: ${{ github.token }}

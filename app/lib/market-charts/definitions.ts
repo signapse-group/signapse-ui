@@ -178,9 +178,9 @@ export interface MarketChartAnnotationResponse {
 export type MarketChartEconomicCalendarEventStatus = "PENDING" | "AVAILABLE"
 
 export interface MarketChartEconomicCalendarEventResponse {
-  id: number
-  assetId: number
-  time: string
+  id?: number
+  assetId?: number
+  time?: string
   title?: string | null
   currencyCode?: string | null
   type?: string | null
@@ -192,7 +192,7 @@ export interface MarketChartEconomicCalendarEventResponse {
   actualBetterWorse?: string | null
   revisionBetterWorse?: string | null
   description?: string | null
-  status: MarketChartEconomicCalendarEventStatus
+  status?: MarketChartEconomicCalendarEventStatus
   scheduledAt?: string | null
 }
 
@@ -208,11 +208,8 @@ export interface MarketChartCandleResponse {
 
 export type MarketChartLiveStreamState =
   | "CONNECTING"
-  | "CONNECTED"
-  | "DISCONNECTED"
   | "RECONNECTING"
   | "SUBSCRIBED"
-  | "UNSUBSCRIBED"
   | "STALE"
   | "MARKET_CLOSED"
   | "ERROR"
@@ -226,7 +223,7 @@ export interface MarketChartLiveStatusResponse {
   assetId: number
   symbol: string
   state: MarketChartLiveStreamState
-  message?: string | null
+  message: string | null
   stale: boolean
   observedAt: string
 }
@@ -235,32 +232,15 @@ export interface MarketChartLiveQuoteResponse {
   assetId: number
   symbol: string
   price: number
-  volume?: number | null
-  providerTime?: string | null
   receivedAt: string
   stale: boolean
-}
-
-export interface MarketChartLiveCandleResponse {
-  assetId: number
-  symbol: string
-  timeframe: MarketChartTimeframe
-  time: string
-  open: number
-  high: number
-  low: number
-  close: number
-  volume?: number | null
-  updatedAt: string
-  partial: true
 }
 
 export interface MarketChartLiveSnapshotResponse {
   asset: MarketChartAssetResponse
   symbol: string
   timeframe: MarketChartTimeframe
-  quote?: MarketChartLiveQuoteResponse | null
-  candle?: MarketChartLiveCandleResponse | null
+  quote: MarketChartLiveQuoteResponse | null
   status: MarketChartLiveStatusResponse
 }
 
@@ -509,9 +489,9 @@ export const marketChartEconomicCalendarEventStatusSchema = z.enum([
 ]) satisfies z.ZodType<MarketChartEconomicCalendarEventStatus>
 
 export const marketChartEconomicCalendarEventResponseSchema = z.object({
-  id: z.number(),
-  assetId: z.number(),
-  time: z.string(),
+  id: z.number().optional(),
+  assetId: z.number().optional(),
+  time: z.string().optional(),
   title: z.string().nullable().optional(),
   currencyCode: z.string().nullable().optional(),
   type: z.string().nullable().optional(),
@@ -523,7 +503,7 @@ export const marketChartEconomicCalendarEventResponseSchema = z.object({
   actualBetterWorse: z.string().nullable().optional(),
   revisionBetterWorse: z.string().nullable().optional(),
   description: z.string().nullable().optional(),
-  status: marketChartEconomicCalendarEventStatusSchema,
+  status: marketChartEconomicCalendarEventStatusSchema.optional(),
   scheduledAt: z.string().nullable().optional(),
 }) satisfies z.ZodType<MarketChartEconomicCalendarEventResponse>
 
@@ -539,11 +519,8 @@ export const marketChartCandleResponseSchema = z.object({
 
 export const marketChartLiveStreamStateSchema = z.enum([
   "CONNECTING",
-  "CONNECTED",
-  "DISCONNECTED",
   "RECONNECTING",
   "SUBSCRIBED",
-  "UNSUBSCRIBED",
   "STALE",
   "MARKET_CLOSED",
   "ERROR",
@@ -558,7 +535,7 @@ export const marketChartLiveStatusResponseSchema = z.object({
   assetId: z.number(),
   symbol: z.string(),
   state: marketChartLiveStreamStateSchema,
-  message: z.string().nullable().optional(),
+  message: z.string().nullable(),
   stale: z.boolean(),
   observedAt: z.string(),
 }) satisfies z.ZodType<MarketChartLiveStatusResponse>
@@ -567,32 +544,15 @@ export const marketChartLiveQuoteResponseSchema = z.object({
   assetId: z.number(),
   symbol: z.string(),
   price: z.number(),
-  volume: z.number().nullable().optional(),
-  providerTime: z.string().nullable().optional(),
   receivedAt: z.string(),
   stale: z.boolean(),
 }) satisfies z.ZodType<MarketChartLiveQuoteResponse>
-
-export const marketChartLiveCandleResponseSchema = z.object({
-  assetId: z.number(),
-  symbol: z.string(),
-  timeframe: z.enum(MARKET_CHART_TIMEFRAMES),
-  time: z.string(),
-  open: z.number(),
-  high: z.number(),
-  low: z.number(),
-  close: z.number(),
-  volume: z.number().nullable().optional(),
-  updatedAt: z.string(),
-  partial: z.literal(true),
-}) satisfies z.ZodType<MarketChartLiveCandleResponse>
 
 export const marketChartLiveSnapshotResponseSchema = z.object({
   asset: marketChartAssetResponseSchema,
   symbol: z.string(),
   timeframe: z.enum(MARKET_CHART_TIMEFRAMES),
-  quote: marketChartLiveQuoteResponseSchema.nullable().optional(),
-  candle: marketChartLiveCandleResponseSchema.nullable().optional(),
+  quote: marketChartLiveQuoteResponseSchema.nullable(),
   status: marketChartLiveStatusResponseSchema,
 }) satisfies z.ZodType<MarketChartLiveSnapshotResponse>
 

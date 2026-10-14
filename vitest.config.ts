@@ -16,6 +16,10 @@ export default defineConfig({
     environment: "node",
     include: ["tests/**/*.test.{ts,tsx}"],
     maxWorkers: 4,
+    reporters: process.env.CI ? ["default", "junit"] : ["default"],
+    outputFile: process.env.CI
+      ? { junit: "test-results/vitest.xml" }
+      : undefined,
     restoreMocks: true,
     setupFiles: ["./tests/setup.ts"],
     coverage: {

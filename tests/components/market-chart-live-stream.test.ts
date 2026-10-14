@@ -8,13 +8,17 @@ import type {
   ObservabilityOperation,
   ObservabilityOutcome,
 } from "@/app/lib/observability/semantic"
+import type { MarketChartTimeframe } from "@/app/lib/market-charts/definitions"
 
 type Listener = (event: Event) => void
 
 class FakeEventSource {
+  static readonly CONNECTING = 0
+  static readonly CLOSED = 2
   static current: FakeEventSource | null = null
   readonly listeners = new Map<string, Listener[]>()
   readonly url: string
+  readyState = FakeEventSource.CONNECTING
   close = vi.fn()
 
   constructor(url: string | URL) {
@@ -39,7 +43,7 @@ interface FinishRecord {
   startAttributes: Record<string, unknown>
 }
 
-function createFixture() {
+function createFixture(timeframe: MarketChartTimeframe = "1h") {
   const finishes: FinishRecord[] = []
   const start = vi.fn(
     (
@@ -52,7 +56,6 @@ function createFixture() {
     })
   )
   const handlers = {
-    onCandle: vi.fn(),
     onErrorEvent: vi.fn(),
     onInvalidEvent: vi.fn(),
     onOpen: vi.fn(),
@@ -63,12 +66,12 @@ function createFixture() {
   }
   const stream = createMarketChartLiveStreamOpener(start)({
     assetId: 42,
-    timeframe: "1h",
+    timeframe,
     ...handlers,
   })
   const source = FakeEventSource.current!
 
-  return { finishes, handlers, source, stream }
+  return { finishes, handlers, source, start, stream }
 }
 
 function message(data: unknown) {
@@ -78,7 +81,8 @@ function message(data: unknown) {
 const status = {
   assetId: 42,
   symbol: "XAUUSD",
-  state: "CONNECTED",
+  state: "SUBSCRIBED",
+  message: null,
   stale: false,
   observedAt: "2026-08-23T00:00:00Z",
 }
@@ -101,6 +105,23 @@ afterEach(() => {
 })
 
 describe("Market Chart live stream observability", () => {
+  it.each([
+    ["1m", "2026-08-23T00:01:00Z"],
+    ["1w", "2026-08-24T00:00:00Z"],
+    ["1mo", "2026-09-01T00:00:00Z"],
+  ] as const)(
+    "forwards a quote at the %s boundary without a candle listener",
+    (timeframe, receivedAt) => {
+      const fixture = createFixture(timeframe)
+      const quote = { ...price, receivedAt }
+
+      fixture.source.emit("price", message(quote))
+
+      expect(fixture.handlers.onPrice).toHaveBeenCalledWith(quote)
+      expect(fixture.source.listeners.has("candle")).toBe(false)
+    }
+  )
+
   it("measures initial open and only the first valid live data event", () => {
     const fixture = createFixture()
 
@@ -162,7 +183,6 @@ describe("Market Chart live stream observability", () => {
         symbol: "XAUUSD",
         timeframe: "1h",
         quote: price,
-        candle: null,
         status,
       })
     )
@@ -175,6 +195,27 @@ describe("Market Chart live stream observability", () => {
     })
   })
 
+  it("accepts a required null quote without creating quote data", () => {
+    const fixture = createFixture()
+    const snapshot = {
+      asset: {
+        id: 42,
+        name: "Gold",
+        symbol: "XAUUSD",
+        type: "COMMODITY",
+        pricePrecision: 2,
+      },
+      symbol: "XAUUSD",
+      timeframe: "1h",
+      quote: null,
+      status,
+    }
+
+    fixture.source.emit("snapshot", message(snapshot))
+
+    expect(fixture.handlers.onSnapshot).toHaveBeenCalledWith(snapshot)
+  })
+
   it("starts fresh reconnect measurements after transport interruption", () => {
     const fixture = createFixture()
 
@@ -182,23 +223,11 @@ describe("Market Chart live stream observability", () => {
     fixture.source.emit("price", message(price))
     fixture.source.emit("error")
     fixture.source.emit("open")
-    fixture.source.emit(
-      "candle",
-      message({
-        assetId: 42,
-        symbol: "XAUUSD",
-        timeframe: "1h",
-        time: "2026-08-23T00:00:00Z",
-        open: 100,
-        high: 102,
-        low: 99,
-        close: 101,
-        updatedAt: "2026-08-23T00:00:02Z",
-        partial: true,
-      })
-    )
+    fixture.source.emit("price", message({ ...price, price: 101 }))
 
-    expect(fixture.handlers.onTransportError).toHaveBeenCalledOnce()
+    expect(fixture.handlers.onTransportError).toHaveBeenCalledWith(
+      "RECONNECTING"
+    )
     expect(fixture.finishes.slice(-2)).toEqual([
       expect.objectContaining({
         operation: "signapse.market_chart.live_connect",
@@ -208,13 +237,32 @@ describe("Market Chart live stream observability", () => {
         }),
       }),
       expect.objectContaining({
-        attributes: { "market.event_kind": "candle" },
+        attributes: { "market.event_kind": "price" },
         operation: "signapse.market_chart.first_live_data",
         outcome: "success",
         startAttributes: expect.objectContaining({
           "connection.kind": "reconnect",
         }),
       }),
+    ])
+  })
+
+  it("reports a terminal transport error without starting reconnect measurements", () => {
+    const fixture = createFixture()
+
+    fixture.source.readyState = FakeEventSource.CLOSED
+    fixture.source.emit("error")
+
+    expect(fixture.handlers.onTransportError).toHaveBeenCalledWith("ERROR")
+    expect(
+      fixture.start.mock.calls.map(([, attributes]) => attributes)
+    ).toEqual([
+      { feature: "market_chart", "connection.kind": "initial" },
+      { feature: "market_chart", "connection.kind": "initial" },
+    ])
+    expect(fixture.finishes.map(({ outcome }) => outcome)).toEqual([
+      "network_error",
+      "network_error",
     ])
   })
 
