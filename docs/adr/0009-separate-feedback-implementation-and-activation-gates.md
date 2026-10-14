@@ -5,7 +5,7 @@ status: superseded
 # Separate feedback implementation and activation gates
 
 Superseded on 2026-10-07 by the accepted [producer API contract policy](https://github.com/signapse-group/signapse-planing/blob/main/workflow/project-execution-workflow.md#contract-api-và-handoff)
-and its [FE consumer instructions](../../.agents/skills/agent-execution-policy/references/api-handoff.md).
+and its [FE consumer standards](../api-consumer.md).
 Published producer OpenAPI owns HTTP schema and consumer-facing semantics; Jira
 owns accepted requirements. Missing contract details affecting integration require
 owner resolution. Fixture checks and live integration retain their distinct evidence

@@ -40,17 +40,28 @@ type FixtureController = {
       | "short"
       | "short-then-empty"
       | "full-then-empty"
-      | "short-then-empty-per-timeframe"
       | "validation-error"
       | "timeout"
       | "delayed"
       | "outage"
       | "mutation-failure"
       | "reconnect"
+      | "error-reconnect"
+      | "post-open-error"
+      | "preopen-unavailable"
+      | "provisioning-pending"
+      | "market-closed"
+      | "no-quote"
+      | "stale"
+      | "connecting-stale"
+      | "reconnecting-stale"
       | "calendar-empty"
+      | "calendar-error"
       | "calendar-upcoming"
+      | "calendar-upcoming-window"
       | "calendar-awaiting"
-      | "calendar-available",
+      | "calendar-available"
+      | "calendar-historical",
     method?: string
   ): Promise<void>
   state(): Promise<{
@@ -189,19 +200,23 @@ export const test = base.extend<Fixtures>({
       }
 
       await fixture.reset()
-      await use(fixture)
+      try {
+        await use(fixture)
 
-      const state = await fixture.state()
-      await testInfo.attach("fixture-state.json", {
-        body: JSON.stringify(state, null, 2),
-        contentType: "application/json",
-      })
-      expect(state.violations, "P0 fixture network violations").toEqual([])
-      await testInfo.attach("external-requests.json", {
-        body: JSON.stringify(externalRequests, null, 2),
-        contentType: "application/json",
-      })
-      expect(externalRequests, "P0 browser external requests").toEqual([])
+        const state = await fixture.state()
+        await testInfo.attach("fixture-state.json", {
+          body: JSON.stringify(state, null, 2),
+          contentType: "application/json",
+        })
+        expect(state.violations, "P0 fixture network violations").toEqual([])
+        await testInfo.attach("external-requests.json", {
+          body: JSON.stringify(externalRequests, null, 2),
+          contentType: "application/json",
+        })
+        expect(externalRequests, "P0 browser external requests").toEqual([])
+      } finally {
+        await fixture.reset()
+      }
     },
     { auto: true },
   ],

@@ -1,11 +1,11 @@
 ---
 name: code-review
-description: Review issue adherence and technical correctness with one independent reviewer, covering committed and relevant uncommitted changes before handoff.
+description: Review requirement adherence and correctness against repository standards, including relevant committed and working changes.
 ---
 
 # Code Review
 
-Use [agent-execution-policy](../agent-execution-policy/SKILL.md) when reviewing an explicitly assigned workflow run; a standalone review does not activate the issue lifecycle. Read repository instructions if present, reusing them if already in context. Read linked policies only for the reviewed scope. Return two separate axes in one review: **Requirement adherence** and **Correctness & Standards**. This skill reviews work; it does not edit code, publish remote feedback, commit, or create a PR unless the user explicitly requests those actions.
+Read repository instructions and [review standards](../../../CONTRIBUTING.md#review-standards), reusing current context. Assigned execution follows [WORKFLOW.md](../../../WORKFLOW.md); this technique adds no permissions, lifecycle gates or reviewer role. A standalone review is read-only unless the user assigns additional actions. Return **Requirement adherence** and **Correctness & Standards** separately.
 
 ## Establish Sources and Scope
 
@@ -13,7 +13,7 @@ Accept the issue/contract and resolved base from the caller. For a PR, resolve i
 
 Read the live Jira Subtask and native parent, accepted decision comments and references directly. Assess the contribution against parent AC or Bug expected behavior and its own scope/Verification. A local accepted contract is valid for explicitly assigned work without an issue. In ad hoc review without a requirement source, disclose that adherence cannot be assessed; never convert missing required input into a full contribution handoff pass.
 
-For API work, read the [API consumer policy](../agent-execution-policy/references/api-handoff.md)
+For API work, read the [API consumer standards](../../../docs/api-consumer.md)
 and current producer contract for the relevant environment. Requirement adherence
 uses accepted requirements; Correctness & Standards checks consumer schema, auth,
 status/error/media/protocol and business semantics against that contract. Verify
@@ -26,34 +26,10 @@ Inspect the contribution's committed diff from the resolved base/merge-base to H
 
 Exclude unrelated changes only with clear ownership evidence. Report ambiguous scope and whether it prevents a reliable conclusion. Do not silently ignore ambiguous files or assign all worktree changes to this Task.
 
-## One Independent Reviewer
+## Review independence
 
-In the autonomous dev-with-PR profile, the fresh In Review agent performs the independent assessment directly from contract/code/evidence. Do not delegate another reviewer when assigned this role. Review is read-only for implementation; feedback, merge/delivery and own Subtask transitions use WORKFLOW's separate grant and [phase procedure](../agent-execution-policy/references/execution-policy.md#review--implement-sửa).
+When independence is required, assess raw contract/code/check evidence directly without a predetermined verdict. The assignment supplies the reviewer role; this skill does not require another reviewer. If independence is unavailable, disclose the unmet requirement rather than calling self-review independent.
 
-For other scopes requiring independence, a coordinating implementer delegates one read-only review to an agent that did not implement the change, supplying raw contract/base/HEAD/ownership/check evidence without a predetermined verdict. The reviewer reads sources and returns both axes directly without another review coordinator. If independence is unavailable, report the unmet requirement instead of calling self-review independent.
+## Assess and report
 
-## Review Both Axes
-
-**Requirement adherence:** map Acceptance Criteria or Expected Behavior to the actual final behavior and suitable evidence. Check omissions, scope creep, accepted contract changes, and related regression risks. Existing implementation can satisfy a criterion without appearing in the diff. Tests passing alone do not establish full coverage.
-
-Assess the applicable evidence for the current phase: local checks/CI before In Review, independent review before merge, delivery before Done. A protected page or reused authenticated transport does not alone add live
-smoke; require it when the accepted assignment names the operation, scope, and inputs.
-Check that scoped selectors still cover every affected behavior, and report baseline
-gaps and pending live acceptance separately from contribution findings.
-
-Assess mandatory evidence at the contribution's operation and phase using the [local handoff policy](../agent-execution-policy/references/execution-policy.md#local-handoff-and-live-acceptance). Pending QA/owner acceptance and coordinator-owned metadata are recorded separately from blocking implementation findings; missing required behavior, local verification, review or CI still prevents handoff readiness.
-
-**Correctness & Standards:** inspect defects in logic, authorization/security, persistence, concurrency, error handling and applicable repository standards. Consider maintainability where it has a concrete impact; naming preferences and speculative abstractions are not automatic blockers. Standards take precedence over generic heuristics.
-
-Use existing check evidence when it applies to the reviewed state. Request or run missing safe checks appropriate to the work; do not broaden testing solely to repeat a green result. Documentation-only work does not require code or build checks unless repository policy says otherwise. Report missing significant required evidence explicitly.
-
-## Findings and Completion
-
-Make each finding actionable and traceable to its axis, location and evidence. Scale explanation to impact; a concise sentence may suffice for a simple nonblocking finding, without a fixed multi-field template. Distinguish:
-
-- **Blocking:** missing/wrong required behavior, correctness/security defects affecting safe delivery, missing mandatory evidence or failing required checks.
-- **Nonblocking:** optional naming, refactoring or optimization that does not affect requirements or safety.
-
-Report a separate result for each axis and one handoff conclusion. A nonblocking suggestion does not keep the contribution in execution. The implementer may challenge findings with evidence; reassess them rather than requiring unnecessary changes. Escalate unresolved material contract/risk disagreements to the human.
-
-After fixes, review the changed parts and affected surrounding behavior; broaden only if warranted. Code/contract changes or specific base impacts invalidate affected evidence; main advancing alone does not require re-review of unchanged head. Return the result for the assigned Jira Subtask's delivery handoff comment, or the requested local-contract PR/artifact/session. Assigned Review saves/read backs findings and follows the phase procedure for Progress/Blocked/Done; a standalone review grants no remote writes. Delivery/merge gates follow the [runbook](../../../docs/delivery.md), and contribution Done never claims parent acceptance. No mandatory repository report, snapshot or fingerprint is needed.
+Apply [review standards](../../../CONTRIBUTING.md#review-standards) for the two verdicts, finding severity and completion, and [verification standards](../../../CONTRIBUTING.md#verification) for applicable evidence. Return the assessment in the requested PR/artifact/session under the assignment's boundary.

@@ -9,7 +9,7 @@
     "start": "next start",
     "lint": "eslint",
     "format": "prettier --write \"**/*.{ts,tsx}\"",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
@@ -17,7 +17,9 @@
     "test:browser": "playwright test",
     "test:browser:update": "playwright test --update-snapshots",
     "test:integration": "node tests/integration/run.mjs",
-    "test:quality": "pnpm lint && pnpm typecheck && pnpm test && pnpm test:contract && pnpm build && pnpm test:browser"
+    "test:quality": "pnpm lint && pnpm typecheck && pnpm test && pnpm test:contract && node --test scripts/verify-deploy.test.mjs",
+    "test:full": "pnpm test:quality && pnpm build && pnpm test:browser",
+    "verify:deploy": "node scripts/verify-deploy.mjs"
   },
   "dependencies": {
     "@antv/g6": "^5.1.1",

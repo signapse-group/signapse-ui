@@ -370,6 +370,8 @@ function createState() {
       },
     ],
     scenarios: {},
+    responses: new Set(),
+    pendingRequests: new Map(),
     streamConnections: 0,
     requests: [],
     violations: [],
@@ -382,6 +384,41 @@ function getState(testRunId) {
     testRuns.set(testRunId, createState())
   }
   return testRuns.get(testRunId)
+}
+
+function trackResponse(state, response) {
+  state.responses.add(response)
+  response.once("close", () => state.responses.delete(response))
+}
+
+function isPending(state, method, pathname) {
+  return getScenario(state, method, pathname) === "delayed" ||
+    feedbackScenarioFor(state, method, pathname) === "pending"
+}
+
+function holdResponse(state, response, method, pathname) {
+  if (response.destroyed) return Promise.resolve(false)
+  trackResponse(state, response)
+  return new Promise((resolve) => {
+    const onClose = () => resume(false)
+    const resume = (released) => {
+      state.pendingRequests.delete(response)
+      response.removeListener("close", onClose)
+      resolve(released)
+    }
+    state.pendingRequests.set(response, { method, pathname, resume })
+    response.once("close", onClose)
+  })
+}
+
+function releasePending(state) {
+  for (const pending of state.pendingRequests.values()) {
+    if (!isPending(state, pending.method, pending.pathname)) pending.resume(true)
+  }
+}
+
+function closeResponses(state) {
+  for (const response of state.responses) response.end()
 }
 
 function jsonHeaders() {
@@ -660,35 +697,70 @@ function marketChartAnnotations(url) {
 
 function marketChartEconomicCalendarEvents(url, scenario) {
   if (scenario === "calendar-empty") return []
+  if (scenario === "calendar-error") {
+    return {
+      __status: 503,
+      payload: errorPayload(
+        "Calendar fixture unavailable",
+        "SERVICE_UNAVAILABLE"
+      ),
+    }
+  }
 
   const assetId = Number(url.searchParams.get("assetId") ?? 101)
-  const now = Date.now()
-  const eventTime =
+  const from = Date.parse(url.searchParams.get("from") ?? "")
+  const to = Date.parse(url.searchParams.get("to") ?? "")
+  const impacts = url.searchParams.getAll("impact")
+  const fixtureNow = Date.parse(NOW)
+  const waiting =
     scenario === "calendar-awaiting" || scenario === "calendar-available"
-      ? now - 30 * 60 * 1000
-      : now + 2 * 60 * 60 * 1000
+  const historical = scenario === "calendar-historical"
   const status = scenario === "calendar-available" ? "AVAILABLE" : "PENDING"
-
-  return [
+  const events = [
     {
-      id: 901,
-      assetId,
-      time: new Date(eventTime).toISOString(),
-      scheduledAt: new Date(eventTime).toISOString(),
-      title: "Fixture inflation release",
-      currencyCode: "USD",
-      type: "INFLATION",
+      id: historical ? 903 : 901,
+      time: fixtureNow + (historical ? -360 : waiting ? -30 : 120) * 60 * 1000,
+      title: historical
+        ? "Fixture historical inflation release"
+        : "Fixture inflation release",
       impact: "HIGH",
+      status,
+    },
+    ...(scenario === "calendar-upcoming-window"
+      ? [
+          {
+            id: 902,
+            time: fixtureNow + 48 * 60 * 60 * 1000,
+            title: "Fixture employment release",
+            impact: "MEDIUM",
+            status: "PENDING",
+          },
+        ]
+      : []),
+  ]
+
+  return events
+    .filter(
+      (event) =>
+        event.time >= from &&
+        event.time < to &&
+        (!impacts.length || impacts.includes(event.impact))
+    )
+    .map((event) => ({
+      ...event,
+      assetId,
+      time: new Date(event.time).toISOString(),
+      scheduledAt: new Date(event.time).toISOString(),
+      currencyCode: "USD",
+      type: event.id === 902 ? "EMPLOYMENT" : "INFLATION",
       forecastValue: "3.0",
       previousValue: "3.1",
-      actualValue: status === "AVAILABLE" ? "3.0" : null,
+      actualValue: event.status === "AVAILABLE" ? "3.0" : null,
       revision: null,
       actualBetterWorse: null,
       revisionBetterWorse: null,
-      description: "Synthetic upcoming calendar event.",
-      status,
-    },
-  ]
+      description: "Synthetic calendar event.",
+    }))
 }
 
 function candles(url) {
@@ -764,17 +836,23 @@ function candles(url) {
   }
 }
 
-function liveSnapshot(assetId, state = "CONNECTED") {
+function liveSnapshot(
+  assetId,
+  state = "SUBSCRIBED",
+  timeframe = "1h",
+  staleQuote = state === "STALE"
+) {
   const symbol = assetId === 102 ? "XAUUSD" : "BTCUSD"
-  const quote = {
-    assetId,
-    symbol,
-    price: 110.5,
-    volume: 1200,
-    providerTime: NOW,
-    receivedAt: NOW,
-    stale: state !== "CONNECTED",
-  }
+  const quote =
+    state === "MARKET_CLOSED" || (state === "CONNECTING" && !staleQuote)
+    ? null
+    : {
+        assetId,
+        symbol,
+        price: assetId === 102 ? 2500.25 : 110.5,
+        receivedAt: NOW,
+        stale: staleQuote,
+      }
   return {
     asset: {
       id: assetId,
@@ -784,22 +862,14 @@ function liveSnapshot(assetId, state = "CONNECTED") {
       pricePrecision: 2,
     },
     symbol,
-    timeframe: "1h",
+    timeframe,
     quote,
-    candle: {
-      time: NOW,
-      open: 110,
-      high: 112,
-      low: 109,
-      close: 110.5,
-      volume: 1200,
-    },
     status: {
       assetId,
       symbol,
       state,
-      message: state === "CONNECTED" ? "Fixture stream connected" : "Fixture stream recovering",
-      stale: state !== "CONNECTED",
+      message: null,
+      stale: staleQuote,
       observedAt: NOW,
     },
   }
@@ -818,9 +888,34 @@ async function streamLive(response, state, url, scenario) {
     Connection: "keep-alive",
     "Access-Control-Allow-Origin": "*",
   })
+  trackResponse(state, response)
 
-  if (scenario === "outage") {
-    writeSse(response, "error", { code: "FIXTURE_STREAM_OUTAGE", message: "Fixture stream outage" })
+  if (scenario === "post-open-error") {
+    writeSse(response, "error", {
+      assetId,
+      symbol: assetId === 102 ? "XAUUSD" : "BTCUSD",
+      message: "Fixture stream outage",
+      observedAt: NOW,
+    })
+    return
+  }
+
+  if (scenario === "error-reconnect" && state.streamConnections === 1) {
+    response.write("retry: 3000\n\n")
+    const snapshot = liveSnapshot(
+      assetId,
+      "SUBSCRIBED",
+      url.searchParams.get("timeframe") ?? "1h"
+    )
+    writeSse(response, "status", snapshot.status)
+    writeSse(response, "snapshot", snapshot)
+    if (snapshot.quote) writeSse(response, "price", snapshot.quote)
+    writeSse(response, "error", {
+      assetId,
+      symbol: snapshot.symbol,
+      message: "Fixture stream error before reconnect",
+      observedAt: NOW,
+    })
     response.end()
     return
   }
@@ -832,11 +927,39 @@ async function streamLive(response, state, url, scenario) {
     return
   }
 
-  const snapshot = liveSnapshot(assetId, "CONNECTED")
+  const liveState =
+    {
+      "connecting-stale": "CONNECTING",
+      "market-closed": "MARKET_CLOSED",
+      "no-quote": "CONNECTING",
+      "reconnecting-stale": "RECONNECTING",
+      stale: "STALE",
+    }[scenario] ?? "SUBSCRIBED"
+  const snapshot = liveSnapshot(
+    assetId,
+    liveState,
+    url.searchParams.get("timeframe") ?? "1h",
+    ["connecting-stale", "reconnecting-stale"].includes(scenario) ||
+      liveState === "STALE"
+  )
   writeSse(response, "status", snapshot.status)
   writeSse(response, "snapshot", snapshot)
-  writeSse(response, "price", snapshot.quote)
-  setTimeout(() => response.end(), 400)
+  if (snapshot.quote && !snapshot.quote.stale) {
+    writeSse(response, "price", snapshot.quote)
+  }
+  if (
+    [
+      "error-reconnect",
+      "market-closed",
+      "no-quote",
+      "reconnect",
+      "connecting-stale",
+      "reconnecting-stale",
+      "stale",
+    ].includes(scenario)
+  ) {
+    return
+  }
 }
 
 function hasFixturePermission(state, permission) {
@@ -1501,6 +1624,8 @@ async function handleControl(request, response, url, body) {
       sendJson(response, 400, errorPayload("testRunId is required", "TEST_RUN_ID_REQUIRED"))
       return true
     }
+    const previous = testRuns.get(String(testRunId))
+    if (previous) closeResponses(previous)
     testRuns.set(String(testRunId), createState())
     sendJson(response, 200, { testRunId, reset: true })
     return true
@@ -1515,6 +1640,7 @@ async function handleControl(request, response, url, body) {
     const state = getState(String(testRunId))
     const key = body.route ?? "*"
     state.scenarios[body.method ? `${body.method} ${key}` : key] = body.scenario
+    releasePending(state)
     sendJson(response, 200, { testRunId, route: key, scenario: body.scenario })
     return true
   }
@@ -1527,6 +1653,7 @@ async function handleControl(request, response, url, body) {
     }
     const state = getState(String(testRunId))
     state.feedbackScenarios[body.kind ?? "feedback"] = body.scenario
+    releasePending(state)
     sendJson(response, 200, { testRunId, kind: body.kind ?? "feedback", scenario: body.scenario })
     return true
   }
@@ -1575,6 +1702,7 @@ async function handleControl(request, response, url, body) {
       permissions: state.permissions,
       smtpConfiguration: smtpConfigurationResponse(state.smtpConfiguration),
       streamConnections: state.streamConnections,
+      pendingRequests: state.pendingRequests.size,
       requests: state.requests,
       violations: state.violations,
     })
@@ -1644,22 +1772,57 @@ const server = createServer(async (request, response) => {
     return
   }
 
-  const scenario = getScenario(state, method, url.pathname)
-  const feedbackScenario = feedbackScenarioFor(state, method, url.pathname)
-  if (feedbackScenario === "pending") {
-    await new Promise((resolve) => setTimeout(resolve, 350))
+  if (isPending(state, method, url.pathname)) {
+    const released = await holdResponse(state, response, method, url.pathname)
+    if (!released || response.destroyed) return
   }
+  const scenario = getScenario(state, method, url.pathname)
   if (scenario === "timeout") {
     await new Promise((resolve) => setTimeout(resolve, 250))
     sendJson(response, 504, errorPayload("Fixture request timed out", "FIXTURE_TIMEOUT"))
     return
   }
-  if (scenario === "outage") {
-    sendJson(response, 503, errorPayload("Fixture backend is unavailable", "FIXTURE_OUTAGE"))
+  if (
+    scenario === "preopen-unavailable" &&
+    method === "GET" &&
+    url.pathname === "/market-charts/live"
+  ) {
+    sendJson(
+      response,
+      503,
+      errorPayload(
+        "Fixture provider is unavailable",
+        "FIXTURE_PROVIDER_UNAVAILABLE"
+      )
+    )
     return
   }
-  if (scenario === "delayed") {
-    await new Promise((resolve) => setTimeout(resolve, 350))
+  if (
+    scenario === "provisioning-pending" &&
+    method === "GET" &&
+    url.pathname === "/market-charts/live" &&
+    state.requests.filter(
+      (request) =>
+        request.method === "GET" && request.path === "/market-charts/live"
+    ).length === 1
+  ) {
+    response.writeHead(503, { ...jsonHeaders(), "Retry-After": "2" })
+    response.end(
+      JSON.stringify(
+        errorPayload(
+          "Account provisioning is still in progress.",
+          "USER_PROVISIONING_PENDING"
+        )
+      )
+    )
+    return
+  }
+  if (
+    scenario === "outage" &&
+    !(method === "GET" && url.pathname === "/market-charts/live")
+  ) {
+    sendJson(response, 503, errorPayload("Fixture backend is unavailable", "FIXTURE_OUTAGE"))
+    return
   }
   if (scenario === "validation-error") {
     sendJson(response, 422, errorPayload("Fixture validation failed", "FIXTURE_VALIDATION"))
@@ -1756,41 +1919,6 @@ const server = createServer(async (request, response) => {
     return
   }
 
-  if (
-    scenario === "short-then-empty-per-timeframe" &&
-    method === "GET" &&
-    result &&
-    Array.isArray(result.candles)
-  ) {
-    const requestAssetId = url.searchParams.get("assetId")
-    const requestTimeframe = url.searchParams.get("timeframe")
-    const candleRequestCount = state.requests.filter((request) => {
-      if (request.path !== "/market-charts/candles") return false
-
-      const query = new URLSearchParams(request.query)
-      return (
-        query.get("assetId") === requestAssetId &&
-        query.get("timeframe") === requestTimeframe
-      )
-    }).length
-
-    if (candleRequestCount > 1) {
-      const anchor = url.searchParams.get("to") ?? result.to
-      sendJson(response, 200, {
-        ...result,
-        from: anchor,
-        to: anchor,
-        candles: [],
-      })
-    } else {
-      sendJson(response, 200, {
-        ...result,
-        candles: result.candles.slice(-1),
-      })
-    }
-    return
-  }
-
   sendJson(response, status, result)
 })
 
@@ -1799,7 +1927,9 @@ server.listen(port, "127.0.0.1", () => {
 })
 
 function shutdown() {
+  for (const state of testRuns.values()) closeResponses(state)
   server.close(() => process.exit(0))
+  server.closeIdleConnections()
 }
 
 process.on("SIGINT", shutdown)

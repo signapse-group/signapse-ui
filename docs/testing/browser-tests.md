@@ -8,7 +8,9 @@ The P0 lane is a secret-free, fixture-backed Chromium check for the highest-risk
 pnpm test:browser       # run Chromium/Vietnamese browser journeys
 pnpm test:browser:update # update selected native screenshot baselines; reviewer approval required
 pnpm test:contract      # offline fixture operation consistency; no live API conformance claim
-pnpm test:quality       # lint, typecheck, Vitest, fixture guard, build, and browser suite
+pnpm test:quality       # lightweight CI: lint, typecheck, Vitest, fixture guard, verifier unit tests
+pnpm test:full          # explicit full regression: quality, build, browser suite
+pnpm verify:deploy <sha> # confirm Vercel Production deployment through GitHub
 pnpm test:integration   # live OpenAPI preflight, password auth and dev backend; requires private credentials
 ```
 
@@ -23,20 +25,22 @@ The fixture mode is a stricter submode of the existing non-production dev-auth m
 
 Each test receives a unique `testRunId`. The browser context carries it through the cookie and request header; the fixture resets and namespaces mutable state by that ID. Requests without the ID, authenticated requests, unregistered routes, or unexpected external browser requests fail the P0 test.
 
+The `delayed` HTTP and feedback `pending` scenarios hold responses until the test changes the matching scenario (normally to `success`). Assert the pending UI first, then change the scenario in `finally`; a wall-clock delay does not release it. Reset/teardown closes held responses. Successful SSE connections stay open until the client disconnects or the fixture resets; `reconnect` closes only the first connection deliberately.
+
 ## CI and delivery
 
-[Verify](../../.github/workflows/verify.yml) runs the full secret-free quality lane on PR/current revision and main before [Vercel delivery](../delivery.md). Fixture P0, live feature acceptance and served build identity are separate evidence. A successful PR check alone does not establish post-merge publication or live auth/backend behavior.
+[Verify](../../.github/workflows/verify.yml) runs lightweight checks on PRs into main and main pushes; its main `deployment` job confirms Vercel Production delivery using a read-only GitHub token. Vercel owns builds; use [shared verification standards](../../CONTRIBUTING.md#verification) and [WORKFLOW](../../WORKFLOW.md) for assigned execution. [CI/Vercel setup](../delivery.md) remains an operator/technical reference. Owner/QA verifies the live website and features. The full fixture browser suite is available explicitly, not required for every PR. Fixture P0, deployment evidence and live feature acceptance remain separate evidence.
 
 ## Selecting checks by change scope
 
 | Change                                                | Focused evidence                                                                  | Completion check                                                                                               |
 | ----------------------------------------------------- | --------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
 | Documentation only                                    | Check the edited content, links, and formatting.                                  | No application test lane is needed unless the documentation change affects a command or contract.              |
-| UI behavior or presentation                           | Run the focused Vitest/component test and the narrowest relevant P0 browser spec. | Run `pnpm test:quality` for code or runtime changes. Review any screenshot diff before updating a baseline.    |
-| API integration, schema, or server action             | Run the action/schema tests and `pnpm test:contract` when fixture routes change.  | Run `pnpm test:quality`; run live integration only when the assigned operation names its scope and inputs.     |
-| Authentication, backend transport, or protected pages | Run the relevant fixture checks for deterministic UI behavior.                    | Run `pnpm test:quality`. A protected page or reused authenticated transport alone does not require live smoke. |
+| UI behavior or presentation                           | Run the focused Vitest/component test and the narrowest relevant P0 browser spec. | Lightweight CI and Vercel Preview build; review screenshot diffs before updating a baseline. |
+| API integration, schema, or server action             | Run affected action/schema tests and the fixture guard when routes change. | Lightweight CI and Preview; live integration only when the assignment names scope/inputs. |
+| Authentication, backend transport, or protected pages | Run affected auth/permission/action tests and relevant browser coverage. | Lightweight CI and Preview; fixtures do not prove live auth. Run assigned live checks with their inputs. |
 
-On Symphony, read `/opt/apps/symphony/runtime/README-fe-testing.md` and use `/opt/apps/symphony/runtime/run-fe-quality "$PWD"` for the quality gate. Use the live wrapper only for an explicitly assigned operation, scope, and inputs, and verify it reports the expected workspace suite revision after coordinator activation. Both lanes share the host lock. Fixture-backed P0 success proves frontend behavior only; it does not prove authentication or public backend access.
+CI owns the full lightweight gate; local work runs affected checks without repeating all CI checks. Run `pnpm test:full` for explicitly requested full regression or when affected coverage cannot be narrowed. On Symphony, browser checks retain the host guide and wrapper/lock; verify the selected workspace tests are actually run after activation. Live checks require their assigned scope/inputs. Fixture P0 success does not prove real auth/backend access.
 
 ## Scope and evidence
 
@@ -48,7 +52,7 @@ authenticated entry and logout with Clerk enabled.
 
 The suite covers the application shell/workspace, canonical list URL/search/pagination/history behavior, Personal Notes save/retry/delete flows, Telegram configuration and Test message states, market-chart controls and SSE recovery, accessibility, and selected stable visual regions. Dynamic chart canvas pixels and full-page snapshots are intentionally excluded.
 
-Failed P0 browser runs retain Playwright traces, screenshots, videos, HTML reports, fixture state, and application/fixture logs under the ignored `test-results/`. A configured P0 CI lane may upload that directory on failure without protected credentials. Live integration artifacts follow the stricter rules below.
+Explicit P0 browser runs retain traces, screenshots, videos, reports and logs under ignored `test-results/`; link required evidence from the run rather than claiming it was uploaded by CI. Verify uploads only the Vitest JUnit report for seven days. Live integration artifacts follow the stricter rules below.
 
 P0 does not prove real authentication. The live integration smoke below verifies password
 authentication and backend access. The broader disposable-environment permission matrix,
@@ -115,7 +119,7 @@ suite with placeholder inputs; it performs no live fetch. Unavailable/invalid co
 or in-scope mismatches fail without a local fallback. Source/time and discrepancies
 are reported separately from P0. This is a structural check; schemas, business
 semantics, authorization and delivered revision still need applicable evidence under
-the [API consumer policy](../../.agents/skills/agent-execution-policy/references/api-handoff.md).
+the [API consumer standards](../api-consumer.md).
 
 The same public contract check can run without account credentials:
 
@@ -173,7 +177,7 @@ hook snapshots the application file to each workspace's ignored `.env.local`. `-
 After coordinator activation, the host wrapper validates runner version 2 and invokes
 `$PWD/tests/integration/run.mjs`; the stable runtime checkout supplies the consumed workflow,
 not the test suite. Config, reporters, and artifact settings remain fixed. Use
-`/opt/apps/symphony/runtime/run-fe-quality "$PWD"` for the quality gate on Symphony; it shares
+the existing host browser wrapper when P0 checks are explicitly selected; it shares
 the integration lock so P0/P1 Next and browser processes do not compete for host memory.
 `SIGNAPSE_UI_INTEGRATION_LOCK` selects the host-wide `flock` file, serializing account and
 local-port use; the lock stays held until Playwright and its Next server exit. The lock file is

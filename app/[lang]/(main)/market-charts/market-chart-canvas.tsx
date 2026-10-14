@@ -14,7 +14,6 @@ import {
   init,
   type Chart,
   type DataLoaderGetBarsParams,
-  type DataLoaderSubscribeBarParams,
   type DeepPartial,
   type KLineData,
   type Overlay,
@@ -94,10 +93,8 @@ import {
   getCandleTimestamp,
   getFiniteVolume,
   hasUsableVolume,
-  hasUsableVolumeData,
   isValidMarketChartCandle,
   mergeCandleItems,
-  mergeLiveCandleItem,
   normalizeCandleItems,
 } from "./market-chart-candle-helpers"
 import {
@@ -173,7 +170,6 @@ interface MarketChartCanvasProps {
   calendarLayerEnabled: boolean
   warmAnnotationGroups?: MarketChartAnnotationGroup[]
   annotationLayerEnabled: boolean
-  liveCandle?: MarketChartCandleItemResponse | null
   selectedAnnotationGroupId?: string | null
   activeOutcomeHoverRange?: MarketChartOutcomeHoverRange | null
   activeIndicators?: MarketChartIndicatorName[]
@@ -241,7 +237,9 @@ export function MarketChartCalendarEventList({
           )
 
           return (
-            <Fragment key={event.id}>
+            <Fragment
+              key={event.id ?? `${eventTimestamp ?? "unknown"}-${index}`}
+            >
               <article className="flex flex-col gap-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <AppTimeMetadata icon={CalendarClock}>
@@ -271,11 +269,11 @@ export function MarketChartCalendarEventList({
                   <Badge
                     variant={getEconomicCalendarStatusVariant(event.status)}
                   >
-                    {
-                      dictionary.marketCharts.calendar.statusLabels[
-                        event.status
-                      ]
-                    }
+                    {event.status
+                      ? dictionary.marketCharts.calendar.statusLabels[
+                          event.status
+                        ]
+                      : dictionary.common.notAvailable}
                   </Badge>
                 </div>
                 {releaseValues.length > 0 ? (
@@ -312,12 +310,15 @@ export function MarketChartCalendarEventList({
                     {event.description}
                   </p>
                 ) : null}
-                <LocalizedLink
-                  href={`/economic-calendar/${event.id}`}
-                  className="w-fit rounded-sm text-xs font-medium text-primary underline-offset-4 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring/50"
-                >
-                  {dictionary.common.detail}
-                </LocalizedLink>
+                {event.id !== undefined ? (
+                  <LocalizedLink
+                    href={`/economic-calendar/${event.id}`}
+                    prefetch={false}
+                    className="w-fit rounded-sm text-xs font-medium text-primary underline-offset-4 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring/50"
+                  >
+                    {dictionary.common.detail}
+                  </LocalizedLink>
+                ) : null}
               </article>
               {index < events.length - 1 ? (
                 <Separator className="my-2" />
@@ -757,7 +758,6 @@ export const MarketChartCanvas = forwardRef<
     dataVersion = 0,
     className,
     drawingToolActive = false,
-    liveCandle = null,
     onAnnotationClose,
     onAnnotationSelect,
     onDrawingSelectionChange,
@@ -786,7 +786,6 @@ export const MarketChartCanvas = forwardRef<
   const activeDrawingDraftIdRef = useRef<string | null>(null)
   const activeDrawingToolRef = useRef<MarketChartDrawingTool | null>(null)
   const annotationLayerEnabledRef = useRef(annotationLayerEnabled)
-  const calendarLayerEnabledRef = useRef(calendarLayerEnabled)
   const annotationsRef = useRef(annotations)
   const annotationGroupsRef = useRef(annotationGroups)
   const calendarEventGroupsRef = useRef(calendarEventGroups)
@@ -806,11 +805,6 @@ export const MarketChartCanvas = forwardRef<
     MarketChartEconomicCalendarEventResponse[]
   >([])
   const loadedCandlesRef = useRef<MarketChartCandleItemResponse[]>([])
-  const liveCandleRef = useRef<MarketChartCandleItemResponse | null>(liveCandle)
-  const liveCandleSubscriberRef = useRef<
-    DataLoaderSubscribeBarParams["callback"] | null
-  >(null)
-  const liveCandleSubscriberLoadIdRef = useRef<number | null>(null)
   const historyExhaustedRef = useRef(false)
   const onDrawingSelectionChangeRef = useRef(onDrawingSelectionChange)
   const onDrawingToolCompleteRef = useRef(onDrawingToolComplete)
@@ -851,10 +845,9 @@ export const MarketChartCanvas = forwardRef<
   }, [annotations, annotationLayerEnabled])
 
   useEffect(() => {
-    calendarLayerEnabledRef.current = calendarLayerEnabled
     calendarEventsRef.current = calendarEvents
-    loadedCalendarEventsRef.current = calendarLayerEnabled ? calendarEvents : []
-  }, [calendarEvents, calendarLayerEnabled])
+    loadedCalendarEventsRef.current = calendarEvents
+  }, [calendarEvents])
 
   useEffect(() => {
     candlesRef.current = candles
@@ -888,22 +881,6 @@ export const MarketChartCanvas = forwardRef<
     activeOutcomeHoverRangeRef.current = activeOutcomeHoverRange
     scheduleMarkerPositionUpdateRef.current()
   }, [activeOutcomeHoverRange])
-
-  useEffect(() => {
-    liveCandleRef.current = liveCandle
-    if (
-      liveCandle &&
-      liveCandleSubscriberLoadIdRef.current === chartLoadIdRef.current &&
-      liveCandleSubscriberRef.current
-    ) {
-      const [liveData] = createKLineData([liveCandle])
-
-      if (liveData) {
-        liveCandleSubscriberRef.current(liveData)
-      }
-    }
-    scheduleMarkerPositionUpdateRef.current()
-  }, [liveCandle])
 
   useEffect(() => {
     onLoadedDataChangeRef.current = onLoadedDataChange
@@ -1336,8 +1313,6 @@ export const MarketChartCanvas = forwardRef<
       chart.unsubscribeAction("onZoom", scheduleMarkerPositionUpdate)
       resizeObserver.disconnect()
       scheduleMarkerPositionUpdateRef.current = () => {}
-      liveCandleSubscriberRef.current = null
-      liveCandleSubscriberLoadIdRef.current = null
       activeDrawingDraftIdRef.current = null
       activeDrawingToolRef.current = null
       selectedDrawingIdRef.current = null
@@ -1460,9 +1435,7 @@ export const MarketChartCanvas = forwardRef<
     loadedAnnotationsRef.current = annotationLayerEnabledRef.current
       ? annotationsRef.current
       : []
-    loadedCalendarEventsRef.current = calendarLayerEnabledRef.current
-      ? calendarEventsRef.current
-      : []
+    loadedCalendarEventsRef.current = calendarEventsRef.current
     loadedCandlesRef.current = normalizeCandleItems(candlesRef.current)
 
     // Update drawing group ID for new data source
@@ -1500,13 +1473,9 @@ export const MarketChartCanvas = forwardRef<
       type,
     }: DataLoaderGetBarsParams) {
       if (type === "init") {
-        const displayed = mergeLiveCandleItem(
-          loadedCandlesRef.current,
-          liveCandleRef.current
-        )
-        callback(createKLineData(displayed), {
+        callback(createKLineData(loadedCandlesRef.current), {
           backward: false,
-          forward: displayed.length > 0,
+          forward: loadedCandlesRef.current.length > 0,
         })
         scheduleMarkerPositionUpdateRef.current()
         return
@@ -1586,13 +1555,10 @@ export const MarketChartCanvas = forwardRef<
         )
       }
 
-      if (calendarLayerEnabledRef.current) {
-        loadedCalendarEventsRef.current =
-          mergeMarketChartEconomicCalendarEvents(
-            loadedCalendarEventsRef.current,
-            result.data.economicCalendarEvents
-          )
-      }
+      loadedCalendarEventsRef.current = mergeMarketChartEconomicCalendarEvents(
+        loadedCalendarEventsRef.current,
+        result.data.economicCalendarEvents
+      )
 
       onLoadedDataChangeRef.current?.({
         annotations: loadedAnnotationsRef.current,
@@ -1609,18 +1575,8 @@ export const MarketChartCanvas = forwardRef<
       getBars(params) {
         void loadBars(params)
       },
-      subscribeBar(params) {
-        liveCandleSubscriberRef.current = params.callback
-        liveCandleSubscriberLoadIdRef.current = loadId
-        const [liveData] = createKLineData(
-          liveCandleRef.current ? [liveCandleRef.current] : []
-        )
-        if (liveData) params.callback(liveData)
-      },
-      unsubscribeBar() {
-        liveCandleSubscriberRef.current = null
-        liveCandleSubscriberLoadIdRef.current = null
-      },
+      subscribeBar() {},
+      unsubscribeBar() {},
     })
   }, [assetId, dataVersion, dictionary.marketCharts.responseInvalid, timeframe])
 
