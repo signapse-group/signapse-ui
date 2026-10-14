@@ -1,6 +1,6 @@
 import { vi as viDictionary } from "@/app/lib/i18n/dictionaries/vi"
 
-import { expect, test } from "./fixtures"
+import { expect, test, waitForClientHandler } from "./fixtures"
 
 test("saves and reads back old and leap birthdays as the same calendar date", async ({
   fixture,
@@ -19,9 +19,13 @@ test("saves and reads back old and leap birthdays as the same calendar date", as
     "2000-02-29",
     "0001-01-01",
   ].entries()) {
+    await waitForClientHandler(birthday, "onChange")
     await birthday.focus()
     await expect(birthday).toBeFocused()
     await birthday.fill(date)
+    await expect(
+      page.getByRole("button", { name: profile.saveChanges })
+    ).toBeEnabled()
     await page.getByRole("button", { name: profile.saveChanges }).press("Enter")
     await expect(
       page.getByRole("button", { name: profile.saveChanges })

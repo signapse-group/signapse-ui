@@ -369,7 +369,7 @@ describe("Telegram schedule destructive actions", () => {
 
     await user.click(calendarLanguage)
     await user.click(
-      screen.getByRole("option", {
+      await screen.findByRole("option", {
         name: viDictionary.telegram.routing.defaultLanguage,
       })
     )

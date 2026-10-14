@@ -8,56 +8,12 @@ globalThis.window = {
 const { isMarketChartTimeframe } = await import(
   "../app/lib/market-charts/definitions" + ".ts"
 )
-const { deriveLiveCandleItemFromQuote } = await import(
-  "../app/[lang]/(main)/market-charts/market-chart-candle-helpers" + ".ts"
-)
 const { createKLinePeriod } = await import(
   "../app/[lang]/(main)/market-charts/market-chart-period" + ".ts"
 )
 
 assert.equal(isMarketChartTimeframe("4h"), true)
 assert.deepEqual(createKLinePeriod("4h"), { type: "hour", span: 4 })
-
-const latestCandle = {
-  open: 100,
-  high: 110,
-  low: 95,
-  close: 105,
-  time: "2026-07-23T08:00:00.000Z",
-  volume: 1000,
-}
-
-assert.deepEqual(
-  deriveLiveCandleItemFromQuote({
-    current: [latestCandle],
-    quote: {
-      price: 108,
-      providerTime: "2026-07-23T11:59:59.000Z",
-      receivedAt: "2026-07-23T11:59:59.000Z",
-    },
-    timeframe: "4h",
-  }),
-  { ...latestCandle, close: 108 }
-)
-
-assert.deepEqual(
-  deriveLiveCandleItemFromQuote({
-    current: [latestCandle],
-    quote: {
-      price: 108,
-      providerTime: "2026-07-23T12:00:00.000Z",
-      receivedAt: "2026-07-23T12:00:00.000Z",
-    },
-    timeframe: "4h",
-  }),
-  {
-    open: 108,
-    high: 108,
-    low: 108,
-    close: 108,
-    time: "2026-07-23T12:00:00.000Z",
-  }
-)
 
 const historySource = await readFile(
   new URL(

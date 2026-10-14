@@ -86,6 +86,7 @@ const annotationResponse = {
   time: "2026-08-19T10:30:00.000Z",
   hotEvent: {
     direction: "BULLISH",
+    topMarketReaction: { timeHorizon: "INTRADAY" },
     evidence: [
       {
         newsArticleId: 71,
@@ -172,12 +173,71 @@ describe("market chart annotation action", () => {
     vi.mocked(fetchAuthenticated).mockReset()
   })
 
-  it("accepts the published direction and evidence-role enums", async () => {
-    vi.mocked(fetchAuthenticated).mockResolvedValue([annotationResponse])
+  it("accepts the published annotation enums", async () => {
+    const warmAnnotationResponse = {
+      id: "warm-episode:4:asset:7",
+      annotationType: "WARM_EPISODE",
+      assetId: 7,
+      time: "2026-08-19T10:00:00.000Z",
+      warmEpisode: {
+        warmEpisodeId: 4,
+        periodStart: "2026-08-19T10:00:00.000Z",
+        periodEnd: "2026-08-19T11:00:00.000Z",
+        events: [
+          {
+            warmEpisodeEventId: 41,
+            time: "2026-08-19T10:30:00.000Z",
+            relationType: "PRIMARY_SUBJECT",
+          },
+        ],
+      },
+    }
+    const annotations = [annotationResponse, warmAnnotationResponse]
+    vi.mocked(fetchAuthenticated).mockResolvedValue(annotations)
 
     await expect(
       getMarketChartAnnotations(annotationRequest)
-    ).resolves.toMatchObject({ success: true, data: [annotationResponse] })
+    ).resolves.toMatchObject({ success: true, data: annotations })
+  })
+
+  it("rejects an unpublished reaction horizon", async () => {
+    const invalidAnnotation = {
+      ...annotationResponse,
+      hotEvent: {
+        ...annotationResponse.hotEvent,
+        topMarketReaction: { timeHorizon: "LONGER_TERM" },
+      },
+    }
+    vi.mocked(fetchAuthenticated).mockResolvedValue([invalidAnnotation])
+
+    await expect(
+      getMarketChartAnnotations(annotationRequest)
+    ).resolves.toMatchObject({ success: false })
+  })
+
+  it("rejects an unpublished warm-event relation type", async () => {
+    const invalidAnnotation = {
+      ...annotationResponse,
+      annotationType: "WARM_EPISODE",
+      hotEvent: undefined,
+      warmEpisode: {
+        warmEpisodeId: 17,
+        periodStart: "2026-08-19T10:00:00.000Z",
+        periodEnd: "2026-08-19T11:00:00.000Z",
+        events: [
+          {
+            warmEpisodeEventId: 18,
+            time: "2026-08-19T10:30:00.000Z",
+            relationType: "UNRELATED",
+          },
+        ],
+      },
+    }
+    vi.mocked(fetchAuthenticated).mockResolvedValue([invalidAnnotation])
+
+    await expect(
+      getMarketChartAnnotations(annotationRequest)
+    ).resolves.toMatchObject({ success: false })
   })
 
   it.each([
@@ -237,6 +297,15 @@ describe("market chart economic calendar action", () => {
     expect(fetchAuthenticated).toHaveBeenCalledWith(
       "/market-charts/economic-calendar-events?assetId=7&from=2026-09-08T10%3A00%3A00.000Z&to=2026-09-15T10%3A00%3A00.000Z&impact=HIGH&impact=LOW"
     )
+  })
+
+  it("accepts calendar response fields omitted by the OpenAPI schema", async () => {
+    const response = [{ scheduledAt: "2026-09-08T12:00:00.000Z" }]
+    vi.mocked(fetchAuthenticated).mockResolvedValue(response)
+
+    await expect(
+      getMarketChartEconomicCalendarEvents(request)
+    ).resolves.toEqual({ success: true, data: response })
   })
 
   it("rejects an empty impact selection before transport", async () => {

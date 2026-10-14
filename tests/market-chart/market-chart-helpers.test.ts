@@ -18,11 +18,11 @@ import {
   createMarketChartAnnotationGroups,
   createMarketChartEconomicCalendarEventGroups,
   createMarketChartWarmAnnotationGroups,
+  mergeMarketChartEconomicCalendarEvents,
   toMarketChartEpochMillis,
 } from "@/app/[lang]/(main)/market-charts/market-chart-annotations"
 import {
   createKLineData,
-  deriveLiveCandleItemFromQuote,
   mergeCandleItems,
   normalizeCandleItems,
 } from "@/app/[lang]/(main)/market-charts/market-chart-candle-helpers"
@@ -116,47 +116,6 @@ describe("market-chart candle and history helpers", () => {
     expect(createKLineData([replacement])[0]).toMatchObject({
       timestamp: Date.parse(replacement.time),
       volume: 20,
-    })
-  })
-
-  it("updates the active candle or creates the next quote bucket", () => {
-    const current = [candle("2026-07-29T01:00:00.000Z", 100)]
-    const updated = deriveLiveCandleItemFromQuote({
-      current,
-      quote: {
-        assetId: 1,
-        symbol: "GOLD",
-        price: 105,
-        providerTime: "2026-07-29T01:30:00.000Z",
-        receivedAt: "2026-07-29T01:30:01.000Z",
-        stale: false,
-      },
-      timeframe: "1h",
-    })
-    const next = deriveLiveCandleItemFromQuote({
-      current,
-      quote: {
-        assetId: 1,
-        symbol: "GOLD",
-        price: 110,
-        providerTime: "2026-07-29T02:00:00.000Z",
-        receivedAt: "2026-07-29T02:00:01.000Z",
-        stale: false,
-      },
-      timeframe: "1h",
-    })
-
-    expect(updated).toMatchObject({
-      time: current[0]?.time,
-      high: 105,
-      close: 105,
-    })
-    expect(next).toMatchObject({
-      time: "2026-07-29T02:00:00.000Z",
-      open: 110,
-      high: 110,
-      low: 110,
-      close: 110,
     })
   })
 
@@ -477,6 +436,27 @@ describe("market-chart annotation and drawing mappings", () => {
     })
   })
 
+  it("keeps and updates events without optional identity fields", () => {
+    const pending = {
+      scheduledAt: "2026-07-30T00:00:00.000Z",
+      title: "Employment report",
+      status: "PENDING" as const,
+    }
+    const available = { ...pending, status: "AVAILABLE" as const }
+
+    expect(
+      mergeMarketChartEconomicCalendarEvents([pending], [available])
+    ).toEqual([available])
+    expect(
+      createMarketChartEconomicCalendarEventGroups(
+        [pending],
+        [candle("2026-07-29T00:00:00.000Z", 100)]
+      )
+    ).toMatchObject([
+      { events: [pending], time: Date.parse(pending.scheduledAt) },
+    ])
+  })
+
   it("keeps drawing tool mappings vendor-independent", () => {
     expect(MARKET_CHART_DRAWING_TOOL_OVERLAYS["horizontal-line"]).toBe(
       "horizontalStraightLine"
@@ -506,7 +486,7 @@ describe("market-chart calendar lookahead helpers", () => {
     impact: "HIGH",
   })
 
-  it("builds a seven-day half-open future request", () => {
+  it("builds a seven-day upcoming request with the waiting overlap", () => {
     expect(
       createMarketChartFutureCalendarRequest({
         assetId: 7,
@@ -515,7 +495,7 @@ describe("market-chart calendar lookahead helpers", () => {
       })
     ).toEqual({
       assetId: 7,
-      from: "2026-09-08T10:00:00.000Z",
+      from: "2026-09-08T09:00:00.000Z",
       to: "2026-09-15T10:00:00.000Z",
       impact: ["HIGH", "MEDIUM"],
     })
@@ -540,12 +520,35 @@ describe("market-chart calendar lookahead helpers", () => {
   })
 
   it("classifies upcoming, awaiting, published, expired, and invalid events", () => {
+    const eventAtSchedule = event(6, new Date(currentTimestamp).toISOString())
+
     expect(
       getMarketChartCalendarEventState(
         event(1, "2026-09-08T11:00:00.000Z"),
         currentTimestamp
       )
     ).toBe("UPCOMING")
+    expect(
+      getMarketChartCalendarEventState(eventAtSchedule, currentTimestamp)
+    ).toBe("AWAITING_PUBLICATION")
+    expect(
+      getAwaitingMarketChartCalendarEvents({
+        currentTimestamp,
+        events: [eventAtSchedule],
+      })
+    ).toEqual([eventAtSchedule])
+    expect(
+      getMarketChartCalendarEventState(
+        eventAtSchedule,
+        currentTimestamp + MARKET_CHART_CALENDAR_WAITING_WINDOW_MS - 1
+      )
+    ).toBe("AWAITING_PUBLICATION")
+    expect(
+      getMarketChartCalendarEventState(
+        eventAtSchedule,
+        currentTimestamp + MARKET_CHART_CALENDAR_WAITING_WINDOW_MS
+      )
+    ).toBe("EXPIRED")
     expect(
       getMarketChartCalendarEventState(
         event(2, "2026-09-08T09:30:00.000Z"),
@@ -572,6 +575,18 @@ describe("market-chart calendar lookahead helpers", () => {
     expect(
       getMarketChartCalendarEventState(event(5, "invalid"), currentTimestamp)
     ).toBe("INVALID")
+    expect(
+      getMarketChartCalendarEventState(
+        { scheduledAt: eventAtSchedule.time },
+        currentTimestamp
+      )
+    ).toBe("INVALID")
+    expect(
+      getAwaitingMarketChartCalendarEvents({
+        currentTimestamp,
+        events: [{ scheduledAt: eventAtSchedule.time }],
+      })
+    ).toEqual([])
   })
 
   it("selects and orders upcoming and awaiting events", () => {

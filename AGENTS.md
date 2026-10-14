@@ -31,7 +31,8 @@ For direct work, complete the requested output with applicable verification; tra
 - Use `pnpm dev`, `pnpm build`, `pnpm lint`, `pnpm format`, and `pnpm typecheck`.
 - Equivalent slash commands may be used when available in the current environment.
 - Run the production server with `pnpm start`.
-- Run `pnpm test:quality` for code/runtime changes; its P0 browser tests use fixtures and disabled auth.
+- CI runs lightweight `pnpm test:quality`. Locally run focused checks for affected behavior; full build/browser regression is `pnpm test:full` when requested or needed by scope. P0 browser tests use fixtures and disabled auth.
+- Vercel builds Preview/Production from Git. After merge, watch the main Verify run's `check` and `deployment` jobs under the [delivery runbook](docs/delivery.md). FE delivery ends at confirmed Vercel deployment; owner/QA checks the website and features. Local configuration does not establish hosting activation.
 - Run `pnpm test:integration` only when the assigned work names a live operation, scope, and required inputs.
   Protected-page changes or reuse of authenticated transport do not alone make live smoke a handoff gate.
 - Select focused checks by change type using the [browser-testing scope matrix](docs/testing/browser-tests.md#selecting-checks-by-change-scope).
