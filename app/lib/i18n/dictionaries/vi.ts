@@ -1834,6 +1834,7 @@ export const vi = {
       confidenceBadge: "Tin cậy {value}",
       eventCount: "{count} sự kiện",
       warmEpisodeLabel: "Giai đoạn",
+      warmEpisodePeriodStart: "Bắt đầu giai đoạn: {time}",
       warmEpisodeSummaryTitle: "Tóm tắt giai đoạn",
       warmEpisodeEventsTitle: "Sự kiện trong giai đoạn",
       episodeOutcomeTitle: "Kết quả giai đoạn",

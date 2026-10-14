@@ -2418,9 +2418,13 @@ function MarketChartWarmEpisodeAnnotationDetail({
   const episodeReaction = warmEpisode.outcome
     ? { direction: warmEpisode.direction, outcome: warmEpisode.outcome }
     : null
+  const episodeTime = formatMarketChartDateTime(annotation.time, localization)
 
   return (
     <div className="flex flex-col gap-3">
+      <AppTimeMetadata icon={CalendarClock}>
+        {formatMessage(labels.warmEpisodePeriodStart, { time: episodeTime })}
+      </AppTimeMetadata>
       {warmEpisode.summary ? (
         <section className="flex flex-col gap-1">
           <h3 className="text-xs font-medium text-muted-foreground">

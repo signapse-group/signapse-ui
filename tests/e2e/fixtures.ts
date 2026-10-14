@@ -62,6 +62,7 @@ type FixtureController = {
       | "calendar-awaiting"
       | "calendar-available"
       | "annotations-many"
+      | "annotations-warm-episode"
       | "annotations-unsafe-evidence-url"
       | "annotations-delayed-old-scope"
       | "calendar-historical",

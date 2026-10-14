@@ -1847,6 +1847,7 @@ export const en: Dictionary = {
       confidenceBadge: "Confidence {value}",
       eventCount: "{count} events",
       warmEpisodeLabel: "Period",
+      warmEpisodePeriodStart: "Period start: {time}",
       warmEpisodeSummaryTitle: "Period summary",
       warmEpisodeEventsTitle: "Events in period",
       episodeOutcomeTitle: "Period outcome",

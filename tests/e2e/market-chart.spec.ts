@@ -434,6 +434,51 @@ test.describe("P0 market chart workbench", () => {
     ).toBeVisible()
   })
 
+  test("shows the warm episode source timestamp in chart details", async ({
+    page,
+    fixture,
+  }) => {
+    await page.clock.install({ time: new Date(MARKET_CHART_FIXTURE_NOW) })
+    await fixture.setScenario(
+      "/market-charts/annotations",
+      "annotations-warm-episode",
+      "GET"
+    )
+    await page.goto("/vi/market-charts?assetId=101&timeframe=1d")
+
+    const annotationMarker = page.getByRole("button", {
+      name: "Mở sự kiện Fixture warm episode",
+      exact: true,
+    })
+    await expect(annotationMarker).toBeVisible()
+    await annotationMarker.focus()
+    await page.keyboard.press("Enter")
+
+    const state = await fixture.state()
+    const annotationRequest = state.requests
+      .filter((request) => request.path === "/market-charts/annotations")
+      .at(-1)
+    const annotationTo = new URLSearchParams(
+      String(annotationRequest?.query)
+    ).get("to")
+    expect(annotationTo).toBeTruthy()
+
+    const expectedTime = new Intl.DateTimeFormat("vi-VN", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: "Asia/Ho_Chi_Minh",
+    }).format(new Date(Date.parse(annotationTo ?? "") - 12 * 60 * 60 * 1000))
+
+    await expect(
+      page
+        .getByRole("dialog")
+        .getByText(`Bắt đầu giai đoạn: ${expectedTime}`, { exact: true })
+    ).toBeVisible()
+  })
+
   test("keeps the chart and valid annotations when an annotation refresh fails", async ({
     page,
     fixture,

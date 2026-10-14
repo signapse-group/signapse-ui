@@ -703,6 +703,29 @@ function marketChartAnnotations(url, scenario) {
     }))
   }
 
+  if (scenario === "annotations-warm-episode") {
+    const periodStart = new Date(
+      Date.parse(anchorTime) - 12 * 60 * 60 * 1000
+    ).toISOString()
+
+    return [
+      {
+        id: "fixture-warm-episode-42",
+        annotationType: "WARM_EPISODE",
+        assetId,
+        time: periodStart,
+        warmEpisode: {
+          warmEpisodeId: 42,
+          periodStart,
+          periodEnd: anchorTime,
+          direction: "NEUTRAL",
+          summary: "Fixture warm episode",
+          events: [],
+        },
+      },
+    ]
+  }
+
   const evidenceUrl =
     scenario === "annotations-unsafe-evidence-url"
       ? "javascript:alert(1)"
