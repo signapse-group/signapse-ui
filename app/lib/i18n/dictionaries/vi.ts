@@ -311,8 +311,8 @@ export const vi = {
     sectionTitle: "Ngôn ngữ mặc định Telegram",
     languageLabel: "Ngôn ngữ mặc định Telegram",
     languageDescription:
-      "Dùng cho thông báo và phân tích theo lịch trên Telegram khi tuyến gửi hoặc lịch chưa có ngôn ngữ riêng.",
-    savedLanguage: "Ngôn ngữ Telegram đã lưu: {language}",
+      "Dùng khi cảnh báo Telegram hoặc lịch của bạn được đặt là Mặc định. Ngôn ngữ giao diện vẫn giữ nguyên.",
+    savedLanguage: "Ngôn ngữ đã lưu: {language}",
     chooseLanguage: "Chọn ngôn ngữ",
     systemDefault:
       "Bạn chưa đặt ngôn ngữ. Telegram đang dùng ngôn ngữ mặc định của hệ thống.",

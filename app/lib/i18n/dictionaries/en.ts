@@ -5,7 +5,7 @@ export const en: Dictionary = {
     selectorLabel: "Choose language",
     selectorShortLabel: "Language",
     currentLanguage: "Current language",
-    vietnamese: "Tiếng Việt",
+    vietnamese: "Vietnamese",
     english: "English",
   },
   common: {
@@ -317,8 +317,8 @@ export const en: Dictionary = {
     sectionTitle: "Default Telegram language",
     languageLabel: "Default Telegram language",
     languageDescription:
-      "Used for Telegram alerts and scheduled analysis unless a route or schedule has its own language.",
-    savedLanguage: "Saved preference: {language}",
+      "Used when your Telegram alerts or schedules are set to Default. Your interface language stays the same.",
+    savedLanguage: "Saved language: {language}",
     chooseLanguage: "Choose a language",
     systemDefault: "No preference is set. Telegram uses the system default.",
     saveLanguage: "Save language",

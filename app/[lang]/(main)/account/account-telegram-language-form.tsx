@@ -2,17 +2,13 @@
 
 import { useRouter } from "next/navigation"
 import { useState } from "react"
+import { Save } from "lucide-react"
 
 import { updateMyPreferredLanguage } from "@/app/api/user/action"
 import type { LanguageCatalogResponse } from "@/app/lib/languages/definitions"
 import { useLocalization } from "@/app/lib/i18n/provider"
 import { Button } from "@/components/ui/button"
-import {
-  Field,
-  FieldDescription,
-  FieldGroup,
-  FieldLabel,
-} from "@/components/ui/field"
+import { Field, FieldDescription, FieldLabel } from "@/components/ui/field"
 import {
   Select,
   SelectContent,
@@ -43,6 +39,14 @@ export function AccountTelegramLanguageForm({
   const savedLanguage = catalog?.languages.find(
     (language) => language.isoCode === savedIsoCode
   )
+  const getLanguageName = (isoCode: string, name: string) => {
+    if (isoCode === "en") return dictionary.locale.english
+    if (isoCode === "vi") return dictionary.locale.vietnamese
+    return name
+  }
+  const savedLanguageName = savedLanguage
+    ? getLanguageName(savedLanguage.isoCode, savedLanguage.name)
+    : savedIsoCode
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -81,7 +85,7 @@ export function AccountTelegramLanguageForm({
   return (
     <section
       aria-labelledby="account-telegram-language-title"
-      className="mx-auto mt-8 w-full max-w-3xl border-t pt-6"
+      className="mx-auto -mt-4 w-full max-w-3xl border-t pt-6"
     >
       <h2
         className="text-xl font-semibold tracking-tight"
@@ -94,16 +98,19 @@ export function AccountTelegramLanguageForm({
       </p>
 
       {catalog ? (
-        <form className="mt-6 flex flex-col gap-5" onSubmit={handleSubmit}>
-          <FieldGroup>
-            <Field>
-              <FieldLabel htmlFor="account-telegram-language">
+        <form className="mt-6" onSubmit={handleSubmit}>
+          <div className="flex flex-col gap-4 sm:flex-row">
+            <Field className="min-w-0 flex-1">
+              <FieldLabel
+                className="sr-only"
+                htmlFor="account-telegram-language"
+              >
                 {t.languageLabel}
               </FieldLabel>
               <Select
                 disabled={isPending}
                 items={catalog.languages.map((language) => ({
-                  label: language.name,
+                  label: getLanguageName(language.isoCode, language.name),
                   value: language.isoCode,
                 }))}
                 onValueChange={(value) => {
@@ -114,7 +121,7 @@ export function AccountTelegramLanguageForm({
               >
                 <SelectTrigger
                   aria-busy={isPending}
-                  className="w-full sm:max-w-sm"
+                  className="w-full"
                   id="account-telegram-language"
                 >
                   <SelectValue placeholder={t.chooseLanguage} />
@@ -126,7 +133,7 @@ export function AccountTelegramLanguageForm({
                         key={language.isoCode}
                         value={language.isoCode}
                       >
-                        {language.name}
+                        {getLanguageName(language.isoCode, language.name)}
                       </SelectItem>
                     ))}
                   </SelectGroup>
@@ -136,30 +143,12 @@ export function AccountTelegramLanguageForm({
                 {savedIsoCode === null
                   ? t.systemDefault
                   : formatMessage(t.savedLanguage, {
-                      language: savedLanguage?.name ?? savedIsoCode,
+                      language: savedLanguageName ?? savedIsoCode,
                     })}
               </FieldDescription>
             </Field>
-          </FieldGroup>
-
-          {feedback === "success" ? (
-            <p className="text-sm text-foreground" role="status">
-              {t.saveSuccess}
-            </p>
-          ) : null}
-          {feedback === "error" ? (
-            <p className="text-sm text-destructive" role="alert">
-              {t.saveError}
-            </p>
-          ) : null}
-          {isPending ? (
-            <span className="sr-only" role="status">
-              {t.saving}
-            </span>
-          ) : null}
-
-          <div className="flex justify-start">
             <Button
+              className="shrink-0"
               disabled={
                 isPending ||
                 !selectedIsoCode ||
@@ -169,10 +158,28 @@ export function AccountTelegramLanguageForm({
             >
               {isPending ? (
                 <Spinner aria-hidden="true" data-icon="inline-start" />
-              ) : null}
+              ) : (
+                <Save data-icon="inline-start" />
+              )}
               {isPending ? t.saving : t.saveLanguage}
             </Button>
           </div>
+
+          {feedback === "success" ? (
+            <p className="mt-3 text-sm text-foreground" role="status">
+              {t.saveSuccess}
+            </p>
+          ) : null}
+          {feedback === "error" ? (
+            <p className="mt-3 text-sm text-destructive" role="alert">
+              {t.saveError}
+            </p>
+          ) : null}
+          {isPending ? (
+            <span className="sr-only" role="status">
+              {t.saving}
+            </span>
+          ) : null}
         </form>
       ) : (
         <div className="mt-6 flex flex-col items-start gap-3">

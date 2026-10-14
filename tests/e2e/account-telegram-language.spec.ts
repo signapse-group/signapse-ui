@@ -39,6 +39,15 @@ test("saves the Telegram language independently of dirty profile data", async ({
     name: enDictionary.accountTelegramLanguage.languageLabel,
   })
   await expect(languageSelect).toContainText(enDictionary.locale.vietnamese)
+  await expect(
+    page.getByText(
+      enDictionary.accountTelegramLanguage.savedLanguage.replace(
+        "{language}",
+        enDictionary.locale.vietnamese
+      ),
+      { exact: true }
+    )
+  ).toBeVisible()
 
   const firstName = page.getByRole("textbox", {
     name: enDictionary.accountProfile.firstName,
