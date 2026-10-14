@@ -5,7 +5,7 @@ description: Design repository contributions with a human technical owner from a
 
 # Technical Design
 
-Run this skill with the human technical owner after upstream planning has produced the related implementation issues. The outcome is a codebase-grounded design and an issue handoff the human can accept. This is a human-led activity outside Symphony's unattended implementation loop. Read repository instructions if present; load [agent-execution-policy](../agent-execution-policy/SKILL.md) only when the human explicitly requests that workflow for this scope. This skill does not invoke [implement](../implement/SKILL.md).
+Run this skill with the human technical owner after upstream planning has produced the related implementation issues. The outcome is a codebase-grounded design and an issue handoff the human can accept. This is a human-led activity outside Symphony's unattended implementation loop. Read repository instructions and [shared standards](../../../CONTRIBUTING.md); assigned execution enters through [WORKFLOW.md](../../../WORKFLOW.md). This skill does not activate implementation or issue lifecycle.
 
 ## Build the design context
 
@@ -13,7 +13,7 @@ Read the Epic and parent Story/Task/Bug requirements, affected execution Subtask
 
 Inspect the relevant working trees, repository instructions, architecture documentation, existing flows, data models, API shapes, and tests. For a cross-repository feature, inspect each affected repository before making claims about its code. Cite paths and concrete behavior for findings; label any inaccessible repository or unverified assumption. Identify shared policy or data decisions across the issue set before designing individual tasks.
 
-For API-dependent design, use the [API consumer policy](../agent-execution-policy/references/api-handoff.md):
+For API-dependent design, use the [API consumer standards](../../../docs/api-consumer.md):
 fetch the published producer contract for the target environment and record source,
 time/revision and gaps. Distinguish current supported behavior from proposed API
 changes, and identify publication/handoff before dependent integration. Default to

@@ -5,7 +5,7 @@ description: Verify changed behavior with regression and acceptance tests at sta
 
 # Behavior-Focused Testing
 
-Use the repository's instructions and the assigned contract when testing. Follow [agent-execution-policy](../agent-execution-policy/SKILL.md) when testing is part of an explicitly assigned workflow run; a standalone test request does not activate the issue lifecycle. Read contract references or architecture decisions only when they affect the behavior under test.
+Use repository instructions, [verification standards](../../../CONTRIBUTING.md#verification) and the accepted contract when testing. Assigned execution follows [WORKFLOW.md](../../../WORKFLOW.md); this technique adds no lifecycle permissions or gates. Read contract references or architecture decisions only when they affect the behavior under test.
 
 ## Select the Seam
 

@@ -6,7 +6,7 @@ When framework versions, the UI preset, CI, or repository ownership change, refr
 
 ## Scoped Instructions And Skills
 
-- `AGENTS.md` holds only repo-wide architecture, verification, and review policy.
+- `AGENTS.md` owns architecture, instruction routing and the direct-work boundary. Read [CONTRIBUTING.md](CONTRIBUTING.md) for shared implementation, verification and review standards.
 - Before implementing or reviewing `app/api/**`, read `app/api/AGENTS.override.md`.
 - Before implementing or reviewing `app/lib/**`, read `app/lib/AGENTS.override.md`.
 - For UI implementation or review under `app/[lang]/**` or `components/**`, read `components/AGENTS.override.md`. For changes to visual presentation, interaction, accessibility, or user-facing content, read the relevant sections of `docs/design/DESIGN.md`, the UI/UX source of truth.
@@ -14,30 +14,17 @@ When framework versions, the UI preset, CI, or repository ownership change, refr
 - When a task spans multiple domains, read every applicable scoped instruction file.
 - Scoped instructions extend this file; the more specific instruction wins when guidance conflicts.
 - `.agents/skills` holds repository-specific or non-overlapping recipes.
-- For assigned Jira/Symphony work, read [WORKFLOW.md](WORKFLOW.md) for the implementation contract, repository-owned execution policy, and review/handoff requirements. Planning owns project hierarchy, routing and acceptance; ordinary requests do not activate tracker lifecycle actions.
-- Load the corresponding repository skill when the change or review matches its trigger:
+- For assigned Jira/Symphony work, read and follow the phase selected by [WORKFLOW.md](WORKFLOW.md). Planning owns project hierarchy, routing and acceptance; ordinary requests do not activate tracker lifecycle actions.
+- Choose technical skills when the change or review needs them; skills do not grant workflow permissions or add lifecycle gates. Relevant techniques include:
 - `shadcn`: adding, fixing, composing shadcn components, wrappers, CLI, docs, presets, and styling rules.
 - Overlay hydration mismatches: use the Hydration section in `components/AGENTS.override.md`.
 - `frontend-design`: redesign, UI polish, dashboards/workbenches, or new layouts that need visual direction.
 - `accessibility`: keyboard, focus, screen reader, semantic markup, dialog/form accessibility.
-- For API integration, contract changes or reviews, read the [API consumer policy](.agents/skills/agent-execution-policy/references/api-handoff.md). The producer's published OpenAPI owns the supported HTTP API contract; Jira owns accepted requirements and acceptance.
+- For API integration, contract changes or reviews, read the [API consumer standards](docs/api-consumer.md). The producer's published OpenAPI owns the supported HTTP API contract; Jira owns accepted requirements and acceptance.
 
 ## Dev handoff boundary
 
-For direct work, complete the requested output with applicable verification; tracker/review/PR/CI workflow steps activate only when assigned. For an activated workflow, apply the repository's [local handoff and live acceptance policy](.agents/skills/agent-execution-policy/references/execution-policy.md#local-handoff-and-live-acceptance). Apply its phase-specific handoff and the [delivery runbook](docs/delivery.md): Implement hands off before its deployment; the assigned Review session completes merge/delivery/Done only after the gates. Pending QA/parent acceptance alone does not stop an otherwise complete contribution. Missing behavior, required checks or necessary producer/input access remains a contribution gap; keep doing meaningful independent work.
-
-## Commands
-
-- Use `pnpm dev`, `pnpm build`, `pnpm lint`, `pnpm format`, and `pnpm typecheck`.
-- Equivalent slash commands may be used when available in the current environment.
-- Run the production server with `pnpm start`.
-- CI runs lightweight `pnpm test:quality`. Locally run focused checks for affected behavior; full build/browser regression is `pnpm test:full` when requested or needed by scope. P0 browser tests use fixtures and disabled auth.
-- Vercel builds Preview/Production from Git. After merge, watch the main Verify run's `check` and `deployment` jobs under the [delivery runbook](docs/delivery.md). FE delivery ends at confirmed Vercel deployment; owner/QA checks the website and features. Local configuration does not establish hosting activation.
-- Run `pnpm test:integration` only when the assigned work names a live operation, scope, and required inputs.
-  Protected-page changes or reuse of authenticated transport do not alone make live smoke a handoff gate.
-- Select focused checks by change type using the [browser-testing scope matrix](docs/testing/browser-tests.md#selecting-checks-by-change-scope).
-  Use its versioned runner selectors and activation runbook; report live results separately from P0.
-  Never commit real `.env` files, account passwords, Clerk secrets, JWTs, cookies, or auth artifacts.
+For direct work, complete the requested output with applicable verification under CONTRIBUTING. An accepted local request needs no Jira ticket as a prerequisite. Tracker/review/PR/CI lifecycle and publication activate only when assigned; ordinary requests and no-PR operations retain their requested boundary. Assigned execution follows WORKFLOW, including its phase-specific permissions and stopping point.
 
 ## Architecture
 
@@ -48,50 +35,3 @@ Signapse UI is an admin dashboard built with **Next.js 16 App Router** for an AI
 - **Stack:** Clerk, shadcn/ui, Tailwind CSS v4, Lucide icons, Geist, Geist Mono, and Zod v4.
 - **Route groups:** `app/[lang]/(main)/` is the protected app, `app/[lang]/(auth)/` is Clerk auth, and `app/api/[feature]/action.ts` contains server actions by feature.
 - **Public scope:** Localized `sign-in/**` pages and the read-only `/api/build-revision` operational endpoint are public. Locale roots redirect to the protected dashboard. Marketing landing and public articles are maintained in a separate repository; do not restore them or standalone editor/dashboard samples here.
-
-## Feature Structure
-
-Each feature should live in its own folder when appropriate:
-
-```text
-app/[lang]/(main)/[feature]/
-├── page.tsx              # Server Component + Suspense boundary
-├── [id]/page.tsx         # Detail page
-├── error.tsx             # Local error boundary
-├── [feature]-list.tsx    # Client Component: table/list + toolbar
-├── [feature]-create-form.tsx
-├── [feature]-update-form.tsx
-└── [feature]-search.tsx
-```
-
-- Use relative imports such as `./component-name` for components inside the same feature.
-- Add `error.tsx` for local server errors when the feature has a meaningful route/page.
-- Create and update must not share one submit-owning form component; share only field primitives/helpers that are not mode-dependent.
-
-## Implementation Guardrails
-
-- For changes spanning multiple files, affecting behavior, or making architectural decisions, state the goal, material assumptions, non-goals, and completion criteria. Use the existing request or contract when it already defines them.
-- Prefer the simplest solution that satisfies the requirement; do not add abstractions, config, or fallbacks without a clear need.
-- Make surgical edits: only change directly related files, follow existing style, and do not clean up unrelated code.
-- When replacing a library/vendor UI or chart engine, the migration must remove old unused sources completely: dependency, imports/types/helpers, adapters, attribution/vendor copy, active documentation references, and temporary dead components.
-- When editing Markdown, TS, or TSX, keep UTF-8 and avoid whole-file rewrites through commands that may change encoding/newlines. Prefer `apply_patch`; if a script/bulk edit is unavoidable, keep it narrow, encoding-aware, and check the diff/readability afterwards.
-- Continue through implementation, applicable verification, and fixes for failures caused by the change; report any remaining blocker. Use the completion checks below and rerun only affected checks unless broader evidence was invalidated.
-
-## I18n And Locale Routing
-
-- The app uses locale route `app/[lang]` with locales declared in `app/lib/i18n/config.ts`; do not create parallel UI routes outside `[lang]`.
-- User-facing copy must come from dictionaries through `getDictionary()`, `getServerDictionary()`, or `useLocalization()`; do not hardcode labels, toasts, placeholders, or menu text in new components.
-- When removing or replacing a UI route, remove old redirect compatibility routes in the same change unless the user explicitly asks to keep a legacy redirect.
-
-## Validation And Typing
-
-- Use Zod v4 or later for schema validation.
-- If `zodResolver` has a temporary type issue such as `_zod.version`, use `as any` only as a narrow workaround at the resolver boundary.
-- Flag `any` as a review finding unless it is a justified narrow boundary workaround.
-
-## Review Expectations
-
-- Review according to this file, applicable scoped instructions, and the task-specific references routed above.
-- For UI reviews, use the detailed drift categories in DESIGN; also prioritize API contract hierarchy drift, unsafe destructive actions, and unchecked `any` where applicable.
-- For each finding, identify file/line, behavioral or UX risk, and the minimal recommended fix.
-- If there are no findings, say that clearly and mention residual risk or checks not run.
