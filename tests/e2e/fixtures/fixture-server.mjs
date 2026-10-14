@@ -1283,6 +1283,7 @@ function responseForRoute(state, method, pathname, url, body) {
       lastName: FEEDBACK_OWNER.lastName,
       birthday: state.profile.birthday,
       phone: state.profile.phone,
+      preferredLanguage: state.preferredLanguage,
       role_name: "Fixture",
       currentWorkspace: { id: 1, name: "Workspace Alpha" },
       mainImage: null,
@@ -1299,6 +1300,33 @@ function responseForRoute(state, method, pathname, url, body) {
       lastName: body.lastName,
       birthday: state.profile.birthday,
       phone: state.profile.phone,
+      preferredLanguage: state.preferredLanguage,
+      role_name: "Fixture",
+      currentWorkspace: { id: 1, name: "Workspace Alpha" },
+      mainImage: null,
+      permissions: state.permissions,
+    }
+  }
+
+  if (method === "PATCH" && pathname === "/me/preferred-language") {
+    const language = state.languages.find(
+      (option) => option.isoCode === body?.isoCode
+    )
+    if (!language) {
+      return {
+        __status: 400,
+        payload: errorPayload("Choose an enabled language", "INVALID_LANGUAGE"),
+      }
+    }
+    state.preferredLanguage = language
+    return {
+      id: FEEDBACK_OWNER_ID,
+      email: FEEDBACK_OWNER.email,
+      firstName: FEEDBACK_OWNER.firstName,
+      lastName: FEEDBACK_OWNER.lastName,
+      birthday: state.profile.birthday,
+      phone: state.profile.phone,
+      preferredLanguage: state.preferredLanguage,
       role_name: "Fixture",
       currentWorkspace: { id: 1, name: "Workspace Alpha" },
       mainImage: null,
@@ -1485,7 +1513,11 @@ function responseForRoute(state, method, pathname, url, body) {
   if (method === "GET" && pathname === "/telegram/feature-settings") return state.featureSettings
   if (method === "GET" && pathname === "/telegram/market-analysis-schedules") return state.schedules
   if (method === "GET" && pathname === "/languages") {
-    return { languages: state.languages, preferredLanguage: state.preferredLanguage }
+    return {
+      currentLanguage: "vi",
+      languages: state.languages,
+      preferredLanguage: state.preferredLanguage?.isoCode ?? null,
+    }
   }
 
   if (method === "POST" && pathname === "/telegram/bot-connections") {
@@ -1631,6 +1663,24 @@ async function handleControl(request, response, url, body) {
     return true
   }
 
+  if (url.pathname === "/__test/preferred-language" && request.method === "POST") {
+    const testRunId = body?.testRunId ?? request.headers["x-signapse-test-run-id"]
+    if (!testRunId || !(body?.isoCode === null || typeof body?.isoCode === "string")) {
+      sendJson(response, 400, errorPayload("testRunId and isoCode are required", "PREFERRED_LANGUAGE_REQUIRED"))
+      return true
+    }
+    const state = getState(String(testRunId))
+    state.preferredLanguage = body.isoCode === null
+      ? null
+      : state.languages.find((language) => language.isoCode === body.isoCode) ?? null
+    if (body.isoCode !== null && !state.preferredLanguage) {
+      sendJson(response, 400, errorPayload("Language is not in the catalog", "INVALID_LANGUAGE"))
+      return true
+    }
+    sendJson(response, 200, { testRunId, preferredLanguage: state.preferredLanguage })
+    return true
+  }
+
   if (url.pathname === "/__test/scenario" && request.method === "POST") {
     const testRunId = body?.testRunId ?? request.headers["x-signapse-test-run-id"]
     if (!testRunId || typeof body?.scenario !== "string") {
@@ -1752,7 +1802,10 @@ const server = createServer(async (request, response) => {
     testRunId,
     locale: request.headers["accept-language"] ?? null,
     hasAuthHeader,
-    ...(method === "PATCH" && url.pathname === "/me" ? { body } : {}),
+    ...(method === "PATCH" &&
+    ["/me", "/me/preferred-language"].includes(url.pathname)
+      ? { body }
+      : {}),
   }
   state.requests.push(logEntry)
   await appendLog(logEntry)

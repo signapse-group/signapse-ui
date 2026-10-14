@@ -32,6 +32,7 @@ const testRunCookie = "signapse_test_run_id"
 type FixtureController = {
   reset(): Promise<void>
   getLanguages(): Promise<LanguageCatalogResponse>
+  setPreferredLanguage(isoCode: string | null): Promise<void>
   setScenario(
     route: string,
     scenario:
@@ -161,6 +162,12 @@ export const test = base.extend<Fixtures>({
           })
           await expectOk(response)
           return response.json()
+        },
+        async setPreferredLanguage(isoCode) {
+          await postControl("/__test/preferred-language", {
+            testRunId,
+            isoCode,
+          })
         },
         async setScenario(route, scenario, method) {
           await postControl("/__test/scenario", {

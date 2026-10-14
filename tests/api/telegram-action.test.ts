@@ -81,7 +81,12 @@ describe("Telegram scheduled asset analysis actions", () => {
     vi.mocked(getLanguages).mockReset()
     vi.mocked(revalidatePath).mockClear()
     vi.mocked(getLanguages).mockResolvedValue({
-      languages: [{ id: 1, isoCode: "en", name: "English" }],
+      currentLanguage: "vi",
+      preferredLanguage: "vi",
+      languages: [
+        { id: 1, isoCode: "vi", name: "Tiếng Việt" },
+        { id: 2, isoCode: "en", name: "English" },
+      ],
     })
   })
 

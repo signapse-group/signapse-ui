@@ -7,6 +7,10 @@ import { ActionResult, SearchParams } from "@/app/lib/definitions"
 import { getDictionary } from "@/app/lib/i18n/dictionaries"
 import { getRequestLocale } from "@/app/lib/i18n/server"
 import {
+  UpdatePreferredLanguageRequestSchema,
+  type UpdatePreferredLanguageRequest,
+} from "@/app/lib/languages/definitions"
+import {
   BackendMeResponse,
   UpdateManagedUserRequest,
   UpdateUserProfileRequest,
@@ -75,5 +79,45 @@ export async function updateMyProfile(
         : dictionary.accountProfile.updateError
 
     return { success: false, error: errorMessage }
+  }
+}
+
+export async function updateMyPreferredLanguage(
+  request: UpdatePreferredLanguageRequest
+): Promise<ActionResult<UserResponse>> {
+  const dictionary = await getDictionary(await getRequestLocale())
+  const parsed = UpdatePreferredLanguageRequestSchema.safeParse(request)
+
+  if (!parsed.success) {
+    return {
+      success: false as const,
+      error: dictionary.accountTelegramLanguage.saveError,
+    }
+  }
+
+  try {
+    const user = await fetchAuthenticated<UserResponse>(
+      "/me/preferred-language",
+      {
+        method: "PATCH",
+        body: JSON.stringify(parsed.data),
+      }
+    )
+
+    if (user.preferredLanguage?.isoCode !== parsed.data.isoCode) {
+      return {
+        success: false,
+        error: dictionary.accountTelegramLanguage.saveError,
+      }
+    }
+
+    revalidatePath("/account")
+
+    return { success: true as const, data: user }
+  } catch {
+    return {
+      success: false as const,
+      error: dictionary.accountTelegramLanguage.saveError,
+    }
   }
 }

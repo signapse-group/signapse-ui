@@ -39,6 +39,13 @@ export default async function AccountLoading() {
         <Skeleton className="h-9 w-full sm:w-24" />
         <Skeleton className="h-9 w-full sm:w-32" />
       </div>
+      <div aria-hidden="true" className="mt-8 border-t pt-6">
+        <Skeleton className="h-6 w-64 max-w-full" />
+        <Skeleton className="mt-3 h-4 w-full max-w-xl" />
+        <Skeleton className="mt-6 h-9 w-full sm:max-w-sm" />
+        <Skeleton className="mt-3 h-4 w-80 max-w-full" />
+        <Skeleton className="mt-5 h-8 w-32" />
+      </div>
     </AppFormShellSkeleton>
   )
 }
