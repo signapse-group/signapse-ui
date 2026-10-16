@@ -4,7 +4,7 @@ This runbook owns Review/delivery and is loaded only when `WORKFLOW.md` assigns 
 
 ## Assignment and authority
 
-The profile is a native Jira `SIGN` dev Subtask, parent Story/Task/Bug, exactly one recognized route `route-frontend`, output owned by `signapse-group/signapse-ui`, PR into `main`, product dev environment `https://dev.signapse.cloud`. Use WORKFLOW's recognized route set; business labels may coexist. Direct/no-PR operations retain their assigned boundary and are outside this profile.
+The profile is a native Jira `SIGN` dev Subtask, parent Story/Task/Bug, exactly one recognized route `route-frontend`, output owned by `signapse-group/signapse-ui`, PR into `main`, product dev environment `https://dev-dashboard.signapse.cloud`. Use WORKFLOW's recognized route set; business labels may coexist. Direct/no-PR operations retain their assigned boundary and are outside this profile.
 
 The fresh In Review session is the independent reviewer. It directly assesses contract/code/evidence and does not replace itself with another reviewer. Review permits owned feedback/handoff/blocker records, merge of the assigned PR into main, bounded delivery recovery and In Review → Progress/Blocked/Done under the gates below. The reviewer does not edit implementation or resolve conflicts.
 

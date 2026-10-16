@@ -4,7 +4,7 @@ This runbook owns the Implement procedure and is loaded only when `WORKFLOW.md` 
 
 ## Assignment and authority
 
-The profile is a native Jira `SIGN` dev Subtask, parent Story/Task/Bug, exactly one recognized route `route-frontend`, output owned by `signapse-group/signapse-ui`, PR into `main`, product dev environment `https://dev.signapse.cloud`. Use the recognized routes in WORKFLOW; business labels may coexist. Direct/no-PR operations retain their separately assigned boundary and are outside this profile.
+The profile is a native Jira `SIGN` dev Subtask, parent Story/Task/Bug, exactly one recognized route `route-frontend`, output owned by `signapse-group/signapse-ui`, PR into `main`, product dev environment `https://dev-dashboard.signapse.cloud`. Use the recognized routes in WORKFLOW; business labels may coexist. Direct/no-PR operations retain their separately assigned boundary and are outside this profile.
 
 Progress permits scoped edits/checks, commits/push/PR, CI follow-up, owned conditional handoff/blocker records and Progress → In Review/Blocked under the gates below. Independent review, merge, Production delivery and Done belong to the fresh In Review session. Implement does not call a reviewer as an In Review admission gate.
 

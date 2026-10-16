@@ -22,7 +22,7 @@ beforeEach(() => {
 
 it("serves build identity without invoking the authentication provider", async () => {
   const request = new NextRequest(
-    "https://dev.signapse.cloud/api/build-revision"
+    "https://dev-dashboard.signapse.cloud/api/build-revision"
   )
   const event = new NextFetchEvent({
     request,
@@ -42,7 +42,7 @@ it.each([
   "/vi/dashboard",
   "/vi/sign-in",
 ])("retains the authentication middleware for %s", async (pathname) => {
-  const request = new NextRequest(`https://dev.signapse.cloud${pathname}`)
+  const request = new NextRequest(`https://dev-dashboard.signapse.cloud${pathname}`)
   const event = new NextFetchEvent({
     request,
     page: pathname,
