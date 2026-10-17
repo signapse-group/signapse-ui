@@ -2,6 +2,7 @@
 
 import {
   cleanup,
+  fireEvent,
   render,
   screen,
   waitFor,
@@ -419,6 +420,43 @@ describe("AccountProfileForm", () => {
     expect(save).toBeDisabled()
     expect(restore).toBeDisabled()
     expect(toastSuccess).toHaveBeenCalledWith(en.accountProfile.updateSuccess)
+  }, 10_000)
+
+  it("closes an open birthday picker while a save is pending", async () => {
+    const user = userEvent.setup()
+    let resolveUpdate: (() => void) | undefined
+    vi.mocked(updateMyProfile).mockImplementation(
+      () =>
+        new Promise<Awaited<ReturnType<typeof updateMyProfile>>>((resolve) => {
+          resolveUpdate = () => resolve({ success: true, data: {} as never })
+        })
+    )
+    renderProfile()
+
+    const firstName = screen.getByRole("textbox", { name: /First name/ })
+    const birthday = screen.getByRole("button", { name: /Date of birth/ })
+    await user.type(firstName, " Prime")
+    await selectBirthday("2000-02-29", user)
+    await user.click(birthday)
+    expect(screen.getByRole("grid")).toBeVisible()
+
+    fireEvent.submit(birthday.closest("form")!)
+    await waitFor(() => expect(updateMyProfile).toHaveBeenCalledTimes(1))
+
+    expect(screen.queryByRole("grid")).not.toBeInTheDocument()
+    expect(birthday).toBeDisabled()
+    expect(updateMyProfile).toHaveBeenCalledWith({
+      firstName: "Ada Prime",
+      lastName: initialData.lastName,
+      birthday: "2000-02-29T00:00:00.000Z",
+      phone: initialData.phoneNumber,
+    })
+
+    await user.click(birthday)
+    expect(screen.queryByRole("grid")).not.toBeInTheDocument()
+    resolveUpdate?.()
+    await waitFor(() => expect(routerRefresh).toHaveBeenCalledTimes(1))
+    expect(birthday).toHaveTextContent("February 29, 2000")
   }, 10_000)
 
   it("retains failed edits and exposes localized recovery feedback", async () => {

@@ -173,6 +173,8 @@ export function AccountProfileForm({ initialData }: AccountProfileFormProps) {
   const avatarAlt = displayName || t.avatarLabel
 
   async function onSubmit(values: AccountProfileFormValues) {
+    setBirthdayPickerOpen(false)
+
     if (isSubmitting) {
       return
     }
