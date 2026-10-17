@@ -17,7 +17,7 @@ The coordinator retains scope/priority, new tickets, Open → Ready, Blocked res
 3. Trace affected code, callers/consumers, reusable patterns, necessary changes and verification seams. Existing code shows current behavior, not expected behavior. For API work, read [API consumer standards](../api-consumer.md) and affected producer contract/publication evidence. For UI work, inspect accepted design and references before concluding readiness.
 4. For a fix under a Bug, read accepted expected/basis and the latest relevant QA report: case/version, actual result, tested build/environment and assigned regression. A FAIL summary may also contain Blocked/Not Run or a different deviation; survey the assigned fix only.
 5. Run existing checks only to answer a concrete question on isolated local data, using [verification standards](../../CONTRIBUTING.md#verification). No full-green baseline is required when an in-scope failure is grounded for Implement. A baseline does not prove future implementation satisfies AC.
-6. Identify the smallest implementation approach and focused acceptance/regression checks. Investigate discoverable facts before escalating unresolved requirements or material decisions to the coordinator. Continue meaningful independent survey while only dependent work waits.
+6. Identify the smallest implementation approach and focused acceptance/regression checks. Apply [decision standards](../../CONTRIBUTING.md#decisions-and-evidence) when an edge-case fix would materially change the user experience. Investigate discoverable facts before escalating unresolved requirements or material decisions to the coordinator. Continue meaningful independent survey while only dependent work waits.
 
 ## Record only useful handoff information
 
