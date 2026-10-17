@@ -204,7 +204,7 @@ function createState() {
     contactRequests: contactRequestRecords(),
     profile: {
       birthday: "1990-01-02T00:00:00.000Z",
-      phone: "+1 555 0100",
+      phone: "2025550199",
     },
     smtpConfiguration: {
       configured: true,
