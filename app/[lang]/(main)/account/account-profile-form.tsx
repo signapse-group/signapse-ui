@@ -84,9 +84,9 @@ function formatDateOnly(date: Date): string {
   return `${year}-${month}-${day}`
 }
 
-function getTodayDate(): Date {
-  const today = new Date()
-  return new Date(today.getFullYear(), today.getMonth(), today.getDate())
+function getUtcTodayDate(): Date {
+  const now = new Date()
+  return new Date(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
 }
 
 function isDateOfBirthValid(value: string): boolean {
@@ -96,7 +96,7 @@ function isDateOfBirthValid(value: string): boolean {
     return false
   }
 
-  return value.trim() <= formatDateOnly(getTodayDate())
+  return value.trim() <= formatDateOnly(getUtcTodayDate())
 }
 
 function getAccountProfileSchema(t: Dictionary["accountProfile"]) {
@@ -124,7 +124,7 @@ export function AccountProfileForm({ initialData }: AccountProfileFormProps) {
   const router = useRouter()
   const { dictionary, formatDate, locale } = useLocalization()
   const t = dictionary.accountProfile
-  const today = useMemo(() => getTodayDate(), [])
+  const today = useMemo(() => getUtcTodayDate(), [])
   const earliestBirthday = useMemo(() => {
     const date = new Date(0)
     date.setFullYear(1, 0, 1)

@@ -290,6 +290,76 @@ describe("AccountProfileForm", () => {
     expect(updateMyProfile).not.toHaveBeenCalled()
   }, 10_000)
 
+  it("uses the UTC day across local timezone boundaries", async () => {
+    const originalTimezone = process.env.TZ
+    vi.useFakeTimers({ toFake: ["Date"] })
+
+    try {
+      for (const boundary of [
+        {
+          timezone: "Pacific/Kiritimati",
+          now: "2026-10-17T12:30:00.000Z",
+          localDay: 18,
+          birthday: "2026-10-18",
+          disabled: true,
+        },
+        {
+          timezone: "Pacific/Honolulu",
+          now: "2026-10-17T00:30:00.000Z",
+          localDay: 16,
+          birthday: "2026-10-17",
+          disabled: false,
+        },
+      ]) {
+        process.env.TZ = boundary.timezone
+        vi.setSystemTime(new Date(boundary.now))
+        expect(new Date().getDate()).toBe(boundary.localDay)
+
+        const user = userEvent.setup({
+          advanceTimers: (milliseconds) => vi.advanceTimersByTime(milliseconds),
+        })
+        renderProfile({ dateOfBirth: boundary.birthday })
+        await user.type(
+          screen.getByRole("textbox", { name: /Last name/ }),
+          " Updated"
+        )
+        const save = screen.getByRole("button", {
+          name: en.accountProfile.saveChanges,
+        })
+        if (boundary.disabled) {
+          await waitFor(() => expect(save).toBeDisabled())
+        } else {
+          await waitFor(() => expect(save).toBeEnabled())
+        }
+
+        const birthday = screen.getByRole("button", {
+          name: /Date of birth/i,
+        })
+        await user.click(birthday)
+        const calendar = within(screen.getByRole("grid"))
+        const calendarDay = calendar.getByRole("button", {
+          name: new RegExp(
+            `October ${Number(boundary.birthday.slice(-2))}(?:st|nd|rd|th)?, 2026`
+          ),
+        })
+        if (boundary.disabled) {
+          expect(calendarDay).toBeDisabled()
+        } else {
+          expect(calendarDay).toBeEnabled()
+        }
+        cleanup()
+      }
+    } finally {
+      cleanup()
+      vi.useRealTimers()
+      if (originalTimezone === undefined) {
+        delete process.env.TZ
+      } else {
+        process.env.TZ = originalTimezone
+      }
+    }
+  }, 10_000)
+
   it("restores dirty edits without mutation and normalizes a successful update", async () => {
     const user = userEvent.setup()
     let resolveUpdate: (() => void) | undefined
