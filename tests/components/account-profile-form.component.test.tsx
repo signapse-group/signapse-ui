@@ -47,7 +47,7 @@ const initialData: AccountProfileInitialData = {
   lastName: "Miller",
   dateOfBirth: "1990-01-02",
   email: "ada@example.com",
-  phoneNumber: "+1 555 0100",
+  phoneNumber: "2025550199",
 }
 
 function renderProfile(

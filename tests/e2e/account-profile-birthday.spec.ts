@@ -139,7 +139,7 @@ test("saves and reads back old and leap birthdays as the same calendar date", as
         birthday: `${date}T00:00:00.000Z`,
         firstName: "Fixture",
         lastName: "User",
-        phone: "+1 555 0100",
+        phone: "2025550199",
       },
     })
 
@@ -166,6 +166,6 @@ test("saves and reads back old and leap birthdays as the same calendar date", as
     ).toHaveValue("User")
     await expect(
       page.getByRole("textbox", { name: profile.phoneNumber, exact: false })
-    ).toHaveValue("+1 555 0100")
+    ).toHaveValue("2025550199")
   }
 })
