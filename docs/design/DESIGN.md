@@ -303,7 +303,7 @@ Delete confirmation tuân theo pattern sau:
 - Khi search, filter, sort hoặc page size đổi, xóa param rỗng và reset `page` về `1` khi page hiện tại có thể không còn hợp lệ.
 - Search dùng `type="search"`, có label hiển thị hoặc `sr-only`, debounce khoảng `300ms` và không cần Search button nếu không có business requirement.
 - Search nằm ở leading area, full-width trên mobile và có width giới hạn trên desktop; pending feedback giữ nguyên footprint của control.
-- Page-size selector nằm trong trailing controls với options `10`, `20`, `50`, `100`, mặc định `10`; không lặp trong footer pagination.
+- Page-size selector nằm trong footer pagination cạnh điều hướng, với options `10`, `20`, `50`, `100` và mặc định `10`; không lặp trên toolbar. Giá trị đang chọn chỉ hiển thị số dòng.
 - Sort/page-size pending chỉ disable control liên quan và không làm toolbar thay đổi layout.
 
 ### Quick Detail Overlay

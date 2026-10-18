@@ -10,6 +10,49 @@ test.describe("P0 contact request read dashboard", () => {
     await page.setViewportSize({ width: 1440, height: 1024 })
   })
 
+  test("matches the pagination reference at desktop and compact widths", async ({
+    page,
+  }, testInfo) => {
+    await page.emulateMedia({ colorScheme: "dark" })
+    await page.goto("/vi/contact-requests?size=50")
+
+    const footer = page.locator('[data-slot="app-pagination-footer"]')
+    await expect(footer).toBeVisible()
+    await expect(
+      footer.getByRole("combobox", { name: "Số hàng mỗi trang" })
+    ).toContainText("50")
+    const navigation = footer.getByRole("navigation", {
+      name: "Điều hướng phân trang",
+    })
+    await expect(
+      navigation.getByRole("button", { name: "Đi tới trang 1" })
+    ).toHaveAttribute("aria-current", "page")
+    await expect(
+      navigation.getByRole("button", { name: "Đi tới trang trước" })
+    ).toBeDisabled()
+    await expect(
+      navigation.getByRole("button", { name: "Đi tới trang sau" })
+    ).toBeDisabled()
+    await page.addStyleTag({
+      content: "nextjs-portal { display: none !important; }",
+    })
+    await testInfo.attach("pagination-desktop", {
+      body: await footer.screenshot({ animations: "disabled" }),
+      contentType: "image/png",
+    })
+
+    await page.setViewportSize({ width: 375, height: 812 })
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth
+      )
+    ).toBe(true)
+    await testInfo.attach("pagination-compact", {
+      body: await footer.screenshot({ animations: "disabled" }),
+      contentType: "image/png",
+    })
+  })
+
   test("opens from navigation, reads separate records, expands safe full text, and paginates", async ({
     fixture,
     page,
@@ -96,9 +139,7 @@ test.describe("P0 contact request read dashboard", () => {
       "dateTime",
       "2026-10-07T00:00:00.000Z"
     )
-    expect(await submittedTime.innerText()).not.toBe(
-      "2026-10-07T00:00:00.000Z"
-    )
+    expect(await submittedTime.innerText()).not.toBe("2026-10-07T00:00:00.000Z")
 
     const axe = await new AxeBuilder({ page })
       .withTags(["wcag2a", "wcag2aa"])
@@ -109,7 +150,7 @@ test.describe("P0 contact request read dashboard", () => {
       )
     ).toEqual([])
 
-    await page.getByRole("button", { name: "Trang sau" }).click()
+    await page.getByRole("button", { name: "Đi tới trang sau" }).click()
     await expect(page).toHaveURL(/page=2/)
     await expect(page.locator("[data-contact-request-row]")).toHaveCount(10)
     await expect(
@@ -127,7 +168,7 @@ test.describe("P0 contact request read dashboard", () => {
         .nth(2)
     ).toHaveText("Lời nhắn 11 cho Signapse.")
 
-    await page.getByRole("button", { name: "Trang sau" }).click()
+    await page.getByRole("button", { name: "Đi tới trang sau" }).click()
     await expect(page).toHaveURL(/page=3/)
     await expect(page.locator("[data-contact-request-row]")).toHaveCount(1)
     await expect(

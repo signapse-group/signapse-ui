@@ -30,7 +30,7 @@ test.describe("P0 shell and canonical list", () => {
   test("covers canonical list search, URL state, pagination, and history", async ({
     page,
   }) => {
-    await page.goto("/vi/events?page=1&size=2")
+    await page.goto("/vi/events?page=1&size=10")
     await expect(
       page.getByText("Central bank signals a slower easing path", {
         exact: true,
@@ -41,6 +41,21 @@ test.describe("P0 shell and canonical list", () => {
       name: "Đi tới trang sau",
       exact: true,
     })
+    const pageSize = page.getByRole("combobox", {
+      name: "Số hàng mỗi trang",
+    })
+    await expect(pageSize).toContainText("10")
+    await waitForClientHandler(pageSize)
+    await pageSize.click()
+    await page.getByRole("option", { name: "20 / trang" }).click()
+    await expect(page).toHaveURL(/page=1&size=20/)
+    await expect(
+      page.getByText("Macro liquidity conditions stabilize", { exact: true })
+    ).toBeVisible()
+
+    await pageSize.click()
+    await page.getByRole("option", { name: "10 / trang" }).click()
+    await expect(page).toHaveURL(/page=1&size=10/)
     await waitForClientHandler(nextPage)
     await nextPage.click()
     await expect(page).toHaveURL(/page=2/)
@@ -48,7 +63,7 @@ test.describe("P0 shell and canonical list", () => {
       page.getByText("Macro liquidity conditions stabilize", { exact: true })
     ).toBeVisible()
 
-    await page.goto("/vi/events?page=1&size=2")
+    await page.goto("/vi/events?page=1&size=10")
     await expect(
       page.getByText("Central bank signals a slower easing path", {
         exact: true,
@@ -68,5 +83,10 @@ test.describe("P0 shell and canonical list", () => {
     await expect(search).toHaveValue("")
     await page.goForward()
     await expect(search).toHaveValue("Macro")
+
+    await page.goto("/vi/events?page=0&size=25&search=Macro")
+    await expect(page).toHaveURL(/page=1&size=10&search=Macro/)
+    await page.goto("/vi/events?page=99&size=10")
+    await expect(page).toHaveURL(/page=2&size=10/)
   })
 })

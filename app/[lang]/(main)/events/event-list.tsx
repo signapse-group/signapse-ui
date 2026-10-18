@@ -19,7 +19,6 @@ import {
   AppListTableHead,
   AppListTableHeaderRow,
 } from "@/components/app-list-table"
-import { AppSelectPageSize } from "@/components/app-select-page-size"
 import { buttonVariants } from "@/components/ui/button"
 import {
   EmptyDescription,
@@ -71,12 +70,6 @@ export function EventList({ eventPage }: EventListProps) {
               },
             ]}
             triggerClassName="w-full sm:w-[200px]"
-          />
-          <AppSelectPageSize
-            className="w-full sm:w-auto"
-            defaultSize={eventPage.size}
-            showLabel={false}
-            triggerClassName="w-full sm:w-[120px]"
           />
         </AppListToolbarTrailing>
       </AppListToolbar>

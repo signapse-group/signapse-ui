@@ -152,6 +152,16 @@ function feedbackRecords() {
     feedbackRecord(4, "Cải thiện trang tổng quan", "PENDING_REVIEW", { ownerId: 9010, createdDate: "2026-01-12T08:00:00.000Z" }),
     feedbackRecord(5, "Ảnh chụp màn hình không hiển thị", "PENDING_REVIEW", { screenshot: true, createdDate: "2026-01-11T08:00:00.000Z" }),
     feedbackRecord(6, "Tín hiệu thị trường cần thêm ngữ cảnh", "PENDING_REVIEW", { screenshot: true, createdDate: "2026-01-10T08:00:00.000Z" }),
+    ...Array.from({ length: 6 }, (_, index) =>
+      feedbackRecord(
+        index + 7,
+        `Phản hồi cá nhân bổ sung ${index + 1}`,
+        "PENDING_REVIEW",
+        {
+          createdDate: `2026-01-${String(9 - index).padStart(2, "0")}T08:00:00.000Z`,
+        }
+      )
+    ),
   ]
 }
 
@@ -345,6 +355,17 @@ function createState() {
         createdDate: "2025-01-08T08:00:00.000Z",
         lastModifiedDate: NOW,
       },
+      ...Array.from({ length: 8 }, (_, index) => ({
+        id: index + 64,
+        title: `Fixture pagination event ${index + 1}`,
+        canonicalKey: `fixture-pagination-event-${index + 1}`,
+        description: "Synthetic event used to keep multiple pages in the fixture.",
+        status: "ENRICHED",
+        confidence: 0.7,
+        occurredAt: NOW,
+        createdDate: `2025-01-${String(index + 9).padStart(2, "0")}T08:00:00.000Z`,
+        lastModifiedDate: NOW,
+      })),
       {
         id: 63,
         title: "Macro liquidity conditions stabilize",
@@ -375,7 +396,7 @@ function createState() {
     streamConnections: 0,
     requests: [],
     violations: [],
-    nextIds: { workspace: 3, note: 32, schedule: 52, feedback: 7 },
+    nextIds: { workspace: 3, note: 32, schedule: 52, feedback: 13 },
   }
 }
 

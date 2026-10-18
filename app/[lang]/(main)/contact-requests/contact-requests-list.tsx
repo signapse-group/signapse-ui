@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation"
 import { ChevronDown, ChevronUp, MessageSquareText } from "lucide-react"
 
 import type { ContactRequestPageData } from "@/app/lib/contact-requests/definitions"
-import { CONTACT_REQUESTS_PAGE_SIZE_OPTIONS } from "@/app/lib/contact-requests/definitions"
 import { useLocalization } from "@/app/lib/i18n/provider"
 import {
   AppListTable,
@@ -13,10 +12,7 @@ import {
   AppListTableHead,
   AppListTableHeaderRow,
 } from "@/components/app-list-table"
-import {
-  PaginationNavigation,
-  PaginationPageSizeSelect,
-} from "@/components/app-pagination-controls"
+import { AppPaginationFooter } from "@/components/app-pagination-controls"
 import { useAppPaginationQuery } from "@/components/use-app-pagination-query"
 import { Button } from "@/components/ui/button"
 import {
@@ -112,9 +108,25 @@ export function ContactRequestsList({
       ? expandedRequest.requestKey
       : firstRequestKey
   const { isPending, setPage, setPageSize } = useAppPaginationQuery({
-    defaultSize: query.size,
-    totalPages: page?.totalPages,
+    totalPages,
   })
+  const summary =
+    totalElements !== undefined
+      ? totalElements > 0
+        ? formatMessage(dictionary.pagination.displayedResults, {
+            from: formatNumber(pageNumber * pageSize + 1),
+            to: formatNumber(
+              Math.min((pageNumber + 1) * pageSize, totalElements)
+            ),
+            total: formatNumber(totalElements),
+          })
+        : dictionary.pagination.noResults
+      : content.length > 0
+        ? formatMessage(t.displayedPageResults, {
+            from: formatNumber(pageNumber * pageSize + 1),
+            to: formatNumber(pageNumber * pageSize + content.length),
+          })
+        : dictionary.pagination.noResults
 
   if (!page) {
     return (
@@ -301,46 +313,17 @@ export function ContactRequestsList({
         </Table>
       </AppListTable>
 
-      <div className="flex flex-col gap-3 rounded-xl border border-border/60 bg-muted/20 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-xs text-muted-foreground">
-          {totalElements !== undefined
-            ? totalElements > 0
-              ? formatMessage(dictionary.pagination.displayedResults, {
-                  from: formatNumber(pageNumber * pageSize + 1),
-                  to: formatNumber(
-                    Math.min((pageNumber + 1) * pageSize, totalElements)
-                  ),
-                  total: formatNumber(totalElements),
-                })
-              : dictionary.pagination.noResults
-            : content.length > 0
-              ? formatMessage(t.displayedPageResults, {
-                  from: formatNumber(pageNumber * pageSize + 1),
-                  to: formatNumber(pageNumber * pageSize + content.length),
-                })
-              : dictionary.pagination.noResults}
-        </p>
-        <div className="flex flex-col gap-3 sm:ml-auto sm:flex-row sm:items-center sm:justify-end">
-          <PaginationPageSizeSelect
-            value={pageSize}
-            options={[...CONTACT_REQUESTS_PAGE_SIZE_OPTIONS]}
-            isPending={isPending}
-            label={t.rowsPerPage}
-            onValueChange={setPageSize}
-            compactOptions
-            triggerClassName="w-16 sm:w-16"
-            className="sm:pt-0"
-          />
-          <PaginationNavigation
-            currentPage={pageNumber + 1}
-            totalPageCount={totalPages}
-            isPending={isPending}
-            onPageChange={setPage}
-            showWhenSinglePage={showPagination}
-            className="w-auto shrink-0"
-          />
-        </div>
-      </div>
+      <AppPaginationFooter
+        currentPage={pageNumber + 1}
+        pageSize={pageSize}
+        totalElements={totalElements ?? content.length}
+        totalPages={totalPages}
+        summary={summary}
+        showNavigation={showPagination}
+        isPending={isPending}
+        onPageChange={setPage}
+        onPageSizeChange={setPageSize}
+      />
     </div>
   )
 }

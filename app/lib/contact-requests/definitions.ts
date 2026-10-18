@@ -1,7 +1,12 @@
 import { z } from "zod"
 
-export const CONTACT_REQUESTS_DEFAULT_PAGE_SIZE = 10
-export const CONTACT_REQUESTS_PAGE_SIZE_OPTIONS = [10, 20, 50, 100] as const
+import {
+  DEFAULT_PAGE_SIZE,
+  PAGE_SIZE_OPTIONS,
+} from "@/app/lib/pagination/query"
+
+export const CONTACT_REQUESTS_DEFAULT_PAGE_SIZE = DEFAULT_PAGE_SIZE
+export const CONTACT_REQUESTS_PAGE_SIZE_OPTIONS = PAGE_SIZE_OPTIONS
 
 export const contactRequestResponseSchema = z
   .object({

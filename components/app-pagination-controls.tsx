@@ -1,8 +1,9 @@
 "use client"
 
+import type { ReactNode } from "react"
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react"
 
-import { Page } from "@/app/lib/definitions"
+import type { Page } from "@/app/lib/definitions"
 import { useLocalization } from "@/app/lib/i18n/provider"
 import { Button } from "@/components/ui/button"
 import {
@@ -20,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
+import { Skeleton } from "@/components/ui/skeleton"
 
 import {
   DEFAULT_PAGE_SIZE_OPTIONS,
@@ -35,7 +37,6 @@ interface PaginationNavigationProps {
   isPending: boolean
   onPageChange: (page: number) => void
   showWhenSinglePage?: boolean
-  siblingCount?: number
   totalPageCount: number
 }
 
@@ -44,19 +45,31 @@ interface PaginationPageSizeSelectProps {
   isPending: boolean
   label?: string
   onValueChange: (value: number) => void
-  options?: readonly number[] | number[]
   showLabel?: boolean
-  compactOptions?: boolean
   triggerClassName?: string
   value: number
 }
 
 interface AppPaginationControlsProps<T> {
   className?: string
+  normalizeUrl?: boolean
   page: Pick<
     Page<T>,
     "number" | "numberOfElements" | "size" | "totalElements" | "totalPages"
   >
+}
+
+interface AppPaginationFooterProps {
+  className?: string
+  currentPage: number
+  isPending: boolean
+  onPageChange: (page: number) => void
+  onPageSizeChange: (size: number) => void
+  pageSize: number
+  summary: ReactNode
+  showNavigation?: boolean
+  totalElements: number
+  totalPages: number
 }
 
 export function PaginationPageSizeSelect({
@@ -64,9 +77,7 @@ export function PaginationPageSizeSelect({
   isPending,
   label,
   onValueChange,
-  options = DEFAULT_PAGE_SIZE_OPTIONS,
   showLabel = true,
-  compactOptions = false,
   triggerClassName,
   value,
 }: PaginationPageSizeSelectProps) {
@@ -79,13 +90,9 @@ export function PaginationPageSizeSelect({
         <span className="text-sm text-muted-foreground">{resolvedLabel}</span>
       ) : null}
       <Select
-        items={options.map((option) => ({
+        items={DEFAULT_PAGE_SIZE_OPTIONS.map((option) => ({
           value: option.toString(),
-          label: compactOptions
-            ? option.toString()
-            : formatMessage(dictionary.pagination.perPage, {
-                count: option,
-              }),
+          label: option.toString(),
         }))}
         value={value.toString()}
         onValueChange={(nextValue) => {
@@ -96,7 +103,7 @@ export function PaginationPageSizeSelect({
         disabled={isPending}
       >
         <SelectTrigger
-          className={cn("w-full sm:w-[120px]", triggerClassName)}
+          className={cn("w-16", triggerClassName)}
           aria-label={resolvedLabel}
           aria-busy={isPending}
         >
@@ -104,7 +111,7 @@ export function PaginationPageSizeSelect({
         </SelectTrigger>
         <SelectContent align="end">
           <SelectGroup>
-            {options.map((option) => (
+            {DEFAULT_PAGE_SIZE_OPTIONS.map((option) => (
               <SelectItem key={option} value={option.toString()}>
                 {formatMessage(dictionary.pagination.perPage, {
                   count: option,
@@ -124,15 +131,10 @@ export function PaginationNavigation({
   isPending,
   onPageChange,
   showWhenSinglePage = false,
-  siblingCount = 1,
   totalPageCount,
 }: PaginationNavigationProps) {
   const { dictionary, formatMessage } = useLocalization()
-  const paginationRange = getPaginationRange({
-    currentPage,
-    siblingCount,
-    totalPageCount,
-  })
+  const paginationRange = getPaginationRange({ currentPage, totalPageCount })
 
   if (totalPageCount <= 1 && !showWhenSinglePage) {
     return null
@@ -143,10 +145,13 @@ export function PaginationNavigation({
 
   return (
     <Pagination
-      className={cn("mx-0 w-full justify-start sm:justify-end", className)}
+      className={cn(
+        "mx-0 w-full justify-start @[600px]/pagination-footer:justify-end",
+        className
+      )}
       aria-label={dictionary.pagination.navigationLabel}
     >
-      <PaginationContent className="flex-wrap justify-start sm:justify-end">
+      <PaginationContent className="flex-wrap justify-start @[600px]/pagination-footer:justify-end">
         <PaginationItem>
           <Button
             type="button"
@@ -163,7 +168,10 @@ export function PaginationNavigation({
         {paginationRange.map((entry, index) => {
           if (entry === DOTS) {
             return (
-              <PaginationItem key={`${entry}-${index}`}>
+              <PaginationItem
+                key={`${entry}-${index}`}
+                className="hidden @[600px]/pagination-footer:flex"
+              >
                 <PaginationEllipsis className="size-8" />
               </PaginationItem>
             )
@@ -172,7 +180,14 @@ export function PaginationNavigation({
           const isCurrentPage = currentPage === entry
 
           return (
-            <PaginationItem key={entry}>
+            <PaginationItem
+              key={entry}
+              className={
+                isCurrentPage
+                  ? "flex"
+                  : "hidden @[600px]/pagination-footer:flex"
+              }
+            >
               <Button
                 type="button"
                 variant={isCurrentPage ? "default" : "outline"}
@@ -211,13 +226,89 @@ export function PaginationNavigation({
   )
 }
 
+export function AppPaginationFooter({
+  className,
+  currentPage,
+  isPending,
+  onPageChange,
+  onPageSizeChange,
+  pageSize,
+  summary,
+  totalElements,
+  showNavigation = totalElements > 0,
+  totalPages,
+}: AppPaginationFooterProps) {
+  const { dictionary } = useLocalization()
+
+  return (
+    <div
+      data-slot="app-pagination-footer"
+      className={cn(
+        "@container/pagination-footer flex flex-col gap-3 rounded-xl border border-border/60 bg-muted/20 px-4 py-3",
+        className
+      )}
+    >
+      <div className="flex flex-col gap-3 @[760px]/pagination-footer:flex-row @[760px]/pagination-footer:items-center @[760px]/pagination-footer:justify-between">
+        <p className="text-xs text-muted-foreground">{summary}</p>
+        <div className="flex min-w-0 items-center justify-between gap-2 pr-12 @[760px]/pagination-footer:ml-auto @[760px]/pagination-footer:w-auto @[760px]/pagination-footer:justify-end @[760px]/pagination-footer:gap-4">
+          <PaginationPageSizeSelect
+            value={pageSize}
+            isPending={isPending}
+            label={dictionary.pagination.pageSize}
+            onValueChange={onPageSizeChange}
+            className="shrink-0"
+          />
+          {showNavigation ? (
+            <PaginationNavigation
+              currentPage={currentPage}
+              totalPageCount={Math.max(1, totalPages)}
+              isPending={isPending}
+              onPageChange={onPageChange}
+              showWhenSinglePage
+              className="w-auto shrink-0"
+            />
+          ) : null}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export function AppPaginationSkeleton({ className }: { className?: string }) {
+  return (
+    <div
+      aria-hidden="true"
+      className={cn(
+        "@container/pagination-footer flex flex-col gap-3 rounded-xl border border-border/60 bg-muted/20 px-4 py-3",
+        className
+      )}
+    >
+      <div className="flex flex-col gap-3 @[760px]/pagination-footer:flex-row @[760px]/pagination-footer:items-center @[760px]/pagination-footer:justify-between">
+        <Skeleton className="h-4 w-52 max-w-full" />
+        <div className="flex min-w-0 items-center justify-between gap-2 pr-12 @[760px]/pagination-footer:ml-auto @[760px]/pagination-footer:w-auto @[760px]/pagination-footer:justify-end @[760px]/pagination-footer:gap-4">
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-9 w-16" />
+          </div>
+          <div className="flex items-center gap-1">
+            <Skeleton className="size-8" />
+            <Skeleton className="size-8" />
+            <Skeleton className="size-8" />
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function AppPaginationControls<T>({
   className,
+  normalizeUrl,
   page,
 }: AppPaginationControlsProps<T>) {
   const { dictionary, formatMessage, formatNumber } = useLocalization()
-  const { isPending, setPage } = useAppPaginationQuery({
-    defaultSize: page.size,
+  const { isPending, pageSize, setPage, setPageSize } = useAppPaginationQuery({
+    normalizeUrl,
     totalPages: page.totalPages,
   })
 
@@ -229,7 +320,7 @@ export function AppPaginationControls<T>({
     totalElements: page.totalElements,
   })
 
-  const summaryText =
+  const summary =
     page.totalElements > 0
       ? formatMessage(dictionary.pagination.displayedResults, {
           from: formatNumber(visibleItems.start),
@@ -239,27 +330,16 @@ export function AppPaginationControls<T>({
       : dictionary.pagination.noResults
 
   return (
-    <div
-      className={cn(
-        "flex flex-col gap-3 rounded-xl border bg-muted/20 px-4 py-3",
-        className
-      )}
-    >
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex min-w-0 flex-col gap-1.5">
-          <p className="text-xs text-muted-foreground">{summaryText}</p>
-        </div>
-
-        {page.totalPages > 1 ? (
-          <PaginationNavigation
-            className="w-full sm:w-auto"
-            currentPage={currentPage}
-            totalPageCount={page.totalPages}
-            isPending={isPending}
-            onPageChange={setPage}
-          />
-        ) : null}
-      </div>
-    </div>
+    <AppPaginationFooter
+      className={className}
+      currentPage={currentPage}
+      pageSize={pageSize}
+      totalElements={page.totalElements}
+      totalPages={page.totalPages}
+      summary={summary}
+      isPending={isPending}
+      onPageChange={setPage}
+      onPageSizeChange={setPageSize}
+    />
   )
 }

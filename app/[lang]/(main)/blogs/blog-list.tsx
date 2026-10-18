@@ -2,11 +2,7 @@
 
 import { Clock3, Edit2, Eye, FileText, Plus, Trash2 } from "lucide-react"
 import { LocalizedLink as Link } from "@/components/localized-link"
-import {
-  usePathname,
-  useRouter,
-  useSearchParams,
-} from "next/navigation"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useState, useTransition } from "react"
 import { toast } from "sonner"
 
@@ -27,7 +23,6 @@ import {
   AppListTableHead,
   AppListTableHeaderRow,
 } from "@/components/app-list-table"
-import { AppSelectPageSize } from "@/components/app-select-page-size"
 import { useHasPermission } from "@/components/permission-provider"
 import { SortSelect } from "@/components/sort-select"
 import {
@@ -109,12 +104,6 @@ export function BlogListPage({ blogPage }: BlogListProps) {
               { label: dictionary.blogs.titleDesc, value: "title_desc" },
             ]}
             triggerClassName="w-full sm:w-[200px]"
-          />
-          <AppSelectPageSize
-            className="w-full sm:w-auto"
-            defaultSize={blogPage.size}
-            showLabel={false}
-            triggerClassName="w-full sm:w-[120px]"
           />
         </AppListToolbarTrailing>
       </AppListToolbar>

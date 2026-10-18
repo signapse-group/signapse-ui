@@ -366,7 +366,7 @@ export const en: Dictionary = {
     previous: "Previous page",
     next: "Next page",
     page: "Page",
-    pageSize: "Items per page",
+    pageSize: "Rows per page",
     navigationLabel: "Pagination navigation",
     goToPrevious: "Go to previous page",
     goToNext: "Go to next page",

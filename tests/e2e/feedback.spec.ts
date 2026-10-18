@@ -5,6 +5,43 @@ import { expect, test, waitForClientHandler } from "./fixtures"
 test.describe("P0 feedback HTTP integration", () => {
   test.setTimeout(180_000)
 
+  test("loads personal feedback with the selected page size at the HTTP boundary", async ({
+    page,
+  }) => {
+    await page.goto("/vi/feedback?page=2&size=10")
+    await expect(
+      page.getByRole("link", {
+        name: "Phản hồi cá nhân bổ sung 6",
+        exact: true,
+      })
+    ).toBeVisible()
+
+    const pageSize = page.getByRole("combobox", {
+      name: "Số hàng mỗi trang",
+    })
+    await expect(pageSize).toContainText("10")
+    await waitForClientHandler(pageSize)
+    await pageSize.click()
+    await page.getByRole("option", { name: "20 / trang" }).click()
+    await expect(page).toHaveURL(/page=1&size=20/)
+    await expect(
+      page.getByRole("link", {
+        name: "Phản hồi cá nhân bổ sung 6",
+        exact: true,
+      })
+    ).toBeVisible()
+
+    await page.goto("/en/feedback?page=1&size=20")
+    await expect(
+      page.getByRole("combobox", { name: "Rows per page" })
+    ).toContainText("20")
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth
+      )
+    ).toBe(true)
+  })
+
   test("opens compose, validates content, and keeps a dirty draft", async ({
     page,
   }) => {
@@ -130,7 +167,9 @@ test.describe("P0 feedback HTTP integration", () => {
     })
     await waitForClientHandler(confirmWithdraw)
     await confirmWithdraw.click()
-    await expect(page.getByText("Đã rút phản hồi.", { exact: true })).toBeVisible()
+    await expect(
+      page.getByText("Đã rút phản hồi.", { exact: true })
+    ).toBeVisible()
     await expect(page).toHaveURL(/\/vi\/feedback$/, { timeout: 30_000 })
     await expect(
       page.getByRole("link", { name: /Biểu đồ không giữ bộ lọc/ })

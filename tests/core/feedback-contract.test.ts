@@ -163,6 +163,9 @@ describe("feedback query contract", () => {
       size: 10,
       status: "PENDING_REVIEW",
     })
+    expect(
+      parseFeedbackModerationQuery({ page: "4", size: "25" })
+    ).toMatchObject({ page: 1, size: 10 })
   })
 
   it("serializes OData filters, zero-based pages, and repeated sort params", () => {

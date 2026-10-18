@@ -39,7 +39,6 @@ import {
   AppListTableHead,
   AppListTableHeaderRow,
 } from "@/components/app-list-table"
-import { AppSelectPageSize } from "@/components/app-select-page-size"
 import { AppTimeMetadata } from "@/components/app-time-metadata"
 import { useHasPermission } from "@/components/permission-provider"
 import { SortSelect } from "@/components/sort-select"
@@ -111,10 +110,7 @@ export function NewsOutletListPage({ newsOutletPage }: NewsOutletListProps) {
       <AppListToolbar>
         <AppListToolbarLeading>
           {canCreateNewsOutlet ? (
-            <Link
-              href="/news-outlets/create"
-              className={buttonVariants()}
-            >
+            <Link href="/news-outlets/create" className={buttonVariants()}>
               <Plus data-icon="inline-start" />
               {dictionary.newsOutlets.createAction}
             </Link>
@@ -132,12 +128,6 @@ export function NewsOutletListPage({ newsOutletPage }: NewsOutletListProps) {
               { label: dictionary.newsOutlets.nameDesc, value: "name_desc" },
             ]}
             triggerClassName="w-full sm:w-[200px]"
-          />
-          <AppSelectPageSize
-            className="w-full sm:w-auto"
-            defaultSize={newsOutletPage.size}
-            showLabel={false}
-            triggerClassName="w-full sm:w-[120px]"
           />
         </AppListToolbarTrailing>
       </AppListToolbar>

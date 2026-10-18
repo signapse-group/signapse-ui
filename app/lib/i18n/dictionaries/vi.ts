@@ -362,7 +362,7 @@ export const vi = {
     previous: "Trang trước",
     next: "Trang sau",
     page: "Trang",
-    pageSize: "Số mục mỗi trang",
+    pageSize: "Số hàng mỗi trang",
     navigationLabel: "Điều hướng phân trang",
     goToPrevious: "Đi tới trang trước",
     goToNext: "Đi tới trang sau",
