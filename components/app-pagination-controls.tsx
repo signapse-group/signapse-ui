@@ -250,7 +250,7 @@ export function AppPaginationFooter({
     >
       <div className="flex flex-col gap-3 @[760px]/pagination-footer:flex-row @[760px]/pagination-footer:items-center @[760px]/pagination-footer:justify-between">
         <p className="text-xs text-muted-foreground">{summary}</p>
-        <div className="flex min-w-0 items-center justify-between gap-2 pr-12 @[760px]/pagination-footer:ml-auto @[760px]/pagination-footer:w-auto @[760px]/pagination-footer:justify-end @[760px]/pagination-footer:gap-4">
+        <div className="flex min-w-0 items-center justify-between gap-2 @[760px]/pagination-footer:ml-auto @[760px]/pagination-footer:w-auto @[760px]/pagination-footer:justify-end @[760px]/pagination-footer:gap-4 [@media(max-height:900px)_and_(min-width:768px)]:pr-12">
           <PaginationPageSizeSelect
             value={pageSize}
             isPending={isPending}
@@ -285,7 +285,7 @@ export function AppPaginationSkeleton({ className }: { className?: string }) {
     >
       <div className="flex flex-col gap-3 @[760px]/pagination-footer:flex-row @[760px]/pagination-footer:items-center @[760px]/pagination-footer:justify-between">
         <Skeleton className="h-4 w-52 max-w-full" />
-        <div className="flex min-w-0 items-center justify-between gap-2 pr-12 @[760px]/pagination-footer:ml-auto @[760px]/pagination-footer:w-auto @[760px]/pagination-footer:justify-end @[760px]/pagination-footer:gap-4">
+        <div className="flex min-w-0 items-center justify-between gap-2 @[760px]/pagination-footer:ml-auto @[760px]/pagination-footer:w-auto @[760px]/pagination-footer:justify-end @[760px]/pagination-footer:gap-4 [@media(max-height:900px)_and_(min-width:768px)]:pr-12">
           <div className="flex items-center gap-2">
             <Skeleton className="h-4 w-24" />
             <Skeleton className="h-9 w-16" />

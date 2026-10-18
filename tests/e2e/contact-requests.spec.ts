@@ -14,24 +14,24 @@ test.describe("P0 contact request read dashboard", () => {
     page,
   }, testInfo) => {
     await page.emulateMedia({ colorScheme: "dark" })
-    await page.goto("/vi/contact-requests?size=50")
+    await page.goto("/en/contact-requests?size=50")
 
     const footer = page.locator('[data-slot="app-pagination-footer"]')
     await expect(footer).toBeVisible()
     await expect(
-      footer.getByRole("combobox", { name: "Số hàng mỗi trang" })
+      footer.getByRole("combobox", { name: "Rows per page" })
     ).toContainText("50")
     const navigation = footer.getByRole("navigation", {
-      name: "Điều hướng phân trang",
+      name: "Pagination navigation",
     })
     await expect(
-      navigation.getByRole("button", { name: "Đi tới trang 1" })
+      navigation.getByRole("button", { name: "Go to page 1" })
     ).toHaveAttribute("aria-current", "page")
     await expect(
-      navigation.getByRole("button", { name: "Đi tới trang trước" })
+      navigation.getByRole("button", { name: "Go to previous page" })
     ).toBeDisabled()
     await expect(
-      navigation.getByRole("button", { name: "Đi tới trang sau" })
+      navigation.getByRole("button", { name: "Go to next page" })
     ).toBeDisabled()
     await page.addStyleTag({
       content: "nextjs-portal { display: none !important; }",
@@ -42,6 +42,21 @@ test.describe("P0 contact request read dashboard", () => {
     })
 
     await page.setViewportSize({ width: 375, height: 812 })
+    await page.goto("/en/contact-requests?size=10")
+    await page.addStyleTag({
+      content: "nextjs-portal { display: none !important; }",
+    })
+    await expect(
+      footer.getByRole("combobox", { name: "Rows per page" })
+    ).toContainText("10")
+    await expect(
+      footer.getByText("Showing 1-10 of 21 results", { exact: true })
+    ).toBeVisible()
+    await expect(
+      footer
+        .getByRole("navigation", { name: "Pagination navigation" })
+        .getByRole("button", { name: "Go to next page" })
+    ).toBeEnabled()
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= window.innerWidth
@@ -51,6 +66,28 @@ test.describe("P0 contact request read dashboard", () => {
       body: await footer.screenshot({ animations: "disabled" }),
       contentType: "image/png",
     })
+
+    const compactPageSize = footer.getByRole("combobox", {
+      name: "Rows per page",
+    })
+    await compactPageSize.focus()
+    await page.keyboard.press("Enter")
+    await page.keyboard.press("ArrowDown")
+    await page.keyboard.press("Enter")
+    await expect(page).toHaveURL(/(?:page=1.*size=20|size=20.*page=1)/)
+    await expect(compactPageSize).toContainText("20")
+
+    const compactNextPage = footer
+      .getByRole("navigation", { name: "Pagination navigation" })
+      .getByRole("button", { name: "Go to next page" })
+    await compactNextPage.focus()
+    await page.keyboard.press("Enter")
+    await expect(page).toHaveURL(/(?:page=2.*size=20|size=20.*page=2)/)
+    await expect(
+      footer
+        .getByRole("navigation", { name: "Pagination navigation" })
+        .getByRole("button", { name: "Go to page 2" })
+    ).toHaveAttribute("aria-current", "page")
   })
 
   test("opens from navigation, reads separate records, expands safe full text, and paginates", async ({
