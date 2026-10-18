@@ -11,16 +11,22 @@ test.describe("P0 contact request read dashboard", () => {
   })
 
   test("matches the pagination reference at desktop and compact widths", async ({
+    fixture,
     page,
   }, testInfo) => {
     await page.emulateMedia({ colorScheme: "dark" })
-    await page.goto("/en/contact-requests?size=50")
+    await fixture.setScenario("/contact-requests", "short", "GET")
+    await page.goto("/en/contact-requests?size=10")
 
     const footer = page.locator('[data-slot="app-pagination-footer"]')
     await expect(footer).toBeVisible()
     await expect(
       footer.getByRole("combobox", { name: "Rows per page" })
-    ).toContainText("50")
+    ).toContainText("10")
+    await expect(
+      footer.getByText("Showing 1-3 of 3 results", { exact: true })
+    ).toBeVisible()
+    await expect(page.locator("[data-contact-request-row]")).toHaveCount(3)
     const navigation = footer.getByRole("navigation", {
       name: "Pagination navigation",
     })
@@ -41,6 +47,7 @@ test.describe("P0 contact request read dashboard", () => {
       contentType: "image/png",
     })
 
+    await fixture.setScenario("/contact-requests", "success", "GET")
     await page.setViewportSize({ width: 375, height: 812 })
     await page.goto("/en/contact-requests?size=10")
     await page.addStyleTag({
@@ -66,6 +73,67 @@ test.describe("P0 contact request read dashboard", () => {
       body: await footer.screenshot({ animations: "disabled" }),
       contentType: "image/png",
     })
+
+    await page.setViewportSize({ width: 1440, height: 1024 })
+    const setFooterContentWidth = async (width: number) => {
+      await footer.evaluate((element, contentWidth) => {
+        const style = getComputedStyle(element)
+        const horizontalChrome =
+          Number.parseFloat(style.paddingLeft) +
+          Number.parseFloat(style.paddingRight) +
+          Number.parseFloat(style.borderLeftWidth) +
+          Number.parseFloat(style.borderRightWidth)
+        const footerElement = element as HTMLElement
+        footerElement.style.width = `${contentWidth + horizontalChrome}px`
+      }, width)
+    }
+    const pageTwo = footer
+      .getByRole("navigation", { name: "Pagination navigation" })
+      .getByRole("button", { name: "Go to page 2" })
+
+    for (const width of [599, 600, 601]) {
+      await setFooterContentWidth(width)
+      if (width < 600) await expect(pageTwo).toBeHidden()
+      else await expect(pageTwo).toBeVisible()
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= window.innerWidth
+        )
+      ).toBe(true)
+    }
+
+    const summary = footer.locator(":scope > div > p")
+    const controls = footer.locator(":scope > div > div")
+    for (const width of [759, 760, 761]) {
+      await setFooterContentWidth(width)
+      const summaryBox = await summary.boundingBox()
+      const controlsBox = await controls.boundingBox()
+      expect(summaryBox).not.toBeNull()
+      expect(controlsBox).not.toBeNull()
+      if (width < 760) {
+        expect(controlsBox!.y).toBeGreaterThan(summaryBox!.y)
+      } else {
+        const summaryCenter = summaryBox!.y + summaryBox!.height / 2
+        const controlsCenter = controlsBox!.y + controlsBox!.height / 2
+        expect(Math.abs(controlsCenter - summaryCenter)).toBeLessThan(2)
+      }
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= window.innerWidth
+        )
+      ).toBe(true)
+    }
+
+    await footer.evaluate((element) => {
+      const footerElement = element as HTMLElement
+      footerElement.style.width = ""
+    })
+    await page.setViewportSize({ width: 375, height: 812 })
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth
+      )
+    ).toBe(true)
 
     const compactPageSize = footer.getByRole("combobox", {
       name: "Rows per page",

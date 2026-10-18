@@ -171,7 +171,7 @@ Toolbar là control surface. Nó nên gọn, có nhóm trái/phải rõ, không 
 Translation:
 
 - Layout responsive dùng `flex-col sm:flex-row sm:justify-between`.
-- Leading area chứa primary action và search; trailing area chứa filter, sort và page size.
+- Leading area chứa primary action và search; trailing area chứa filter và sort.
 - Primary controls giữ default shadcn size/chrome; không thêm custom height/radius/padding hoặc `size="sm"` chỉ để đổi density.
 - Mỗi surface chỉ có một primary action. Secondary actions giảm emphasis; destructive actions tách khỏi primary flow hoặc nằm trong overflow menu khi toolbar dày.
 
@@ -304,7 +304,7 @@ Delete confirmation tuân theo pattern sau:
 - Search dùng `type="search"`, có label hiển thị hoặc `sr-only`, debounce khoảng `300ms` và không cần Search button nếu không có business requirement.
 - Search nằm ở leading area, full-width trên mobile và có width giới hạn trên desktop; pending feedback giữ nguyên footprint của control.
 - Page-size selector nằm trong footer pagination cạnh điều hướng, với options `10`, `20`, `50`, `100` và mặc định `10`; không lặp trên toolbar. Giá trị đang chọn chỉ hiển thị số dòng.
-- Sort/page-size pending chỉ disable control liên quan và không làm toolbar thay đổi layout.
+- Sort pending chỉ disable control tương ứng; page-size pending chỉ disable selector tại footer. Cả hai giữ nguyên footprint của control.
 
 ### Quick Detail Overlay
 

@@ -214,9 +214,14 @@ test.describe("P0 feedback HTTP integration", () => {
       "/vi/feedback-submissions?status=PENDING_REVIEW&sort=createdDate_desc&page=1&size=10"
     )
     await expect(page.locator("h1")).toHaveText("Phản hồi người dùng")
-    await page
-      .getByRole("searchbox", { name: "Tìm trong nội dung phản hồi" })
-      .fill("Biểu đồ")
+    const search = page.getByRole("searchbox", {
+      name: "Tìm trong nội dung phản hồi",
+    })
+    const searchForm = page.locator("form").filter({ has: search })
+    await waitForClientHandler(search, "onChange")
+    await waitForClientHandler(searchForm, "onSubmit")
+    await search.fill("Biểu đồ")
+    await expect(search).toHaveValue("Biểu đồ")
     await page
       .getByRole("button", { name: "Tìm trong nội dung phản hồi", exact: true })
       .click()

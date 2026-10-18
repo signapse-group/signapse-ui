@@ -81,12 +81,15 @@ export function FeedbackQueuePage({
   const records = initialPage?.content ?? []
   const hasNoPageResults =
     Boolean(initialPage) && records.length === 0 && query.page > 1
-  const canonicalQuery = serializeFeedbackModerationUrlQuery({
-    ...query,
-    page: initialPage
-      ? Math.min(query.page, Math.max(1, initialPage.totalPages))
-      : query.page,
-  })
+  const canonicalQuery = serializeFeedbackModerationUrlQuery(
+    {
+      ...query,
+      page: initialPage
+        ? Math.min(query.page, Math.max(1, initialPage.totalPages))
+        : query.page,
+    },
+    searchParams
+  )
 
   React.useEffect(() => {
     // URL-backed draft state must follow browser Back/Forward changes.

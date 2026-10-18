@@ -94,7 +94,8 @@ export function serializeFeedbackPersonalQuery(
 }
 
 export function serializeFeedbackModerationUrlQuery(
-  query: FeedbackModerationQuery
+  query: FeedbackModerationQuery,
+  currentParams?: URLSearchParams
 ): string {
   const params = new URLSearchParams()
   if (query.search) params.set("search", query.search)
@@ -102,5 +103,11 @@ export function serializeFeedbackModerationUrlQuery(
   params.set("sort", query.sort)
   params.set("page", String(query.page))
   params.set("size", String(query.size))
+
+  const paginationParams = new Set(["search", "status", "sort", "page", "size"])
+  for (const [key, value] of currentParams ?? []) {
+    if (!paginationParams.has(key)) params.append(key, value)
+  }
+
   return params.toString()
 }

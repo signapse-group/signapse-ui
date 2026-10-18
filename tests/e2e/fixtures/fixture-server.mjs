@@ -2081,6 +2081,15 @@ const server = createServer(async (request, response) => {
     return
   }
 
+  if (
+    scenario === "short" &&
+    method === "GET" &&
+    url.pathname === "/contact-requests"
+  ) {
+    sendJson(response, 200, slicePage(state.contactRequests.slice(0, 3), url))
+    return
+  }
+
   if (scenario === "short" && method === "GET" && result && Array.isArray(result.candles)) {
     sendJson(response, 200, {
       ...result,

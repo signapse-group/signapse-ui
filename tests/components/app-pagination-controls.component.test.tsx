@@ -193,9 +193,21 @@ describe("pagination number windows", () => {
     expect(getPaginationRange({ currentPage: 1, totalPageCount: 134 })).toEqual(
       [1, 2, 3, 4, DOTS, 134]
     )
+    expect(getPaginationRange({ currentPage: 4, totalPageCount: 134 })).toEqual(
+      [1, 2, 3, 4, DOTS, 134]
+    )
+    expect(getPaginationRange({ currentPage: 5, totalPageCount: 134 })).toEqual(
+      [1, DOTS, 4, 5, 6, DOTS, 134]
+    )
     expect(
       getPaginationRange({ currentPage: 67, totalPageCount: 134 })
     ).toEqual([1, DOTS, 66, 67, 68, DOTS, 134])
+    expect(
+      getPaginationRange({ currentPage: 130, totalPageCount: 134 })
+    ).toEqual([1, DOTS, 129, 130, 131, DOTS, 134])
+    expect(
+      getPaginationRange({ currentPage: 131, totalPageCount: 134 })
+    ).toEqual([1, DOTS, 131, 132, 133, 134])
     expect(
       getPaginationRange({ currentPage: 134, totalPageCount: 134 })
     ).toEqual([1, DOTS, 131, 132, 133, 134])

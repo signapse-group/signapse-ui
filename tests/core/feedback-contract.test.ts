@@ -16,6 +16,7 @@ import { validateFeedbackScreenshot } from "@/app/lib/feedback/validation"
 import {
   parseFeedbackModerationQuery,
   serializeFeedbackModerationQuery,
+  serializeFeedbackModerationUrlQuery,
 } from "@/app/lib/feedback/query"
 
 const listItem = {
@@ -184,6 +185,25 @@ describe("feedback query contract", () => {
     expect(params.get("page")).toBe("1")
     expect(params.get("size")).toBe("20")
     expect(params.getAll("sort")).toEqual(["createdDate,desc", "id,desc"])
+  })
+
+  it("preserves unrelated URL parameters when canonicalizing moderation state", () => {
+    const query = parseFeedbackModerationQuery({
+      search: " chart ",
+      status: "REVIEWED",
+      sort: "createdDate_asc",
+      page: "2",
+      size: "50",
+    })
+
+    expect(
+      serializeFeedbackModerationUrlQuery(
+        query,
+        new URLSearchParams("campaign=autumn&tag=one&tag=two&size=25")
+      )
+    ).toBe(
+      "search=chart&status=REVIEWED&sort=createdDate_asc&page=2&size=50&campaign=autumn&tag=one&tag=two"
+    )
   })
 })
 
