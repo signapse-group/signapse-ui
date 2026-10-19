@@ -51,18 +51,24 @@ For app delivery, require confirmed Vercel **Production** deployment containing 
 
 Read [CI/Vercel technical setup](../delivery.md#ci-and-vercel-setup) when setup evidence is needed. Local configuration does not prove hosting activation. Required developer delivery evidence connects the reviewed candidate to the actual merge and deployed build; overall green CI, merge or a health check alone is insufficient.
 
-After merge, select the main Verify run for a SHA containing that merge. Save run/build identity, start time, absolute deadline and retry counter in an existing durable owned delivery record before waiting. Reuse them across restart/resume; neither reconnect nor rerun resets the budget. Use:
+After merge, select the main Verify push run for a SHA containing that merge. Save merge/run/build identity, start time, absolute deadline (30 minutes per tracked run) and retry counter in an existing durable owned delivery record before waiting. Reuse them across restart/resume; neither reconnect nor rerun resets the budget. Require its actual `check` job to succeed:
 
 ```sh
 gh run watch "$VERIFY_RUN" --repo signapse-group/signapse-ui --interval 30 --exit-status
 gh run view "$VERIFY_RUN" --repo signapse-group/signapse-ui --json headSha,status,conclusion,jobs,url
 ```
 
-Bound the process by the saved remaining deadline: 30 minutes per tracked run. Use short tool yields, checking the same terminal every 30–60 seconds during quiet waits. A tool disconnect/timeout is not deployment failure; reread the live run and reconnect within remaining budget. Do not end merely to obtain a new scheduler attempt/deadline.
+Then run the existing verifier from the FE workspace, using the actual full merge SHA from the merged PR. On the Linux worker, cap the process with the remaining saved budget:
 
-Use the [deployment verifier reference](../delivery.md#confirm-deployment-through-github) for its invocation, candidate validation, polling and read-retry behavior. Any optional local diagnosis must stay within the saved remaining session budget; the verifier's per-invocation timeout does not reset that budget.
+```sh
+remaining_seconds=$((DELIVERY_WAIT_DEADLINE_EPOCH - $(date +%s)))
+test "$remaining_seconds" -gt 0
+timeout "${remaining_seconds}s" pnpm verify:deploy "$MERGE_SHA"
+```
 
-Require actual success of both main Verify `check` and `deployment`, not skipped jobs or overall green alone. Preserve merge/deployed SHA, deployment environment/URL, confirmation time and Actions link; compare merge ancestry when watching a descendant. Never infer deployed SHA from local HEAD. Canceled/skipped deployments alone do not prove delivery; a confirmed containing descendant may satisfy it.
+`DELIVERY_WAIT_DEADLINE_EPOCH` comes from the saved absolute deadline; do not create a new deadline when starting the verifier. Bound `gh run watch` by that same remaining deadline. Use short tool yields, checking the same terminal every 30–60 seconds during quiet waits. A tool disconnect/timeout is not deployment failure; reread live state and reconnect only within the remaining budget. Do not end merely to obtain a new scheduler attempt/deadline.
+
+Use the [deployment verifier reference](../delivery.md#confirm-deployment-through-github) for prerequisites, candidate validation, polling and read-retry behavior. Its per-invocation timeout does not reset the saved deadline. A skipped/canceled check, overall green CI or merge alone is insufficient. Require verifier exit code 0 and PASS; it also checks main quality success for the actual deployed SHA. Save its merge/deployed SHA, environment/URL and confirmation time with the corresponding Actions quality-run link in existing PR/delivery evidence before handoff. Never infer deployed SHA from local HEAD. A confirmed containing descendant may satisfy delivery.
 
 Docs-only output uses artifact location/version, review and applicable checks rather than mandatory app deployment. Runtime/workflow output still needs activation evidence when the accepted assignment requires it; source edits alone do not establish worker adoption.
 
