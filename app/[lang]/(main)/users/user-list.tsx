@@ -10,7 +10,6 @@ import type { UserResponse } from "@/app/lib/users/definitions"
 import {
   AppListToolbar,
   AppListToolbarLeading,
-  AppListToolbarTrailing,
 } from "@/components/app-list-toolbar"
 import {
   AppListTable,
@@ -19,7 +18,6 @@ import {
   AppListTableHeaderRow,
 } from "@/components/app-list-table"
 import { AppPaginationControls } from "@/components/app-pagination-controls"
-import { AppSelectPageSize } from "@/components/app-select-page-size"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -98,14 +96,6 @@ export function UserListPage({
         <AppListToolbarLeading className="lg:items-start">
           <UserSearch />
         </AppListToolbarLeading>
-        <AppListToolbarTrailing>
-          <AppSelectPageSize
-            className="w-full sm:w-auto"
-            defaultSize={userPage.size}
-            showLabel={false}
-            triggerClassName="w-full sm:w-[120px]"
-          />
-        </AppListToolbarTrailing>
       </AppListToolbar>
 
       <AppListTable>

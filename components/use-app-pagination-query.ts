@@ -1,45 +1,77 @@
 "use client"
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { useTransition } from "react"
+import { useEffect, useTransition } from "react"
 
-const DEFAULT_PAGE = 1
-
-const isPositiveInteger = (value: number) =>
-  Number.isFinite(value) && Number.isInteger(value) && value > 0
+import { isPageSize, parsePaginationQuery } from "@/app/lib/pagination/query"
 
 export function useAppPaginationQuery({
-  defaultSize = 10,
+  normalizeUrl = true,
   totalPages,
 }: {
-  defaultSize?: number
+  normalizeUrl?: boolean
   totalPages?: number
 }) {
   const pathname = usePathname()
-  const router = useRouter()
+  const { push, replace } = useRouter()
   const searchParams = useSearchParams()
   const [isPending, startTransition] = useTransition()
 
-  const rawPage = Number(searchParams.get("page"))
-  const rawSize = Number(searchParams.get("size"))
-  const currentPage = isPositiveInteger(rawPage) ? rawPage : DEFAULT_PAGE
-  const pageSize = isPositiveInteger(rawSize) ? rawSize : defaultSize
+  const { page: currentPage, size: pageSize } =
+    parsePaginationQuery(searchParams)
 
   const maxPage =
     typeof totalPages === "number" && totalPages > 0
       ? totalPages
       : Number.POSITIVE_INFINITY
 
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams.toString())
+    const rawPage = searchParams.get("page")
+    const rawSize = searchParams.get("size")
+    let shouldReplace = false
+
+    if (rawPage !== null && rawPage !== currentPage.toString()) {
+      params.set("page", currentPage.toString())
+      shouldReplace = true
+    }
+
+    if (rawSize !== null && rawSize !== pageSize.toString()) {
+      params.set("size", pageSize.toString())
+      params.set("page", "1")
+      shouldReplace = true
+    }
+
+    const lastPage = Math.max(totalPages ?? 1, 1)
+    if (totalPages !== undefined && currentPage > lastPage) {
+      params.set("page", lastPage.toString())
+      shouldReplace = true
+    }
+
+    if (normalizeUrl && shouldReplace) {
+      const query = params.toString()
+      replace(query ? `${pathname}?${query}` : pathname)
+    }
+  }, [
+    currentPage,
+    normalizeUrl,
+    pageSize,
+    pathname,
+    replace,
+    searchParams,
+    totalPages,
+  ])
+
   const pushParams = (params: URLSearchParams) => {
     const query = params.toString()
 
     startTransition(() => {
-      router.push(query ? `${pathname}?${query}` : pathname)
+      push(query ? `${pathname}?${query}` : pathname)
     })
   }
 
   const setPage = (page: number) => {
-    if (isPending || !isPositiveInteger(page)) {
+    if (isPending || !Number.isSafeInteger(page) || page <= 0) {
       return
     }
 
@@ -53,13 +85,15 @@ export function useAppPaginationQuery({
   }
 
   const setPageSize = (size: number) => {
-    if (isPending || !isPositiveInteger(size) || size === pageSize) {
+    if (isPending || !Number.isSafeInteger(size) || size === pageSize) {
       return
     }
 
+    if (!isPageSize(size)) return
+
     const params = new URLSearchParams(searchParams)
     params.set("size", size.toString())
-    params.set("page", DEFAULT_PAGE.toString())
+    params.set("page", "1")
     pushParams(params)
   }
 

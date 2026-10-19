@@ -6,7 +6,7 @@ import type { LanguageCatalogResponse } from "@/app/lib/languages/definitions"
 
 export async function waitForClientHandler(
   locator: Locator,
-  handler: "onClick" | "onChange" = "onClick"
+  handler: "onClick" | "onChange" | "onSubmit" = "onClick"
 ) {
   await expect
     .poll(

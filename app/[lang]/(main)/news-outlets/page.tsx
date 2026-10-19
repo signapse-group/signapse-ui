@@ -3,6 +3,7 @@ import { Suspense } from "react"
 import { getNewsOutlets } from "@/app/api/news-outlets/action"
 import type { Dictionary } from "@/app/lib/i18n/dictionary-types"
 import { getServerDictionary } from "@/app/lib/i18n/server"
+import { parsePaginationQuery } from "@/app/lib/pagination/query"
 import { hasPermission } from "@/app/lib/permissions"
 import { NEWS_OUTLET_READ_PERMISSION } from "@/app/lib/news-outlets/permissions"
 import { getCurrentPermissions } from "@/app/lib/permissions-server"
@@ -13,6 +14,7 @@ import {
   AppListTableHead,
   AppListTableHeaderRow,
 } from "@/components/app-list-table"
+import { AppPaginationSkeleton } from "@/components/app-pagination-controls"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   Table,
@@ -55,19 +57,21 @@ async function NewsOutletContent({
 }) {
   const resolvedParams = await searchParamsPromise
   const {
-    page = "1",
-    size = "10",
+    page: pageParam,
+    size: sizeParam,
     sort = "id_desc",
     ...filterParams
   } = resolvedParams
-
-  const pageIndex = Math.max(0, Number(page) - 1)
+  const { page, size } = parsePaginationQuery({
+    page: pageParam,
+    size: sizeParam,
+  })
   const filter = buildFilterQuery(filterParams)
   const sortQuery = buildSortQuery(sort as string)
 
   const newsOutletPage = await getNewsOutlets({
-    page: pageIndex,
-    size: Number(size),
+    page: page - 1,
+    size,
     sort: sortQuery,
     filter,
   })
@@ -137,21 +141,7 @@ function ListSkeleton({ dictionary }: { dictionary: Dictionary }) {
         </Table>
       </AppListTable>
 
-      <div className="mt-4 flex flex-col gap-3 rounded-xl border border-border/60 bg-muted/20 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-col gap-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <Skeleton className="h-6 w-24" />
-            <Skeleton className="h-6 w-28" />
-          </div>
-          <Skeleton className="h-4 w-52" />
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Skeleton className="h-8 w-20" />
-          <Skeleton className="h-8 w-8" />
-          <Skeleton className="h-8 w-8" />
-          <Skeleton className="h-8 w-20" />
-        </div>
-      </div>
+      <AppPaginationSkeleton className="mt-4" />
     </div>
   )
 }

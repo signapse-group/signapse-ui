@@ -3,6 +3,7 @@ import { Suspense } from "react"
 import { getSystemPrompts } from "@/app/api/system-prompts/action"
 import type { Dictionary } from "@/app/lib/i18n/dictionary-types"
 import { getServerDictionary } from "@/app/lib/i18n/server"
+import { parsePaginationQuery } from "@/app/lib/pagination/query"
 import { canReadSystemPrompts } from "@/app/lib/system-prompts/permissions"
 import { getCurrentPermissions } from "@/app/lib/permissions-server"
 import { buildFilterQuery, buildSortQuery } from "@/app/lib/utils"
@@ -12,6 +13,7 @@ import {
   AppListTableHead,
   AppListTableHeaderRow,
 } from "@/components/app-list-table"
+import { AppPaginationSkeleton } from "@/components/app-pagination-controls"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   Table,
@@ -45,8 +47,7 @@ export default async function SystemPromptsPage({
   }
 
   const params = await searchParams
-  const page = Number(params.page) || 1
-  const size = Number(params.size) || 10
+  const { page, size } = parsePaginationQuery(params)
   const sort =
     typeof params.sort === "string" ? params.sort : "lastModifiedDate_desc"
 
@@ -161,7 +162,7 @@ function SystemPromptListSkeleton({ dictionary }: { dictionary: Dictionary }) {
         </Table>
       </AppListTable>
 
-      <Skeleton className="mt-4 h-16 w-full rounded-xl" />
+      <AppPaginationSkeleton className="mt-4" />
     </div>
   )
 }

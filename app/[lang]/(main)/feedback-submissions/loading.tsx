@@ -1,3 +1,4 @@
+import { AppPaginationSkeleton } from "@/components/app-pagination-controls"
 import { Skeleton } from "@/components/ui/skeleton"
 
 export default function FeedbackSubmissionsLoading() {
@@ -14,6 +15,7 @@ export default function FeedbackSubmissionsLoading() {
         <Skeleton className="h-9 w-40" />
       </div>
       <Skeleton className="h-72 w-full rounded-xl" />
+      <AppPaginationSkeleton />
     </div>
   )
 }

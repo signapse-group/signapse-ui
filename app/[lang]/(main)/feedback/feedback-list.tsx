@@ -4,12 +4,14 @@ import * as React from "react"
 import { Plus } from "lucide-react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 
-import { FEEDBACK_PAGE_SIZE } from "@/app/lib/feedback/definitions"
 import type { FeedbackListItemViewModel } from "@/app/lib/feedback/mappers"
 import { useLocalization } from "@/app/lib/i18n/provider"
+import { parsePaginationQuery } from "@/app/lib/pagination/query"
 import { LocalizedLink as Link } from "@/components/localized-link"
 import { FeedbackComposeDialog } from "@/components/feedback/feedback-compose-dialog"
-import { AppPaginationControls } from "@/components/app-pagination-controls"
+import { AppPaginationFooter } from "@/components/app-pagination-controls"
+import { getVisibleItemRange } from "@/components/app-pagination-utils"
+import { useAppPaginationQuery } from "@/components/use-app-pagination-query"
 import {
   AppListTable,
   AppListTableHead,
@@ -55,13 +57,15 @@ export function FeedbackListPage({
   initialErrorTitle,
 }: FeedbackListPageProps) {
   const { dictionary, formatDateTime } = useLocalization()
-  const searchParams = useSearchParams()
   const pathname = usePathname()
+  const searchParams = useSearchParams()
   const router = useRouter()
   const [composeOpen, setComposeOpen] = React.useState(false)
-  const page = Math.max(1, Number(searchParams.get("page")) || 1)
+  const { page } = parsePaginationQuery(searchParams)
+  const { isPending, pageSize, setPage, setPageSize } = useAppPaginationQuery({
+    totalPages: initialPage?.totalPages,
+  })
   const records = initialPage?.content ?? []
-  const totalPages = Math.max(1, initialPage?.totalPages ?? 1)
   const hasNoPageResults =
     Boolean(initialPage) && records.length === 0 && page > 1
 
@@ -116,73 +120,116 @@ export function FeedbackListPage({
           }}
         />
       ) : (
-        <>
-          <AppListTable>
-            <Table>
-              <TableHeader>
-                <AppListTableHeaderRow>
-                  <AppListTableHead>
-                    {dictionary.feedback.contentColumn}
-                  </AppListTableHead>
-                  <AppListTableHead className="w-48">
-                    {dictionary.feedback.statusColumn}
-                  </AppListTableHead>
-                  <AppListTableHead className="w-48">
-                    {dictionary.feedback.submittedColumn}
-                  </AppListTableHead>
-                  <AppListTableHead className="w-28">
-                    {dictionary.feedback.screenshotColumn}
-                  </AppListTableHead>
-                </AppListTableHeaderRow>
-              </TableHeader>
-              <TableBody>
-                {records.map((record) => (
-                  <TableRow key={record.id}>
-                    <TableCell className="max-w-0 align-top whitespace-normal">
-                      <Link
-                        href={`/feedback/${record.id}`}
-                        className="line-clamp-2 font-medium break-words text-foreground hover:underline"
-                      >
-                        {record.content}
-                      </Link>
-                    </TableCell>
-                    <TableCell className="align-top">
-                      <FeedbackStatusBadge status={record.status} />
-                    </TableCell>
-                    <TableCell className="align-top text-sm text-muted-foreground">
-                      {formatDateTime(record.createdAt, {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </TableCell>
-                    <TableCell className="align-top">
-                      <FeedbackScreenshotView
-                        screenshot={record.screenshot}
-                        compact
-                      />
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </AppListTable>
-          <AppPaginationControls
-            page={{
-              number: page - 1,
-              numberOfElements: initialPage?.numberOfElements ?? records.length,
-              size: initialPage?.size ?? FEEDBACK_PAGE_SIZE,
-              totalElements: initialPage?.totalElements ?? records.length,
-              totalPages,
-            }}
-          />
-        </>
+        <AppListTable>
+          <Table>
+            <TableHeader>
+              <AppListTableHeaderRow>
+                <AppListTableHead>
+                  {dictionary.feedback.contentColumn}
+                </AppListTableHead>
+                <AppListTableHead className="w-48">
+                  {dictionary.feedback.statusColumn}
+                </AppListTableHead>
+                <AppListTableHead className="w-48">
+                  {dictionary.feedback.submittedColumn}
+                </AppListTableHead>
+                <AppListTableHead className="w-28">
+                  {dictionary.feedback.screenshotColumn}
+                </AppListTableHead>
+              </AppListTableHeaderRow>
+            </TableHeader>
+            <TableBody>
+              {records.map((record) => (
+                <TableRow key={record.id}>
+                  <TableCell className="max-w-0 align-top whitespace-normal">
+                    <Link
+                      href={`/feedback/${record.id}`}
+                      className="line-clamp-2 font-medium break-words text-foreground hover:underline"
+                    >
+                      {record.content}
+                    </Link>
+                  </TableCell>
+                  <TableCell className="align-top">
+                    <FeedbackStatusBadge status={record.status} />
+                  </TableCell>
+                  <TableCell className="align-top text-sm text-muted-foreground">
+                    {formatDateTime(record.createdAt, {
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </TableCell>
+                  <TableCell className="align-top">
+                    <FeedbackScreenshotView
+                      screenshot={record.screenshot}
+                      compact
+                    />
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </AppListTable>
       )}
+
+      {initialPage ? (
+        <FeedbackPaginationFooter
+          page={initialPage}
+          pageSize={pageSize}
+          isPending={isPending}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+        />
+      ) : null}
 
       <FeedbackComposeDialog open={composeOpen} onOpenChange={setComposeOpen} />
     </div>
+  )
+}
+
+function FeedbackPaginationFooter({
+  page,
+  pageSize,
+  isPending,
+  onPageChange,
+  onPageSizeChange,
+}: {
+  page: NonNullable<FeedbackListPageProps["initialPage"]>
+  pageSize: number
+  isPending: boolean
+  onPageChange: (page: number) => void
+  onPageSizeChange: (size: number) => void
+}) {
+  const { dictionary, formatMessage, formatNumber } = useLocalization()
+  const currentPage = page.number + 1
+  const visibleItems = getVisibleItemRange({
+    currentItemCount: page.numberOfElements,
+    currentPage,
+    itemsPerPage: page.size,
+    totalElements: page.totalElements,
+  })
+  const summary =
+    page.totalElements > 0
+      ? formatMessage(dictionary.pagination.displayedResults, {
+          from: formatNumber(visibleItems.start),
+          to: formatNumber(visibleItems.end),
+          total: formatNumber(page.totalElements),
+        })
+      : dictionary.pagination.noResults
+
+  return (
+    <AppPaginationFooter
+      currentPage={currentPage}
+      pageSize={pageSize}
+      totalElements={page.totalElements}
+      totalPages={page.totalPages}
+      summary={summary}
+      isPending={isPending}
+      onPageChange={onPageChange}
+      onPageSizeChange={onPageSizeChange}
+    />
   )
 }
 
