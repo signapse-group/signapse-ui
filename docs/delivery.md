@@ -16,15 +16,20 @@ Before publication/cutover the operator verifies:
 
 Without the hosting check, Vercel may publish before main CI succeeds. Local YAML cannot enforce hosting settings. Domain configuration is an operator setup responsibility, not a per-ticket website gate.
 
-## Confirm deployment through GitHub
+## Confirm live dev revision
 
-The reviewer runs `pnpm verify:deploy <full-merge-sha>` in the FE workspace after merge, using Node and authenticated `gh` with repository contents/deployments/statuses/actions read access. No application environment, Vercel token or browser installation is needed. The same command supports read-only local diagnosis. The script:
-- Reads canonical GitHub Deployments, latest deployment status and commit/project metadata; requires Vercel creator, Production environment and this project's observed deployment URL prefix. GitHub's `production_environment` boolean is not authoritative for this integration.
-- Accepts the merge or a main descendant containing it, with a successful `check` for that deployed SHA. A newer release can contain several tickets; canceled/skipped alone never proves delivery.
-- Polls every 30 seconds for up to 30 minutes; retries consecutive GitHub read errors at most three times. Wrong project/Preview/unrelated revisions are not candidates. Failure/error fails unless a replacement is pending or already confirmed; missing evidence times out explicitly.
-- Prints PASS with merge/deployed SHA, Vercel environment, deployment URL and confirmation time. Save this result with the main quality-run link in existing PR/delivery evidence. No website HTTP request, browser, deployment or rollback.
+After merge, the reviewer runs `pnpm verify:deploy <full-merge-sha>` in the FE workspace. Node 24 and authenticated `gh` need repository contents/actions read access. Set `SIGNAPSE_UI_VERCEL_ENV` to the absolute private dotenv file containing `VERCEL_AUTOMATION_BYPASS_SECRET`; parse it as data, never source it. Do not put this secret in Next.js env files, command arguments, logs or Git. Without the file, the verifier attempts the request without bypass.
 
-Vercel success is deployment evidence at confirmation time; it does not certify current domain mapping, basic loading, authentication, feature correctness or later rollbacks. Owner/QA checks those under their own scope/inputs. `/api/build-revision` remains available for their diagnosis; it is not a dev delivery gate.
+On the provisioned Symphony host use `/opt/apps/symphony/runtime/run-fe-deploy "$PWD" "$MERGE_SHA"`. The wrapper supplies the private file path and invokes the workspace verifier. Local PowerShell can set `$env:SIGNAPSE_UI_VERCEL_ENV` to the operator's private input then run the same pnpm command.
+
+The script:
+- GETs only `https://dev-dashboard.signapse.cloud/api/build-revision`, with a 20-second request timeout, no cache and no redirect following. Bypass is sent only to this fixed origin.
+- Requires HTTP 200, JSON and a full 40-character revision. HTTP 429/503 remain pending; redirects, invalid JSON or invalid revisions fail without logging response bodies or secrets.
+- Requires the live revision to equal or contain the merge, be contained in main, and have a successful latest main-push quality check. Older/unrelated builds or failed checks never pass.
+- Polls every 30 seconds for up to 30 minutes; consecutive network/GitHub read errors fail after three attempts. The Review runbook's saved deadline also bounds the process across resumes.
+- Prints PASS with merge/live SHA, dev revision URL and confirmation time. Save the result and quality-run link in existing PR/delivery evidence.
+
+This confirms the build served by the dev domain at that time. It does not certify login, feature behavior or later rollbacks; owner/QA acceptance remains separate. Vercel still performs Git builds; deployment-status records alone are not the completion gate.
 
 ## Worker activation
 

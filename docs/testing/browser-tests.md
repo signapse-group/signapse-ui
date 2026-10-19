@@ -10,7 +10,7 @@ pnpm test:browser:update # update selected native screenshot baselines; reviewer
 pnpm test:contract      # offline fixture operation consistency; no live API conformance claim
 pnpm test:quality       # lightweight CI: lint, typecheck, Vitest, fixture guard, verifier unit tests
 pnpm test:full          # explicit full regression: quality, build, browser suite
-pnpm verify:deploy <sha> # confirm Vercel Production deployment through GitHub
+pnpm verify:deploy <sha> # confirm live dev revision and GitHub quality
 pnpm test:integration   # live OpenAPI preflight, password auth and dev backend; requires private credentials
 ```
 
@@ -29,7 +29,7 @@ The `delayed` HTTP and feedback `pending` scenarios hold responses until the tes
 
 ## CI and delivery
 
-[Verify](../../.github/workflows/verify.yml) runs lightweight checks on PRs into main and main pushes; the reviewer confirms Vercel Production delivery from the workspace using the existing script under the [Review runbook](../runbooks/review-and-delivery.md#verify-the-delivered-build). Vercel owns builds; use [shared verification standards](../../CONTRIBUTING.md#verification) and [WORKFLOW](../../WORKFLOW.md) for assigned execution. [CI/Vercel setup](../delivery.md) remains an operator/technical reference. Owner/QA verifies the live website and features. The full fixture browser suite is available explicitly, not required for every PR. Fixture P0, deployment evidence and live feature acceptance remain separate evidence.
+[Verify](../../.github/workflows/verify.yml) runs lightweight checks on PRs into main and main pushes; the reviewer confirms the live dev revision from the workspace using the existing script under the [Review runbook](../runbooks/review-and-delivery.md#verify-the-delivered-build). Vercel owns builds; use [shared verification standards](../../CONTRIBUTING.md#verification) and [WORKFLOW](../../WORKFLOW.md) for assigned execution. [CI/Vercel setup](../delivery.md) remains an operator/technical reference. Owner/QA verifies the live website and features. The full fixture browser suite is available explicitly, not required for every PR. Fixture P0, deployment evidence and live feature acceptance remain separate evidence.
 
 ## Selecting checks by change scope
 

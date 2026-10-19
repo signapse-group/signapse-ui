@@ -47,7 +47,7 @@ No admin bypass. Read back ambiguous writes before retry; MERGED and actual merg
 
 ## Verify the delivered build
 
-For app delivery, require confirmed Vercel **Production** deployment containing the contribution. Production is Vercel's environment name for this project's product dev environment. Owner/QA verifies domains, website, auth and features; these are not FE developer delivery gates. Deployment confirmation does not certify website behavior or later rollbacks.
+For app delivery, require a verified live revision on **https://dev-dashboard.signapse.cloud** containing the contribution, with successful main quality checks. Owner/QA verifies website, auth and features; these are not FE developer delivery gates. Deployment confirmation does not certify website behavior or later rollbacks.
 
 Read [CI/Vercel technical setup](../delivery.md#ci-and-vercel-setup) when setup evidence is needed. Local configuration does not prove hosting activation. Required developer delivery evidence connects the reviewed candidate to the actual merge and deployed build; overall green CI, merge or a health check alone is insufficient.
 
@@ -63,12 +63,12 @@ Then run the existing verifier from the FE workspace, using the actual full merg
 ```sh
 remaining_seconds=$((DELIVERY_WAIT_DEADLINE_EPOCH - $(date +%s)))
 test "$remaining_seconds" -gt 0
-timeout "${remaining_seconds}s" pnpm verify:deploy "$MERGE_SHA"
+timeout "${remaining_seconds}s" /opt/apps/symphony/runtime/run-fe-deploy "$PWD" "$MERGE_SHA"
 ```
 
 `DELIVERY_WAIT_DEADLINE_EPOCH` comes from the saved absolute deadline; do not create a new deadline when starting the verifier. Bound `gh run watch` by that same remaining deadline. Use short tool yields, checking the same terminal every 30–60 seconds during quiet waits. A tool disconnect/timeout is not deployment failure; reread live state and reconnect only within the remaining budget. Do not end merely to obtain a new scheduler attempt/deadline.
 
-Use the [deployment verifier reference](../delivery.md#confirm-deployment-through-github) for prerequisites, candidate validation, polling and read-retry behavior. Its per-invocation timeout does not reset the saved deadline. A skipped/canceled check, overall green CI or merge alone is insufficient. Require verifier exit code 0 and PASS; it also checks main quality success for the actual deployed SHA. Save its merge/deployed SHA, environment/URL and confirmation time with the corresponding Actions quality-run link in existing PR/delivery evidence before handoff. Never infer deployed SHA from local HEAD. A confirmed containing descendant may satisfy delivery.
+Use the [deployment verifier reference](../delivery.md#confirm-live-dev-revision) for prerequisites, candidate validation, polling and read-retry behavior. Its per-invocation timeout does not reset the saved deadline. A skipped/canceled check, overall green CI or merge alone is insufficient. Require verifier exit code 0 and PASS; it also checks main quality success for the actual deployed SHA. Save its merge/deployed SHA, environment/URL and confirmation time with the corresponding Actions quality-run link in existing PR/delivery evidence before handoff. Never infer deployed SHA from local HEAD. A confirmed containing descendant may satisfy delivery.
 
 Docs-only output uses artifact location/version, review and applicable checks rather than mandatory app deployment. Runtime/workflow output still needs activation evidence when the accepted assignment requires it; source edits alone do not establish worker adoption.
 
