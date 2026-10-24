@@ -1983,6 +1983,8 @@ export const vi = {
       "narrative-asset": "Luận điểm - tài sản",
     },
     relationTypes: {
+      DRIVER: "Sự kiện góp phần hình thành luận điểm",
+      AFFECTED: "Tài sản chịu ảnh hưởng",
       PRIMARY_SUBJECT: "Chủ thể chính",
       AFFECTED_ASSET: "Tài sản bị ảnh hưởng",
       REFERENCE_ASSET: "Tài sản tham chiếu",
@@ -2023,6 +2025,22 @@ export const vi = {
       summary: "{nodes} nút · {edges} cạnh",
     },
     demo: {
+      liveDescription:
+        "Khám phá tri thức liên quan đến watchlist của workspace hiện tại.",
+      selectNode: "Chọn đối tượng trên graph",
+      relationMeaning: "Ý nghĩa quan hệ",
+      sourceUnavailable: "Chưa có liên kết đến bài báo gốc.",
+      workspaceRequired: "Chọn workspace",
+      workspaceRequiredDescription:
+        "Tạo hoặc chọn workspace trong menu workspace để khám phá graph.",
+      workspaceChanged:
+        "Workspace đã đổi trong lúc tải. Hãy tải lại graph để tiếp tục.",
+      emptyWatchlist: "Watchlist chưa có tài sản",
+      emptyWatchlistDescription:
+        "Thêm tài sản vào watchlist của workspace này để khám phá bối cảnh liên quan.",
+      noGraph: "Chưa có dữ liệu graph liên quan",
+      noGraphDescription:
+        "Chưa có quan hệ được cung cấp cho workspace này. Điều đó không có nghĩa các tài sản không chịu ảnh hưởng.",
       eyebrow: "Bản thử nghiệm hiệu năng",
       title: "Demo Sigma cho biểu đồ tri thức",
       description:

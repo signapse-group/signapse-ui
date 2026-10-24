@@ -5,10 +5,7 @@ import type { Dictionary } from "@/app/lib/i18n/dictionary-types"
 export type GraphViewNodeKind = "event" | "asset" | "news-article" | "narrative"
 
 export type GraphViewEdgeKind =
-  | "event-asset"
-  | "news-article-event"
-  | "narrative-event"
-  | "narrative-asset"
+  "event-asset" | "news-article-event" | "narrative-event" | "narrative-asset"
 
 export interface GraphViewNodeThemeMetadata {
   title?: string | null
@@ -39,7 +36,7 @@ export interface GraphViewNode {
   id: string
   kind: GraphViewNodeKind
   label: string
-  secondaryLabel?: string
+  secondaryLabel?: string | null
   metadata?: GraphViewNodeMetadata
 }
 
@@ -107,7 +104,7 @@ export const graphViewNodeSchema = z.object({
   id: z.string().min(1),
   kind: graphViewNodeKindSchema,
   label: z.string().min(1),
-  secondaryLabel: z.string().optional(),
+  secondaryLabel: z.string().nullish(),
   metadata: graphViewNodeMetadataSchema.optional(),
 }) satisfies z.ZodType<GraphViewNode>
 
