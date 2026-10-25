@@ -1009,7 +1009,7 @@ export function SigmaGraphViewDemo({
         cameraPanBoundaries: null,
         defaultEdgeColor: paletteRef.current.edgeDimStroke,
         defaultEdgeType: "line",
-        minEdgeThickness: 0.8,
+        minEdgeThickness: 1.7,
         zIndex: true,
         itemSizesReference: "positions",
         doubleClickZoomingRatio: 1,
