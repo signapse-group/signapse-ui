@@ -354,6 +354,10 @@ Signapse entity quick detail là local, modal reading overlay cho một entity �
 - User-facing copy phải được localization và tiếng Việt phải tự nhiên, đúng dấu; technical instructions chịu trách nhiệm quy định helper cụ thể.
 - Vendor/license attribution phải ở vị trí người dùng truy cập được khi rời main surface.
 
+## Responsive Contract
+
+Dashboard viewport groups, layout defaults, design references and verification coverage are owned by the planning [Responsive Contract](https://github.com/signapse-group/signapse-planing/blob/main/ui-design/references/DESIGN.md#responsive-contract). Read and apply it before implementing or reviewing layout/responsive changes; report the affected checks and gaps in the handoff. Keep feature exceptions explicit and accepted. The local component geometry below and Quick Detail resolver remain applicable; do not maintain a second breakpoint table here.
+
 ## Accessibility And Responsive Behavior
 
 - Mục tiêu là WCAG 2.2 AA. Normal text đạt contrast tối thiểu `4.5:1`; large text, component boundary, state indicator và focus indicator đạt tối thiểu `3:1` trong cả light và dark mode.
