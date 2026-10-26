@@ -83,6 +83,11 @@ test.describe("P0 system prompt catalog and content hotfix", () => {
       "/en/system-prompts/MARKET_QUESTION_UNDERSTANDING"
     )
     expect(response?.status()).toBe(200)
+    const breadcrumb = page.getByRole("navigation", {
+      name: en.navigation.breadcrumb,
+    })
+    await expect(breadcrumb).toContainText(en.navigation.systemPrompts)
+    await expect(breadcrumb).not.toContainText("Details")
     await expect(
       page.getByText(en.systemPrompts.requiredPlaceholders, { exact: true })
     ).toBeVisible()

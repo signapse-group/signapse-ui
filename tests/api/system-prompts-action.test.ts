@@ -141,10 +141,13 @@ describe("system prompt actions", () => {
     )
   })
 
-  it("retains server placeholder errors and handles update denial", async () => {
+  it("retains placeholder errors, handles denial, and hides unexpected errors", async () => {
     vi.mocked(getCurrentPermissions).mockResolvedValue(["system-prompt:update"])
     vi.mocked(fetchAuthenticated).mockRejectedValue(
-      new Error("Missing prompt variables: {locale}, {asOfTime}")
+      Object.assign(
+        new Error("Missing prompt variables: {locale}, {asOfTime}"),
+        { status: 400 }
+      )
     )
 
     await expect(
@@ -163,6 +166,16 @@ describe("system prompt actions", () => {
     ).resolves.toEqual({
       success: false,
       error: testDictionary.systemPrompts.updateDenied,
+    })
+
+    vi.mocked(fetchAuthenticated).mockRejectedValue(
+      Object.assign(new Error("Internal database detail"), { status: 500 })
+    )
+    await expect(
+      updateSystemPrompt(prompt.promptType, { content: prompt.content })
+    ).resolves.toEqual({
+      success: false,
+      error: testDictionary.systemPrompts.updateError,
     })
   })
 })

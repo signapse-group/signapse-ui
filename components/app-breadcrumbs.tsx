@@ -74,11 +74,17 @@ export function AppBreadcrumb() {
   const isDashboardRoute = segments.length === 1 && segments[0] === "dashboard"
   const isEmailDeliveryRoute =
     segments.length === 1 && segments[0] === "email-delivery"
+  const isSystemPromptDetailRoute =
+    segments[0] === "system-prompts" && segments.length === 2
   const showOverviewCrumb = !(
     segments.length === 1 &&
     (segments[0] === "graph-view" || segments[0] === "email-delivery")
   )
-  const visibleSegments = isDashboardRoute ? [] : segments
+  const visibleSegments = isDashboardRoute
+    ? []
+    : isSystemPromptDetailRoute
+      ? segments.slice(0, 1)
+      : segments
 
   return (
     <Breadcrumb

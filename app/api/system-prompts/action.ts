@@ -146,7 +146,7 @@ export async function updateSystemPrompt(
       error:
         status === 403
           ? t.updateDenied
-          : error instanceof Error
+          : status === 400 && error instanceof Error
             ? error.message
             : t.updateError,
     }
