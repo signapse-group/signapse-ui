@@ -71,6 +71,133 @@ test.describe("P0 system prompt catalog and content hotfix", () => {
     expect(query.has("$filter")).toBe(false)
   })
 
+  test("keeps the list and editor usable across responsive frames and 200% zoom", async ({
+    fixture,
+    page,
+  }, testInfo) => {
+    await fixture.setPermissions(["*"])
+    await page.addInitScript(() => localStorage.setItem("theme", "dark"))
+
+    const frames = [
+      { label: "mobile-360x800", width: 360, height: 800, capture: true },
+      { label: "mobile-390x844", width: 390, height: 844 },
+      { label: "mobile-boundary-767", width: 767, height: 900 },
+      { label: "compact-boundary-768", width: 768, height: 900 },
+      { label: "compact-1024x768", width: 1024, height: 768, capture: true },
+      { label: "wide-boundary-1439", width: 1439, height: 900 },
+      { label: "wide-boundary-1440", width: 1440, height: 900 },
+      { label: "wide-1520x1024", width: 1520, height: 1024, capture: true },
+      { label: "wide-1920x1024", width: 1920, height: 1024 },
+      { label: "wide-2560x1440", width: 2560, height: 1440 },
+      // Equivalent effective CSS viewport to 1520x1340 at 200% browser zoom.
+      {
+        label: "zoom-200-effective-760x670",
+        width: 760,
+        height: 670,
+        capture: true,
+      },
+    ]
+
+    async function expectNoHorizontalOverflow(label: string) {
+      const dimensions = await page.evaluate(() => ({
+        viewport: window.innerWidth,
+        document: document.documentElement.scrollWidth,
+        body: document.body.scrollWidth,
+      }))
+      expect(
+        dimensions.document,
+        `${label}: document wider than viewport (${JSON.stringify(dimensions)})`
+      ).toBeLessThanOrEqual(dimensions.viewport)
+      expect(
+        dimensions.body,
+        `${label}: body wider than viewport (${JSON.stringify(dimensions)})`
+      ).toBeLessThanOrEqual(dimensions.viewport)
+    }
+
+    await page.goto("/en/system-prompts")
+    await expect(
+      page.getByRole("button", { name: en.aiAssistant.open })
+    ).toHaveCount(0)
+
+    for (const frame of frames) {
+      await page.setViewportSize({ width: frame.width, height: frame.height })
+      await expect(page.getByRole("searchbox")).toBeVisible()
+      await expect(page.locator("tbody tr")).toHaveCount(13)
+      await expect(
+        page.getByRole("link", {
+          name: "News content normalization",
+          exact: true,
+        })
+      ).toBeVisible()
+      await expectNoHorizontalOverflow(`list ${frame.label}`)
+
+      if (frame.width === 360) {
+        const tableScrollRegion = page.locator('[data-slot="table-container"]')
+        await tableScrollRegion.evaluate((element) => {
+          element.scrollLeft = element.scrollWidth
+        })
+        await expect(
+          page.getByRole("link", { name: en.systemPrompts.editContent }).first()
+        ).toBeInViewport()
+        await tableScrollRegion.evaluate((element) => {
+          element.scrollLeft = 0
+        })
+      }
+
+      if (frame.capture) {
+        await testInfo.attach(`system-prompt-list-${frame.label}`, {
+          body: await page.screenshot(),
+          contentType: "image/png",
+        })
+      }
+
+      if (frame.width >= 768) {
+        const sidebar = page.locator('[data-slot="sidebar"]').first()
+        const initialState = await sidebar.getAttribute("data-state")
+        expect(initialState).toBeTruthy()
+        await page
+          .getByRole("button", { name: en.navigation.toggleSidebar })
+          .click()
+        await expect(sidebar).toHaveAttribute(
+          "data-state",
+          initialState === "expanded" ? "collapsed" : "expanded"
+        )
+        await expectNoHorizontalOverflow(
+          `list ${frame.label} with sidebar toggled`
+        )
+        await page
+          .getByRole("button", { name: en.navigation.toggleSidebar })
+          .click()
+        await expect(sidebar).toHaveAttribute("data-state", initialState!)
+      }
+    }
+
+    await page.goto("/en/system-prompts/MARKET_QUESTION_UNDERSTANDING")
+    await expect(
+      page.getByRole("button", { name: en.aiAssistant.open })
+    ).toHaveCount(0)
+    const content = page.getByRole("textbox", {
+      name: new RegExp(`^${en.systemPrompts.content}`),
+    })
+    const save = page.getByRole("button", {
+      name: en.systemPrompts.saveHotfix,
+    })
+
+    for (const frame of frames) {
+      await page.setViewportSize({ width: frame.width, height: frame.height })
+      await expect(content).toBeVisible()
+      await expect(save).toBeVisible()
+      await expectNoHorizontalOverflow(`editor ${frame.label}`)
+
+      if (frame.capture) {
+        await testInfo.attach(`system-prompt-editor-${frame.label}`, {
+          body: await page.screenshot(),
+          contentType: "image/png",
+        })
+      }
+    }
+  })
+
   test("reads and saves content only after the backend confirms the update", async ({
     fixture,
     page,
