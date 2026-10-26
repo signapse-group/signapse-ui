@@ -1,22 +1,26 @@
-import { LocalizedLink as Link } from "@/components/localized-link"
 import { notFound } from "next/navigation"
-import { ArrowLeft } from "lucide-react"
 
 import { getSystemPromptByType } from "@/app/api/system-prompts/action"
-import {
-  isSystemPromptType,
-  SystemPromptResponse,
-} from "@/app/lib/system-prompts/definitions"
+import type { SystemPromptContentResponse } from "@/app/lib/system-prompts/definitions"
 import { getServerDictionary } from "@/app/lib/i18n/server"
-import { canUpdateSystemPrompts } from "@/app/lib/system-prompts/permissions"
+import {
+  canReadSystemPrompts,
+  canUpdateSystemPrompts,
+} from "@/app/lib/system-prompts/permissions"
 import { getCurrentPermissions } from "@/app/lib/permissions-server"
 import { AccessDenied } from "@/components/access-denied"
-import { buttonVariants } from "@/components/ui/button"
-
 import { SystemPromptForm } from "../system-prompt-form"
 
 interface EditSystemPromptPageProps {
   params: Promise<{ promptType: string }>
+}
+
+function hasHttpStatus(error: unknown): error is Error & { status: number } {
+  return (
+    error instanceof Error &&
+    "status" in error &&
+    typeof error.status === "number"
+  )
 }
 
 export default async function EditSystemPromptPage({
@@ -27,6 +31,15 @@ export default async function EditSystemPromptPage({
     getServerDictionary(),
   ])
 
+  if (!canReadSystemPrompts(permissions)) {
+    return (
+      <AccessDenied
+        description={dictionary.systemPrompts.readDenied}
+        permission="system-prompt:read"
+      />
+    )
+  }
+
   if (!canUpdateSystemPrompts(permissions)) {
     return (
       <AccessDenied
@@ -36,34 +49,27 @@ export default async function EditSystemPromptPage({
     )
   }
 
-  const { promptType: rawPromptType } = await params
-  const promptType = decodeURIComponent(rawPromptType)
-
-  if (!isSystemPromptType(promptType)) {
-    notFound()
-  }
-
-  let prompt: SystemPromptResponse
+  const { promptType } = await params
+  let prompt: SystemPromptContentResponse
 
   try {
-    prompt = await getSystemPromptByType(promptType)
-  } catch {
-    notFound()
+    prompt = await getSystemPromptByType(decodeURIComponent(promptType))
+  } catch (error: unknown) {
+    if (hasHttpStatus(error) && error.status === 404) {
+      notFound()
+    }
+
+    if (hasHttpStatus(error) && error.status === 403) {
+      return (
+        <AccessDenied
+          description={dictionary.systemPrompts.readDenied}
+          permission="system-prompt:read"
+        />
+      )
+    }
+
+    throw error
   }
 
-  return (
-    <div className="flex flex-col gap-6">
-      <div className="flex items-center">
-        <Link
-          href="/system-prompts"
-          className={buttonVariants({ variant: "secondary", size: "sm" })}
-        >
-          <ArrowLeft data-icon="inline-start" />
-          {dictionary.common.back}
-        </Link>
-      </div>
-
-      <SystemPromptForm initialData={prompt} />
-    </div>
-  )
+  return <SystemPromptForm initialData={prompt} />
 }

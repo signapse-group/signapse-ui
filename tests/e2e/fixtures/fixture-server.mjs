@@ -179,6 +179,55 @@ function contactRequestRecords() {
   })
 }
 
+function systemPromptRecords() {
+  const requiredVariables = [
+    "locale",
+    "asOfTime",
+    "rawQuestion",
+    "watchlistAssetCandidates",
+    "deterministicAssetMatches",
+    "deterministicThemeMatches",
+    "previousConversationHints",
+  ]
+
+  return [
+    ["NEWS_ARTICLE_CONTENT_LOCALIZATION", "News content normalization"],
+    [
+      "ECONOMIC_CALENDAR_ENTRY_TEXT_LOCALIZATION",
+      "Economic calendar localization",
+    ],
+    ["NEWS_PRIMARY_EVENT_DERIVATION", "Primary event derivation"],
+    ["EVENT_ASSET_THEME_ENRICHMENT", "Asset and theme enrichment"],
+    ["EVENT_MARKET_REACTION_DERIVATION", "Market reaction derivation"],
+    ["MARKET_REACTION_OUTCOME_SUMMARY", "Market reaction outcome summary"],
+    ["EVENT_NARRATIVE_REFRESH", "Narrative refresh"],
+    [
+      "WARM_ABSORPTION_EVENT_ASSET_DECISION",
+      "Monthly knowledge absorption · Warm",
+    ],
+    ["MARKET_QUESTION_UNDERSTANDING", "AI assistant · Question understanding"],
+    ["MARKET_QUERY_CONVERSATION_ORCHESTRATION", "AI assistant · Response"],
+    ["TELEGRAM_MARKET_ANALYSIS_ASSESSMENT", "Telegram · Assessment"],
+    ["TELEGRAM_MARKET_ANALYSIS_SCALPING", "Telegram · Scalping"],
+    ["TELEGRAM_MARKET_ANALYSIS_EXPLANATION", "Telegram · Explanation"],
+  ].map(([promptType, name]) => {
+    const variables =
+      promptType === "MARKET_QUESTION_UNDERSTANDING" ? requiredVariables : []
+
+    return {
+      promptType,
+      name,
+      content:
+        variables.length > 0
+          ? `Fixture content for ${promptType}. ${variables
+              .map((variable) => `{${variable}}`)
+              .join(" ")}`
+          : `Fixture content for ${promptType}.`,
+      requiredVariables: variables,
+    }
+  })
+}
+
 function createState() {
   const primaryWorkspace = workspace(1, "Workspace Alpha", true)
   const secondaryWorkspace = workspace(2, "Workspace Beta")
@@ -202,6 +251,7 @@ function createState() {
     notes: [note(31, "Morning brief", "Review the fixture market brief.")],
     feedback: feedbackRecords(),
     contactRequests: contactRequestRecords(),
+    systemPrompts: systemPromptRecords(),
     profile: {
       birthday: "1990-01-02T00:00:00.000Z",
       phone: "2025550199",
@@ -1424,6 +1474,93 @@ function responseForRoute(state, method, pathname, url, body) {
       : pageResponse
   }
 
+  if (pathname === "/system-prompts" && method === "GET") {
+    if (!hasFixturePermission(state, "system-prompt:read")) {
+      return {
+        __status: 403,
+        payload: errorPayload(
+          "System prompt read permission denied",
+          "FORBIDDEN"
+        ),
+      }
+    }
+    const response = page(
+      state.systemPrompts,
+      Number(url.searchParams.get("page") ?? 0),
+      Number(url.searchParams.get("size") ?? 20),
+      state.systemPrompts.length
+    )
+    return response
+  }
+
+  const systemPromptMatch = pathname.match(/^\/system-prompts\/([^/]+)$/)
+  if (systemPromptMatch) {
+    const promptType = decodeURIComponent(systemPromptMatch[1])
+    const prompt = state.systemPrompts.find(
+      (entry) => entry.promptType === promptType
+    )
+    if (!prompt) {
+      return {
+        __status: 404,
+        payload: errorPayload("System prompt not found", "NOT_FOUND"),
+      }
+    }
+    if (method === "GET") {
+      if (!hasFixturePermission(state, "system-prompt:read")) {
+        return {
+          __status: 403,
+          payload: errorPayload(
+            "System prompt read permission denied",
+            "FORBIDDEN"
+          ),
+        }
+      }
+      return { ...prompt }
+    }
+    if (method === "PUT") {
+      if (!hasFixturePermission(state, "system-prompt:update")) {
+        return {
+          __status: 403,
+          payload: errorPayload(
+            "System prompt update permission denied",
+            "FORBIDDEN"
+          ),
+        }
+      }
+      if (
+        !body ||
+        Object.keys(body).length !== 1 ||
+        typeof body.content !== "string" ||
+        !/\S/.test(body.content) ||
+        body.content.length > 10_000
+      ) {
+        return {
+          __status: 400,
+          payload: errorPayload(
+            "Invalid content-only update",
+            "FIXTURE_VALIDATION"
+          ),
+        }
+      }
+      if (prompt.requiredVariables.length > 0) {
+        const missing = prompt.requiredVariables
+          .map((variable) => `{${variable}}`)
+          .filter((placeholder) => !body.content.includes(placeholder))
+        if (missing.length) {
+          return {
+            __status: 400,
+            payload: errorPayload(
+              `Missing required prompt placeholders: ${missing.join(", ")}`,
+              "PROMPT_PLACEHOLDERS_MISSING"
+            ),
+          }
+        }
+      }
+      prompt.content = body.content
+      return { ...prompt }
+    }
+  }
+
   const blogIdMatch = pathname.match(/^\/blogs\/(\d+)$/)
   if (method === "GET" && blogIdMatch) {
     const id = Number(blogIdMatch[1])
@@ -1913,6 +2050,9 @@ const server = createServer(async (request, response) => {
     ...(method === "PATCH" &&
     ["/me", "/me/preferred-language"].includes(url.pathname)
       ? { body }
+      : {}),
+    ...(method === "PUT" && url.pathname.startsWith("/system-prompts/")
+      ? { bodyKeys: Object.keys(body ?? {}) }
       : {}),
   }
   state.requests.push(logEntry)

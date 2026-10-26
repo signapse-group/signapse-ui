@@ -91,7 +91,7 @@ export default async function Layout({
           permissions={permissions}
           isP0FixtureMode={p0FixtureMode}
         />
-        <SidebarInset>
+        <SidebarInset className="min-w-0">
           <header className="flex min-h-12 shrink-0 items-center border-b px-2 py-2 transition-[width,height] ease-linear">
             <div className="flex w-full flex-col gap-2 md:flex-row md:items-center md:justify-between">
               <div className="flex min-w-0 items-center gap-2">
@@ -105,7 +105,7 @@ export default async function Layout({
                 <AppBreadcrumb />
               </div>
 
-              <div className="flex min-w-0 items-center gap-2 md:justify-end">
+              <div className="flex min-w-0 flex-wrap items-center gap-1 sm:gap-2 md:justify-end">
                 {canReadWorkspace ? (
                   <WorkspaceSwitcher
                     workspaces={workspaces}

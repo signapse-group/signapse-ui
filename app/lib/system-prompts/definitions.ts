@@ -1,113 +1,54 @@
+import { z } from "zod"
+
 import type { Dictionary } from "@/app/lib/i18n/dictionary-types"
-import { formatMessage } from "@/app/lib/i18n/messages"
 
-export const SYSTEM_PROMPT_TYPES = [
-  "FIRECRAWL_SOURCE_DOCUMENT_FILTER",
-  "NEWS_ARTICLE_CONTENT_LOCALIZATION",
-  "NEWS_PRIMARY_EVENT_DERIVATION",
-  "EVENT_ASSET_THEME_ENRICHMENT",
-  "EVENT_MARKET_REACTION_DERIVATION",
-  "EVENT_NARRATIVE_REFRESH",
-  "EVENT_GROUNDED_MARKET_QUERY_SYNTHESIS",
-  "TELEGRAM_CALENDAR_ALERT_ASSESSMENT",
-  "TELEGRAM_NEWS_ALERT_ASSESSMENT",
-  "TELEGRAM_MARKET_ANALYSIS",
-] as const
+export const SYSTEM_PROMPT_MAX_CONTENT_LENGTH = 10_000
 
-export type SystemPromptType = (typeof SYSTEM_PROMPT_TYPES)[number]
-export type JsonValue =
-  | string
-  | number
-  | boolean
-  | null
-  | JsonValue[]
-  | { [key: string]: JsonValue }
+export const systemPromptContentResponseSchema = z.object({
+  promptType: z.string().min(1),
+  name: z.string(),
+  content: z.string().max(SYSTEM_PROMPT_MAX_CONTENT_LENGTH),
+  requiredVariables: z.array(z.string()),
+})
 
-export type LocalizedNames = Record<string, string>
+export const systemPromptListResponseSchema = z
+  .object({
+    content: z.array(systemPromptContentResponseSchema),
+  })
+  .passthrough()
 
-export interface SystemPromptResponse {
-  id: number
-  promptType: SystemPromptType
-  name?: string
-  content: string
-  responseSchema?: JsonValue
-  localizedNames?: LocalizedNames
-  createdDate?: string
-  lastModifiedDate?: string
-}
+export const updateSystemPromptContentRequestSchema = z
+  .object({
+    content: z.string().max(SYSTEM_PROMPT_MAX_CONTENT_LENGTH).regex(/\S/),
+  })
+  .strict()
 
-export interface CreateSystemPromptRequest {
-  promptType: SystemPromptType
-  content: string
-  responseSchema: JsonValue
-  localizedNames?: LocalizedNames
-}
-
-export interface UpdateSystemPromptRequest {
-  content?: string
-  responseSchema?: JsonValue
-  localizedNames?: LocalizedNames
-}
-
-export function isSystemPromptType(value: string): value is SystemPromptType {
-  return SYSTEM_PROMPT_TYPES.includes(value as SystemPromptType)
-}
-
-export function getSystemPromptTypeLabel(
-  promptType: string,
-  dictionary: Dictionary
-) {
-  if (isSystemPromptType(promptType)) {
-    return dictionary.systemPrompts.typeLabels[promptType]
-  }
-
-  return promptType
-}
-
-export function getSystemPromptDisplayName(
-  prompt: Pick<SystemPromptResponse, "promptType" | "name" | "localizedNames">,
-  dictionary: Dictionary,
-  locale?: string
-) {
-  const localizedName = locale ? prompt.localizedNames?.[locale]?.trim() : ""
-
-  if (localizedName) {
-    return localizedName
-  }
-
-  if (prompt.name?.trim()) {
-    return prompt.name
-  }
-
-  return getSystemPromptTypeLabel(prompt.promptType, dictionary)
-}
+export type SystemPromptContentResponse = z.infer<
+  typeof systemPromptContentResponseSchema
+>
+export type UpdateSystemPromptContentRequest = z.infer<
+  typeof updateSystemPromptContentRequestSchema
+>
 
 export function getSystemPromptWorkflowGroup(
   promptType: string,
   dictionary: Dictionary
 ) {
-  if (isSystemPromptType(promptType)) {
-    return dictionary.systemPrompts.workflowGroups[promptType]
+  const workflows = dictionary.systemPrompts.workflowGroups
+
+  if (promptType.startsWith("TELEGRAM_")) return workflows.telegram
+  if (promptType.startsWith("ECONOMIC_CALENDAR_")) return workflows.calendar
+  if (promptType.startsWith("NEWS_ARTICLE_")) return workflows.news
+  if (promptType.includes("REACTION")) return workflows.reactions
+  if (promptType.startsWith("WARM_")) return workflows.warm
+  if (/^MARKET_(QUESTION|QUERY)_/.test(promptType)) return workflows.assistant
+  if (promptType.includes("NARRATIVE")) return workflows.narratives
+  if (
+    promptType.startsWith("EVENT_") ||
+    promptType.startsWith("NEWS_PRIMARY_EVENT_")
+  ) {
+    return workflows.events
   }
 
-  return dictionary.systemPrompts.otherGroup
-}
-
-export function getSystemPromptTypeOptions(dictionary: Dictionary) {
-  return SYSTEM_PROMPT_TYPES.map((type) => ({
-    value: type,
-    label: dictionary.systemPrompts.typeLabels[type],
-    group: dictionary.systemPrompts.workflowGroups[type],
-  }))
-}
-
-export function formatSystemPromptContentLength(
-  content: string | undefined,
-  dictionary: Dictionary,
-  formatNumber: (value: number) => string = String
-) {
-  const length = content?.length ?? 0
-  return formatMessage(dictionary.systemPrompts.contentLength, {
-    count: formatNumber(length),
-  })
+  return workflows.other
 }
