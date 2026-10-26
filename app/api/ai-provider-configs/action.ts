@@ -1,23 +1,87 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
+import * as z from "zod"
 
 import { fetchAuthenticated } from "@/app/api/auth/action"
 import {
-  AiProviderConfigCreateRequest,
-  AiProviderConfigListResponse,
-  AiProviderModelCatalogRequest,
-  AiProviderModelCatalogResponse,
-  AiProviderConfigResponse,
-  AiProviderConfigUpdateRequest,
-  AiProviderCredentialCreateRequest,
-  AiProviderCredentialResponse,
-  AiProviderCredentialUpdateRequest,
+  aiProviderConfigCreateRequestSchema,
+  aiProviderConfigDetailResponseSchema,
+  aiProviderConfigPageResponseSchema,
+  aiProviderConfigResponseSchema,
+  aiProviderModelCatalogRequestSchema,
+  aiProviderModelCatalogResponseSchema,
+  type AiProviderConfigCreateRequest,
+  type AiProviderConfigDetailResponse,
+  type AiProviderConfigListResponse,
+  type AiProviderModelCatalogRequest,
+  type AiProviderModelCatalogResponse,
 } from "@/app/lib/ai-provider-configs/definitions"
+import { AI_PROVIDER_CONFIG_PERMISSIONS } from "@/app/lib/ai-provider-configs/permissions"
 import { ActionResult, Page, SearchParams } from "@/app/lib/definitions"
-import { getDictionary } from "@/app/lib/i18n/dictionaries"
-import { getRequestLocale } from "@/app/lib/i18n/server"
+import { hasPermission } from "@/app/lib/permissions"
+import { getCurrentPermissions } from "@/app/lib/permissions-server"
+import { getServerDictionary } from "@/app/lib/i18n/server"
 import { queryParamsToString } from "@/app/lib/utils"
+
+const aiProviderConfigListQuerySchema = z
+  .object({
+    filter: z.string(),
+    page: z.number().int().nonnegative(),
+    size: z.number().int().positive().max(2000),
+    sort: z.array(
+      z.object({
+        field: z.string().min(1),
+        direction: z.enum(["asc", "desc"]),
+      })
+    ),
+  })
+  .strict()
+
+const idSchema = z.number().int().positive()
+
+function parseResponse<T>(
+  schema: z.ZodType<T>,
+  value: unknown,
+  invalidMessage: string
+): T {
+  const parsed = schema.safeParse(value)
+  if (!parsed.success) {
+    throw new Error(invalidMessage)
+  }
+  return parsed.data
+}
+
+function getSafeBackendError(
+  error: unknown,
+  fallback: string,
+  secrets: readonly string[] = []
+): string {
+  if (
+    !(error instanceof Error) ||
+    typeof error !== "object" ||
+    !("status" in error)
+  ) {
+    return fallback
+  }
+
+  const status = error.status
+  if (typeof status !== "number" || status < 400 || status >= 500) {
+    return fallback
+  }
+
+  let message = error.message.replace(/[\u0000-\u001f\u007f]/g, " ").trim()
+
+  for (const secret of secrets) {
+    if (secret) message = message.replaceAll(secret, "[redacted]")
+  }
+
+  if (!message || message.length > 240 || /\bat\s+\S+\s*\(/i.test(message)) {
+    return fallback
+  }
+
+  return message
+}
 
 function revalidateAiProviderConfig(id?: number) {
   revalidatePath("/ai-provider-configs")
@@ -27,236 +91,137 @@ function revalidateAiProviderConfig(id?: number) {
   }
 }
 
-async function getAiProviderConfigDictionary() {
-  return getDictionary(await getRequestLocale())
-}
-
 export async function getAiProviderConfigs(
   searchParams: SearchParams
 ): Promise<Page<AiProviderConfigListResponse>> {
-  return fetchAuthenticated<Page<AiProviderConfigListResponse>>(
-    `/ai-provider-configs?${queryParamsToString(searchParams)}`
+  const dictionary = await getServerDictionary()
+  const parsedSearchParams =
+    aiProviderConfigListQuerySchema.safeParse(searchParams)
+
+  if (!parsedSearchParams.success) {
+    throw new Error(dictionary.aiProviderConfigs.listErrorDescription)
+  }
+
+  const value = await fetchAuthenticated<unknown>(
+    `/ai-provider-configs?${queryParamsToString(parsedSearchParams.data)}`
+  )
+
+  return parseResponse(
+    aiProviderConfigPageResponseSchema,
+    value,
+    dictionary.aiProviderConfigs.responseInvalid
   )
 }
 
 export async function getAiProviderConfigById(
   id: number
-): Promise<AiProviderConfigResponse> {
-  return fetchAuthenticated<AiProviderConfigResponse>(
-    `/ai-provider-configs/${id}`
-  )
-}
+): Promise<AiProviderConfigDetailResponse> {
+  const dictionary = await getServerDictionary()
+  const parsedId = idSchema.safeParse(id)
+  if (!parsedId.success) {
+    throw new Error(dictionary.aiProviderConfigs.detailErrorDescription)
+  }
 
-export async function getAiProviderCredentials(
-  id: number
-): Promise<AiProviderCredentialResponse[]> {
-  return fetchAuthenticated<AiProviderCredentialResponse[]>(
-    `/ai-provider-configs/${id}/credentials`
+  const value = await fetchAuthenticated<unknown>(
+    `/ai-provider-configs/${parsedId.data}`
+  )
+  return parseResponse(
+    aiProviderConfigDetailResponseSchema,
+    value,
+    dictionary.aiProviderConfigs.responseInvalid
   )
 }
 
 export async function getAiProviderModelCatalog(
   request: AiProviderModelCatalogRequest
 ): Promise<ActionResult<AiProviderModelCatalogResponse>> {
+  const dictionary = await getServerDictionary()
+  const permissions = await getCurrentPermissions()
+  if (
+    !hasPermission(permissions, AI_PROVIDER_CONFIG_PERMISSIONS.modelCatalog)
+  ) {
+    return {
+      success: false,
+      error: dictionary.aiProviderConfigs.modelCatalogDenied,
+    }
+  }
+
+  const parsedRequest = aiProviderModelCatalogRequestSchema.safeParse(request)
+  if (!parsedRequest.success) {
+    return {
+      success: false,
+      error: dictionary.aiProviderConfigs.validationError,
+    }
+  }
+
+  let value: unknown
   try {
-    const data = await fetchAuthenticated<AiProviderModelCatalogResponse>(
+    value = await fetchAuthenticated<unknown>(
       "/ai-provider-configs/model-catalog",
       {
         method: "POST",
-        body: JSON.stringify(request),
+        body: JSON.stringify(parsedRequest.data),
       }
     )
-    return { success: true, data }
   } catch (error: unknown) {
-    const dictionary = await getAiProviderConfigDictionary()
-
     return {
       success: false,
-      error:
-        error instanceof Error
-          ? error.message
-          : dictionary.aiProviderConfigs.modelCatalogError,
+      error: getSafeBackendError(
+        error,
+        dictionary.aiProviderConfigs.modelCatalogError,
+        [parsedRequest.data.apiKey]
+      ),
     }
   }
+
+  const parsedResponse = aiProviderModelCatalogResponseSchema.safeParse(value)
+  if (!parsedResponse.success) {
+    return {
+      success: false,
+      error: dictionary.aiProviderConfigs.responseInvalid,
+    }
+  }
+  return { success: true, data: parsedResponse.data }
 }
 
 export async function createAiProviderConfig(
   request: AiProviderConfigCreateRequest
-): Promise<ActionResult<AiProviderConfigResponse>> {
-  try {
-    const data = await fetchAuthenticated<AiProviderConfigResponse>(
-      "/ai-provider-configs",
-      {
-        method: "POST",
-        body: JSON.stringify(request),
-      }
-    )
-    revalidateAiProviderConfig(data.id)
-    return { success: true, data }
-  } catch (error: unknown) {
-    const dictionary = await getAiProviderConfigDictionary()
+): Promise<ActionResult<z.infer<typeof aiProviderConfigResponseSchema>>> {
+  const dictionary = await getServerDictionary()
+  const parsedRequest = aiProviderConfigCreateRequestSchema.safeParse(request)
 
+  if (!parsedRequest.success) {
     return {
       success: false,
-      error:
-        error instanceof Error
-          ? error.message
-          : dictionary.aiProviderConfigs.createError,
+      error: dictionary.aiProviderConfigs.validationError,
     }
   }
-}
 
-export async function updateAiProviderConfig(
-  id: number,
-  request: AiProviderConfigUpdateRequest
-): Promise<ActionResult<AiProviderConfigResponse>> {
+  let value: unknown
   try {
-    const data = await fetchAuthenticated<AiProviderConfigResponse>(
-      `/ai-provider-configs/${id}`,
-      {
-        method: "PUT",
-        body: JSON.stringify(request),
-      }
-    )
-    revalidateAiProviderConfig(id)
-    return { success: true, data }
-  } catch (error: unknown) {
-    const dictionary = await getAiProviderConfigDictionary()
-
-    return {
-      success: false,
-      error:
-        error instanceof Error
-          ? error.message
-          : dictionary.aiProviderConfigs.updateError,
-    }
-  }
-}
-
-export async function setAiProviderConfigDefault(
-  id: number
-): Promise<ActionResult<AiProviderConfigResponse>> {
-  try {
-    const data = await fetchAuthenticated<AiProviderConfigResponse>(
-      `/ai-provider-configs/${id}/set-default`,
-      {
-        method: "PATCH",
-      }
-    )
-    revalidateAiProviderConfig(id)
-    return { success: true, data }
-  } catch (error: unknown) {
-    const dictionary = await getAiProviderConfigDictionary()
-
-    return {
-      success: false,
-      error:
-        error instanceof Error
-          ? error.message
-          : dictionary.aiProviderConfigs.setDefaultError,
-    }
-  }
-}
-
-export async function deleteAiProviderConfig(
-  id: number
-): Promise<ActionResult> {
-  try {
-    await fetchAuthenticated<void>(`/ai-provider-configs/${id}`, {
-      method: "DELETE",
+    value = await fetchAuthenticated<unknown>("/ai-provider-configs", {
+      method: "POST",
+      body: JSON.stringify(parsedRequest.data),
     })
-    revalidatePath("/ai-provider-configs")
-    return { success: true, data: undefined }
   } catch (error: unknown) {
-    const dictionary = await getAiProviderConfigDictionary()
-
     return {
       success: false,
-      error:
-        error instanceof Error
-          ? error.message
-          : dictionary.aiProviderConfigs.deleteConfigError,
+      error: getSafeBackendError(
+        error,
+        dictionary.aiProviderConfigs.createError,
+        parsedRequest.data.credentials.map(({ apiKey }) => apiKey)
+      ),
     }
   }
-}
 
-export async function createAiProviderCredential(
-  id: number,
-  request: AiProviderCredentialCreateRequest
-): Promise<ActionResult<AiProviderCredentialResponse>> {
-  try {
-    const data = await fetchAuthenticated<AiProviderCredentialResponse>(
-      `/ai-provider-configs/${id}/credentials`,
-      {
-        method: "POST",
-        body: JSON.stringify(request),
-      }
-    )
-    revalidateAiProviderConfig(id)
-    return { success: true, data }
-  } catch (error: unknown) {
-    const dictionary = await getAiProviderConfigDictionary()
-
+  const parsedResponse = aiProviderConfigResponseSchema.safeParse(value)
+  if (!parsedResponse.success) {
     return {
       success: false,
-      error:
-        error instanceof Error
-          ? error.message
-          : dictionary.aiProviderConfigs.credentialCreateError,
+      error: dictionary.aiProviderConfigs.responseInvalid,
     }
   }
-}
 
-export async function updateAiProviderCredential(
-  id: number,
-  credentialId: number,
-  request: AiProviderCredentialUpdateRequest
-): Promise<ActionResult<AiProviderCredentialResponse>> {
-  try {
-    const data = await fetchAuthenticated<AiProviderCredentialResponse>(
-      `/ai-provider-configs/${id}/credentials/${credentialId}`,
-      {
-        method: "PUT",
-        body: JSON.stringify(request),
-      }
-    )
-    revalidateAiProviderConfig(id)
-    return { success: true, data }
-  } catch (error: unknown) {
-    const dictionary = await getAiProviderConfigDictionary()
-
-    return {
-      success: false,
-      error:
-        error instanceof Error
-          ? error.message
-          : dictionary.aiProviderConfigs.credentialUpdateError,
-    }
-  }
-}
-
-export async function deleteAiProviderCredential(
-  id: number,
-  credentialId: number
-): Promise<ActionResult> {
-  try {
-    await fetchAuthenticated<void>(
-      `/ai-provider-configs/${id}/credentials/${credentialId}`,
-      {
-        method: "DELETE",
-      }
-    )
-    revalidateAiProviderConfig(id)
-    return { success: true, data: undefined }
-  } catch (error: unknown) {
-    const dictionary = await getAiProviderConfigDictionary()
-
-    return {
-      success: false,
-      error:
-        error instanceof Error
-          ? error.message
-          : dictionary.aiProviderConfigs.credentialDeleteError,
-    }
-  }
+  revalidateAiProviderConfig(parsedResponse.data.id)
+  return { success: true, data: parsedResponse.data }
 }

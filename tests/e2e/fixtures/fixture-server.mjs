@@ -202,6 +202,15 @@ function createState() {
     notes: [note(31, "Morning brief", "Review the fixture market brief.")],
     feedback: feedbackRecords(),
     contactRequests: contactRequestRecords(),
+    aiProviderConfigs: [
+      {
+        id: 12,
+        providerType: "GROQ",
+        description: "Legacy connection retained after migration.",
+        defaultProvider: true,
+        credentials: [{ id: 101, keyPreview: "gsk-...legacy" }],
+      },
+    ],
     profile: {
       birthday: "1990-01-02T00:00:00.000Z",
       phone: "2025550199",
@@ -1424,6 +1433,98 @@ function responseForRoute(state, method, pathname, url, body) {
       : pageResponse
   }
 
+  if (pathname === "/ai-provider-configs") {
+    const permission =
+      method === "GET" ? "ai-provider-config:read" : "ai-provider-config:create"
+    if (!hasFixturePermission(state, permission)) {
+      return {
+        __status: 403,
+        payload: errorPayload("AI connection permission required", "PERMISSION_DENIED"),
+      }
+    }
+
+    if (method === "GET") {
+      const result = slicePage(state.aiProviderConfigs, url)
+      const sort = { sorted: false, unsorted: true, empty: true }
+      return {
+        ...result,
+        pageable: { ...result.pageable, sort },
+        sort,
+      }
+    }
+
+    if (method === "POST") {
+      if (
+        !["DEEPSEEK", "GEMINI", "OPENAI"].includes(body?.providerType) ||
+        !Array.isArray(body?.credentials) ||
+        body.credentials.length < 1 ||
+        body.credentials.some(
+          (credential) =>
+            typeof credential?.apiKey !== "string" || !/\S/.test(credential.apiKey)
+        )
+      ) {
+        return {
+          __status: 400,
+          payload: errorPayload(
+            "Provider and non-empty API keys are required",
+            "FIXTURE_VALIDATION"
+          ),
+        }
+      }
+
+      const id = Math.max(...state.aiProviderConfigs.map((item) => item.id)) + 1
+      const connection = {
+        id,
+        providerType: body.providerType,
+        ...(typeof body.description === "string" && body.description
+          ? { description: body.description }
+          : {}),
+        ...(typeof body.baseUrl === "string" && body.baseUrl
+          ? { baseUrl: body.baseUrl }
+          : {}),
+        defaultProvider: false,
+        credentials: body.credentials.map((credential, index) => ({
+          id: id * 100 + index,
+          keyPreview: `key-...${credential.apiKey.slice(-4)}`,
+        })),
+      }
+      state.aiProviderConfigs.unshift(connection)
+      return { __status: 201, payload: connection }
+    }
+  }
+
+  const aiProviderConfigId = pathname.match(/^\/ai-provider-configs\/(\d+)$/)
+  if (method === "GET" && aiProviderConfigId) {
+    if (!hasFixturePermission(state, "ai-provider-config:read")) {
+      return {
+        __status: 403,
+        payload: errorPayload("AI connection read permission required", "PERMISSION_DENIED"),
+      }
+    }
+    const connection = state.aiProviderConfigs.find(
+      (item) => item.id === Number(aiProviderConfigId[1])
+    )
+    return connection
+      ? { ...connection, taskReferences: [] }
+      : {
+          __status: 404,
+          payload: errorPayload("AI connection not found", "NOT_FOUND"),
+        }
+  }
+
+  if (method === "POST" && pathname === "/ai-provider-configs/model-catalog") {
+    if (!hasFixturePermission(state, "ai-provider-config:model-catalog")) {
+      return {
+        __status: 403,
+        payload: errorPayload("AI catalog permission required", "PERMISSION_DENIED"),
+      }
+    }
+    return {
+      providerType: body?.providerType,
+      models: [{ id: "fixture-model", label: "Fixture model" }],
+    }
+  }
+
   const blogIdMatch = pathname.match(/^\/blogs\/(\d+)$/)
   if (method === "GET" && blogIdMatch) {
     const id = Number(blogIdMatch[1])
@@ -2101,7 +2202,13 @@ const server = createServer(async (request, response) => {
     return
   }
 
-  sendJson(response, status, result)
+  sendJson(
+    response,
+    status,
+    result && typeof result === "object" && "__status" in result
+      ? (result.payload ?? result)
+      : result
+  )
 })
 
 server.listen(port, "127.0.0.1", () => {

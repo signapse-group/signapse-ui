@@ -1,6 +1,7 @@
 import {
   AI_PROVIDER_TYPES,
   AiProviderType,
+  SUPPORTED_AI_PROVIDER_TYPES,
 } from "@/app/lib/ai-provider-configs/definitions"
 import type { Dictionary } from "@/app/lib/i18n/dictionary-types"
 
@@ -12,16 +13,19 @@ export const providerOptions: { value: AiProviderType; label: string }[] = [
   { value: "ZAI", label: "ZAI" },
 ]
 
+export const supportedProviderOptions = providerOptions.filter((provider) =>
+  SUPPORTED_AI_PROVIDER_TYPES.includes(
+    provider.value as (typeof SUPPORTED_AI_PROVIDER_TYPES)[number]
+  )
+)
+
 export function getProviderOptionLabel(
-  providerType?: AiProviderType,
-  dictionary?: Dictionary
+  providerType: AiProviderType,
+  dictionary: Dictionary
 ) {
   return (
     providerOptions.find((provider) => provider.value === providerType)
-      ?.label ??
-    providerType ??
-    dictionary?.aiProviderConfigs.unknownProvider ??
-    "AI provider"
+      ?.label ?? dictionary.aiProviderConfigs.unknownProvider
   )
 }
 

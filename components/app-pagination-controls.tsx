@@ -57,6 +57,9 @@ interface AppPaginationControlsProps<T> {
     Page<T>,
     "number" | "numberOfElements" | "size" | "totalElements" | "totalPages"
   >
+  showPageSizeSelector?: boolean
+  showPageSizeLabel?: boolean
+  showWhenSinglePage?: boolean
 }
 
 export function PaginationPageSizeSelect({
@@ -214,9 +217,12 @@ export function PaginationNavigation({
 export function AppPaginationControls<T>({
   className,
   page,
+  showPageSizeLabel = false,
+  showPageSizeSelector = false,
+  showWhenSinglePage = false,
 }: AppPaginationControlsProps<T>) {
   const { dictionary, formatMessage, formatNumber } = useLocalization()
-  const { isPending, setPage } = useAppPaginationQuery({
+  const { isPending, pageSize, setPage, setPageSize } = useAppPaginationQuery({
     defaultSize: page.size,
     totalPages: page.totalPages,
   })
@@ -250,15 +256,29 @@ export function AppPaginationControls<T>({
           <p className="text-xs text-muted-foreground">{summaryText}</p>
         </div>
 
-        {page.totalPages > 1 ? (
-          <PaginationNavigation
-            className="w-full sm:w-auto"
-            currentPage={currentPage}
-            totalPageCount={page.totalPages}
-            isPending={isPending}
-            onPageChange={setPage}
-          />
-        ) : null}
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+          {showPageSizeSelector ? (
+            <PaginationPageSizeSelect
+              className="justify-between sm:justify-start"
+              value={pageSize}
+              isPending={isPending}
+              onValueChange={setPageSize}
+              showLabel={showPageSizeLabel}
+              triggerClassName="w-[120px]"
+            />
+          ) : null}
+          {page.totalPages > 1 ||
+          (showWhenSinglePage && page.totalPages === 1) ? (
+            <PaginationNavigation
+              className="w-full sm:w-auto"
+              currentPage={currentPage}
+              totalPageCount={page.totalPages}
+              isPending={isPending}
+              onPageChange={setPage}
+              showWhenSinglePage={showWhenSinglePage}
+            />
+          ) : null}
+        </div>
       </div>
     </div>
   )

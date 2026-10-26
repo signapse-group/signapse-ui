@@ -3,37 +3,38 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Plus, Trash2 } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useState, useTransition } from "react"
-import { Controller, useFieldArray, useForm } from "react-hook-form"
-import { toast } from "sonner"
+import { useState } from "react"
+import {
+  Controller,
+  useFieldArray,
+  useForm,
+  type SubmitErrorHandler,
+} from "react-hook-form"
 import * as z from "zod"
+import { toast } from "sonner"
 
+import { createAiProviderConfig } from "@/app/api/ai-provider-configs/action"
 import {
-  createAiProviderConfig,
-  getAiProviderModelCatalog,
-} from "@/app/api/ai-provider-configs/action"
-import {
-  AiProviderConfigCreateRequest,
-  AiProviderModelCatalogRequest,
-  AiProviderModelOptionResponse,
-  AiProviderType,
+  aiProviderConfigCreateRequestSchema,
+  type AiProviderConfigCreateRequest,
+  SUPPORTED_AI_PROVIDER_TYPES,
 } from "@/app/lib/ai-provider-configs/definitions"
-import type { Dictionary } from "@/app/lib/i18n/dictionary-types"
+import { AI_PROVIDER_CONFIG_PERMISSIONS } from "@/app/lib/ai-provider-configs/permissions"
 import { useLocalization } from "@/app/lib/i18n/provider"
 import { useLocalizedPath } from "@/components/localized-link"
+import { useHasPermission } from "@/components/permission-provider"
 import {
   AppFormShell,
   AppFormShellBody,
   AppFormShellFooter,
 } from "@/components/app-form-shell"
-import { AppFormSwitchField } from "@/components/app-form-switch-field"
-import { useHasPermission } from "@/components/permission-provider"
 import { Button } from "@/components/ui/button"
 import {
   Field,
   FieldDescription,
   FieldError,
   FieldGroup,
+  FieldLegend,
   FieldLabel,
   FieldSet,
 } from "@/components/ui/field"
@@ -47,73 +48,55 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Spinner } from "@/components/ui/spinner"
-import { Textarea } from "@/components/ui/textarea"
 
-import {
-  AiProviderCredentialModelActionButton,
-  AiProviderCredentialModelSummary,
-} from "./ai-provider-credential-model-control"
-import { AI_PROVIDER_TYPES, providerOptions } from "./ai-provider-config-shared"
-import { AiProviderModelPickerDialog } from "./ai-provider-model-picker-dialog"
+import { supportedProviderOptions } from "./ai-provider-config-shared"
 
-function getAiProviderConfigCreateSchema(t: Dictionary["aiProviderConfigs"]) {
-  const credentialCreateSchema = z.object({
-    apiKey: z.string().trim().min(1, t.apiKeyRequired),
-    model: z.string().trim().min(1, t.modelRequired),
-  })
-
+function getCreateFormSchema(t: {
+  keyRequired: string
+  providerRequired: string
+}) {
   return z.object({
-    providerType: z.enum(AI_PROVIDER_TYPES),
-    description: z
-      .string()
-      .max(500, t.descriptionTooLong)
-      .optional()
-      .or(z.literal("")),
-    credentials: z.array(credentialCreateSchema).min(1, t.credentialRequired),
-    baseUrl: z.string().max(500, t.baseUrlTooLong).optional().or(z.literal("")),
-    defaultProvider: z.boolean().default(false),
+    providerType: z.enum(SUPPORTED_AI_PROVIDER_TYPES, {
+      error: t.providerRequired,
+    }),
+    baseUrl: z.string(),
+    description: z.string(),
+    credentials: z
+      .array(z.object({ apiKey: z.string() }))
+      .min(1, t.keyRequired)
+      .refine(
+        (credentials) => credentials.some(({ apiKey }) => /\S/.test(apiKey)),
+        t.keyRequired
+      ),
   })
 }
 
-interface AiProviderConfigCreateFormValues {
-  providerType: AiProviderType
-  description?: string
-  credentials: { apiKey: string; model: string }[]
-  baseUrl?: string
-  defaultProvider: boolean
-}
+type CreateFormValues = z.infer<ReturnType<typeof getCreateFormSchema>>
 
-const emptyCredential = {
-  apiKey: "",
-  model: "",
+const defaultValues: CreateFormValues = {
+  providerType: "OPENAI",
+  baseUrl: "",
+  description: "",
+  credentials: [{ apiKey: "" }],
 }
 
 export function AiProviderConfigCreateForm() {
   const router = useRouter()
   const { dictionary, formatMessage, formatNumber } = useLocalization()
-  const aiProviderConfigsPath = useLocalizedPath("/ai-provider-configs")
-  const t = dictionary.aiProviderConfigs
-  const canFetchModelCatalog = useHasPermission(
-    "ai-provider-config:model-catalog"
+  const canReadConnections = useHasPermission(
+    AI_PROVIDER_CONFIG_PERMISSIONS.read
   )
-  const [modelOptions, setModelOptions] = useState<
-    AiProviderModelOptionResponse[]
-  >([])
-  const [isModelDialogOpen, setIsModelDialogOpen] = useState(false)
-  const [catalogCredentialFieldId, setCatalogCredentialFieldId] = useState("")
-  const [isAuthenticatingModels, startAuthenticatingModels] = useTransition()
-  const aiProviderConfigCreateSchema = getAiProviderConfigCreateSchema(t)
+  const destinationPath = useLocalizedPath(
+    canReadConnections ? "/ai-provider-configs" : "/dashboard"
+  )
+  const t = dictionary.aiProviderConfigs
+  const [submitError, setSubmitError] = useState("")
+  const [createSucceeded, setCreateSucceeded] = useState(false)
+  const schema = getCreateFormSchema(t)
 
-  const form = useForm<AiProviderConfigCreateFormValues>({
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    resolver: zodResolver(aiProviderConfigCreateSchema as any),
-    defaultValues: {
-      providerType: "OPENAI",
-      description: "",
-      credentials: [emptyCredential],
-      baseUrl: "",
-      defaultProvider: false,
-    },
+  const form = useForm<CreateFormValues>({
+    resolver: zodResolver(schema),
+    defaultValues,
   })
 
   const { fields, append, remove } = useFieldArray({
@@ -121,411 +104,331 @@ export function AiProviderConfigCreateForm() {
     name: "credentials",
   })
 
-  // eslint-disable-next-line react-hooks/incompatible-library
-  const credentialValues = form.watch("credentials")
-  const selectedCredentialIndex = fields.findIndex(
-    (field) => field.id === catalogCredentialFieldId
-  )
-  const currentDialogModel =
-    selectedCredentialIndex >= 0
-      ? credentialValues?.[selectedCredentialIndex]?.model || ""
-      : ""
-
-  function clearCatalogState() {
-    setModelOptions([])
-    setIsModelDialogOpen(false)
+  function clearMessages() {
+    setSubmitError("")
+    setCreateSucceeded(false)
   }
 
-  function clearCredentialModel(index: number) {
-    form.setValue(`credentials.${index}.model`, "", {
-      shouldDirty: true,
-      shouldTouch: true,
-      shouldValidate: true,
-    })
-    clearCatalogState()
-  }
+  async function onSubmit(values: CreateFormValues) {
+    clearMessages()
 
-  function clearAllCredentialModels() {
-    fields.forEach((_, index) => {
-      form.setValue(`credentials.${index}.model`, "", {
-        shouldDirty: true,
-        shouldTouch: true,
-        shouldValidate: true,
-      })
-    })
-    clearCatalogState()
-  }
-
-  function handleAddCredential() {
-    append({ ...emptyCredential })
-  }
-
-  function handleRemoveCredential(index: number) {
-    if (fields.length <= 1) {
-      return
-    }
-
-    if (fields[index]?.id === catalogCredentialFieldId) {
-      setCatalogCredentialFieldId("")
-      clearCatalogState()
-    }
-
-    remove(index)
-  }
-
-  async function handleAuthenticateAndSelectModel(
-    fieldId: string,
-    index: number
-  ) {
-    const values = form.getValues()
-    const apiKeyFieldName = `credentials.${index}.apiKey` as const
-    const apiKey = values.credentials?.[index]?.apiKey?.trim() || ""
-
-    if (!apiKey) {
-      form.setError(apiKeyFieldName, {
-        message: t.apiKeyRequiredForAuth,
-      })
-      form.setFocus(apiKeyFieldName)
-      return
-    }
-
-    form.clearErrors(apiKeyFieldName)
-    setCatalogCredentialFieldId(fieldId)
-
-    const request: AiProviderModelCatalogRequest = {
+    const request: AiProviderConfigCreateRequest = {
       providerType: values.providerType,
-      apiKey,
-      baseUrl: values.baseUrl?.trim() || undefined,
+      baseUrl: values.baseUrl.trim() || undefined,
+      description: values.description.trim() || undefined,
+      credentials: values.credentials
+        .map(({ apiKey }) => apiKey.trim())
+        .filter(Boolean)
+        .map((apiKey) => ({ apiKey })),
     }
 
-    startAuthenticatingModels(async () => {
-      const result = await getAiProviderModelCatalog(request)
-
-      if (result.success) {
-        setModelOptions(result.data.models)
-        setIsModelDialogOpen(true)
-        toast.success(t.authenticateSuccess)
-        return
-      }
-
-      setModelOptions([])
-      setIsModelDialogOpen(false)
-      toast.error(result.error || t.authenticateError)
-    })
-  }
-
-  function handleConfirmModel(modelId: string) {
-    const index = fields.findIndex(
-      (field) => field.id === catalogCredentialFieldId
-    )
-
-    if (index < 0) {
-      setIsModelDialogOpen(false)
+    const parsedRequest = aiProviderConfigCreateRequestSchema.safeParse(request)
+    if (!parsedRequest.success) {
+      setSubmitError(t.validationError)
       return
     }
 
-    form.setValue(`credentials.${index}.model`, modelId, {
-      shouldDirty: true,
-      shouldTouch: true,
-      shouldValidate: true,
-    })
-    setIsModelDialogOpen(false)
-    toast.success(t.modelSelected)
-  }
+    let result: Awaited<ReturnType<typeof createAiProviderConfig>>
+    try {
+      result = await createAiProviderConfig(parsedRequest.data)
+    } catch {
+      setSubmitError(t.createError)
+      return
+    }
 
-  async function onSubmit(values: AiProviderConfigCreateFormValues) {
-    const result = await createAiProviderConfig({
-      providerType: values.providerType,
-      description: values.description?.trim() || undefined,
-      baseUrl: values.baseUrl?.trim() || undefined,
-      defaultProvider: values.defaultProvider,
-      credentials: values.credentials.map((credential) => ({
-        apiKey: credential.apiKey.trim(),
-        model: credential.model.trim(),
-      })),
-    } satisfies AiProviderConfigCreateRequest)
+    if (!result.success) {
+      setSubmitError(result.error)
+      return
+    }
 
-    if (result.success) {
-      toast.success(t.createSuccess)
-      router.push(aiProviderConfigsPath)
+    form.reset(defaultValues)
+    setCreateSucceeded(true)
+    toast.success(t.createSuccess)
+
+    if (canReadConnections) {
+      router.push(destinationPath)
       router.refresh()
-      return
     }
-
-    toast.error(result.error)
   }
 
   function handleCancel() {
-    router.push(aiProviderConfigsPath)
+    router.push(destinationPath)
   }
 
+  const handleInvalid: SubmitErrorHandler<CreateFormValues> = (errors) => {
+    if (errors.credentials) {
+      const emptyKeyIndex = form
+        .getValues("credentials")
+        .findIndex((credential) => credential.apiKey.trim().length === 0)
+      if (emptyKeyIndex >= 0) {
+        form.setFocus(`credentials.${emptyKeyIndex}.apiKey`)
+      }
+    }
+  }
+
+  const isSubmitting = form.formState.isSubmitting
+  const credentialsError =
+    form.formState.errors.credentials?.root?.message ??
+    form.formState.errors.credentials?.message
+
   return (
-    <>
-      <AppFormShell
-        title={t.createTitle}
-        description={t.createDescription}
-        width="lg"
-      >
-        <form onSubmit={form.handleSubmit(onSubmit)}>
-          <AppFormShellBody>
-            <FieldGroup>
-              <Controller
-                name="providerType"
-                control={form.control}
-                render={({ field, fieldState }) => (
-                  <Field data-invalid={fieldState.invalid}>
-                    <FieldLabel htmlFor="providerType">
-                      {t.provider} <span className="text-destructive">*</span>
-                    </FieldLabel>
-                    <Select
-                      items={providerOptions}
-                      value={field.value}
-                      onValueChange={(value) => {
-                        field.onChange(value ?? "")
-                        clearAllCredentialModels()
-                      }}
-                    >
-                      <SelectTrigger
-                        id="providerType"
-                        aria-invalid={fieldState.invalid}
-                      >
-                        <SelectValue placeholder={t.providerPlaceholder} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectGroup>
-                          {providerOptions.map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectGroup>
-                      </SelectContent>
-                    </Select>
-                    {fieldState.invalid ? (
-                      <FieldError errors={[fieldState.error]} />
-                    ) : null}
-                  </Field>
-                )}
-              />
-
-              <FieldSet className="gap-4">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="flex flex-col gap-1">
-                    <FieldLabel>{t.credentialSetup}</FieldLabel>
-                    <FieldDescription>
-                      {t.credentialSetupDescription}
-                    </FieldDescription>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleAddCredential}
+    <AppFormShell
+      title={t.createTitle}
+      description={t.createDescription}
+      width="lg"
+    >
+      <form onSubmit={form.handleSubmit(onSubmit, handleInvalid)} noValidate>
+        <AppFormShellBody>
+          <FieldGroup>
+            <Controller
+              name="providerType"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="providerType">
+                    {t.provider} <span className="text-destructive">*</span>
+                  </FieldLabel>
+                  <Select
+                    items={supportedProviderOptions}
+                    value={field.value}
+                    onValueChange={(value) => {
+                      field.onChange(value ?? "")
+                      clearMessages()
+                    }}
+                    disabled={isSubmitting}
                   >
-                    <Plus data-icon="inline-start" />
-                    {t.addCredential}
-                  </Button>
-                </div>
+                    <SelectTrigger
+                      id="providerType"
+                      aria-invalid={fieldState.invalid}
+                      aria-required="true"
+                    >
+                      <SelectValue placeholder={t.providerPlaceholder} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        {supportedProviderOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                  {fieldState.invalid ? (
+                    <FieldError errors={[fieldState.error]} />
+                  ) : null}
+                  <FieldDescription>
+                    {t.supportedProvidersDescription}
+                  </FieldDescription>
+                </Field>
+              )}
+            />
 
-                <div className="flex flex-col gap-4">
-                  {fields.map((credentialField, index) => {
+            <Controller
+              name="baseUrl"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="baseUrl">{t.endpoint}</FieldLabel>
+                  <Input
+                    {...field}
+                    id="baseUrl"
+                    aria-invalid={fieldState.invalid}
+                    autoComplete="url"
+                    placeholder={t.endpointPlaceholder}
+                    disabled={isSubmitting}
+                    onChange={(event) => {
+                      field.onChange(event)
+                      clearMessages()
+                    }}
+                  />
+                  <FieldDescription>{t.endpointDescription}</FieldDescription>
+                  {fieldState.invalid ? (
+                    <FieldError errors={[fieldState.error]} />
+                  ) : null}
+                </Field>
+              )}
+            />
+
+            <Controller
+              name="description"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="description">{t.description}</FieldLabel>
+                  <Input
+                    {...field}
+                    id="description"
+                    aria-invalid={fieldState.invalid}
+                    placeholder={t.descriptionPlaceholder}
+                    disabled={isSubmitting}
+                    onChange={(event) => {
+                      field.onChange(event)
+                      clearMessages()
+                    }}
+                  />
+                  <FieldDescription>
+                    {t.descriptionDescription}
+                  </FieldDescription>
+                  {fieldState.invalid ? (
+                    <FieldError errors={[fieldState.error]} />
+                  ) : null}
+                </Field>
+              )}
+            />
+
+            <FieldSet
+              data-invalid={Boolean(credentialsError)}
+              aria-invalid={Boolean(credentialsError)}
+              aria-required="true"
+              aria-describedby={
+                credentialsError
+                  ? "credentials-description credentials-error"
+                  : "credentials-description"
+              }
+              className="relative gap-4"
+            >
+              <FieldLegend variant="label">
+                {t.apiKeys} <span className="text-destructive">*</span>
+              </FieldLegend>
+              <Button
+                className="absolute top-0 right-0"
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  append({ apiKey: "" })
+                  clearMessages()
+                }}
+                disabled={isSubmitting}
+              >
+                <Plus data-icon="inline-start" />
+                {t.addKey}
+              </Button>
+
+              {fields.length > 0 ? (
+                <div className="flex flex-col gap-3">
+                  {fields.map((credential, index) => {
                     const apiKeyName = `credentials.${index}.apiKey` as const
-                    const modelName = `credentials.${index}.model` as const
-                    const apiKeyInputId = `credential-api-key-${credentialField.id}`
-                    const isCatalogCredential =
-                      credentialField.id === catalogCredentialFieldId
-                    const isAuthenticatingThisCredential =
-                      isAuthenticatingModels && isCatalogCredential
+                    const inputId = `credential-api-key-${credential.id}`
 
                     return (
                       <div
-                        key={credentialField.id}
-                        className="flex flex-col gap-3 rounded-lg border p-3"
+                        key={credential.id}
+                        className="flex min-w-0 items-end gap-2"
                       >
-                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                          <div className="text-sm text-muted-foreground tabular-nums">
-                            {formatMessage(t.credentialIndex, {
-                              index: formatNumber(index + 1),
-                            })}
-                          </div>
-                          <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-                            <Controller
-                              name={modelName}
-                              control={form.control}
-                              render={({ field }) => (
-                                <AiProviderCredentialModelActionButton
-                                  model={field.value}
-                                  isPending={isAuthenticatingThisCredential}
-                                  disabled={
-                                    !canFetchModelCatalog ||
-                                    isAuthenticatingModels
-                                  }
-                                  onClick={() =>
-                                    handleAuthenticateAndSelectModel(
-                                      credentialField.id,
-                                      index
-                                    )
-                                  }
-                                />
-                              )}
-                            />
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon-sm"
-                              aria-label={formatMessage(t.removeCredential, {
-                                index: formatNumber(index + 1),
-                              })}
-                              disabled={fields.length <= 1}
-                              onClick={() => handleRemoveCredential(index)}
+                        <Controller
+                          name={apiKeyName}
+                          control={form.control}
+                          render={({ field, fieldState }) => (
+                            <Field
+                              className="min-w-0 flex-1"
+                              data-invalid={fieldState.invalid}
                             >
-                              <Trash2 data-icon="inline-start" />
-                            </Button>
-                          </div>
-                        </div>
-
-                        <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(14rem,0.75fr)]">
-                          <Controller
-                            name={apiKeyName}
-                            control={form.control}
-                            render={({ field, fieldState }) => (
-                              <Field data-invalid={fieldState.invalid}>
-                                <FieldLabel htmlFor={apiKeyInputId}>
-                                  {t.apiKey}{" "}
-                                  <span className="text-destructive">*</span>
-                                </FieldLabel>
-                                <Input
-                                  {...field}
-                                  id={apiKeyInputId}
-                                  type="password"
-                                  aria-invalid={fieldState.invalid}
-                                  onChange={(event) => {
-                                    field.onChange(event)
-                                    clearCredentialModel(index)
-                                    form.clearErrors(apiKeyName)
-                                  }}
-                                  placeholder={t.apiKeyPlaceholder}
-                                  autoComplete="new-password"
-                                />
-                                {fieldState.invalid ? (
-                                  <FieldError errors={[fieldState.error]} />
-                                ) : null}
-                              </Field>
-                            )}
-                          />
-
-                          <Controller
-                            name={modelName}
-                            control={form.control}
-                            render={({ field, fieldState }) => (
-                              <Field data-invalid={fieldState.invalid}>
-                                <FieldLabel>
-                                  {t.model}{" "}
-                                  <span className="text-destructive">*</span>
-                                </FieldLabel>
-                                <AiProviderCredentialModelSummary
-                                  model={field.value}
-                                  invalid={fieldState.invalid}
-                                />
-                                {fieldState.invalid ? (
-                                  <FieldError errors={[fieldState.error]} />
-                                ) : null}
-                              </Field>
-                            )}
-                          />
-                        </div>
+                              <FieldLabel htmlFor={inputId}>
+                                {formatMessage(t.apiKeyIndex, {
+                                  index: formatNumber(index + 1),
+                                })}
+                              </FieldLabel>
+                              <Input
+                                {...field}
+                                id={inputId}
+                                type="password"
+                                autoComplete="new-password"
+                                aria-invalid={fieldState.invalid}
+                                placeholder={t.apiKeyPlaceholder}
+                                disabled={isSubmitting}
+                                onChange={(event) => {
+                                  field.onChange(event)
+                                  clearMessages()
+                                }}
+                              />
+                              {fieldState.invalid ? (
+                                <FieldError errors={[fieldState.error]} />
+                              ) : null}
+                            </Field>
+                          )}
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          aria-label={formatMessage(t.removeKey, {
+                            index: formatNumber(index + 1),
+                          })}
+                          onClick={() => {
+                            remove(index)
+                            clearMessages()
+                          }}
+                          disabled={isSubmitting || fields.length <= 1}
+                        >
+                          <Trash2 aria-hidden="true" />
+                        </Button>
                       </div>
                     )
                   })}
                 </div>
-              </FieldSet>
-
-              <Controller
-                name="baseUrl"
-                control={form.control}
-                render={({ field, fieldState }) => (
-                  <Field data-invalid={fieldState.invalid}>
-                    <FieldLabel htmlFor="baseUrl">Base URL</FieldLabel>
-                    <Input
-                      {...field}
-                      id="baseUrl"
-                      aria-invalid={fieldState.invalid}
-                      onChange={(event) => {
-                        field.onChange(event)
-                        clearAllCredentialModels()
-                      }}
-                      placeholder="https://api.example.com/v1"
-                    />
-                    <FieldDescription>{t.baseUrlDescription}</FieldDescription>
-                    {fieldState.invalid ? (
-                      <FieldError errors={[fieldState.error]} />
-                    ) : null}
-                  </Field>
-                )}
-              />
-
-              <Controller
-                name="description"
-                control={form.control}
-                render={({ field, fieldState }) => (
-                  <Field data-invalid={fieldState.invalid}>
-                    <FieldLabel htmlFor="description">
-                      {t.description}
-                    </FieldLabel>
-                    <Textarea
-                      {...field}
-                      id="description"
-                      aria-invalid={fieldState.invalid}
-                      placeholder={t.descriptionPlaceholder}
-                      rows={4}
-                    />
-                    {fieldState.invalid ? (
-                      <FieldError errors={[fieldState.error]} />
-                    ) : null}
-                  </Field>
-                )}
-              />
-
-              <Controller
-                name="defaultProvider"
-                control={form.control}
-                render={({ field }) => (
-                  <AppFormSwitchField
-                    id="defaultProvider"
-                    label={t.defaultProvider}
-                    description={t.defaultProviderDescription}
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                )}
-              />
-            </FieldGroup>
-          </AppFormShellBody>
-
-          <AppFormShellFooter>
-            <Button type="button" variant="ghost" onClick={handleCancel}>
-              {dictionary.common.cancel}
-            </Button>
-            <Button disabled={form.formState.isSubmitting} type="submit">
-              {form.formState.isSubmitting ? (
-                <>
-                  <Spinner data-icon="inline-start" />
-                  {t.createPending}
-                </>
               ) : (
-                t.createConfig
+                <p className="text-sm text-muted-foreground">{t.noKeysAdded}</p>
               )}
-            </Button>
-          </AppFormShellFooter>
-        </form>
-      </AppFormShell>
+              <FieldDescription id="credentials-description">
+                {t.apiKeysDescription}
+              </FieldDescription>
+              {credentialsError ? (
+                <FieldError
+                  id="credentials-error"
+                  errors={[{ message: credentialsError }]}
+                />
+              ) : null}
+            </FieldSet>
 
-      <AiProviderModelPickerDialog
-        currentModel={currentDialogModel}
-        models={modelOptions}
-        open={isModelDialogOpen}
-        onOpenChange={setIsModelDialogOpen}
-        onConfirm={handleConfirmModel}
-      />
-    </>
+            <aside className="rounded-lg border bg-muted/20 p-4">
+              <p className="text-sm font-medium">{t.verifyOnCreateTitle}</p>
+              <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                {t.verifyOnCreateDescription}
+              </p>
+            </aside>
+
+            {createSucceeded && !canReadConnections ? (
+              <p
+                role="status"
+                className="rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-sm"
+              >
+                {t.createSuccess}
+              </p>
+            ) : null}
+
+            {submitError ? (
+              <p
+                role="alert"
+                className="rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm text-destructive"
+              >
+                {submitError}
+              </p>
+            ) : null}
+          </FieldGroup>
+        </AppFormShellBody>
+
+        <AppFormShellFooter>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={handleCancel}
+            disabled={isSubmitting}
+          >
+            {dictionary.common.cancel}
+          </Button>
+          <Button disabled={isSubmitting} type="submit">
+            {isSubmitting ? (
+              <span role="status" className="inline-flex items-center gap-2">
+                <Spinner data-icon="inline-start" />
+                {t.createPending}
+              </span>
+            ) : (
+              t.createConnection
+            )}
+          </Button>
+        </AppFormShellFooter>
+      </form>
+    </AppFormShell>
   )
 }
