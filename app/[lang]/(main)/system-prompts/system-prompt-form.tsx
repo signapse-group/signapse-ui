@@ -57,6 +57,9 @@ export function SystemPromptForm({ initialData }: SystemPromptFormProps) {
   const isDirty = content !== initialData.content
   const contentLength = content.length
   const isOverLimit = contentLength > SYSTEM_PROMPT_MAX_CONTENT_LENGTH
+  const missingVariables = initialData.requiredVariables.filter(
+    (variable) => !content.includes(`{${variable}}`)
+  )
 
   function leaveEditor() {
     if (isDirty) {
@@ -77,6 +80,18 @@ export function SystemPromptForm({ initialData }: SystemPromptFormProps) {
         parsed.error.issues.some((issue) => issue.code === "too_big")
           ? t.contentTooLong
           : t.contentRequired
+      )
+      textareaRef.current?.focus()
+      return
+    }
+
+    if (missingVariables.length > 0) {
+      setError(
+        formatMessage(t.missingPlaceholders, {
+          variables: missingVariables
+            .map((variable) => `{${variable}}`)
+            .join(", "),
+        })
       )
       textareaRef.current?.focus()
       return
@@ -142,7 +157,7 @@ export function SystemPromptForm({ initialData }: SystemPromptFormProps) {
                   {t.requiredPlaceholders}
                 </h2>
                 {initialData.requiredVariables.length > 0 ? (
-                  <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1 font-mono text-sm text-muted-foreground">
+                  <ul className="mt-2 flex max-w-[32rem] flex-wrap gap-x-4 gap-y-1 font-mono text-sm text-muted-foreground">
                     {initialData.requiredVariables.map((variable) => (
                       <li key={variable}>{`{${variable}}`}</li>
                     ))}

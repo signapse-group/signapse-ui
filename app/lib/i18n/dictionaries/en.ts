@@ -2477,7 +2477,8 @@ export const en: Dictionary = {
     editorTitle: "Edit prompt content",
     requiredPlaceholders: "Required placeholders",
     placeholdersDescription:
-      "Keep every placeholder from the official seed. You can change the wording and move placeholders. Missing placeholders are listed if saving is rejected.",
+      "Keep every placeholder from the official seed. You can change the wording and move placeholders. Missing names are listed if saving is rejected.",
+    missingPlaceholders: "Missing required prompt placeholders: {variables}",
     noRequiredPlaceholders: "This prompt has no required placeholders.",
     content: "Prompt content",
     contentPlaceholder: "Enter prompt content...",

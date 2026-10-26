@@ -2466,7 +2466,8 @@ export const vi = {
     editorTitle: "Chỉnh sửa nội dung prompt",
     requiredPlaceholders: "Placeholder bắt buộc",
     placeholdersDescription:
-      "Giữ lại mọi placeholder từ seed chính thức. Bạn có thể sửa câu chữ và thay đổi vị trí placeholder. Nếu lưu thất bại, các placeholder bị thiếu sẽ được liệt kê.",
+      "Giữ lại mọi placeholder từ seed chính thức. Bạn có thể sửa câu chữ và đổi vị trí placeholder. Nếu không thể lưu, danh sách placeholder còn thiếu sẽ hiển thị.",
+    missingPlaceholders: "Thiếu các placeholder bắt buộc: {variables}",
     noRequiredPlaceholders: "Prompt này không có placeholder bắt buộc.",
     content: "Nội dung prompt",
     contentPlaceholder: "Nhập nội dung prompt...",

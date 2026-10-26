@@ -141,35 +141,76 @@ describe("system prompt content editor", () => {
     expect(updateSystemPrompt).not.toHaveBeenCalled()
   })
 
-  it("keeps edited content and reports missing placeholders after rejection", async () => {
+  it.each(localizations)(
+    "lists missing producer placeholders and keeps the draft in $locale without submitting",
+    async ({ locale, dictionary }) => {
+      const user = userEvent.setup()
+      renderForm(locale, dictionary)
+
+      const content = screen.getByRole("textbox", {
+        name: new RegExp(`^${dictionary.systemPrompts.content}`),
+      })
+      const editedContent = "Reworded {locale} {rawQuestion}"
+      const missingVariables = initialData.requiredVariables
+        .filter((variable) => !["locale", "rawQuestion"].includes(variable))
+        .map((variable) => `{${variable}}`)
+        .join(", ")
+      const expectedError =
+        dictionary.systemPrompts.missingPlaceholders.replace(
+          "{variables}",
+          missingVariables
+        )
+      fireEvent.change(content, { target: { value: editedContent } })
+      await user.click(
+        screen.getByRole("button", {
+          name: dictionary.systemPrompts.saveHotfix,
+        })
+      )
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(expectedError)
+      expect(content).toHaveValue(editedContent)
+      expect(updateSystemPrompt).not.toHaveBeenCalled()
+    }
+  )
+
+  it("keeps edited content when the producer rejects an update", async () => {
     const user = userEvent.setup()
-    const missingVariables = "Missing prompt variables: {locale}, {rawQuestion}"
+    const producerError = "The producer rejected this prompt update."
     vi.mocked(updateSystemPrompt).mockResolvedValue({
       success: false,
-      error: missingVariables,
+      error: producerError,
     })
     renderForm()
 
     const content = screen.getByRole("textbox", {
       name: new RegExp(`^${viDictionary.systemPrompts.content}`),
     })
-    fireEvent.change(content, { target: { value: "Reworded content" } })
+    const editedContent = initialData.requiredVariables
+      .map((variable) => `{${variable}}`)
+      .join(" ")
+    fireEvent.change(content, { target: { value: editedContent } })
     await user.click(
       screen.getByRole("button", {
         name: viDictionary.systemPrompts.saveHotfix,
       })
     )
 
-    expect(await screen.findByRole("alert")).toHaveTextContent(missingVariables)
-    expect(content).toHaveValue("Reworded content")
+    expect(await screen.findByRole("alert")).toHaveTextContent(producerError)
+    expect(content).toHaveValue(editedContent)
     expect(updateSystemPrompt).toHaveBeenCalledWith(initialData.promptType, {
-      content: "Reworded content",
+      content: editedContent,
     })
   })
 
   it("shows save confirmation and leaves the editor only after API success", async () => {
     const user = userEvent.setup()
-    const savedData = { ...initialData, content: "Updated {locale}" }
+    const savedData = {
+      ...initialData,
+      content: `Updated ${[...initialData.requiredVariables]
+        .reverse()
+        .map((variable) => `{${variable}}`)
+        .join(", ")}`,
+    }
     vi.mocked(updateSystemPrompt).mockResolvedValue({
       success: true,
       data: savedData,

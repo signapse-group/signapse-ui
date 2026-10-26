@@ -140,10 +140,13 @@ test.describe("P0 system prompt catalog and content hotfix", () => {
       name: en.systemPrompts.saveHotfix,
     })
     await expect(save).toBeFocused()
+    const successVisible = expect(
+      page.getByText(en.systemPrompts.updateSuccess)
+    ).toBeVisible({ timeout: 5_000 })
     await page.keyboard.press("Enter")
 
+    await successVisible
     await expect(page).toHaveURL(/\/en\/system-prompts$/)
-    await expect(page.getByText(en.systemPrompts.updateSuccess)).toBeVisible()
 
     const state = await fixture.state()
     const updateRequest = state.requests.find(
