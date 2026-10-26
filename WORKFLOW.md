@@ -80,6 +80,8 @@ Description:
 Description not provided in the snapshot.
 {% endif %}
 
+Retain the live Jira `dependencies` envelope and apply the [dependency contract](https://github.com/signapse-group/signapse-symphony/blob/main/elixir/README.md#jira-dependency-contract). Use this workspace instruction/runbook sources; if a required source is missing, report deployment drift and stop the affected phase instead of searching legacy checkouts or backups for substitute policy.
+
 {% if state == "ready" %}
 ## Phase: Survey
 

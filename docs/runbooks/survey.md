@@ -1,5 +1,7 @@
 # Survey — Ready
 
+Read dependencies under the [shared contract](../../CONTRIBUTING.md#reading-jira-dependencies); retain the live tool `dependencies` envelope.
+
 This runbook owns the Survey procedure and is loaded only when `WORKFLOW.md` assigns `Ready`. A direct survey request does not activate Symphony/Jira lifecycle. Read `AGENTS.md`, applicable scoped instructions and [CONTRIBUTING.md](../../CONTRIBUTING.md); select technical skills as needed, without adding permissions or gates.
 
 ## Assignment and authority
@@ -17,7 +19,7 @@ The coordinator retains scope/priority, new tickets, Open → Ready, Blocked res
 3. Trace affected code, callers/consumers, reusable patterns, necessary changes and verification seams. Existing code shows current behavior, not expected behavior. For API work, read [API consumer standards](../api-consumer.md) and affected producer contract/publication evidence. For UI work, read and apply the [UI design gate](https://github.com/signapse-group/signapse-planing/blob/main/workflow/project-execution-workflow.md#ui-design-gate): follow the native parent's Design references and open the actual approved images/frames, checking version, scope and shared rules before concluding readiness. Attachment metadata alone is insufficient.
 4. For a fix under a Bug, read accepted expected/basis and the latest relevant QA report: case/version, actual result, tested build/environment and assigned regression. A FAIL summary may also contain Blocked/Not Run or a different deviation; survey the assigned fix only.
 5. Run existing checks only to answer a concrete question on isolated local data, using [verification standards](../../CONTRIBUTING.md#verification). No full-green baseline is required when an in-scope failure is grounded for Implement. A baseline does not prove future implementation satisfies AC.
-6. Identify the smallest implementation approach and focused acceptance/regression checks. Investigate discoverable facts before escalating unresolved requirements or material decisions to the coordinator. Continue meaningful independent survey while only dependent work waits.
+6. Identify the smallest implementation approach and focused acceptance/regression checks. Apply [decision standards](../../CONTRIBUTING.md#decisions-and-evidence) when an edge-case fix would materially change the user experience. Investigate discoverable facts before escalating unresolved requirements or material decisions to the coordinator. Continue meaningful independent survey while only dependent work waits.
 
 ## Record only useful handoff information
 

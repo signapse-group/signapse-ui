@@ -3,6 +3,7 @@ import { Suspense } from "react"
 import { getNewsArticles } from "@/app/api/news-articles/action"
 import type { Dictionary } from "@/app/lib/i18n/dictionary-types"
 import { getServerDictionary } from "@/app/lib/i18n/server"
+import { parsePaginationQuery } from "@/app/lib/pagination/query"
 import { hasAnyPermission } from "@/app/lib/permissions"
 import { NEWS_ARTICLE_READ_PERMISSIONS } from "@/app/lib/news-articles/permissions"
 import { getCurrentPermissions } from "@/app/lib/permissions-server"
@@ -13,6 +14,7 @@ import {
   AppListTableHead,
   AppListTableHeaderRow,
 } from "@/components/app-list-table"
+import { AppPaginationSkeleton } from "@/components/app-pagination-controls"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   Table,
@@ -42,8 +44,7 @@ export default async function NewsArticlesPage({ searchParams }: PageProps) {
   }
 
   const params = await searchParams
-  const page = Number(params.page) || 1
-  const size = Number(params.size) || 10
+  const { page, size } = parsePaginationQuery(params)
   const sort =
     typeof params.sort === "string" ? params.sort : "publishedAt_desc"
 
@@ -152,21 +153,7 @@ function NewsArticleListSkeleton({ dictionary }: { dictionary: Dictionary }) {
         </Table>
       </AppListTable>
 
-      <div className="mt-4 flex flex-col gap-3 rounded-xl border border-border/60 bg-muted/20 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-col gap-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <Skeleton className="h-6 w-24" />
-            <Skeleton className="h-6 w-28" />
-          </div>
-          <Skeleton className="h-4 w-56" />
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Skeleton className="h-8 w-20" />
-          <Skeleton className="h-8 w-8" />
-          <Skeleton className="h-8 w-8" />
-          <Skeleton className="h-8 w-20" />
-        </div>
-      </div>
+      <AppPaginationSkeleton className="mt-4" />
     </div>
   )
 }

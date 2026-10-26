@@ -1,5 +1,9 @@
 import type { AppLocale } from "@/app/lib/i18n/config"
 import type { Dictionary } from "@/app/lib/i18n/dictionary-types"
+import {
+  DEFAULT_PAGE_SIZE,
+  PAGE_SIZE_OPTIONS,
+} from "@/app/lib/pagination/query"
 import { z } from "zod"
 
 export const FEEDBACK_STATUSES = ["PENDING_REVIEW", "REVIEWED"] as const
@@ -8,8 +12,8 @@ export type FeedbackStatus = (typeof FEEDBACK_STATUSES)[number]
 export const FEEDBACK_MAX_CONTENT_LENGTH = 5_000
 export const FEEDBACK_MAX_SCREENSHOT_BYTES = 5 * 1024 * 1024
 export const FEEDBACK_MAX_SCREENSHOT_PIXELS = 25_000_000
-export const FEEDBACK_PAGE_SIZE = 10
-export const FEEDBACK_MODERATION_PAGE_SIZE_OPTIONS = [10, 20, 50, 100] as const
+export const FEEDBACK_PAGE_SIZE = DEFAULT_PAGE_SIZE
+export const FEEDBACK_MODERATION_PAGE_SIZE_OPTIONS = PAGE_SIZE_OPTIONS
 
 export const feedbackStatusSchema = z.enum(FEEDBACK_STATUSES)
 

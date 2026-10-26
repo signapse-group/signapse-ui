@@ -4,6 +4,7 @@ import {
   AppListTableHead,
   AppListTableHeaderRow,
 } from "@/components/app-list-table"
+import { AppPaginationSkeleton } from "@/components/app-pagination-controls"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   Table,
@@ -74,18 +75,7 @@ export default async function ContactRequestsLoading() {
           </TableBody>
         </Table>
       </AppListTable>
-      <div className="flex flex-col gap-3 rounded-xl border border-border/60 bg-muted/20 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-        <Skeleton className="h-4 w-44" />
-        <div className="flex items-center gap-3 sm:ml-auto">
-          <Skeleton className="h-4 w-24" />
-          <Skeleton className="h-9 w-16" />
-          <div className="flex items-center gap-1">
-            {Array.from({ length: 3 }, (_, index) => (
-              <Skeleton className="size-8" key={index} />
-            ))}
-          </div>
-        </div>
-      </div>
+      <AppPaginationSkeleton />
     </div>
   )
 }

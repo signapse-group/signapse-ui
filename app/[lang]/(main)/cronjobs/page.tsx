@@ -2,6 +2,7 @@ import { Suspense } from "react"
 import { CronjobListPage } from "./cronjob-list"
 import { getCronjobs } from "@/app/api/cronjobs/action"
 import { getServerDictionary } from "@/app/lib/i18n/server"
+import { parsePaginationQuery } from "@/app/lib/pagination/query"
 import { hasPermission } from "@/app/lib/permissions"
 import { getCurrentPermissions } from "@/app/lib/permissions-server"
 import { buildSortQuery, buildFilterQuery } from "@/app/lib/utils"
@@ -11,6 +12,7 @@ import {
   AppListTableHead,
   AppListTableHeaderRow,
 } from "@/components/app-list-table"
+import { AppPaginationSkeleton } from "@/components/app-pagination-controls"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   Table,
@@ -50,15 +52,23 @@ async function CronjobListContent({
   searchParamsPromise: Promise<{ [key: string]: string | string[] | undefined }>
 }) {
   const resolvedParams = await searchParamsPromise
-  const { page = "1", size = "10", sort = "", ...filterParams } = resolvedParams
+  const {
+    page: pageParam,
+    size: sizeParam,
+    sort = "",
+    ...filterParams
+  } = resolvedParams
+  const { page, size } = parsePaginationQuery({
+    page: pageParam,
+    size: sizeParam,
+  })
 
-  const pageIndex = Math.max(0, Number(page) - 1)
   const filter = buildFilterQuery(filterParams)
 
   const cronjobPage = await getCronjobs({
     filter: filter,
-    page: pageIndex,
-    size: Number(size),
+    page: page - 1,
+    size,
     sort: buildSortQuery(sort as string),
   })
 
@@ -131,14 +141,7 @@ function CronjobListSkeleton() {
         </Table>
       </AppListTable>
 
-      <div className="mt-4 flex items-center justify-between gap-2">
-        <Skeleton className="h-8 w-24" />
-        <Skeleton className="h-4 w-32" />
-        <div className="flex gap-2">
-          <Skeleton className="h-8 w-8" />
-          <Skeleton className="h-8 w-8" />
-        </div>
-      </div>
+      <AppPaginationSkeleton className="mt-4" />
     </div>
   )
 }

@@ -81,6 +81,11 @@ describe("Feedback authenticated actions", () => {
       "/me/feedback-submissions?page=1&size=10&sort=createdDate%2Cdesc&sort=id%2Cdesc"
     )
 
+    await getPersonalFeedback({ page: 3, size: 50 })
+    expect(fetchAuthenticated).toHaveBeenLastCalledWith(
+      "/me/feedback-submissions?page=2&size=50&sort=createdDate%2Cdesc&sort=id%2Cdesc"
+    )
+
     await getModerationFeedback({
       search: "chart",
       status: "PENDING_REVIEW",

@@ -24,6 +24,8 @@ When framework versions, the UI preset, CI, or repository ownership change, refr
 
 ## Dev handoff boundary
 
+CI runs quality checks on PRs and main; reviewers confirm Vercel delivery from their workspace under [delivery guidance](docs/delivery.md) and the assigned Review runbook.
+
 For direct work, complete the requested output with applicable verification under CONTRIBUTING. An accepted local request needs no Jira ticket as a prerequisite. Tracker/review/PR/CI lifecycle and publication activate only when assigned; ordinary requests and no-PR operations retain their requested boundary. Assigned execution follows WORKFLOW, including its phase-specific permissions and stopping point.
 
 ## Architecture

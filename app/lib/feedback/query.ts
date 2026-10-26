@@ -1,9 +1,6 @@
 import type { FeedbackStatus } from "./definitions"
-import {
-  FEEDBACK_MODERATION_PAGE_SIZE_OPTIONS,
-  FEEDBACK_PAGE_SIZE,
-  isFeedbackStatus,
-} from "./definitions"
+import { FEEDBACK_PAGE_SIZE, isFeedbackStatus } from "./definitions"
+import { parsePaginationQuery } from "@/app/lib/pagination/query"
 
 export const FEEDBACK_DEFAULT_SORT = "createdDate_desc"
 
@@ -29,10 +26,9 @@ export function parseFeedbackModerationQuery(
 ): FeedbackModerationQuery {
   const get = (key: string) =>
     input instanceof URLSearchParams
-      ? input.get(key) ?? undefined
+      ? (input.get(key) ?? undefined)
       : firstValue(input[key])
-  const requestedPage = Number(get("page"))
-  const requestedSize = Number(get("size"))
+  const pagination = parsePaginationQuery(input)
   const requestedStatus = get("status")
   const requestedSort = get("sort")
 
@@ -45,14 +41,8 @@ export function parseFeedbackModerationQuery(
       requestedSort === "createdDate_asc"
         ? "createdDate_asc"
         : FEEDBACK_DEFAULT_SORT,
-    page: Number.isInteger(requestedPage) && requestedPage > 0
-      ? requestedPage
-      : 1,
-    size: FEEDBACK_MODERATION_PAGE_SIZE_OPTIONS.includes(
-      requestedSize as (typeof FEEDBACK_MODERATION_PAGE_SIZE_OPTIONS)[number]
-    )
-      ? requestedSize
-      : FEEDBACK_PAGE_SIZE,
+    page: pagination.page,
+    size: pagination.size,
   }
 }
 
@@ -104,7 +94,8 @@ export function serializeFeedbackPersonalQuery(
 }
 
 export function serializeFeedbackModerationUrlQuery(
-  query: FeedbackModerationQuery
+  query: FeedbackModerationQuery,
+  currentParams?: URLSearchParams
 ): string {
   const params = new URLSearchParams()
   if (query.search) params.set("search", query.search)
@@ -112,5 +103,11 @@ export function serializeFeedbackModerationUrlQuery(
   params.set("sort", query.sort)
   params.set("page", String(query.page))
   params.set("size", String(query.size))
+
+  const paginationParams = new Set(["search", "status", "sort", "page", "size"])
+  for (const [key, value] of currentParams ?? []) {
+    if (!paginationParams.has(key)) params.append(key, value)
+  }
+
   return params.toString()
 }

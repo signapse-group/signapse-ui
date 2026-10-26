@@ -6,8 +6,9 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react"
-import userEvent from "@testing-library/user-event"
+import userEvent, { type UserEvent } from "@testing-library/user-event"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 const { routerRefresh, toastError, toastSuccess } = vi.hoisted(() => ({
@@ -33,6 +34,7 @@ vi.mock("sonner", () => ({
 
 import { updateMyProfile } from "@/app/api/user/action"
 import { en } from "@/app/lib/i18n/dictionaries/en"
+import { vi as viDictionary } from "@/app/lib/i18n/dictionaries/vi"
 import { LocalizationProvider } from "@/app/lib/i18n/provider"
 import {
   AccountProfileForm,
@@ -46,14 +48,52 @@ const initialData: AccountProfileInitialData = {
   lastName: "Miller",
   dateOfBirth: "1990-01-02",
   email: "ada@example.com",
-  phoneNumber: "+1 555 0100",
+  phoneNumber: "2025550199",
 }
 
-function renderProfile(overrides: Partial<AccountProfileInitialData> = {}) {
+function renderProfile(
+  overrides: Partial<AccountProfileInitialData> = {},
+  locale: "en" | "vi" = "en"
+) {
+  const dictionary = locale === "vi" ? viDictionary : en
+
   return render(
-    <LocalizationProvider locale="en" dictionary={en}>
+    <LocalizationProvider locale={locale} dictionary={dictionary}>
       <AccountProfileForm initialData={{ ...initialData, ...overrides }} />
     </LocalizationProvider>
+  )
+}
+
+async function selectBirthday(value: string, user: UserEvent) {
+  const [year, month, day] = value.split("-").map(Number)
+  const date = new Date(0)
+  date.setUTCFullYear(year, month - 1, day)
+  date.setUTCHours(0, 0, 0, 0)
+  const monthName = new Intl.DateTimeFormat("en-US", {
+    month: "long",
+    timeZone: "UTC",
+  }).format(date)
+
+  await user.click(screen.getByRole("button", { name: /Date of birth/ }))
+
+  const calendar = screen
+    .getByRole("grid")
+    .closest<HTMLElement>('[data-slot="calendar"]')!
+  await user.selectOptions(
+    within(calendar).getByRole("combobox", { name: "Choose the Year" }),
+    String(year)
+  )
+  await user.selectOptions(
+    within(calendar).getByRole("combobox", { name: "Choose the Month" }),
+    String(month - 1)
+  )
+  await user.click(
+    within(screen.getByRole("grid")).getByRole("button", {
+      name: new RegExp(`${monthName} ${day}(?:st|nd|rd|th)?, ${year}`),
+    })
+  )
+  await waitFor(() =>
+    expect(screen.queryByRole("grid")).not.toBeInTheDocument()
   )
 }
 
@@ -96,9 +136,11 @@ describe("AccountProfileForm", () => {
 
     expect(screen.getByRole("textbox", { name: /Last name/ })).toBeRequired()
     expect(screen.getByRole("textbox", { name: /First name/ })).toBeRequired()
-    const dateOfBirth = screen.getByLabelText(/Date of birth/i)
-    expect(dateOfBirth).toHaveAttribute("type", "date")
-    expect(dateOfBirth).toBeRequired()
+    const dateOfBirth = screen.getByRole("button", { name: /Date of birth/i })
+    expect(dateOfBirth).toHaveAttribute("type", "button")
+    expect(dateOfBirth).toHaveTextContent("January 2, 1990")
+    expect(dateOfBirth).toHaveAccessibleName(/Date of birth.*January 2, 1990/)
+    expect(document.querySelector('input[type="date"]')).not.toBeInTheDocument()
     expect(screen.getByRole("textbox", { name: /Phone number/ })).toBeRequired()
     expect(
       screen.queryByRole("button", { name: /upload|delete|replace/i })
@@ -106,6 +148,14 @@ describe("AccountProfileForm", () => {
     expect(
       screen.queryByText(/billing|payment|package|plan|upgrade|subscription/i)
     ).not.toBeInTheDocument()
+
+    dateOfBirth.focus()
+    await user.keyboard("{Enter}")
+    expect(screen.getByRole("grid")).toBeVisible()
+    await user.keyboard("{Escape}")
+    await waitFor(() => expect(screen.queryByRole("grid")).toBeNull())
+    expect(dateOfBirth).toHaveFocus()
+    expect(updateMyProfile).not.toHaveBeenCalled()
 
     await user.clear(screen.getByRole("textbox", { name: /First name/ }))
 
@@ -119,6 +169,25 @@ describe("AccountProfileForm", () => {
     )
   })
 
+  it("localizes the selected birthday and calendar dropdowns", async () => {
+    const user = userEvent.setup()
+    renderProfile({}, "vi")
+
+    const birthday = screen.getByRole("button", { name: /Ngày sinh/ })
+    expect(birthday).toHaveTextContent("2 tháng 1, 1990")
+
+    await user.click(birthday)
+    const calendar = screen
+      .getByRole("grid")
+      .closest<HTMLElement>('[data-slot="calendar"]')!
+    expect(
+      within(calendar).getByRole("combobox", { name: "Chọn tháng" })
+    ).toBeVisible()
+    expect(
+      within(calendar).getByRole("combobox", { name: "Chọn năm" })
+    ).toBeVisible()
+  })
+
   it("keeps leap-day selection in the API date-time without shifting it", async () => {
     const user = userEvent.setup()
     vi.mocked(updateMyProfile).mockResolvedValue({
@@ -127,9 +196,10 @@ describe("AccountProfileForm", () => {
     })
     renderProfile()
 
-    const dateOfBirth = screen.getByLabelText(/Date of birth/i)
-    fireEvent.change(dateOfBirth, { target: { value: "2000-02-29" } })
-    expect(dateOfBirth).toHaveValue("2000-02-29")
+    await selectBirthday("2000-02-29", user)
+    expect(
+      screen.getByRole("button", { name: /Date of birth/i })
+    ).toHaveTextContent("February 29, 2000")
 
     await user.click(
       screen.getByRole("button", { name: en.accountProfile.saveChanges })
@@ -142,7 +212,7 @@ describe("AccountProfileForm", () => {
       birthday: "2000-02-29T00:00:00.000Z",
       phone: initialData.phoneNumber,
     })
-  })
+  }, 10_000)
 
   it("accepts a date before 1900 without an age cutoff", async () => {
     const user = userEvent.setup()
@@ -152,9 +222,10 @@ describe("AccountProfileForm", () => {
     })
     renderProfile()
 
-    const dateOfBirth = screen.getByLabelText(/Date of birth/i)
-    fireEvent.change(dateOfBirth, { target: { value: "0001-01-01" } })
-    expect(dateOfBirth).toHaveValue("0001-01-01")
+    await selectBirthday("0001-01-01", user)
+    expect(
+      screen.getByRole("button", { name: /Date of birth/i })
+    ).toHaveTextContent("January 1, 1")
     const save = screen.getByRole("button", {
       name: en.accountProfile.saveChanges,
     })
@@ -168,25 +239,127 @@ describe("AccountProfileForm", () => {
       birthday: "0001-01-01T00:00:00.000Z",
       phone: initialData.phoneNumber,
     })
-  })
+  }, 10_000)
 
-  it("rejects a future date before saving", async () => {
+  it("keeps the required error and disables future calendar dates", async () => {
+    const user = userEvent.setup()
     renderProfile()
 
-    const dateOfBirth = screen.getByLabelText(/Date of birth/i)
-    fireEvent.change(dateOfBirth, { target: { value: "2100-01-01" } })
+    const birthday = screen.getByRole("button", { name: /Date of birth/i })
+    await user.click(birthday)
+    await user.click(
+      within(screen.getByRole("grid")).getByRole("button", {
+        name: /January 2nd, 1990.*selected/,
+      })
+    )
 
     await waitFor(() => {
-      expect(dateOfBirth).toHaveAttribute("aria-invalid", "true")
+      expect(birthday).toHaveAttribute("aria-invalid", "true")
       expect(screen.getByRole("alert")).toHaveTextContent(
-        en.accountProfile.dateOfBirthInvalid
+        en.accountProfile.dateOfBirthRequired
       )
     })
     expect(
       screen.getByRole("button", { name: en.accountProfile.saveChanges })
     ).toBeDisabled()
+
+    await user.click(birthday)
+    const today = new Date()
+    const monthDays = new Date(
+      today.getFullYear(),
+      today.getMonth() + 1,
+      0
+    ).getDate()
+    if (today.getDate() < monthDays) {
+      const tomorrow = new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate() + 1
+      )
+      const monthName = new Intl.DateTimeFormat("en-US", {
+        month: "long",
+        timeZone: "UTC",
+      }).format(tomorrow)
+      await expect(
+        within(screen.getByRole("grid")).getByRole("button", {
+          name: new RegExp(
+            `${monthName} ${tomorrow.getDate()}(?:st|nd|rd|th)?, ${today.getFullYear()}`
+          ),
+        })
+      ).toBeDisabled()
+    }
     expect(updateMyProfile).not.toHaveBeenCalled()
-  })
+  }, 10_000)
+
+  it("uses the UTC day across local timezone boundaries", async () => {
+    const originalTimezone = process.env.TZ
+    vi.useFakeTimers({ toFake: ["Date"] })
+
+    try {
+      for (const boundary of [
+        {
+          timezone: "Pacific/Kiritimati",
+          now: "2026-10-17T12:30:00.000Z",
+          localDay: 18,
+          birthday: "2026-10-18",
+          disabled: true,
+        },
+        {
+          timezone: "Pacific/Honolulu",
+          now: "2026-10-17T00:30:00.000Z",
+          localDay: 16,
+          birthday: "2026-10-17",
+          disabled: false,
+        },
+      ]) {
+        process.env.TZ = boundary.timezone
+        vi.setSystemTime(new Date(boundary.now))
+        expect(new Date().getDate()).toBe(boundary.localDay)
+
+        const user = userEvent.setup({
+          advanceTimers: (milliseconds) => vi.advanceTimersByTime(milliseconds),
+        })
+        renderProfile({ dateOfBirth: boundary.birthday })
+        await user.type(
+          screen.getByRole("textbox", { name: /Last name/ }),
+          " Updated"
+        )
+        const save = screen.getByRole("button", {
+          name: en.accountProfile.saveChanges,
+        })
+        if (boundary.disabled) {
+          await waitFor(() => expect(save).toBeDisabled())
+        } else {
+          await waitFor(() => expect(save).toBeEnabled())
+        }
+
+        const birthday = screen.getByRole("button", {
+          name: /Date of birth/i,
+        })
+        await user.click(birthday)
+        const calendar = within(screen.getByRole("grid"))
+        const calendarDay = calendar.getByRole("button", {
+          name: new RegExp(
+            `October ${Number(boundary.birthday.slice(-2))}(?:st|nd|rd|th)?, 2026`
+          ),
+        })
+        if (boundary.disabled) {
+          expect(calendarDay).toBeDisabled()
+        } else {
+          expect(calendarDay).toBeEnabled()
+        }
+        cleanup()
+      }
+    } finally {
+      cleanup()
+      vi.useRealTimers()
+      if (originalTimezone === undefined) {
+        delete process.env.TZ
+      } else {
+        process.env.TZ = originalTimezone
+      }
+    }
+  }, 10_000)
 
   it("restores dirty edits without mutation and normalizes a successful update", async () => {
     const user = userEvent.setup()
@@ -203,6 +376,7 @@ describe("AccountProfileForm", () => {
     const restore = screen.getByRole("button", {
       name: en.accountProfile.restore,
     })
+    const birthday = screen.getByRole("button", { name: /Date of birth/ })
     const save = screen.getByRole("button", {
       name: en.accountProfile.saveChanges,
     })
@@ -211,11 +385,14 @@ describe("AccountProfileForm", () => {
 
     await user.clear(firstName)
     await user.type(firstName, "  Ada Prime  ")
+    await selectBirthday("2000-02-29", user)
+    expect(birthday).toHaveTextContent("February 29, 2000")
     expect(restore).toBeEnabled()
     expect(save).toBeEnabled()
 
     await user.click(restore)
     expect(firstName).toHaveValue(initialData.firstName)
+    expect(birthday).toHaveTextContent("January 2, 1990")
     expect(restore).toBeDisabled()
     expect(save).toBeDisabled()
     expect(updateMyProfile).not.toHaveBeenCalled()
@@ -224,6 +401,7 @@ describe("AccountProfileForm", () => {
     await user.type(firstName, "  Ada Prime  ")
     await user.click(save)
     await waitFor(() => expect(updateMyProfile).toHaveBeenCalledTimes(1))
+    expect(birthday).toBeDisabled()
     expect(updateMyProfile).toHaveBeenCalledWith({
       firstName: "Ada Prime",
       lastName: initialData.lastName,
@@ -242,7 +420,44 @@ describe("AccountProfileForm", () => {
     expect(save).toBeDisabled()
     expect(restore).toBeDisabled()
     expect(toastSuccess).toHaveBeenCalledWith(en.accountProfile.updateSuccess)
-  })
+  }, 10_000)
+
+  it("closes an open birthday picker while a save is pending", async () => {
+    const user = userEvent.setup()
+    let resolveUpdate: (() => void) | undefined
+    vi.mocked(updateMyProfile).mockImplementation(
+      () =>
+        new Promise<Awaited<ReturnType<typeof updateMyProfile>>>((resolve) => {
+          resolveUpdate = () => resolve({ success: true, data: {} as never })
+        })
+    )
+    renderProfile()
+
+    const firstName = screen.getByRole("textbox", { name: /First name/ })
+    const birthday = screen.getByRole("button", { name: /Date of birth/ })
+    await user.type(firstName, " Prime")
+    await selectBirthday("2000-02-29", user)
+    await user.click(birthday)
+    expect(screen.getByRole("grid")).toBeVisible()
+
+    fireEvent.submit(birthday.closest("form")!)
+    await waitFor(() => expect(updateMyProfile).toHaveBeenCalledTimes(1))
+
+    expect(screen.queryByRole("grid")).not.toBeInTheDocument()
+    expect(birthday).toBeDisabled()
+    expect(updateMyProfile).toHaveBeenCalledWith({
+      firstName: "Ada Prime",
+      lastName: initialData.lastName,
+      birthday: "2000-02-29T00:00:00.000Z",
+      phone: initialData.phoneNumber,
+    })
+
+    await user.click(birthday)
+    expect(screen.queryByRole("grid")).not.toBeInTheDocument()
+    resolveUpdate?.()
+    await waitFor(() => expect(routerRefresh).toHaveBeenCalledTimes(1))
+    expect(birthday).toHaveTextContent("February 29, 2000")
+  }, 10_000)
 
   it("retains failed edits and exposes localized recovery feedback", async () => {
     const user = userEvent.setup()

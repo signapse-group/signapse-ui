@@ -10,6 +10,154 @@ test.describe("P0 contact request read dashboard", () => {
     await page.setViewportSize({ width: 1440, height: 1024 })
   })
 
+  test("matches the pagination reference at desktop and compact widths", async ({
+    fixture,
+    page,
+  }, testInfo) => {
+    await page.emulateMedia({ colorScheme: "dark" })
+    await fixture.setScenario("/contact-requests", "short", "GET")
+    await page.goto("/en/contact-requests?size=10")
+
+    const footer = page.locator('[data-slot="app-pagination-footer"]')
+    await expect(footer).toBeVisible()
+    await expect(
+      footer.getByRole("combobox", { name: "Rows per page" })
+    ).toContainText("10")
+    await expect(
+      footer.getByText("Showing 1-3 of 3 results", { exact: true })
+    ).toBeVisible()
+    await expect(page.locator("[data-contact-request-row]")).toHaveCount(3)
+    const navigation = footer.getByRole("navigation", {
+      name: "Pagination navigation",
+    })
+    await expect(
+      navigation.getByRole("button", { name: "Go to page 1" })
+    ).toHaveAttribute("aria-current", "page")
+    await expect(
+      navigation.getByRole("button", { name: "Go to previous page" })
+    ).toBeDisabled()
+    await expect(
+      navigation.getByRole("button", { name: "Go to next page" })
+    ).toBeDisabled()
+    await page.addStyleTag({
+      content: "nextjs-portal { display: none !important; }",
+    })
+    await testInfo.attach("pagination-desktop", {
+      body: await footer.screenshot({ animations: "disabled" }),
+      contentType: "image/png",
+    })
+
+    await fixture.setScenario("/contact-requests", "success", "GET")
+    await page.setViewportSize({ width: 375, height: 812 })
+    await page.goto("/en/contact-requests?size=10")
+    await page.addStyleTag({
+      content: "nextjs-portal { display: none !important; }",
+    })
+    await expect(
+      footer.getByRole("combobox", { name: "Rows per page" })
+    ).toContainText("10")
+    await expect(
+      footer.getByText("Showing 1-10 of 21 results", { exact: true })
+    ).toBeVisible()
+    await expect(
+      footer
+        .getByRole("navigation", { name: "Pagination navigation" })
+        .getByRole("button", { name: "Go to next page" })
+    ).toBeEnabled()
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth
+      )
+    ).toBe(true)
+    await testInfo.attach("pagination-compact", {
+      body: await footer.screenshot({ animations: "disabled" }),
+      contentType: "image/png",
+    })
+
+    await page.setViewportSize({ width: 1440, height: 1024 })
+    const setFooterContentWidth = async (width: number) => {
+      await footer.evaluate((element, contentWidth) => {
+        const style = getComputedStyle(element)
+        const horizontalChrome =
+          Number.parseFloat(style.paddingLeft) +
+          Number.parseFloat(style.paddingRight) +
+          Number.parseFloat(style.borderLeftWidth) +
+          Number.parseFloat(style.borderRightWidth)
+        const footerElement = element as HTMLElement
+        footerElement.style.width = `${contentWidth + horizontalChrome}px`
+      }, width)
+    }
+    const pageTwo = footer
+      .getByRole("navigation", { name: "Pagination navigation" })
+      .getByRole("button", { name: "Go to page 2" })
+
+    for (const width of [599, 600, 601]) {
+      await setFooterContentWidth(width)
+      if (width < 600) await expect(pageTwo).toBeHidden()
+      else await expect(pageTwo).toBeVisible()
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= window.innerWidth
+        )
+      ).toBe(true)
+    }
+
+    const summary = footer.locator(":scope > div > p")
+    const controls = footer.locator(":scope > div > div")
+    for (const width of [759, 760, 761]) {
+      await setFooterContentWidth(width)
+      const summaryBox = await summary.boundingBox()
+      const controlsBox = await controls.boundingBox()
+      expect(summaryBox).not.toBeNull()
+      expect(controlsBox).not.toBeNull()
+      if (width < 760) {
+        expect(controlsBox!.y).toBeGreaterThan(summaryBox!.y)
+      } else {
+        const summaryCenter = summaryBox!.y + summaryBox!.height / 2
+        const controlsCenter = controlsBox!.y + controlsBox!.height / 2
+        expect(Math.abs(controlsCenter - summaryCenter)).toBeLessThan(2)
+      }
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= window.innerWidth
+        )
+      ).toBe(true)
+    }
+
+    await footer.evaluate((element) => {
+      const footerElement = element as HTMLElement
+      footerElement.style.width = ""
+    })
+    await page.setViewportSize({ width: 375, height: 812 })
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth
+      )
+    ).toBe(true)
+
+    const compactPageSize = footer.getByRole("combobox", {
+      name: "Rows per page",
+    })
+    await compactPageSize.focus()
+    await page.keyboard.press("Enter")
+    await page.keyboard.press("ArrowDown")
+    await page.keyboard.press("Enter")
+    await expect(page).toHaveURL(/(?:page=1.*size=20|size=20.*page=1)/)
+    await expect(compactPageSize).toContainText("20")
+
+    const compactNextPage = footer
+      .getByRole("navigation", { name: "Pagination navigation" })
+      .getByRole("button", { name: "Go to next page" })
+    await compactNextPage.focus()
+    await page.keyboard.press("Enter")
+    await expect(page).toHaveURL(/(?:page=2.*size=20|size=20.*page=2)/)
+    await expect(
+      footer
+        .getByRole("navigation", { name: "Pagination navigation" })
+        .getByRole("button", { name: "Go to page 2" })
+    ).toHaveAttribute("aria-current", "page")
+  })
+
   test("opens from navigation, reads separate records, expands safe full text, and paginates", async ({
     fixture,
     page,
@@ -96,9 +244,7 @@ test.describe("P0 contact request read dashboard", () => {
       "dateTime",
       "2026-10-07T00:00:00.000Z"
     )
-    expect(await submittedTime.innerText()).not.toBe(
-      "2026-10-07T00:00:00.000Z"
-    )
+    expect(await submittedTime.innerText()).not.toBe("2026-10-07T00:00:00.000Z")
 
     const axe = await new AxeBuilder({ page })
       .withTags(["wcag2a", "wcag2aa"])
@@ -109,7 +255,7 @@ test.describe("P0 contact request read dashboard", () => {
       )
     ).toEqual([])
 
-    await page.getByRole("button", { name: "Trang sau" }).click()
+    await page.getByRole("button", { name: "Đi tới trang sau" }).click()
     await expect(page).toHaveURL(/page=2/)
     await expect(page.locator("[data-contact-request-row]")).toHaveCount(10)
     await expect(
@@ -127,7 +273,7 @@ test.describe("P0 contact request read dashboard", () => {
         .nth(2)
     ).toHaveText("Lời nhắn 11 cho Signapse.")
 
-    await page.getByRole("button", { name: "Trang sau" }).click()
+    await page.getByRole("button", { name: "Đi tới trang sau" }).click()
     await expect(page).toHaveURL(/page=3/)
     await expect(page.locator("[data-contact-request-row]")).toHaveCount(1)
     await expect(

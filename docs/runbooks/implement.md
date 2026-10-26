@@ -1,5 +1,7 @@
 # Implement — Progress
 
+Read dependencies under the [shared contract](../../CONTRIBUTING.md#reading-jira-dependencies); retain the live tool `dependencies` envelope.
+
 This runbook owns the Implement procedure and is loaded only when `WORKFLOW.md` assigns `Progress`. A direct implementation request does not activate Symphony/Jira lifecycle. Read `AGENTS.md`, applicable scoped instructions and [CONTRIBUTING.md](../../CONTRIBUTING.md); select technical skills as needed, without adding permissions or gates.
 
 ## Assignment and authority
