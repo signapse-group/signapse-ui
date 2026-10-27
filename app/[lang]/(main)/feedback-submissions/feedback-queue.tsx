@@ -4,10 +4,7 @@ import * as React from "react"
 import { Search, SlidersHorizontal } from "lucide-react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 
-import {
-  FEEDBACK_MODERATION_PAGE_SIZE_OPTIONS,
-  FEEDBACK_STATUSES,
-} from "@/app/lib/feedback/definitions"
+import { FEEDBACK_STATUSES } from "@/app/lib/feedback/definitions"
 import type { FeedbackListItemViewModel } from "@/app/lib/feedback/mappers"
 import {
   parseFeedbackModerationQuery,
@@ -25,10 +22,7 @@ import {
   AppListToolbarLeading,
   AppListToolbarTrailing,
 } from "@/components/app-list-toolbar"
-import {
-  PaginationNavigation,
-  PaginationPageSizeSelect,
-} from "@/components/app-pagination-controls"
+import { AppPaginationControls } from "@/components/app-pagination-controls"
 import { Button } from "@/components/ui/button"
 import {
   Empty,
@@ -85,10 +79,17 @@ export function FeedbackQueuePage({
   const query = parseFeedbackModerationQuery(searchParams)
   const [searchValue, setSearchValue] = React.useState(query.search)
   const records = initialPage?.content ?? []
-  const totalPages = Math.max(1, initialPage?.totalPages ?? 1)
   const hasNoPageResults =
     Boolean(initialPage) && records.length === 0 && query.page > 1
-  const canonicalQuery = serializeFeedbackModerationUrlQuery(query)
+  const canonicalQuery = serializeFeedbackModerationUrlQuery(
+    {
+      ...query,
+      page: initialPage
+        ? Math.min(query.page, Math.max(1, initialPage.totalPages))
+        : query.page,
+    },
+    searchParams
+  )
 
   React.useEffect(() => {
     // URL-backed draft state must follow browser Back/Forward changes.
@@ -248,87 +249,71 @@ export function FeedbackQueuePage({
           title={t.queueNoResultsTitle}
           description={t.queueNoResultsDescription}
           actionLabel={dictionary.common.back}
-          onAction={() => updateQuery({ page: "1" })}
+          onAction={() => {
+            const next = new URLSearchParams(searchParams)
+            next.set("page", String(Math.max(1, initialPage?.totalPages ?? 1)))
+            router.replace(`${pathname}?${next.toString()}`)
+          }}
         />
       ) : (
-        <>
-          <AppListTable>
-            <Table>
-              <TableHeader>
-                <AppListTableHeaderRow>
-                  <AppListTableHead>{t.queueTitle}</AppListTableHead>
-                  <AppListTableHead className="w-48">
-                    {t.queueStatus}
-                  </AppListTableHead>
-                  <AppListTableHead className="w-48">
-                    {t.queueDate}
-                  </AppListTableHead>
-                  <AppListTableHead className="w-32">
-                    {t.queueScreenshot}
-                  </AppListTableHead>
-                </AppListTableHeaderRow>
-              </TableHeader>
-              <TableBody>
-                {records.map((record) => (
-                  <TableRow key={record.id}>
-                    <TableCell className="max-w-0 align-top whitespace-normal">
-                      <Link
-                        href={{
-                          pathname: `/feedback-submissions/${record.id}`,
-                          query: Object.fromEntries(searchParams.entries()),
-                        }}
-                        className="line-clamp-2 font-medium break-words text-foreground hover:underline"
-                      >
-                        {record.content}
-                      </Link>
-                    </TableCell>
-                    <TableCell className="align-top">
-                      <FeedbackStatusBadge status={record.status} />
-                    </TableCell>
-                    <TableCell className="align-top text-sm text-muted-foreground">
-                      {formatDateTime(record.createdAt, {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </TableCell>
-                    <TableCell className="align-top">
-                      <FeedbackScreenshotView
-                        screenshot={record.screenshot}
-                        compact
-                      />
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </AppListTable>
-
-          <div className="flex flex-col gap-3 rounded-xl border border-border/60 bg-muted/20 px-4 py-3 sm:flex-row sm:items-center sm:justify-end">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
-              <PaginationPageSizeSelect
-                value={query.size}
-                options={[...FEEDBACK_MODERATION_PAGE_SIZE_OPTIONS]}
-                isPending={false}
-                showLabel
-                onValueChange={(value) =>
-                  updateQuery({ size: String(value), page: "1" })
-                }
-              />
-              <PaginationNavigation
-                currentPage={query.page}
-                totalPageCount={totalPages}
-                isPending={false}
-                onPageChange={(nextPage) =>
-                  updateQuery({ page: String(nextPage) })
-                }
-              />
-            </div>
-          </div>
-        </>
+        <AppListTable>
+          <Table>
+            <TableHeader>
+              <AppListTableHeaderRow>
+                <AppListTableHead>{t.queueTitle}</AppListTableHead>
+                <AppListTableHead className="w-48">
+                  {t.queueStatus}
+                </AppListTableHead>
+                <AppListTableHead className="w-48">
+                  {t.queueDate}
+                </AppListTableHead>
+                <AppListTableHead className="w-32">
+                  {t.queueScreenshot}
+                </AppListTableHead>
+              </AppListTableHeaderRow>
+            </TableHeader>
+            <TableBody>
+              {records.map((record) => (
+                <TableRow key={record.id}>
+                  <TableCell className="max-w-0 align-top whitespace-normal">
+                    <Link
+                      href={{
+                        pathname: `/feedback-submissions/${record.id}`,
+                        query: Object.fromEntries(searchParams.entries()),
+                      }}
+                      className="line-clamp-2 font-medium break-words text-foreground hover:underline"
+                    >
+                      {record.content}
+                    </Link>
+                  </TableCell>
+                  <TableCell className="align-top">
+                    <FeedbackStatusBadge status={record.status} />
+                  </TableCell>
+                  <TableCell className="align-top text-sm text-muted-foreground">
+                    {formatDateTime(record.createdAt, {
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </TableCell>
+                  <TableCell className="align-top">
+                    <FeedbackScreenshotView
+                      screenshot={record.screenshot}
+                      compact
+                    />
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </AppListTable>
       )}
+
+      {initialPage ? (
+        <AppPaginationControls page={initialPage} normalizeUrl={false} />
+      ) : null}
     </div>
   )
 }

@@ -1,10 +1,12 @@
 "use client"
 
+import { PAGE_SIZE_OPTIONS } from "@/app/lib/pagination/query"
+
 export const DOTS = "..." as const
 
 export type PaginationEntry = number | typeof DOTS
 
-export const DEFAULT_PAGE_SIZE_OPTIONS = [10, 20, 50, 100] as const
+export const DEFAULT_PAGE_SIZE_OPTIONS = PAGE_SIZE_OPTIONS
 
 const range = (start: number, end: number) => {
   const length = end - start + 1
@@ -14,54 +16,34 @@ const range = (start: number, end: number) => {
 
 export function getPaginationRange({
   currentPage,
-  siblingCount = 1,
   totalPageCount,
 }: {
   currentPage: number
-  siblingCount?: number
   totalPageCount: number
 }): PaginationEntry[] {
-  const totalPageNumbers = siblingCount + 5
-
   if (totalPageCount <= 0) {
     return []
   }
 
-  if (totalPageNumbers >= totalPageCount) {
+  if (totalPageCount <= 7) {
     return range(1, totalPageCount)
   }
 
-  const leftSiblingIndex = Math.max(currentPage - siblingCount, 1)
-  const rightSiblingIndex = Math.min(currentPage + siblingCount, totalPageCount)
-  const shouldShowLeftDots = leftSiblingIndex > 2
-  const shouldShowRightDots = rightSiblingIndex < totalPageCount - 2
-  const firstPageIndex = 1
-  const lastPageIndex = totalPageCount
-
-  if (!shouldShowLeftDots && shouldShowRightDots) {
-    const leftItemCount = 3 + 2 * siblingCount
-    const leftRange = range(1, leftItemCount)
-
-    return [...leftRange, DOTS, totalPageCount]
+  if (currentPage <= 4) {
+    return [1, 2, 3, 4, DOTS, totalPageCount]
   }
 
-  if (shouldShowLeftDots && !shouldShowRightDots) {
-    const rightItemCount = 3 + 2 * siblingCount
-    const rightRange = range(
-      totalPageCount - rightItemCount + 1,
-      totalPageCount
-    )
-
-    return [firstPageIndex, DOTS, ...rightRange]
+  if (currentPage >= totalPageCount - 3) {
+    return [1, DOTS, ...range(totalPageCount - 3, totalPageCount)]
   }
 
-  if (shouldShowLeftDots && shouldShowRightDots) {
-    const middleRange = range(leftSiblingIndex, rightSiblingIndex)
-
-    return [firstPageIndex, DOTS, ...middleRange, DOTS, lastPageIndex]
-  }
-
-  return []
+  return [
+    1,
+    DOTS,
+    ...range(currentPage - 1, currentPage + 1),
+    DOTS,
+    totalPageCount,
+  ]
 }
 
 export function getVisibleItemRange({

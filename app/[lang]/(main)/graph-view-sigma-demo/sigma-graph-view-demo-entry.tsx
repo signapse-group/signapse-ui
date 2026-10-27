@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic"
 
 import type { GraphViewDemoEdgeCount } from "@/app/lib/graph-view/demo-fixture"
+import type { GraphViewResponse } from "@/app/lib/graph-view/definitions"
 
 const SigmaGraphViewDemo = dynamic(
   () =>
@@ -19,8 +20,15 @@ const SigmaGraphViewDemo = dynamic(
 
 export function SigmaGraphViewDemoEntry({
   initialEdgeCount,
+  graphView,
 }: {
-  initialEdgeCount: GraphViewDemoEdgeCount
+  initialEdgeCount?: GraphViewDemoEdgeCount
+  graphView?: GraphViewResponse
 }) {
-  return <SigmaGraphViewDemo initialEdgeCount={initialEdgeCount} />
+  return (
+    <SigmaGraphViewDemo
+      initialEdgeCount={initialEdgeCount}
+      graphView={graphView}
+    />
+  )
 }

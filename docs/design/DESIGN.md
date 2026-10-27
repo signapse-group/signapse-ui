@@ -171,7 +171,7 @@ Toolbar là control surface. Nó nên gọn, có nhóm trái/phải rõ, không 
 Translation:
 
 - Layout responsive dùng `flex-col sm:flex-row sm:justify-between`.
-- Leading area chứa primary action và search; trailing area chứa filter, sort và page size.
+- Leading area chứa primary action và search; trailing area chứa filter và sort.
 - Primary controls giữ default shadcn size/chrome; không thêm custom height/radius/padding hoặc `size="sm"` chỉ để đổi density.
 - Mỗi surface chỉ có một primary action. Secondary actions giảm emphasis; destructive actions tách khỏi primary flow hoặc nằm trong overflow menu khi toolbar dày.
 
@@ -303,8 +303,8 @@ Delete confirmation tuân theo pattern sau:
 - Khi search, filter, sort hoặc page size đổi, xóa param rỗng và reset `page` về `1` khi page hiện tại có thể không còn hợp lệ.
 - Search dùng `type="search"`, có label hiển thị hoặc `sr-only`, debounce khoảng `300ms` và không cần Search button nếu không có business requirement.
 - Search nằm ở leading area, full-width trên mobile và có width giới hạn trên desktop; pending feedback giữ nguyên footprint của control.
-- Page-size selector nằm trong trailing controls với options `10`, `20`, `50`, `100`, mặc định `10`; không lặp trong footer pagination.
-- Sort/page-size pending chỉ disable control liên quan và không làm toolbar thay đổi layout.
+- Page-size selector nằm trong footer pagination cạnh điều hướng, với options `10`, `20`, `50`, `100` và mặc định `10`; không lặp trên toolbar. Giá trị đang chọn chỉ hiển thị số dòng.
+- Sort pending chỉ disable control tương ứng; page-size pending chỉ disable selector tại footer. Cả hai giữ nguyên footprint của control.
 
 ### Quick Detail Overlay
 
@@ -353,6 +353,10 @@ Signapse entity quick detail là local, modal reading overlay cho một entity �
 - Dense data screen ưu tiên controls và primary data; long copy, roadmap/future notes và legal/vendor notes chuyển sang tooltip, help text, footer legal area hoặc docs.
 - User-facing copy phải được localization và tiếng Việt phải tự nhiên, đúng dấu; technical instructions chịu trách nhiệm quy định helper cụ thể.
 - Vendor/license attribution phải ở vị trí người dùng truy cập được khi rời main surface.
+
+## Responsive Contract
+
+Dashboard viewport groups, layout defaults, design references and verification coverage are owned by the planning [Responsive Contract](https://github.com/signapse-group/signapse-planing/blob/main/ui-design/references/DESIGN.md#responsive-contract). Read and apply it before implementing or reviewing layout/responsive changes; report the affected checks and gaps in the handoff. Keep feature exceptions explicit and accepted. The local component geometry below and Quick Detail resolver remain applicable; do not maintain a second breakpoint table here.
 
 ## Accessibility And Responsive Behavior
 

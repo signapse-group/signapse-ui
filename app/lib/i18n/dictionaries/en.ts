@@ -366,7 +366,7 @@ export const en: Dictionary = {
     previous: "Previous page",
     next: "Next page",
     page: "Page",
-    pageSize: "Items per page",
+    pageSize: "Rows per page",
     navigationLabel: "Pagination navigation",
     goToPrevious: "Go to previous page",
     goToNext: "Go to next page",
@@ -1996,6 +1996,8 @@ export const en: Dictionary = {
       "narrative-asset": "Narrative - asset",
     },
     relationTypes: {
+      DRIVER: "Contributing event",
+      AFFECTED: "Affected asset",
       PRIMARY_SUBJECT: "Primary subject",
       AFFECTED_ASSET: "Affected asset",
       REFERENCE_ASSET: "Reference asset",
@@ -2036,6 +2038,22 @@ export const en: Dictionary = {
       summary: "{nodes} nodes · {edges} edges",
     },
     demo: {
+      liveDescription:
+        "Explore the knowledge connected to your current workspace watchlist.",
+      selectNode: "Select a node",
+      relationMeaning: "Relationship meaning",
+      sourceUnavailable: "No original source URL is available.",
+      workspaceRequired: "Choose a workspace",
+      workspaceRequiredDescription:
+        "Create or select a workspace using the workspace menu to explore its graph.",
+      workspaceChanged:
+        "The workspace changed while loading. Reload the graph to continue.",
+      emptyWatchlist: "Your watchlist is empty",
+      emptyWatchlistDescription:
+        "Add an asset to this workspace's watchlist to explore its context.",
+      noGraph: "No related graph data yet",
+      noGraphDescription:
+        "No relationships are available for this workspace. This does not mean its assets are unaffected.",
       eyebrow: "Performance trial",
       title: "Sigma knowledge graph demo",
       description:

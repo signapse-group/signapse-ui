@@ -15,7 +15,7 @@ import {
 
 export const GRAPH_VIEW_DEMO_EDGE_COUNTS = [100, 400, 1000] as const
 export const GRAPH_VIEW_DEMO_FIXTURE_VERSION = "v1"
-export const GRAPH_VIEW_DEMO_LAYOUT_VERSION = "forceatlas2-v1"
+export const GRAPH_VIEW_DEMO_LAYOUT_VERSION = "d3-force-v2"
 export const GRAPH_VIEW_DEMO_NODE_COUNT = 100
 export const GRAPH_VIEW_DEMO_NODES_PER_KIND = 25
 
@@ -81,13 +81,13 @@ const GRAPH_VIEW_DEMO_EDGE_BLUEPRINTS = [
   },
   {
     edgeKind: "narrative-event",
-    relationTypes: ["PRIMARY_THEME", "SECONDARY_THEME"],
+    relationTypes: ["DRIVER", "SUPPORTING", "CONTRADICTING"],
     sourceKind: "narrative",
     targetKind: "event",
   },
   {
     edgeKind: "narrative-asset",
-    relationTypes: ["AFFECTED_ASSET", "REFERENCE_ASSET"],
+    relationTypes: ["PRIMARY", "AFFECTED"],
     sourceKind: "narrative",
     targetKind: "asset",
   },
@@ -309,11 +309,15 @@ export function createGraphViewDemoSeedPositions(
     "news-article": 1.55,
   }
 
+  const kindCounts = new Map<GraphViewNodeKind, number>()
+  const kindIndexes = new Map<GraphViewNodeKind, number>()
+  for (const node of nodes)
+    kindCounts.set(node.kind, (kindCounts.get(node.kind) ?? 0) + 1)
   for (const [index, node] of nodes.entries()) {
-    const indexWithinKind = Number(node.id.split(":")[1]) - 1
-    const angle =
-      (indexWithinKind / GRAPH_VIEW_DEMO_NODES_PER_KIND) * Math.PI * 2
-    const radius = radii[node.kind]
+    const indexWithinKind = kindIndexes.get(node.kind) ?? 0
+    kindIndexes.set(node.kind, indexWithinKind + 1)
+    const angle = (indexWithinKind / kindCounts.get(node.kind)!) * Math.PI * 2
+    const radius = radii[node.kind] * 200
 
     positions[node.id] = {
       x: Math.cos(angle) * radius + (index % 3) * 0.015,
@@ -353,7 +357,8 @@ export function createGraphViewDemoGraph({
       label: node.label,
       metadata: node.metadata ?? null,
       secondaryLabel: node.secondaryLabel ?? null,
-      size: Math.max(4, visual.size / 7),
+      // G6 sizes are diameters; Sigma sizes are radii in CSS pixels at zoom 1.
+      size: visual.size / 2,
       x: position.x,
       y: position.y,
     })

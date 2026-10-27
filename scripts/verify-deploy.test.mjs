@@ -1,263 +1,138 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
-import { findDeployment, verifyDeployment } from "./verify-deploy.mjs"
-
-const merge = "a".repeat(40)
-const build = "b".repeat(40)
-const url = "https://signapse-build-signapse.vercel.app"
-const deployment = (sha = merge, id = 1) => ({
-  id,
-  sha,
-  environment: "Production",
-  production_environment: false,
-  creator: { login: "vercel[bot]" },
-})
-
-function fixture({
-  deployments = [deployment()],
-  states = {},
-  quality = true,
-  project = true,
-  compare = "ahead",
-  pages = [],
-} = {}) {
-  const requests = []
-  const api = async (path) => {
-    requests.push(path)
+import {
+  readRevision,
+  findDeployment,
+  verifyDeployment,
+} from "./verify-deploy.mjs"
+const merge = "a".repeat(40),
+  build = "b".repeat(40)
+function api({ quality = true, compare = "ahead", latestFail = false } = {}) {
+  return async (path) => {
     if (path === "commits/main") return { sha: build }
-    if (path.startsWith("compare/"))
-      return { status: compare, commits: [{ sha: build }] }
-    if (path.startsWith("deployments?")) {
-      const page = Number(new URLSearchParams(path.split("?")[1]).get("page"))
-      return pages.length ? (pages[page - 1] ?? []) : deployments
-    }
-    if (/deployments\/\d+\/statuses/.test(path)) {
-      const id = Number(path.split("/")[1])
-      return [{ state: states[id] ?? "success", environment_url: url }]
-    }
-    if (/commits\/.+\/status/.test(path))
-      return {
-        statuses: project
-          ? [
-              {
-                target_url:
-                  "https://vercel.com/signapse/signapse-ui/deployment",
-              },
-            ]
-          : [],
-      }
-    if (path.startsWith("actions/workflows/")) {
-      const sha = new URLSearchParams(path.split("?")[1]).get("head_sha")
+    if (path.startsWith("compare/")) return { status: compare }
+    if (path.startsWith("actions/workflows/"))
       return {
         workflow_runs: [
-          {
-            id: 10,
-            head_sha: sha,
-            head_branch: "main",
-            event: "push",
-          },
+          { id: 2, head_sha: build, event: "push", head_branch: "main" },
+          ...(latestFail
+            ? [{ id: 1, head_sha: build, event: "push", head_branch: "main" }]
+            : []),
         ],
       }
-    }
     if (path.startsWith("actions/runs/"))
       return {
         jobs: [
           {
             name: "check",
-            conclusion: quality ? "success" : "failure",
+            conclusion: quality && !latestFail ? "success" : "failure",
           },
         ],
       }
-    assert.fail(`Unexpected request: ${path}`)
+    assert.fail(path)
   }
-  return { api, requests }
 }
-
-test("confirms exact merge and checked descendant using GitHub only", async () => {
-  for (const sha of [merge, build]) {
-    const { api, requests } = fixture({ deployments: [deployment(sha)] })
-    const result = await findDeployment(merge, api)
-    assert.equal(result.revision, sha)
-    assert.equal(result.deployment, url)
-    assert.equal(result.status, "PASS")
-    assert(requests.every((path) => !path.includes("build-revision")))
-  }
+test("reads only fixed dev URL, disables redirects/cache, sends bypass header", async () => {
+  const revision = await readRevision(async (url, opts) => {
+    assert.equal(url, "https://dev-dashboard.signapse.cloud/api/build-revision")
+    assert.equal(opts.redirect, "manual")
+    assert.equal(opts.cache, "no-store")
+    assert.equal(opts.headers["x-vercel-protection-bypass"], "private-test")
+    return Response.json({ revision: build })
+  }, "private-test")
+  assert.equal(revision, build)
 })
-
-test("rejects invalid identity, unrelated ancestry, Preview and other projects", async () => {
-  await assert.rejects(findDeployment("main", fixture().api), /40-character/)
+test("rejects redirects, HTML, malformed JSON and missing/invalid revision without leaking response", async () => {
+  for (const r of [
+    new Response("private-test", {
+      status: 302,
+      headers: { location: "https://other.example" },
+    }),
+    new Response("private-test", { headers: { "content-type": "text/html" } }),
+    new Response("private-test", {
+      headers: { "content-type": "application/json" },
+    }),
+    Response.json({ revision: null }),
+    Response.json({ revision: "unknown" }),
+  ]) {
+    await assert.rejects(
+      readRevision(async () => r),
+      (e) => !e.message.includes("private-test")
+    )
+  }
+  for (const status of [429, 503])
+    assert.equal(
+      await readRevision(async () => new Response("", { status })),
+      null
+    )
   await assert.rejects(
-    findDeployment(merge, fixture({ compare: "diverged" }).api),
-    /not contained/
+    readRevision(async () => {
+      throw new Error("private-test")
+    }),
+    /request unavailable/
   )
-  for (const candidate of [
-    { ...deployment(), environment: "Preview" },
-    { ...deployment(), creator: { login: "someone" } },
-    { ...deployment(), sha: "unknown" },
+})
+test("accepts checked live descendant; rejects unrelated revision and failed latest quality", async () => {
+  assert.equal(
+    (await findDeployment(merge, api(), async () => build)).status,
+    "PASS"
+  )
+  assert.equal(
+    (await findDeployment(build, api(), async () => build)).revision,
+    build
+  )
+  for (const options of [
+    { quality: false },
+    { compare: "diverged" },
+    { latestFail: true },
   ])
     assert.equal(
-      await findDeployment(merge, fixture({ deployments: [candidate] }).api),
+      await findDeployment(merge, api(options), async () => build),
       null
     )
-  assert.equal(
-    await findDeployment(merge, fixture({ project: false }).api),
-    null
-  )
-  const { api } = fixture({ deployments: [deployment("c".repeat(40))] })
-  assert.equal(
-    await findDeployment(merge, (path) =>
-      path.includes(`...${"c".repeat(40)}`) ? { status: "behind" } : api(path)
-    ),
-    null
-  )
-})
-
-test("never accepts failed quality or canceled/skipped/inactive deployment", async () => {
-  assert.equal(
-    await findDeployment(merge, fixture({ quality: false }).api),
-    null
-  )
-  for (const state of [
-    "pending",
-    "queued",
-    "in_progress",
-    "inactive",
-    "canceled",
-    "skipped",
-  ]) {
-    assert.equal(
-      await findDeployment(merge, fixture({ states: { 1: state } }).api),
-      null
-    )
-  }
-  for (const state of ["failure", "error"]) {
-    await assert.rejects(
-      findDeployment(merge, fixture({ states: { 1: state } }).api),
-      /Vercel deployment/
-    )
-  }
-})
-
-test("handles a newer pending build and succeeds when it contains a canceled merge", async () => {
-  const deployments = [deployment(build, 2), deployment(merge, 1)]
-  assert.equal(
-    await findDeployment(
-      merge,
-      fixture({
-        deployments,
-        states: { 1: "error", 2: "pending" },
-      }).api
-    ),
-    null
-  )
-  const result = await findDeployment(
-    merge,
-    fixture({
-      deployments,
-      states: { 1: "canceled", 2: "success" },
-    }).api
-  )
-  assert.equal(result.revision, build)
-})
-
-test("finds deployment beyond the first page", async () => {
-  const { api, requests } = fixture({
-    pages: [
-      Array.from({ length: 100 }, () => ({ environment: "Preview" })),
-      [deployment()],
-    ],
-  })
-  assert.equal((await findDeployment(merge, api)).revision, merge)
-  assert(requests.some((path) => path.endsWith("page=2")))
-})
-
-test("paginates ancestry and excludes a side-branch commit that does not contain the merge", async () => {
-  const side = "c".repeat(40)
-  const { api } = fixture({ deployments: [deployment(side)] })
-  assert.equal(
-    await findDeployment(merge, async (path) => {
-      if (path.includes("per_page=100&page=1") && path.startsWith("compare/")) {
-        return {
-          status: "ahead",
-          commits: Array.from({ length: 100 }, () => ({ sha: build })),
-        }
-      }
-      if (path.includes("per_page=100&page=2") && path.startsWith("compare/")) {
-        return { status: "ahead", commits: [{ sha: side }] }
-      }
-      if (path === `compare/${merge}...${side}`) return { status: "diverged" }
-      return api(path)
-    }),
-    null
-  )
-})
-
-test("uses the latest quality run and never passes from an older successful run", async () => {
-  const { api } = fixture()
-  assert.equal(
-    await findDeployment(merge, async (path) => {
-      if (path.startsWith("actions/workflows/"))
-        return {
-          workflow_runs: [
-            { id: 11, head_sha: merge, event: "push", head_branch: "main" },
-            { id: 10, head_sha: merge, event: "push", head_branch: "main" },
-          ],
-        }
-      if (path.startsWith("actions/runs/11/"))
-        return { jobs: [{ name: "check", conclusion: "failure" }] }
-      return api(path)
-    }),
-    null
-  )
-})
-
-test("fails a newer deployment error even if an older deployment is still pending", async () => {
   await assert.rejects(
-    findDeployment(
-      merge,
-      fixture({
-        deployments: [deployment(build, 2), deployment(merge, 1)],
-        states: { 2: "error", 1: "pending" },
-      }).api
-    ),
-    /Vercel deployment/
+    findDeployment("main", api(), async () => build),
+    /40-character/
   )
+  assert.equal(await findDeployment(merge, api(), async () => null), null)
 })
-
-test("wait is bounded, transitions pending to success, and retries reads at most three times", async () => {
-  let time = 0
-  const pending = fixture({ deployments: [] }).api
-  const success = fixture().api
-  const options = {
+test("bounds polling and read failures", async () => {
+  let time = 0,
+    attempts = 0
+  const opts = {
+    api: api(),
     now: () => time,
     sleep: async (ms) => {
       time += ms
     },
     log: () => {},
   }
-  const result = await verifyDeployment(merge, {
-    ...options,
-    api: (path) => (time ? success : pending)(path),
-  })
-  assert.equal(result.status, "PASS")
-  assert.equal(time, 30_000)
+  assert.equal(
+    (
+      await verifyDeployment(merge, {
+        ...opts,
+        read: async () => (time ? build : null),
+      })
+    ).status,
+    "PASS"
+  )
+  assert.equal(time, 30000)
   time = 0
   await assert.rejects(
-    verifyDeployment(merge, { ...options, api: pending }),
+    verifyDeployment(merge, { ...opts, read: async () => null }),
     /30 minutes/
   )
-  assert.equal(time, 30 * 60_000)
+  assert.equal(time, 1800000)
   time = 0
-  let attempts = 0
   await assert.rejects(
     verifyDeployment(merge, {
-      ...options,
-      api: async () => {
+      ...opts,
+      read: async () => {
         attempts++
-        throw new Error("GitHub read failed: commits/main")
+        throw new Error("Dev revision read failed: unavailable")
       },
     }),
-    /GitHub read failed/
+    /read failed/
   )
   assert.equal(attempts, 3)
 })

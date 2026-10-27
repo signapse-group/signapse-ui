@@ -17,7 +17,7 @@ The coordinator retains scope/priority, new tickets, Open → Ready, Blocked res
 1. At start/resume and before mutations/handoff, read live Subtask/parent, accepted comments, references and native dependencies through `jira_rest`; paginate relevant comments and use ADF for REST v3 bodies. Confirm live In Review and the assignment profile. Native `is blocked by` dependencies must have Jira category `done`; `Resolved` in an active category and unreadable/ambiguous dependencies do not satisfy admission.
 2. Reconcile the actual PR/base/head, branch/workspace/output, previous review, checks and any saved delivery state. Review relevant committed and working output plus final code/callers under [review standards](../../CONTRIBUTING.md#review-standards). Implement summaries are input, never approval. An already merged PR still needs an independent assessment before Done when none exists; assess its actual candidate, then resume delivery rather than merge again.
 3. Assess **Requirement adherence** and **Correctness & Standards** separately. Map accepted AC/expected behavior to output/evidence, distinguish blocking findings from optional suggestions, and disclose missing required inputs/checks. Reuse valid evidence; reassess affected code/behavior after fixes, head/contract changes or concrete base impacts.
-4. For API work, read [API consumer standards](../api-consumer.md) and the current relevant producer contract/publication evidence. For UI work, inspect approved references and compare affected rendered UI under design/scoped rules. A protected page or reused transport alone does not add live smoke; require only the assigned live operation/scope/inputs.
+4. For API work, read [API consumer standards](../api-consumer.md) and the current relevant producer contract/publication evidence. For UI work, read and apply the [UI design gate](https://github.com/signapse-group/signapse-planing/blob/main/workflow/project-execution-workflow.md#ui-design-gate): reopen the native parent's designated design and independently compare affected rendered UI/screenshots under design/scoped rules. Verify candidate, design version/frame and affected viewport coverage; missing required evidence or an unaccepted deviation prevents merge/Done. A protected page or reused transport alone does not add live smoke; require only the assigned live operation/scope/inputs.
 5. For a fix under a Bug, reconcile accepted expected/basis and latest relevant QA report/case/version, tested build/environment and assigned regression. A FAIL summary can include different deviations or Blocked/Not Run; assess the assigned fix. Dev review does not overwrite QA outcomes or resolve/close/reopen the parent Bug.
 6. Verify focused local evidence and [required PR build checks](../../CONTRIBUTING.md#required-pr-build-checks) for the assessed current head. Missing/failing mandatory evidence is not Pass. Pending owner/QA acceptance or coordinator-owned metadata alone does not prevent otherwise complete contribution review; report only concrete receiver actions.
 
@@ -47,22 +47,28 @@ No admin bypass. Read back ambiguous writes before retry; MERGED and actual merg
 
 ## Verify the delivered build
 
-For app delivery, require confirmed Vercel **Production** deployment containing the contribution. Production is Vercel's environment name for this project's product dev environment. Owner/QA verifies domains, website, auth and features; these are not FE developer delivery gates. Deployment confirmation does not certify website behavior or later rollbacks.
+For app delivery, require a verified live revision on **https://dev-dashboard.signapse.cloud** containing the contribution, with successful main quality checks. Owner/QA verifies website, auth and features; these are not FE developer delivery gates. Deployment confirmation does not certify website behavior or later rollbacks.
 
 Read [CI/Vercel technical setup](../delivery.md#ci-and-vercel-setup) when setup evidence is needed. Local configuration does not prove hosting activation. Required developer delivery evidence connects the reviewed candidate to the actual merge and deployed build; overall green CI, merge or a health check alone is insufficient.
 
-After merge, select the main Verify run for a SHA containing that merge. Save run/build identity, start time, absolute deadline and retry counter in an existing durable owned delivery record before waiting. Reuse them across restart/resume; neither reconnect nor rerun resets the budget. Use:
+After merge, select the main Verify push run for a SHA containing that merge. Save merge/run/build identity, start time, absolute deadline (30 minutes per tracked run) and retry counter in an existing durable owned delivery record before waiting. Reuse them across restart/resume; neither reconnect nor rerun resets the budget. Require its actual `check` job to succeed:
 
 ```sh
 gh run watch "$VERIFY_RUN" --repo signapse-group/signapse-ui --interval 30 --exit-status
 gh run view "$VERIFY_RUN" --repo signapse-group/signapse-ui --json headSha,status,conclusion,jobs,url
 ```
 
-Bound the process by the saved remaining deadline: 30 minutes per tracked run. Use short tool yields, checking the same terminal every 30–60 seconds during quiet waits. A tool disconnect/timeout is not deployment failure; reread the live run and reconnect within remaining budget. Do not end merely to obtain a new scheduler attempt/deadline.
+Then run the existing verifier from the FE workspace, using the actual full merge SHA from the merged PR. On the Linux worker, cap the process with the remaining saved budget:
 
-Use the [deployment verifier reference](../delivery.md#confirm-deployment-through-github) for its invocation, candidate validation, polling and read-retry behavior. Any optional local diagnosis must stay within the saved remaining session budget; the verifier's per-invocation timeout does not reset that budget.
+```sh
+remaining_seconds=$((DELIVERY_WAIT_DEADLINE_EPOCH - $(date +%s)))
+test "$remaining_seconds" -gt 0
+timeout "${remaining_seconds}s" /opt/apps/symphony/runtime/run-fe-deploy "$PWD" "$MERGE_SHA"
+```
 
-Require actual success of both main Verify `check` and `deployment`, not skipped jobs or overall green alone. Preserve merge/deployed SHA, deployment environment/URL, confirmation time and Actions link; compare merge ancestry when watching a descendant. Never infer deployed SHA from local HEAD. Canceled/skipped deployments alone do not prove delivery; a confirmed containing descendant may satisfy it.
+`DELIVERY_WAIT_DEADLINE_EPOCH` comes from the saved absolute deadline; do not create a new deadline when starting the verifier. Bound `gh run watch` by that same remaining deadline. Use short tool yields, checking the same terminal every 30–60 seconds during quiet waits. A tool disconnect/timeout is not deployment failure; reread live state and reconnect only within the remaining budget. Do not end merely to obtain a new scheduler attempt/deadline.
+
+Use the [deployment verifier reference](../delivery.md#confirm-live-dev-revision) for prerequisites, candidate validation, polling and read-retry behavior. Its per-invocation timeout does not reset the saved deadline. A skipped/canceled check, overall green CI or merge alone is insufficient. Require verifier exit code 0 and PASS; it also checks main quality success for the actual deployed SHA. Save its merge/deployed SHA, environment/URL and confirmation time with the corresponding Actions quality-run link in existing PR/delivery evidence before handoff. Never infer deployed SHA from local HEAD. A confirmed containing descendant may satisfy delivery.
 
 Docs-only output uses artifact location/version, review and applicable checks rather than mandatory app deployment. Runtime/workflow output still needs activation evidence when the accepted assignment requires it; source edits alone do not establish worker adoption.
 

@@ -13,12 +13,14 @@ import type {
   UserSearchResponse,
 } from "@/app/lib/users/definitions"
 import { buildFilterQuery } from "@/app/lib/utils"
+import { parsePaginationQuery } from "@/app/lib/pagination/query"
 import { AccessDenied } from "@/components/access-denied"
 import {
   AppListTable,
   AppListTableHead,
   AppListTableHeaderRow,
 } from "@/components/app-list-table"
+import { AppPaginationSkeleton } from "@/components/app-pagination-controls"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   Table,
@@ -32,20 +34,6 @@ import { UserListPage } from "./user-list"
 
 interface PageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>
-}
-
-function getSingleParam(value: string | string[] | undefined) {
-  return Array.isArray(value) ? (value[0] ?? "") : (value ?? "")
-}
-
-function getPositiveInteger(
-  value: string | string[] | undefined,
-  fallback: number
-) {
-  const parsedValue = Number(getSingleParam(value))
-  return Number.isInteger(parsedValue) && parsedValue > 0
-    ? parsedValue
-    : fallback
 }
 
 function buildClientPage(
@@ -140,8 +128,10 @@ async function UserListContent({
 }) {
   const resolvedParams = await searchParamsPromise
   const { page: pageParam, size: sizeParam, ...filterParams } = resolvedParams
-  const page = getPositiveInteger(pageParam, 1)
-  const size = getPositiveInteger(sizeParam, 10)
+  const { page, size } = parsePaginationQuery({
+    page: pageParam,
+    size: sizeParam,
+  })
   const filter = buildFilterQuery(filterParams)
   const permissions = await getCurrentPermissions()
   const userResponse = await getUsers({
@@ -228,14 +218,7 @@ function ListSkeleton({ dictionary }: { dictionary: Dictionary }) {
         </Table>
       </AppListTable>
 
-      <div className="mt-4 flex flex-col gap-3 rounded-xl border bg-muted/20 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-        <Skeleton className="h-4 w-52" />
-        <div className="flex flex-wrap gap-2">
-          <Skeleton className="h-8 w-8" />
-          <Skeleton className="h-8 w-8" />
-          <Skeleton className="h-8 w-8" />
-        </div>
-      </div>
+      <AppPaginationSkeleton className="mt-4" />
     </div>
   )
 }

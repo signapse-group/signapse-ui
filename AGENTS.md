@@ -10,7 +10,7 @@ When framework versions, the UI preset, CI, or repository ownership change, refr
 - Before implementing or reviewing `app/api/**`, read `app/api/AGENTS.override.md`.
 - Before implementing or reviewing `app/lib/**`, read `app/lib/AGENTS.override.md`.
 - For UI implementation or review under `app/[lang]/**` or `components/**`, read `components/AGENTS.override.md`. For changes to visual presentation, interaction, accessibility, or user-facing content, read the relevant sections of `docs/design/DESIGN.md`, the UI/UX source of truth.
-- If a UI task includes an approved reference attachment or link (such as a screenshot, Figma file, mockup, or video), inspect it before implementation and compare the rendered UI against it before handoff. Use the reference with `docs/design/DESIGN.md` as the visual contract; report any inaccessible or materially ambiguous reference before coding the affected UI.
+- For assigned Jira UI work, read and apply the planning-owned [UI design gate](https://github.com/signapse-group/signapse-planing/blob/main/workflow/project-execution-workflow.md#ui-design-gate). Resolve the approved design from the native parent in every Survey/Implement/Review session, open the actual references and use them with `docs/design/DESIGN.md`; a child attachment is not required. Direct work retains its accepted contract: inspect any supplied approved reference before coding and compare affected rendered UI before handoff. Report inaccessible, ambiguous or conflicting references before coding dependent UI.
 - When a task spans multiple domains, read every applicable scoped instruction file.
 - Scoped instructions extend this file; the more specific instruction wins when guidance conflicts.
 - `.agents/skills` holds repository-specific or non-overlapping recipes.
@@ -23,6 +23,8 @@ When framework versions, the UI preset, CI, or repository ownership change, refr
 - For API integration, contract changes or reviews, read the [API consumer standards](docs/api-consumer.md). The producer's published OpenAPI owns the supported HTTP API contract; Jira owns accepted requirements and acceptance.
 
 ## Dev handoff boundary
+
+CI runs quality checks on PRs and main; reviewers confirm Vercel delivery from their workspace under [delivery guidance](docs/delivery.md) and the assigned Review runbook.
 
 For direct work, complete the requested output with applicable verification under CONTRIBUTING. An accepted local request needs no Jira ticket as a prerequisite. Tracker/review/PR/CI lifecycle and publication activate only when assigned; ordinary requests and no-PR operations retain their requested boundary. Assigned execution follows WORKFLOW, including its phase-specific permissions and stopping point.
 

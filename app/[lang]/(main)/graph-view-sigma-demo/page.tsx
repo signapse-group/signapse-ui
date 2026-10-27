@@ -1,4 +1,13 @@
 import { Suspense } from "react"
+import { getGraphView } from "@/app/api/graph-view/action"
+import { getMe } from "@/app/api/user/action"
+import { getWorkspaceWatchlistAssets } from "@/app/api/watchlists/action"
+import {
+  Empty,
+  EmptyHeader,
+  EmptyTitle,
+  EmptyDescription,
+} from "@/components/ui/empty"
 
 import { getServerDictionary } from "@/app/lib/i18n/server"
 import { getGraphViewDemoEdgeCount } from "@/app/lib/graph-view/demo-fixture"
@@ -50,10 +59,88 @@ export default async function SigmaGraphViewDemoPage({
 
   return (
     <Suspense fallback={<SigmaGraphViewDemoSkeleton />}>
-      <SigmaGraphViewDemoEntry
-        initialEdgeCount={getGraphViewDemoEdgeCount(rawEdgeCount)}
-      />
+      {rawEdgeCount !== undefined ? (
+        <SigmaGraphViewDemoEntry
+          initialEdgeCount={getGraphViewDemoEdgeCount(rawEdgeCount)}
+        />
+      ) : (
+        <WorkspaceGraph
+          canReadWatchlist={hasAnyPermission(permissions, ["watchlist:read"])}
+        />
+      )}
     </Suspense>
+  )
+}
+
+async function WorkspaceGraph({
+  canReadWatchlist,
+}: {
+  canReadWatchlist: boolean
+}) {
+  const [me, dictionary] = await Promise.all([getMe(), getServerDictionary()])
+  const copy = dictionary.graphView.demo
+  if (!me.currentWorkspace) {
+    return (
+      <GraphState
+        title={copy.workspaceRequired}
+        description={copy.workspaceRequiredDescription}
+      />
+    )
+  }
+
+  const graphView = await getGraphView()
+  const watchlist =
+    graphView.nodes.length === 0 && canReadWatchlist
+      ? await getWorkspaceWatchlistAssets({
+          filter: "",
+          page: 0,
+          size: 1,
+          sort: [],
+        })
+      : null
+  const latest = await getMe()
+  if (latest.currentWorkspace?.id !== me.currentWorkspace.id) {
+    throw new Error(copy.workspaceChanged)
+  }
+  if (graphView.nodes.length === 0) {
+    return (
+      <GraphState
+        title={
+          watchlist?.totalElements === 0 ? copy.emptyWatchlist : copy.noGraph
+        }
+        description={
+          watchlist?.totalElements === 0
+            ? copy.emptyWatchlistDescription
+            : copy.noGraphDescription
+        }
+      />
+    )
+  }
+  return (
+    <SigmaGraphViewDemoEntry
+      key={`${me.id}:${me.currentWorkspace.id}`}
+      graphView={graphView}
+    />
+  )
+}
+
+function GraphState({
+  title,
+  description,
+}: {
+  title: string
+  description: string
+}) {
+  return (
+    <section className="h-[calc(100svh-6.5rem)] min-h-[36rem]">
+      <h1 className="sr-only">{title}</h1>
+      <Empty className="h-full">
+        <EmptyHeader>
+          <EmptyTitle>{title}</EmptyTitle>
+          <EmptyDescription>{description}</EmptyDescription>
+        </EmptyHeader>
+      </Empty>
+    </section>
   )
 }
 

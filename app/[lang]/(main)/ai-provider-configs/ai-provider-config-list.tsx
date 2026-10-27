@@ -34,7 +34,6 @@ import {
   AppListToolbarLeading,
   AppListToolbarTrailing,
 } from "@/components/app-list-toolbar"
-import { AppSelectPageSize } from "@/components/app-select-page-size"
 import { AppTimeMetadata } from "@/components/app-time-metadata"
 import { useHasPermission } from "@/components/permission-provider"
 import { SortSelect } from "@/components/sort-select"
@@ -117,12 +116,6 @@ export function AiProviderConfigListPage({
               { label: t.oldest, value: "id_asc" },
             ]}
             triggerClassName="w-full sm:w-[200px]"
-          />
-          <AppSelectPageSize
-            className="w-full sm:w-auto"
-            defaultSize={providerPage.size}
-            showLabel={false}
-            triggerClassName="w-full sm:w-[120px]"
           />
         </AppListToolbarTrailing>
       </AppListToolbar>
