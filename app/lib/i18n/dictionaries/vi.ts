@@ -57,6 +57,7 @@ export const vi = {
     emailDelivery: "Gửi email hệ thống",
     telegram: "Tích hợp Telegram",
     aiProviders: "Nhà cung cấp AI",
+    aiTaskConfigurations: "Cấu hình tác vụ AI",
     demoConversation: "Demo hội thoại",
     systemPrompts: "Prompt hệ thống",
     cronjobs: "Tác vụ định kỳ",
@@ -1373,6 +1374,140 @@ export const vi = {
     errorTitle: "Đã xảy ra lỗi",
     errorDescription: "Không thể tải cấu hình nhà cung cấp AI do lỗi hệ thống.",
   },
+  aiTaskConfigurations: {
+    pageTitle: "Cấu hình tác vụ AI",
+    pageDescription:
+      "Cấu hình từng tác vụ tại đây. Lưu thay đổi riêng từng tác vụ; cấu hình của tác vụ khác sẽ không đổi.",
+    unconfiguredSummary: "{count} tác vụ cần được cấu hình",
+    unconfiguredDescription:
+      "Tác vụ chưa cấu hình sẽ không chạy. Hãy chọn rõ kết nối và model; hệ thống không có mặc định chung hay tự động dự phòng.",
+    readDenied: "Bạn không có quyền xem cấu hình tác vụ AI.",
+    loadErrorTitle: "Không thể tải cấu hình tác vụ AI",
+    loadError: "Không thể tải cấu hình tác vụ AI. Vui lòng thử lại.",
+    invalidResponse: "Dịch vụ trả về cấu hình tác vụ AI không đúng định dạng.",
+    connectionReadDenied: "Bạn không có quyền xem các kết nối AI.",
+    connectionLoadError: "Không thể tải danh sách kết nối AI đã lưu.",
+    modelCatalogDenied: "Bạn không có quyền xem danh sách model.",
+    modelCatalogError: "Không thể tải model cho kết nối này.",
+    invalidModelCatalog: "Dịch vụ trả về danh sách model không đúng định dạng.",
+    invalidConnection: "Vui lòng chọn một kết nối AI đã lưu hợp lệ.",
+    updateDenied: "Bạn không có quyền thay đổi cấu hình tác vụ AI.",
+    invalidTask: "Vui lòng chọn một tác vụ AI được hỗ trợ.",
+    selectionValidationError: "Vui lòng chọn cả kết nối và model.",
+    tokenValidationError:
+      "Nhập số nguyên dương hoặc xóa trường để dùng giá trị mặc định.",
+    selectionSaveError: "Không thể lưu kết nối và model cho tác vụ này.",
+    tokenSaveError: "Không thể lưu giới hạn token đầu ra cho tác vụ này.",
+    rowSaveError: "Không thể lưu cấu hình của tác vụ này.",
+    partialSave:
+      "Đã lưu {saved}. Chưa lưu được {failed}; thay đổi của bạn vẫn được giữ lại.",
+    saveSuccess: "Đã lưu cấu hình tác vụ.",
+    save: "Lưu",
+    saving: "Đang lưu",
+    configured: "Đã cấu hình",
+    notConfigured: "Chưa cấu hình",
+    connection: "Kết nối",
+    connectionRequired: "Bắt buộc chọn kết nối",
+    model: "Model",
+    modelRequired: "Bắt buộc chọn model",
+    outputTokenLimit: "Giới hạn token đầu ra",
+    connectionPlaceholder: "Chọn kết nối",
+    modelPlaceholder: "Chọn model",
+    tokenPlaceholder: "Dùng mặc định của tác vụ",
+    defaultLabel: "Mặc định: {value}",
+    defaultPerRequest: "Mặc định: {value} mỗi yêu cầu",
+    sdkProviderDefault: "SDK / nhà cung cấp",
+    connectionHelp: "Chọn một kết nối đã lưu cho tác vụ này.",
+    modelHelp: "Model được tải từ kết nối đã chọn.",
+    tokenPositiveError: "Nhập một số nguyên dương.",
+    tokenMaximumError: "Nhập số nguyên không lớn hơn {max}.",
+    selectionPermissionNote:
+      "Thay đổi kết nối và model cần các quyền truy cập riêng.",
+    connectionPermissionNote: "Cần quyền xem kết nối AI để thay đổi kết nối.",
+    modelPermissionNote:
+      "Cần quyền xem catalog model để chọn kết nối và model.",
+    noConnections: "Không có kết nối AI đã lưu để lựa chọn.",
+    noModels: "Không có model khả dụng cho kết nối này.",
+    loadingModels: "Đang tải model",
+    retryModels: "Thử tải model lại",
+    noSelection: "Chưa chọn",
+    prompts: "Prompt liên quan",
+    openPrompt: "Mở prompt",
+    promptViewTitle: "Prompt hệ thống",
+    promptContentLabel: "Nội dung prompt",
+    saveSettingsNote:
+      "Nhập số nguyên dương cho giới hạn token, hoặc xóa trường để dùng giá trị mặc định đang hiển thị. Thao tác lưu không tạo nội dung AI. Thay đổi chỉ áp dụng cho các lượt chạy mới.",
+    configurationScopeTitle: "Phạm vi cấu hình",
+    configurationScopeDescription:
+      "Kết nối, model và giới hạn token được lưu riêng cho từng tác vụ và vẫn còn sau khi khởi động lại hoặc triển khai. Liên kết prompt cần quyền riêng; các chỉnh sửa prompt tạm thời được khôi phục về nội dung gốc chính thức khi backend khởi động lại.",
+    groups: {
+      newsProcessing: "Xử lý tin tức",
+      economicCalendar: "Lịch kinh tế",
+      eventIntelligence: "Phân tích sự kiện",
+      warmKnowledge: "Tri thức Warm",
+      aiAssistant: "Trợ lý AI",
+      scheduledTelegramAnalysis: "Phân tích Telegram theo lịch",
+    },
+    groupNotes: {
+      aiAssistant:
+        "Cả hai bước đều lấy cấu hình tại thời điểm bắt đầu mỗi lượt hỏi và trả lời.",
+      scheduledTelegramAnalysis:
+        "Một cấu hình cho Assessment, Scalping và Explanation, kể cả các lượt hiệu chỉnh. Giới hạn token áp dụng cho từng yêu cầu; tất cả prompt được lấy tại thời điểm bắt đầu lượt chạy.",
+    },
+    taskNames: {
+      NEWS_CONTENT_NORMALIZATION: "Chuẩn hóa nội dung tin tức",
+      ECONOMIC_CALENDAR_DESCRIPTION_TRANSLATION: "Bản địa hóa lịch kinh tế",
+      NEWS_EVENT_EXTRACTION: "Suy luận sự kiện chính",
+      EVENT_ASSET_THEME_ENRICHMENT: "Làm giàu tài sản và chủ đề",
+      MARKET_REACTION_ANALYSIS: "Suy luận phản ứng thị trường",
+      MARKET_REACTION_SUMMARY: "Tổng kết kết quả phản ứng thị trường",
+      EVENT_NARRATIVE_REFRESH: "Làm mới narrative",
+      WARM_ABSORPTION_DECISION: "Quyết định đưa sự kiện/tài sản vào Warm",
+      MARKET_QUESTION_UNDERSTANDING: "Hiểu câu hỏi",
+      MARKET_CONVERSATION_RESPONSE: "Trả lời hội thoại",
+      SCHEDULED_TELEGRAM_ANALYSIS: "Phân tích Telegram theo lịch",
+    },
+    taskDescriptions: {
+      NEWS_CONTENT_NORMALIZATION:
+        "Chuẩn hóa và bản địa hóa nội dung bài viết trước khi xử lý sự kiện.",
+      ECONOMIC_CALENDAR_DESCRIPTION_TRANSLATION:
+        "Dịch mô tả sự kiện; không cấu hình cảnh báo lịch kinh tế.",
+      NEWS_EVENT_EXTRACTION: "Trích xuất sự kiện thị trường chính từ bài viết.",
+      EVENT_ASSET_THEME_ENRICHMENT:
+        "Liên kết sự kiện với các tài sản và chủ đề liên quan.",
+      MARKET_REACTION_ANALYSIS:
+        "Phân tích phản ứng thị trường gắn với một sự kiện.",
+      MARKET_REACTION_SUMMARY:
+        "Tóm tắt kết quả phản ứng; tách biệt với bước phân tích ban đầu.",
+      EVENT_NARRATIVE_REFRESH:
+        "Làm mới narrative dựa trên các sự kiện và phản ứng.",
+      WARM_ABSORPTION_DECISION:
+        "Quyết định đưa sự kiện và tài sản vào Warm; không bao gồm toàn bộ workflow Warm.",
+      MARKET_QUESTION_UNDERSTANDING:
+        "Định hình câu hỏi cho bước trả lời; không tạo câu trả lời cuối cùng.",
+      MARKET_CONVERSATION_RESPONSE:
+        "Tạo phản hồi bằng model riêng và các công cụ của tính năng.",
+      SCHEDULED_TELEGRAM_ANALYSIS:
+        "Một cấu hình cho Assessment, Scalping và Explanation, kể cả các lượt hiệu chỉnh.",
+    },
+    promptTypeLabels: {
+      ECONOMIC_CALENDAR_ENTRY_TEXT_LOCALIZATION:
+        "Bản địa hóa mô tả lịch kinh tế",
+      NEWS_ARTICLE_CONTENT_LOCALIZATION: "Chuẩn hóa nội dung tin tức",
+      NEWS_PRIMARY_EVENT_DERIVATION: "Suy luận sự kiện chính",
+      EVENT_ASSET_THEME_ENRICHMENT: "Làm giàu tài sản và chủ đề",
+      EVENT_MARKET_REACTION_DERIVATION: "Suy luận phản ứng thị trường",
+      MARKET_REACTION_OUTCOME_SUMMARY: "Tổng kết kết quả phản ứng thị trường",
+      WARM_ABSORPTION_EVENT_ASSET_DECISION:
+        "Quyết định đưa sự kiện/tài sản vào Warm",
+      EVENT_NARRATIVE_REFRESH: "Làm mới narrative",
+      MARKET_QUESTION_UNDERSTANDING: "Hiểu câu hỏi",
+      MARKET_QUERY_CONVERSATION_ORCHESTRATION: "Trả lời hội thoại",
+      TELEGRAM_MARKET_ANALYSIS_ASSESSMENT: "Assessment",
+      TELEGRAM_MARKET_ANALYSIS_SCALPING: "Scalping",
+      TELEGRAM_MARKET_ANALYSIS_EXPLANATION: "Explanation",
+    },
+  },
   marketQuery: {
     readDenied: "Bạn không có quyền sử dụng công cụ truy vấn thị trường.",
     validationInvalid: "Yêu cầu truy vấn không hợp lệ.",
@@ -2460,6 +2595,9 @@ export const vi = {
   },
   systemPrompts: {
     readDenied: "Bạn không có quyền xem prompt hệ thống.",
+    unsupportedPrompt: "Prompt hệ thống này không khả dụng.",
+    viewErrorTitle: "Không thể mở prompt hệ thống",
+    viewError: "Vui lòng kiểm tra quyền truy cập prompt và thử lại.",
     createDenied: "Bạn không có quyền tạo prompt hệ thống.",
     updateDenied: "Bạn không có quyền cập nhật prompt hệ thống.",
     backToList: "Quay lại danh sách",

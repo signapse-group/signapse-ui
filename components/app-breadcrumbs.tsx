@@ -25,6 +25,7 @@ function getFriendlySegmentNames(
     "contact-requests": dictionary.navigation.contactRequests,
     create: dictionary.common.create,
     "ai-provider-configs": dictionary.navigation.aiProviders,
+    "ai-task-configurations": dictionary.navigation.aiTaskConfigurations,
     blogs: dictionary.navigation.blogs,
     cronjobs: dictionary.navigation.cronjobs,
     dashboard: dictionary.navigation.overview,
@@ -74,11 +75,19 @@ export function AppBreadcrumb() {
   const isDashboardRoute = segments.length === 1 && segments[0] === "dashboard"
   const isEmailDeliveryRoute =
     segments.length === 1 && segments[0] === "email-delivery"
+  const isSystemPromptViewRoute =
+    segments.length === 3 &&
+    segments[0] === "system-prompts" &&
+    segments[2] === "view"
   const showOverviewCrumb = !(
     segments.length === 1 &&
     (segments[0] === "graph-view" || segments[0] === "email-delivery")
   )
-  const visibleSegments = isDashboardRoute ? [] : segments
+  const visibleSegments = isDashboardRoute
+    ? []
+    : isSystemPromptViewRoute
+      ? segments.filter((_, index) => index !== 1)
+      : segments
 
   return (
     <Breadcrumb
@@ -111,7 +120,10 @@ export function AppBreadcrumb() {
         {visibleSegments.map((segment, index) => {
           const href = `/${visibleSegments.slice(0, index + 1).join("/")}`
           const isLast = index === visibleSegments.length - 1
-          const title = formatSegment(segment, index, dictionary)
+          const title =
+            isSystemPromptViewRoute && segment === "view"
+              ? dictionary.aiTaskConfigurations.promptViewTitle
+              : formatSegment(segment, index, dictionary)
           const showSeparator = showOverviewCrumb || index > 0
 
           return (
