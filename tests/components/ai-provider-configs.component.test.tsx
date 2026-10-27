@@ -280,7 +280,7 @@ describe("AI connection UI", () => {
     expect(createAiProviderConfig).not.toHaveBeenCalled()
 
     const apiKey = screen.getByLabelText("Key 1")
-    await user.type(apiKey, "sk-test-key")
+    await user.type(apiKey, " sk-test-key ")
     await user.type(screen.getByLabelText("Endpoint"), "https://example.com/v1")
     await user.type(screen.getByLabelText("Description"), "Test connection")
     await user.click(screen.getByRole("button", { name: "Add key" }))
@@ -290,7 +290,7 @@ describe("AI connection UI", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "API key was rejected"
     )
-    expect(apiKey).toHaveValue("sk-test-key")
+    expect(apiKey).toHaveValue(" sk-test-key ")
     expect(routerPush).not.toHaveBeenCalled()
 
     await user.click(screen.getByRole("button", { name: "Create connection" }))
@@ -301,13 +301,13 @@ describe("AI connection UI", () => {
       providerType: "OPENAI",
       baseUrl: "https://example.com/v1",
       description: "Test connection",
-      credentials: [{ apiKey: "sk-test-key" }],
+      credentials: [{ apiKey: " sk-test-key " }],
     })
     expect(routerPush).toHaveBeenCalledWith("/vi/ai-provider-configs")
-    expect(routerRefresh).toHaveBeenCalledOnce()
+    expect(routerRefresh).not.toHaveBeenCalled()
   })
 
-  it("allows adding and removing draft key rows while keeping at least one form slot optional", async () => {
+  it("allows removing every draft key but requires a non-empty key before create", async () => {
     const user = userEvent.setup()
     renderWithProviders(
       <AiProviderConfigCreateForm />,
@@ -315,12 +315,18 @@ describe("AI connection UI", () => {
       en
     )
 
-    await user.click(screen.getByRole("button", { name: "Add key" }))
-    expect(screen.getByLabelText("Key 1")).toBeVisible()
-    expect(screen.getByLabelText("Key 2")).toBeVisible()
     await user.click(screen.getByRole("button", { name: "Remove API key 1" }))
-    expect(screen.getByLabelText("Key 1")).toBeVisible()
-    expect(screen.queryByLabelText("Key 2")).not.toBeInTheDocument()
+    expect(screen.queryByLabelText("Key 1")).not.toBeInTheDocument()
+    expect(screen.getByText(en.aiProviderConfigs.noKeysAdded)).toBeVisible()
+
+    await user.click(screen.getByRole("button", { name: "Create connection" }))
+    expect(
+      await screen.findByText(en.aiProviderConfigs.keyRequired)
+    ).toBeVisible()
+    await vi.waitFor(() =>
+      expect(screen.getByRole("button", { name: "Add key" })).toHaveFocus()
+    )
+    expect(createAiProviderConfig).not.toHaveBeenCalled()
   })
 
   it("confirms successful creation for a create-only user without navigating to the unreadable list", async () => {

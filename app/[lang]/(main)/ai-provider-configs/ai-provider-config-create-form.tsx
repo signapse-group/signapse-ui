@@ -117,8 +117,8 @@ export function AiProviderConfigCreateForm() {
       baseUrl: values.baseUrl.trim() || undefined,
       description: values.description.trim() || undefined,
       credentials: values.credentials
-        .map(({ apiKey }) => apiKey.trim())
-        .filter(Boolean)
+        .map(({ apiKey }) => apiKey)
+        .filter((apiKey) => apiKey.trim().length > 0)
         .map((apiKey) => ({ apiKey })),
     }
 
@@ -147,7 +147,6 @@ export function AiProviderConfigCreateForm() {
 
     if (canReadConnections) {
       router.push(destinationPath)
-      router.refresh()
     }
   }
 
@@ -157,12 +156,21 @@ export function AiProviderConfigCreateForm() {
 
   const handleInvalid: SubmitErrorHandler<CreateFormValues> = (errors) => {
     if (errors.credentials) {
-      const emptyKeyIndex = form
-        .getValues("credentials")
-        .findIndex((credential) => credential.apiKey.trim().length === 0)
-      if (emptyKeyIndex >= 0) {
-        form.setFocus(`credentials.${emptyKeyIndex}.apiKey`)
-      }
+      window.requestAnimationFrame(() => {
+        const emptyKeyIndex = form
+          .getValues("credentials")
+          .findIndex((credential) => credential.apiKey.trim().length === 0)
+        const emptyKeyName = `credentials.${emptyKeyIndex}.apiKey` as const
+        if (
+          emptyKeyIndex >= 0 &&
+          document.querySelector(`[name="${emptyKeyName}"]`)
+        ) {
+          form.setFocus(emptyKeyName)
+          return
+        }
+
+        document.getElementById("ai-provider-config-add-key")?.focus()
+      })
     }
   }
 
@@ -280,7 +288,6 @@ export function AiProviderConfigCreateForm() {
             <FieldSet
               data-invalid={Boolean(credentialsError)}
               aria-invalid={Boolean(credentialsError)}
-              aria-required="true"
               aria-describedby={
                 credentialsError
                   ? "credentials-description credentials-error"
@@ -292,9 +299,15 @@ export function AiProviderConfigCreateForm() {
                 {t.apiKeys} <span className="text-destructive">*</span>
               </FieldLegend>
               <Button
+                id="ai-provider-config-add-key"
                 className="absolute top-0 right-0"
                 type="button"
                 variant="outline"
+                aria-describedby={
+                  credentialsError
+                    ? "credentials-description credentials-error"
+                    : "credentials-description"
+                }
                 onClick={() => {
                   append({ apiKey: "" })
                   clearMessages()
@@ -314,7 +327,7 @@ export function AiProviderConfigCreateForm() {
                     return (
                       <div
                         key={credential.id}
-                        className="flex min-w-0 items-end gap-2"
+                        className="group relative flex min-w-0 items-end gap-2"
                       >
                         <Controller
                           name={apiKeyName}
@@ -349,6 +362,7 @@ export function AiProviderConfigCreateForm() {
                           )}
                         />
                         <Button
+                          className="pointer-events-none absolute right-0 bottom-1 opacity-0 group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100 max-md:pointer-events-auto max-md:static max-md:size-11 max-md:opacity-100"
                           type="button"
                           variant="ghost"
                           size="icon"
@@ -359,7 +373,7 @@ export function AiProviderConfigCreateForm() {
                             remove(index)
                             clearMessages()
                           }}
-                          disabled={isSubmitting || fields.length <= 1}
+                          disabled={isSubmitting}
                         >
                           <Trash2 aria-hidden="true" />
                         </Button>
