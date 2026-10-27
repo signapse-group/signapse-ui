@@ -3,7 +3,7 @@ import { en } from "../../app/lib/i18n/dictionaries/en"
 import { vi } from "../../app/lib/i18n/dictionaries/vi"
 
 test.describe("P0 system prompt catalog and content hotfix", () => {
-  test("lists the producer catalog and searches locally", async ({
+  test("lists the producer catalog and stores local search in the URL", async ({
     fixture,
     page,
   }, testInfo) => {
@@ -29,9 +29,13 @@ test.describe("P0 system prompt catalog and content hotfix", () => {
     const search = page.getByRole("searchbox")
     await search.fill("TELEGRAM_MARKET_ANALYSIS_SCALPING")
     await expect(page.locator("tbody tr")).toHaveCount(1)
+    await expect(page).toHaveURL(/search=TELEGRAM_MARKET_ANALYSIS_SCALPING/)
     await expect(
       page.getByText("Telegram · Scalping", { exact: true })
     ).toBeVisible()
+    await page.reload()
+    await expect(search).toHaveValue("TELEGRAM_MARKET_ANALYSIS_SCALPING")
+    await expect(page.locator("tbody tr")).toHaveCount(1)
     await page.setViewportSize({ width: 390, height: 844 })
     const overflowDetails = await page.evaluate(() => ({
       viewportWidth: window.innerWidth,
@@ -69,6 +73,49 @@ test.describe("P0 system prompt catalog and content hotfix", () => {
     expect(query.get("size")).toBe("100")
     expect(query.has("sort")).toBe(false)
     expect(query.has("$filter")).toBe(false)
+  })
+
+  test("lets read-only users view content without update controls", async ({
+    fixture,
+    page,
+  }) => {
+    await fixture.setPermissions(["system-prompt:read"])
+
+    await page.goto("/en/system-prompts")
+    await expect(
+      page.getByRole("link", {
+        name: "News content normalization",
+        exact: true,
+      })
+    ).toBeVisible()
+    await expect(
+      page.getByRole("link", { name: en.systemPrompts.editContent })
+    ).toHaveCount(0)
+
+    await page
+      .getByRole("link", {
+        name: "News content normalization",
+        exact: true,
+      })
+      .click()
+    const content = page.getByRole("textbox", {
+      name: en.systemPrompts.content,
+    })
+    await expect(content).toBeVisible()
+    await expect(content).toHaveJSProperty("readOnly", true)
+    await expect(
+      page.getByRole("button", { name: en.systemPrompts.saveHotfix })
+    ).toHaveCount(0)
+
+    const state = await fixture.state()
+    expect(
+      state.requests.filter(
+        (request) =>
+          request.method === "PUT" &&
+          typeof request.path === "string" &&
+          request.path.startsWith("/system-prompts/")
+      )
+    ).toHaveLength(0)
   })
 
   test("keeps the list and editor usable across responsive frames and 200% zoom", async ({
@@ -267,12 +314,31 @@ test.describe("P0 system prompt catalog and content hotfix", () => {
       name: en.systemPrompts.saveHotfix,
     })
     await expect(save).toBeFocused()
-    const successVisible = expect(
-      page.getByText(en.systemPrompts.updateSuccess)
-    ).toBeVisible({ timeout: 5_000 })
-    await page.keyboard.press("Enter")
 
-    await successVisible
+    await fixture.setScenario(
+      "/system-prompts/MARKET_QUESTION_UNDERSTANDING",
+      "delayed",
+      "PUT"
+    )
+    await page.keyboard.press("Enter")
+    await expect(
+      page.getByRole("button", {
+        name: en.systemPrompts.updatePending,
+      })
+    ).toBeDisabled()
+    await expect(page.getByText(en.systemPrompts.updateSuccess)).toBeHidden()
+    await expect
+      .poll(async () => (await fixture.state()).pendingRequests)
+      .toBe(1)
+
+    await fixture.setScenario(
+      "/system-prompts/MARKET_QUESTION_UNDERSTANDING",
+      "success",
+      "PUT"
+    )
+    await expect(page.getByText(en.systemPrompts.updateSuccess)).toBeVisible({
+      timeout: 10_000,
+    })
     await expect(page).toHaveURL(/\/en\/system-prompts$/)
 
     const state = await fixture.state()
@@ -284,7 +350,7 @@ test.describe("P0 system prompt catalog and content hotfix", () => {
     expect(updateRequest?.bodyKeys).toEqual(["content"])
   })
 
-  test("shows the catalog to readers and protects the editor from read-only access", async ({
+  test("shows the catalog and content to Vietnamese read-only users", async ({
     fixture,
     page,
   }) => {
@@ -299,8 +365,13 @@ test.describe("P0 system prompt catalog and content hotfix", () => {
     ).toHaveCount(0)
 
     await page.goto("/vi/system-prompts/MARKET_QUESTION_UNDERSTANDING")
+    const content = page.getByRole("textbox", {
+      name: vi.systemPrompts.content,
+    })
+    await expect(content).toBeVisible()
+    await expect(content).toHaveJSProperty("readOnly", true)
     await expect(
-      page.getByText(vi.systemPrompts.updateDenied, { exact: false })
-    ).toBeVisible()
+      page.getByRole("button", { name: vi.systemPrompts.saveHotfix })
+    ).toHaveCount(0)
   })
 })

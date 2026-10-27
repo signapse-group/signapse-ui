@@ -2479,6 +2479,7 @@ export const en: Dictionary = {
     updatedColumn: "Updated",
     searchLabel: "Search system prompts",
     searchPlaceholder: "Search by purpose or prompt type...",
+    searchPending: "Updating prompt search",
     supportedPromptCount: "{count} supported prompts",
     noPromptsTitle: "No supported prompts",
     noPromptsDescription: "The producer returned no available prompts.",
@@ -2493,15 +2494,19 @@ export const en: Dictionary = {
     editorWarningDescription:
       "Saving applies to new runs only. Restarting the backend or deploying restores the official seed. Put permanent fixes in the release seed.",
     editorTitle: "Edit prompt content",
+    viewTitle: "View prompt content",
     requiredPlaceholders: "Required placeholders",
     placeholdersDescription:
       "Keep every placeholder from the official seed. You can change the wording and move placeholders. Missing names are listed if saving is rejected.",
+    placeholdersReadOnlyDescription:
+      "Required placeholders for this prompt, based on the official seed.",
     missingPlaceholders: "Missing required prompt placeholders: {variables}",
     noRequiredPlaceholders: "This prompt has no required placeholders.",
     content: "Prompt content",
     contentPlaceholder: "Enter prompt content...",
-    contentDescription:
-      "Saving checks the required placeholders without generating AI output.",
+    contentDescription: "Content cannot be blank.",
+    editorInstructions:
+      "Saving checks content and required placeholders without generating AI output. Response schema and tools remain managed by the feature.",
     contentRequired: "Enter prompt content",
     contentTooLong: "Prompt content cannot exceed 10,000 characters.",
     contentCounter: "{count} / 10,000 characters",

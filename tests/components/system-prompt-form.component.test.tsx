@@ -57,11 +57,12 @@ const localizations = [
 function renderForm(
   locale: "vi" | "en" = "vi",
   dictionary: Dictionary = viDictionary,
-  prompt = initialData
+  prompt = initialData,
+  readOnly = false
 ) {
   return render(
     <LocalizationProvider locale={locale} dictionary={dictionary}>
-      <SystemPromptForm initialData={prompt} />
+      <SystemPromptForm initialData={prompt} readOnly={readOnly} />
     </LocalizationProvider>
   )
 }
@@ -111,6 +112,35 @@ describe("system prompt content editor", () => {
       ).toBeInTheDocument()
     }
   )
+
+  it("shows prompt content without update controls for read-only users", () => {
+    renderForm("en", enDictionary, initialData, true)
+
+    expect(
+      screen.getByRole("heading", {
+        name: enDictionary.systemPrompts.viewTitle,
+      })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("textbox", {
+        name: enDictionary.systemPrompts.content,
+      })
+    ).toHaveAttribute("readonly")
+    expect(
+      screen.getByText(
+        enDictionary.systemPrompts.placeholdersReadOnlyDescription
+      )
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText(enDictionary.systemPrompts.contentDescription)
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", {
+        name: enDictionary.systemPrompts.saveHotfix,
+      })
+    ).not.toBeInTheDocument()
+    expect(updateSystemPrompt).not.toHaveBeenCalled()
+  })
 
   it("blocks blank and over-limit content before the action", async () => {
     const user = userEvent.setup()

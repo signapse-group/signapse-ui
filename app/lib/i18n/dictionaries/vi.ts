@@ -2468,6 +2468,7 @@ export const vi = {
     updatedColumn: "Cập nhật",
     searchLabel: "Tìm prompt hệ thống",
     searchPlaceholder: "Tìm theo mục đích hoặc loại prompt...",
+    searchPending: "Đang cập nhật kết quả tìm kiếm",
     supportedPromptCount: "{count} prompt được hỗ trợ",
     noPromptsTitle: "Không có prompt được hỗ trợ",
     noPromptsDescription: "Producer không trả về prompt nào.",
@@ -2482,15 +2483,19 @@ export const vi = {
     editorWarningDescription:
       "Nội dung đã lưu chỉ áp dụng cho các lượt mới. Khởi động lại backend hoặc triển khai phiên bản mới sẽ khôi phục seed chính thức. Hãy đưa thay đổi lâu dài vào seed của bản phát hành.",
     editorTitle: "Chỉnh sửa nội dung prompt",
+    viewTitle: "Xem nội dung prompt",
     requiredPlaceholders: "Placeholder bắt buộc",
     placeholdersDescription:
       "Giữ lại mọi placeholder từ seed chính thức. Bạn có thể sửa câu chữ và đổi vị trí placeholder. Nếu không thể lưu, danh sách placeholder còn thiếu sẽ hiển thị.",
+    placeholdersReadOnlyDescription:
+      "Placeholder bắt buộc của prompt này, dựa trên seed chính thức.",
     missingPlaceholders: "Thiếu các placeholder bắt buộc: {variables}",
     noRequiredPlaceholders: "Prompt này không có placeholder bắt buộc.",
     content: "Nội dung prompt",
     contentPlaceholder: "Nhập nội dung prompt...",
-    contentDescription:
-      "Khi lưu, dịch vụ kiểm tra placeholder bắt buộc mà không tạo đầu ra AI.",
+    contentDescription: "Nội dung không được để trống.",
+    editorInstructions:
+      "Khi lưu, hệ thống kiểm tra nội dung và các placeholder bắt buộc mà không tạo đầu ra AI. Cấu trúc phản hồi và công cụ vẫn do tính năng quản lý.",
     contentRequired: "Vui lòng nhập nội dung prompt",
     contentTooLong: "Nội dung prompt không được vượt quá 10.000 ký tự.",
     contentCounter: "{count} / 10.000 ký tự",

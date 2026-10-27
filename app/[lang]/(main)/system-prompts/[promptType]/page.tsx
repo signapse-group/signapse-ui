@@ -40,15 +40,6 @@ export default async function EditSystemPromptPage({
     )
   }
 
-  if (!canUpdateSystemPrompts(permissions)) {
-    return (
-      <AccessDenied
-        description={dictionary.systemPrompts.updateDenied}
-        permission="system-prompt:update"
-      />
-    )
-  }
-
   const { promptType } = await params
   let prompt: SystemPromptContentResponse
 
@@ -71,5 +62,10 @@ export default async function EditSystemPromptPage({
     throw error
   }
 
-  return <SystemPromptForm initialData={prompt} />
+  return (
+    <SystemPromptForm
+      initialData={prompt}
+      readOnly={!canUpdateSystemPrompts(permissions)}
+    />
+  )
 }

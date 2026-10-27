@@ -8,16 +8,19 @@ import {
   InputGroupAddon,
   InputGroupInput,
 } from "@/components/ui/input-group"
+import { Spinner } from "@/components/ui/spinner"
 
 const SEARCH_INPUT_ID = "system-prompt-search"
 
 interface SystemPromptSearchProps {
   value: string
+  isPending: boolean
   onValueChange: (value: string) => void
 }
 
 export function SystemPromptSearch({
   value,
+  isPending,
   onValueChange,
 }: SystemPromptSearchProps) {
   const { dictionary } = useLocalization()
@@ -30,7 +33,11 @@ export function SystemPromptSearch({
       </label>
       <InputGroup>
         <InputGroupAddon>
-          <Search aria-hidden="true" />
+          {isPending ? (
+            <Spinner aria-label={t.searchPending} />
+          ) : (
+            <Search aria-hidden="true" />
+          )}
         </InputGroupAddon>
         <InputGroupInput
           id={SEARCH_INPUT_ID}

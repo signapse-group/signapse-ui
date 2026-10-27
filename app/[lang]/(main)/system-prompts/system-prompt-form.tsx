@@ -42,9 +42,13 @@ import { Textarea } from "@/components/ui/textarea"
 
 interface SystemPromptFormProps {
   initialData: SystemPromptContentResponse
+  readOnly?: boolean
 }
 
-export function SystemPromptForm({ initialData }: SystemPromptFormProps) {
+export function SystemPromptForm({
+  initialData,
+  readOnly = false,
+}: SystemPromptFormProps) {
   const router = useRouter()
   const promptsPath = useLocalizedPath("/system-prompts")
   const { dictionary, formatNumber, formatMessage } = useLocalization()
@@ -72,6 +76,7 @@ export function SystemPromptForm({ initialData }: SystemPromptFormProps) {
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (readOnly) return
     setError("")
 
     const parsed = updateSystemPromptContentRequestSchema.safeParse({ content })
@@ -130,7 +135,7 @@ export function SystemPromptForm({ initialData }: SystemPromptFormProps) {
 
       <div className="mx-auto w-full max-w-[60rem]">
         <AppFormShell
-          title={t.editorTitle}
+          title={readOnly ? t.viewTitle : t.editorTitle}
           description={
             <>
               <span className="block text-base text-foreground">
@@ -168,39 +173,49 @@ export function SystemPromptForm({ initialData }: SystemPromptFormProps) {
                   </p>
                 )}
                 <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                  {t.placeholdersDescription}
+                  {readOnly
+                    ? t.placeholdersReadOnlyDescription
+                    : t.placeholdersDescription}
                 </p>
               </section>
 
               <FieldGroup>
                 <Field data-invalid={Boolean(error)}>
                   <FieldLabel htmlFor="prompt-content">
-                    {t.content} <span className="text-destructive">*</span>
+                    {t.content}
+                    {!readOnly ? (
+                      <span className="text-destructive"> *</span>
+                    ) : null}
                   </FieldLabel>
                   <Textarea
                     ref={textareaRef}
                     id="prompt-content"
                     name="content"
-                    required
+                    readOnly={readOnly}
+                    required={!readOnly}
                     maxLength={SYSTEM_PROMPT_MAX_CONTENT_LENGTH + 1}
                     value={content}
                     onChange={(event) => {
                       setContent(event.target.value)
                       if (error) setError("")
                     }}
-                    aria-invalid={Boolean(error)}
+                    aria-invalid={readOnly ? undefined : Boolean(error)}
                     aria-describedby={
-                      error
-                        ? "prompt-content-description prompt-content-counter prompt-content-error"
-                        : "prompt-content-description prompt-content-counter"
+                      readOnly
+                        ? "prompt-content-counter"
+                        : error
+                          ? "prompt-content-description prompt-content-counter prompt-content-error"
+                          : "prompt-content-description prompt-content-counter"
                     }
-                    placeholder={t.contentPlaceholder}
+                    placeholder={readOnly ? undefined : t.contentPlaceholder}
                     className="min-h-[28rem] resize-y font-mono text-sm leading-6 md:min-h-[50rem]"
                   />
                   <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                    <FieldDescription id="prompt-content-description">
-                      {t.contentDescription}
-                    </FieldDescription>
+                    {!readOnly ? (
+                      <FieldDescription id="prompt-content-description">
+                        {t.contentDescription}
+                      </FieldDescription>
+                    ) : null}
                     <p
                       id="prompt-content-counter"
                       className={
@@ -227,30 +242,40 @@ export function SystemPromptForm({ initialData }: SystemPromptFormProps) {
                   ) : null}
                 </Field>
               </FieldGroup>
+              {!readOnly ? (
+                <p className="text-sm leading-6 text-muted-foreground">
+                  {t.editorInstructions}
+                </p>
+              ) : null}
             </AppFormShellBody>
 
-            <AppFormShellFooter surface="plain" className="border-0 px-0 py-0">
-              <div className="flex flex-col-reverse gap-3 sm:flex-row">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={leaveEditor}
-                  disabled={isPending}
-                >
-                  {t.cancel}
-                </Button>
-                <Button type="submit" disabled={isPending}>
-                  {isPending ? (
-                    <>
-                      <Spinner data-icon="inline-start" />
-                      {t.updatePending}
-                    </>
-                  ) : (
-                    t.saveHotfix
-                  )}
-                </Button>
-              </div>
-            </AppFormShellFooter>
+            {!readOnly ? (
+              <AppFormShellFooter
+                surface="plain"
+                className="border-0 px-0 py-0"
+              >
+                <div className="flex flex-col-reverse gap-3 sm:flex-row">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={leaveEditor}
+                    disabled={isPending}
+                  >
+                    {t.cancel}
+                  </Button>
+                  <Button type="submit" disabled={isPending}>
+                    {isPending ? (
+                      <>
+                        <Spinner data-icon="inline-start" />
+                        {t.updatePending}
+                      </>
+                    ) : (
+                      t.saveHotfix
+                    )}
+                  </Button>
+                </div>
+              </AppFormShellFooter>
+            ) : null}
           </form>
         </AppFormShell>
       </div>

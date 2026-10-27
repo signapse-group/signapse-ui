@@ -1,7 +1,9 @@
 "use client"
 
 import { Pencil } from "lucide-react"
-import { useState } from "react"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
+import { useDebouncedCallback } from "use-debounce"
+import { useEffect, useRef, useState, useTransition } from "react"
 
 import type { SystemPromptContentResponse } from "@/app/lib/system-prompts/definitions"
 import { getSystemPromptWorkflowGroup } from "@/app/lib/system-prompts/definitions"
@@ -37,15 +39,49 @@ interface SystemPromptListProps {
   prompts: SystemPromptContentResponse[]
 }
 
+const SEARCH_PARAM_KEY = "search"
+
 function getPromptHref(promptType: string) {
   return `/system-prompts/${encodeURIComponent(promptType)}`
 }
 
 export function SystemPromptList({ prompts }: SystemPromptListProps) {
-  const [search, setSearch] = useState("")
+  const pathname = usePathname()
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const currentSearch = searchParams.get(SEARCH_PARAM_KEY) ?? ""
+  const [search, setSearch] = useState(currentSearch)
+  const previousSearch = useRef(currentSearch)
+  const [isPending, startTransition] = useTransition()
   const canUpdate = useHasAnyPermission(SYSTEM_PROMPT_UPDATE_PERMISSIONS)
   const { dictionary, formatMessage, formatNumber, locale } = useLocalization()
   const t = dictionary.systemPrompts
+  const updateSearch = useDebouncedCallback((term: string) => {
+    const trimmedTerm = term.trim()
+    const params = new URLSearchParams(searchParams.toString())
+
+    if (trimmedTerm) {
+      params.set(SEARCH_PARAM_KEY, trimmedTerm)
+    } else {
+      params.delete(SEARCH_PARAM_KEY)
+    }
+
+    const query = params.toString()
+    startTransition(() => {
+      router.replace(query ? `${pathname}?${query}` : pathname, {
+        scroll: false,
+      })
+    })
+  }, 300)
+
+  useEffect(() => {
+    if (previousSearch.current === currentSearch) return
+
+    previousSearch.current = currentSearch
+    updateSearch.cancel()
+    setSearch(currentSearch)
+  }, [currentSearch, updateSearch])
+
   const normalizedSearch = search.trim().toLocaleLowerCase(locale)
   const filteredPrompts = normalizedSearch
     ? prompts.filter((prompt) =>
@@ -59,7 +95,14 @@ export function SystemPromptList({ prompts }: SystemPromptListProps) {
     <div className="flex w-full flex-col gap-6">
       <h1 className="sr-only">{t.title}</h1>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-        <SystemPromptSearch value={search} onValueChange={setSearch} />
+        <SystemPromptSearch
+          value={search}
+          isPending={isPending}
+          onValueChange={(value) => {
+            setSearch(value)
+            updateSearch(value)
+          }}
+        />
         <p
           aria-live="polite"
           className="text-sm text-muted-foreground"
@@ -96,18 +139,12 @@ export function SystemPromptList({ prompts }: SystemPromptListProps) {
                 >
                   <TableCell className="py-3 align-top whitespace-normal">
                     <div className="flex min-w-0 flex-col gap-1">
-                      {canUpdate ? (
-                        <Link
-                          href={getPromptHref(prompt.promptType)}
-                          className="font-medium break-words text-foreground hover:underline"
-                        >
-                          {prompt.name}
-                        </Link>
-                      ) : (
-                        <span className="font-medium break-words text-foreground">
-                          {prompt.name}
-                        </span>
-                      )}
+                      <Link
+                        href={getPromptHref(prompt.promptType)}
+                        className="font-medium break-words text-foreground hover:underline"
+                      >
+                        {prompt.name}
+                      </Link>
                       <span className="font-mono text-xs break-all text-muted-foreground">
                         {prompt.promptType}
                       </span>

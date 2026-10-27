@@ -72,6 +72,7 @@ type FixtureController = {
     method?: string
   ): Promise<void>
   state(): Promise<{
+    pendingRequests: number
     requests: Array<Record<string, unknown>>
     violations: Array<Record<string, unknown>>
     streamConnections: number

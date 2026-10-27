@@ -1,13 +1,26 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react"
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react"
 import type { ComponentProps } from "react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 const listState = vi.hoisted(() => ({
   canUpdate: true,
+  searchParams: "",
+  routerReplace: vi.fn(),
 }))
 
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/en/system-prompts",
+  useRouter: () => ({ replace: listState.routerReplace }),
+  useSearchParams: () => new URLSearchParams(listState.searchParams),
+}))
 vi.mock("@/components/localized-link", () => ({
   LocalizedLink: ({ href, children, ...props }: ComponentProps<"a">) => (
     <a href={href} {...props}>
@@ -45,6 +58,8 @@ describe("system prompt list", () => {
   afterEach(() => {
     cleanup()
     listState.canUpdate = true
+    listState.searchParams = ""
+    listState.routerReplace.mockReset()
   })
 
   it("renders every producer row and groups the Telegram stages together", () => {
@@ -76,11 +91,38 @@ describe("system prompt list", () => {
     expect(screen.queryByText("Purpose 4")).not.toBeInTheDocument()
   })
 
+  it("stores search in the URL and restores it from the current query", async () => {
+    renderList()
+    const search = screen.getByRole("searchbox")
+    const query = "telegram_market_analysis_stage_2"
+
+    fireEvent.change(search, { target: { value: query } })
+
+    expect(screen.getByText("Telegram stage 2")).toBeInTheDocument()
+    await waitFor(() => {
+      expect(listState.routerReplace).toHaveBeenCalledWith(
+        `/en/system-prompts?search=${query}`,
+        { scroll: false }
+      )
+    })
+
+    cleanup()
+    listState.searchParams = `search=${query}`
+    renderList()
+
+    expect(screen.getByRole("searchbox")).toHaveValue(query)
+    expect(screen.getByText("Telegram stage 2")).toBeInTheDocument()
+    expect(screen.queryByText("Purpose 4")).not.toBeInTheDocument()
+  })
+
   it("keeps the catalog readable without update permission", () => {
     listState.canUpdate = false
     renderList()
 
-    expect(screen.getByText("Purpose 4")).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "Purpose 4" })).toHaveAttribute(
+      "href",
+      "/system-prompts/PRODUCER_PROMPT_4"
+    )
     expect(
       screen.queryByRole("link", { name: "Chỉnh sửa nội dung" })
     ).not.toBeInTheDocument()
