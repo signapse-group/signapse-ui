@@ -4,14 +4,17 @@ import { revalidatePath } from "next/cache"
 
 import { fetchAuthenticated, type BackendApiError } from "@/app/api/auth/action"
 import type { ActionResult } from "@/app/lib/definitions"
-import { getServerDictionary } from "@/app/lib/i18n/server"
+import { getDictionary } from "@/app/lib/i18n/dictionaries"
+import { getRequestLocale, getServerDictionary } from "@/app/lib/i18n/server"
 import {
   canReadSystemPrompts,
   canUpdateSystemPrompts,
 } from "@/app/lib/system-prompts/permissions"
 import {
+  isSystemPromptContentType,
   systemPromptContentResponseSchema,
   systemPromptListResponseSchema,
+  SystemPromptContentResponseSchema,
   updateSystemPromptContentRequestSchema,
   type SystemPromptContentResponse,
   type UpdateSystemPromptContentRequest,
@@ -28,6 +31,10 @@ function permissionDenied(message: string): BackendApiError {
   const error = new Error(message) as BackendApiError
   error.status = 403
   return error
+}
+
+async function getSystemPromptsDictionary() {
+  return getDictionary(await getRequestLocale())
 }
 
 export async function getSystemPrompts(): Promise<
@@ -90,6 +97,38 @@ export async function getSystemPromptByType(
   }
 
   return parsed.data
+}
+
+export async function getSystemPromptContentByType(
+  rawPromptType: string
+): Promise<SystemPromptContentResponse> {
+  const [permissions, dictionary] = await Promise.all([
+    getCurrentPermissions(),
+    getSystemPromptsDictionary(),
+  ])
+
+  if (!canReadSystemPrompts(permissions)) {
+    throw new Error(dictionary.systemPrompts.readDenied)
+  }
+
+  if (!isSystemPromptContentType(rawPromptType)) {
+    throw new Error(dictionary.systemPrompts.unsupportedPrompt)
+  }
+
+  try {
+    const response = await fetchAuthenticated<unknown>(
+      getSystemPromptPath(rawPromptType)
+    )
+    const parsed = SystemPromptContentResponseSchema.safeParse(response)
+
+    if (!parsed.success || parsed.data.promptType !== rawPromptType) {
+      throw new Error(dictionary.systemPrompts.viewError)
+    }
+
+    return parsed.data
+  } catch {
+    throw new Error(dictionary.systemPrompts.viewError)
+  }
 }
 
 export async function updateSystemPrompt(

@@ -59,6 +59,7 @@ export const en: Dictionary = {
     emailDelivery: "Email delivery",
     telegram: "Telegram integration",
     aiProviders: "AI providers",
+    aiTaskConfigurations: "AI task configuration",
     demoConversation: "Conversation demo",
     systemPrompts: "System prompts",
     cronjobs: "Cronjobs",
@@ -1381,6 +1382,145 @@ export const en: Dictionary = {
     errorDescription:
       "Could not load AI provider configs due to a system error.",
   },
+  aiTaskConfigurations: {
+    pageTitle: "AI task configuration",
+    pageDescription:
+      "Configure each task directly below. Save changes per task; other task settings stay unchanged.",
+    unconfiguredSummary: "{count} tasks need configuration",
+    unconfiguredDescription:
+      "Unconfigured tasks cannot run. Select a connection and model explicitly; there is no global default or automatic fallback.",
+    readDenied: "You do not have permission to view AI task settings.",
+    loadErrorTitle: "Could not load AI task settings",
+    loadError: "Could not load AI task settings. Try again.",
+    invalidResponse:
+      "The service returned AI task settings in an unexpected format.",
+    connectionReadDenied: "You do not have permission to view AI connections.",
+    connectionLoadError: "Could not load saved AI connections.",
+    modelCatalogDenied: "You do not have permission to view model choices.",
+    modelCatalogError: "Could not load models for this connection.",
+    invalidModelCatalog:
+      "The service returned model choices in an unexpected format.",
+    invalidConnection: "Choose a valid saved AI connection.",
+    updateDenied: "You do not have permission to change AI task settings.",
+    invalidTask: "Choose a supported AI task.",
+    selectionValidationError: "Choose both a connection and a model.",
+    tokenValidationError:
+      "Enter a positive whole number or clear the field to use the default.",
+    selectionSaveError:
+      "Could not save the connection and model for this task.",
+    tokenSaveError: "Could not save the output-token limit for this task.",
+    rowSaveError: "Could not save this task's settings.",
+    partialSave:
+      "{saved} saved. {failed} could not be saved; your changes are still here.",
+    saveSuccess: "Task settings saved.",
+    save: "Save",
+    saving: "Saving",
+    configured: "Configured",
+    notConfigured: "Not configured",
+    connection: "Connection",
+    connectionRequired: "Connection required",
+    model: "Model",
+    modelRequired: "Model required",
+    outputTokenLimit: "Output token limit",
+    connectionPlaceholder: "Select connection",
+    modelPlaceholder: "Select model",
+    tokenPlaceholder: "Use task default",
+    defaultLabel: "Default: {value}",
+    defaultPerRequest: "Default: {value} per request",
+    sdkProviderDefault: "SDK / provider",
+    connectionHelp: "Select a saved connection for this task.",
+    modelHelp: "Models load from the selected saved connection.",
+    tokenPositiveError: "Enter a positive whole number.",
+    tokenMaximumError: "Enter a whole number no larger than {max}.",
+    selectionPermissionNote:
+      "Connection and model changes need their own access permissions.",
+    connectionPermissionNote:
+      "AI connection read access is required to change the connection.",
+    modelPermissionNote:
+      "Model catalog access is required to choose a connection and model.",
+    noConnections: "No saved AI connections are available.",
+    noModels: "No models are available for this connection.",
+    loadingModels: "Loading models",
+    retryModels: "Try loading models again",
+    noSelection: "Not selected",
+    prompts: "Related prompts",
+    openPrompt: "Open prompt",
+    promptViewTitle: "System prompt",
+    promptContentLabel: "Prompt content",
+    saveSettingsNote:
+      "Enter a positive whole number for output tokens, or clear the field to use the displayed default. Saving does not generate AI content. Changes apply to new runs only.",
+    configurationScopeTitle: "Configuration scope",
+    configurationScopeDescription:
+      "Connection, model and token settings persist after restart or deployment. Prompt links require separate prompt access; prompt hotfixes reset to the official seed when the backend restarts.",
+    groups: {
+      newsProcessing: "News processing",
+      economicCalendar: "Economic calendar",
+      eventIntelligence: "Event intelligence",
+      warmKnowledge: "Warm knowledge",
+      aiAssistant: "AI assistant",
+      scheduledTelegramAnalysis: "Scheduled Telegram analysis",
+    },
+    groupNotes: {
+      aiAssistant:
+        "Both steps capture their configuration at the start of each question–answer turn.",
+      scheduledTelegramAnalysis:
+        "One configuration for Assessment, Scalping and Explanation, including corrections. The token limit applies to each request; all prompts are captured at the start of the run.",
+    },
+    taskNames: {
+      NEWS_CONTENT_NORMALIZATION: "News content normalization",
+      ECONOMIC_CALENDAR_DESCRIPTION_TRANSLATION:
+        "Economic calendar localization",
+      NEWS_EVENT_EXTRACTION: "Primary event derivation",
+      EVENT_ASSET_THEME_ENRICHMENT: "Asset and theme enrichment",
+      MARKET_REACTION_ANALYSIS: "Market reaction derivation",
+      MARKET_REACTION_SUMMARY: "Market reaction outcome summary",
+      EVENT_NARRATIVE_REFRESH: "Narrative refresh",
+      WARM_ABSORPTION_DECISION: "Warm event / asset absorption",
+      MARKET_QUESTION_UNDERSTANDING: "Question understanding",
+      MARKET_CONVERSATION_RESPONSE: "Conversation response",
+      SCHEDULED_TELEGRAM_ANALYSIS: "Scheduled Telegram analysis",
+    },
+    taskDescriptions: {
+      NEWS_CONTENT_NORMALIZATION:
+        "Normalize and localize article content before event processing.",
+      ECONOMIC_CALENDAR_DESCRIPTION_TRANSLATION:
+        "Translate event descriptions; does not configure Calendar Alerts.",
+      NEWS_EVENT_EXTRACTION:
+        "Extract the primary market event from a news article.",
+      EVENT_ASSET_THEME_ENRICHMENT:
+        "Link events to relevant assets and themes.",
+      MARKET_REACTION_ANALYSIS:
+        "Analyze the market reaction associated with an event.",
+      MARKET_REACTION_SUMMARY:
+        "Summarize reaction outcomes; separate from initial reaction analysis.",
+      EVENT_NARRATIVE_REFRESH:
+        "Refresh the narrative supported by events and reactions.",
+      WARM_ABSORPTION_DECISION:
+        "Decide event and asset absorption into Warm; not the entire Warm workflow.",
+      MARKET_QUESTION_UNDERSTANDING:
+        "Frame the question for the answer step; does not generate the final answer.",
+      MARKET_CONVERSATION_RESPONSE:
+        "Generate the response using its own model and the feature's tools.",
+      SCHEDULED_TELEGRAM_ANALYSIS:
+        "One configuration for Assessment, Scalping and Explanation, including corrections.",
+    },
+    promptTypeLabels: {
+      ECONOMIC_CALENDAR_ENTRY_TEXT_LOCALIZATION:
+        "Economic calendar localization",
+      NEWS_ARTICLE_CONTENT_LOCALIZATION: "News content normalization",
+      NEWS_PRIMARY_EVENT_DERIVATION: "Primary event derivation",
+      EVENT_ASSET_THEME_ENRICHMENT: "Asset and theme enrichment",
+      EVENT_MARKET_REACTION_DERIVATION: "Market reaction derivation",
+      MARKET_REACTION_OUTCOME_SUMMARY: "Market reaction outcome summary",
+      WARM_ABSORPTION_EVENT_ASSET_DECISION: "Warm event / asset absorption",
+      EVENT_NARRATIVE_REFRESH: "Narrative refresh",
+      MARKET_QUESTION_UNDERSTANDING: "Question understanding",
+      MARKET_QUERY_CONVERSATION_ORCHESTRATION: "Conversation response",
+      TELEGRAM_MARKET_ANALYSIS_ASSESSMENT: "Assessment",
+      TELEGRAM_MARKET_ANALYSIS_SCALPING: "Scalping",
+      TELEGRAM_MARKET_ANALYSIS_EXPLANATION: "Explanation",
+    },
+  },
   marketQuery: {
     readDenied: "You do not have permission to use market query.",
     validationInvalid: "The market query request is invalid.",
@@ -2471,6 +2611,9 @@ export const en: Dictionary = {
   },
   systemPrompts: {
     readDenied: "You do not have permission to view system prompts.",
+    unsupportedPrompt: "This system prompt is not available.",
+    viewErrorTitle: "Could not open the system prompt",
+    viewError: "Check your prompt access and try again.",
     updateDenied: "You do not have permission to update system prompts.",
     title: "System prompts",
     backToList: "Back to prompts",

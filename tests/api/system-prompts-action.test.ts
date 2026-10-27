@@ -23,8 +23,12 @@ const {
 
 vi.mock("@/app/api/auth/action", () => ({ fetchAuthenticated }))
 vi.mock("@/app/lib/permissions-server", () => ({ getCurrentPermissions }))
+vi.mock("@/app/lib/i18n/dictionaries", () => ({
+  getDictionary: vi.fn(async () => testDictionary),
+}))
 vi.mock("@/app/lib/i18n/server", () => ({
   getServerDictionary: vi.fn(async () => testDictionary),
+  getRequestLocale: vi.fn(async () => "en"),
 }))
 vi.mock("next/cache", () => ({ revalidatePath }))
 
