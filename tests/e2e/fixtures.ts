@@ -37,6 +37,8 @@ type FixtureController = {
     route: string,
     scenario:
       | "success"
+      | "legacy-saved-provider-selection"
+      | "legacy-provider-options"
       | "empty"
       | "short"
       | "short-then-empty"

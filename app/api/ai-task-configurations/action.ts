@@ -16,6 +16,7 @@ import {
   AiTaskModelCatalogSchema,
   AiTaskOutputTokenRequestSchema,
   AiTaskSelectionRequestSchema,
+  isAiTaskModelCatalogProviderType,
   AI_TASK_TYPES,
   type AiTaskConfiguration,
   type AiTaskConnectionOption,
@@ -91,12 +92,16 @@ export async function getAiTaskConfigurationConnections(): Promise<
       filter: "",
       sort: [],
     })
-    const options = providerPage.content.map((provider) =>
-      AiTaskConnectionOptionSchema.parse({
-        id: provider.id,
-        providerType: provider.providerType,
-      })
-    )
+    const options = providerPage.content
+      .filter((provider) =>
+        isAiTaskModelCatalogProviderType(provider.providerType)
+      )
+      .map((provider) =>
+        AiTaskConnectionOptionSchema.parse({
+          id: provider.id,
+          providerType: provider.providerType,
+        })
+      )
 
     return { success: true, data: options }
   } catch {

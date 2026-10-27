@@ -57,6 +57,23 @@ describe("AI task configuration DTOs", () => {
     ).toBe(false)
   })
 
+  it("keeps a previously saved legacy provider selection readable", () => {
+    const savedLegacySelection = {
+      ...taskConfiguration("MARKET_QUESTION_UNDERSTANDING"),
+      configured: true,
+      selectedConnectionId: 42,
+      selectedProviderType: "GROQ",
+      selectedModel: "legacy-model",
+    }
+    const catalog = AI_TASK_TYPES.map((task) =>
+      task === savedLegacySelection.task
+        ? savedLegacySelection
+        : taskConfiguration(task)
+    )
+
+    expect(AiTaskConfigurationsResponseSchema.parse(catalog)).toEqual(catalog)
+  })
+
   it("keeps a model ID unchanged and accepts the published selection fields", () => {
     const request = { connectionId: 42, model: "model id" }
     expect(AiTaskSelectionRequestSchema.parse(request)).toEqual(request)

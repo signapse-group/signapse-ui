@@ -1188,9 +1188,25 @@ function aiTaskConfigurationRouteResult(state, method, pathname, body, url) {
         ),
       }
     }
-    return state.aiTaskConfigurations.map((configuration) => ({
+    const configurations = state.aiTaskConfigurations.map((configuration) => ({
       ...configuration,
     }))
+    if (
+      getScenario(state, method, pathname) === "legacy-saved-provider-selection"
+    ) {
+      return configurations.map((configuration) =>
+        configuration.task === "MARKET_QUESTION_UNDERSTANDING"
+          ? {
+              ...configuration,
+              configured: true,
+              selectedConnectionId: 16,
+              selectedProviderType: "GROQ",
+              selectedModel: "legacy-model",
+            }
+          : configuration
+      )
+    }
+    return configurations
   }
 
   const selectionMatch = pathname.match(
@@ -1284,7 +1300,15 @@ function aiTaskConfigurationRouteResult(state, method, pathname, body, url) {
         ),
       }
     }
-    return slicePage(state.aiProviderConfigurations, url)
+    const connections =
+      getScenario(state, method, pathname) === "legacy-provider-options"
+        ? [
+            ...state.aiProviderConfigurations,
+            { id: 16, providerType: "GROQ" },
+            { id: 17, providerType: "ZAI" },
+          ]
+        : state.aiProviderConfigurations
+    return slicePage(connections, url)
   }
 
   const modelCatalogMatch = pathname.match(

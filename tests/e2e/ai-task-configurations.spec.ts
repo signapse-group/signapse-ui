@@ -159,6 +159,52 @@ test.describe("AI task inline configuration", () => {
     ).toBeVisible()
   })
 
+  test("keeps a saved legacy provider visible but out of new connection choices", async ({
+    fixture,
+    page,
+  }) => {
+    await fixture.setPermissions([
+      TASK_CONFIGURATION_READ,
+      TASK_CONFIGURATION_UPDATE,
+      PROVIDER_READ,
+      MODEL_CATALOG_READ,
+    ])
+    await fixture.setScenario(
+      "/ai-task-configurations",
+      "legacy-saved-provider-selection",
+      "GET"
+    )
+    await fixture.setScenario(
+      "/ai-provider-configs",
+      "legacy-provider-options",
+      "GET"
+    )
+    await page.goto("/en/ai-task-configurations")
+
+    const row = page.getByRole("form", {
+      name: TASKS.MARKET_QUESTION_UNDERSTANDING,
+    })
+    const connectionSelect = row.getByRole("combobox", {
+      name: en.aiTaskConfigurations.connection,
+    })
+    await expect(connectionSelect).toContainText("Groq · #16")
+    await expect(
+      row.getByRole("combobox", { name: en.aiTaskConfigurations.model })
+    ).toContainText("legacy-model")
+
+    await connectionSelect.click()
+    await expect(
+      page.getByRole("option", { name: "Groq · #16" })
+    ).toBeDisabled()
+    await expect(page.getByRole("option", { name: "ZAI · #17" })).toHaveCount(0)
+    await expect(
+      page.getByRole("option", { name: "DeepSeek · #14" })
+    ).toBeEnabled()
+    await expect(
+      page.getByRole("option", { name: "OpenAI · #15" })
+    ).toBeEnabled()
+  })
+
   test("updates one task, keeps another task isolated, and preserves failed token input", async ({
     fixture,
     page,

@@ -281,7 +281,7 @@ describe("AI task configuration actions", () => {
     )
   })
 
-  it("returns safe connection options without provider credentials", async () => {
+  it("returns safe connection options only for catalog-supported providers", async () => {
     vi.mocked(getCurrentPermissions).mockResolvedValue([
       "ai-provider-config:read",
     ])
@@ -294,12 +294,20 @@ describe("AI task configuration actions", () => {
           baseUrl: "https://provider.invalid",
           credentials: [{ apiKey: "must-not-leave-server", model: "private" }],
         },
+        { id: 15, providerType: "GEMINI" },
+        { id: 16, providerType: "OPENAI" },
+        { id: 17, providerType: "GROQ" },
+        { id: 18, providerType: "ZAI" },
       ],
     })
 
     await expect(getAiTaskConfigurationConnections()).resolves.toEqual({
       success: true,
-      data: [{ id: 14, providerType: "DEEPSEEK" }],
+      data: [
+        { id: 14, providerType: "DEEPSEEK" },
+        { id: 15, providerType: "GEMINI" },
+        { id: 16, providerType: "OPENAI" },
+      ],
     })
     expect(getAiProviderConfigs).toHaveBeenCalledWith({
       page: 0,

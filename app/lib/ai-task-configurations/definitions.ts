@@ -1,6 +1,26 @@
 import { z } from "zod"
 
-import { AI_PROVIDER_TYPES } from "@/app/lib/ai-provider-configs/definitions"
+import {
+  AI_PROVIDER_TYPES,
+  type AiProviderType,
+} from "@/app/lib/ai-provider-configs/definitions"
+
+export const AI_TASK_MODEL_CATALOG_PROVIDER_TYPES = [
+  "DEEPSEEK",
+  "GEMINI",
+  "OPENAI",
+] as const
+
+export type AiTaskModelCatalogProviderType =
+  (typeof AI_TASK_MODEL_CATALOG_PROVIDER_TYPES)[number]
+
+export function isAiTaskModelCatalogProviderType(
+  providerType: AiProviderType
+): providerType is AiTaskModelCatalogProviderType {
+  return AI_TASK_MODEL_CATALOG_PROVIDER_TYPES.some(
+    (supportedType) => supportedType === providerType
+  )
+}
 
 export const AI_TASK_TYPES = [
   "NEWS_CONTENT_NORMALIZATION",
@@ -147,7 +167,7 @@ export type AiTaskOutputTokenRequest = z.infer<
 
 export const AiTaskConnectionOptionSchema = z.object({
   id: z.number().int().positive(),
-  providerType: z.enum(AI_PROVIDER_TYPES),
+  providerType: z.enum(AI_TASK_MODEL_CATALOG_PROVIDER_TYPES),
 })
 
 export type AiTaskConnectionOption = z.infer<
@@ -155,7 +175,7 @@ export type AiTaskConnectionOption = z.infer<
 >
 
 export const AiTaskModelCatalogSchema = z.object({
-  providerType: z.enum(["DEEPSEEK", "GEMINI", "OPENAI"]),
+  providerType: z.enum(AI_TASK_MODEL_CATALOG_PROVIDER_TYPES),
   models: z.array(
     z.object({
       id: z.string(),
