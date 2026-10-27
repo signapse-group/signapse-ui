@@ -6,11 +6,16 @@ import { fetchAuthenticated } from "@/app/api/auth/action"
 import { ActionResult, Page, SearchParams } from "@/app/lib/definitions"
 import { getDictionary } from "@/app/lib/i18n/dictionaries"
 import { getRequestLocale } from "@/app/lib/i18n/server"
+import { canReadSystemPrompts } from "@/app/lib/system-prompts/permissions"
+import { getCurrentPermissions } from "@/app/lib/permissions-server"
 import {
   CreateSystemPromptRequest,
+  SystemPromptContentResponseSchema,
   SystemPromptResponse,
+  SystemPromptContentResponse,
   SystemPromptType,
   UpdateSystemPromptRequest,
+  isSystemPromptContentType,
 } from "@/app/lib/system-prompts/definitions"
 import { queryParamsToString } from "@/app/lib/utils"
 
@@ -47,6 +52,38 @@ export async function getSystemPromptByType(
   return fetchAuthenticated<SystemPromptResponse>(
     getSystemPromptPath(promptType)
   )
+}
+
+export async function getSystemPromptContentByType(
+  rawPromptType: string
+): Promise<SystemPromptContentResponse> {
+  const [permissions, dictionary] = await Promise.all([
+    getCurrentPermissions(),
+    getSystemPromptsDictionary(),
+  ])
+
+  if (!canReadSystemPrompts(permissions)) {
+    throw new Error(dictionary.systemPrompts.readDenied)
+  }
+
+  if (!isSystemPromptContentType(rawPromptType)) {
+    throw new Error(dictionary.systemPrompts.unsupportedPrompt)
+  }
+
+  try {
+    const response = await fetchAuthenticated<unknown>(
+      `/system-prompts/${encodeURIComponent(rawPromptType)}`
+    )
+    const result = SystemPromptContentResponseSchema.safeParse(response)
+
+    if (!result.success || result.data.promptType !== rawPromptType) {
+      throw new Error(dictionary.systemPrompts.viewError)
+    }
+
+    return result.data
+  } catch {
+    throw new Error(dictionary.systemPrompts.viewError)
+  }
 }
 
 export async function createSystemPrompt(

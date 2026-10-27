@@ -19,6 +19,7 @@ import { MARKET_CHART_NAV_PERMISSIONS } from "@/app/lib/market-charts/permission
 import { NEWS_ARTICLE_NAV_PERMISSIONS } from "@/app/lib/news-articles/permissions"
 import { NEWS_OUTLET_NAV_PERMISSIONS } from "@/app/lib/news-outlets/permissions"
 import { SYSTEM_PROMPT_NAV_PERMISSIONS } from "@/app/lib/system-prompts/permissions"
+import { AI_TASK_CONFIGURATION_NAV_PERMISSIONS } from "@/app/lib/ai-task-configurations/permissions"
 import { SMTP_CONFIGURATION_NAV_PERMISSIONS } from "@/app/lib/smtp-configuration/permissions"
 import { TELEGRAM_NAV_PERMISSIONS } from "@/app/lib/telegram/permissions"
 import { FEEDBACK_READ_PERMISSION } from "@/app/lib/feedback/permissions"
@@ -167,6 +168,12 @@ export function createSiteConfig(dictionary: Dictionary) {
                 title: dictionary.navigation.aiProviders,
                 url: "/ai-provider-configs",
                 permission: "ai-provider-config:read",
+              },
+              {
+                id: "ai-task-configurations",
+                title: dictionary.navigation.aiTaskConfigurations,
+                url: "/ai-task-configurations",
+                permission: AI_TASK_CONFIGURATION_NAV_PERMISSIONS,
               },
               {
                 id: "system-prompts",

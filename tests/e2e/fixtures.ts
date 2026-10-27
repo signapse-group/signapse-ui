@@ -47,6 +47,7 @@ type FixtureController = {
       | "delayed-outage"
       | "outage"
       | "mutation-failure"
+      | "permission-denied"
       | "reconnect"
       | "error-reconnect"
       | "post-open-error"
@@ -76,6 +77,7 @@ type FixtureController = {
     violations: Array<Record<string, unknown>>
     streamConnections: number
     smtpConfiguration?: Record<string, unknown>
+    aiTaskConfigurations?: Array<Record<string, unknown>>
   }>
   setFeedbackScenario(
     scenario:
