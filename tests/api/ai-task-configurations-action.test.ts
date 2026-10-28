@@ -324,6 +324,7 @@ describe("AI task configuration actions", () => {
       name: "News article localization",
       content: "Translate the article.",
       requiredVariables: [],
+      lastModifiedDate: "2026-10-18T13:21:00.000Z",
     }
     vi.mocked(fetchAuthenticated).mockResolvedValue(prompt)
 

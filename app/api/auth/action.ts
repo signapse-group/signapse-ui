@@ -126,6 +126,13 @@ async function apiFetch<T>(
                 typeof errorJson.message === "string"
               ) {
                 errorMessage = errorJson.message
+              } else if (
+                typeof errorJson === "object" &&
+                errorJson !== null &&
+                "detail" in errorJson &&
+                typeof errorJson.detail === "string"
+              ) {
+                errorMessage = errorJson.detail
               }
               if (
                 typeof errorJson === "object" &&

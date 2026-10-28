@@ -68,6 +68,10 @@ export default async function ViewSystemPromptPage({
     )
   }
 
+  if (!isSystemPromptContentType(prompt.promptType)) {
+    notFound()
+  }
+
   const taskDictionary = dictionary.aiTaskConfigurations
 
   return (

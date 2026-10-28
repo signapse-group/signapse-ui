@@ -2,56 +2,101 @@
 
 import { revalidatePath } from "next/cache"
 
-import { fetchAuthenticated } from "@/app/api/auth/action"
-import { ActionResult, Page, SearchParams } from "@/app/lib/definitions"
+import { fetchAuthenticated, type BackendApiError } from "@/app/api/auth/action"
+import type { ActionResult } from "@/app/lib/definitions"
 import { getDictionary } from "@/app/lib/i18n/dictionaries"
-import { getRequestLocale } from "@/app/lib/i18n/server"
-import { canReadSystemPrompts } from "@/app/lib/system-prompts/permissions"
-import { getCurrentPermissions } from "@/app/lib/permissions-server"
+import { getRequestLocale, getServerDictionary } from "@/app/lib/i18n/server"
 import {
-  CreateSystemPromptRequest,
-  SystemPromptContentResponseSchema,
-  SystemPromptResponse,
-  SystemPromptContentResponse,
-  SystemPromptType,
-  UpdateSystemPromptRequest,
+  canReadSystemPrompts,
+  canUpdateSystemPrompts,
+} from "@/app/lib/system-prompts/permissions"
+import {
   isSystemPromptContentType,
+  systemPromptContentResponseSchema,
+  systemPromptListResponseSchema,
+  SystemPromptContentResponseSchema,
+  updateSystemPromptContentRequestSchema,
+  type SystemPromptContentResponse,
+  type UpdateSystemPromptContentRequest,
 } from "@/app/lib/system-prompts/definitions"
-import { queryParamsToString } from "@/app/lib/utils"
+import { getCurrentPermissions } from "@/app/lib/permissions-server"
+
+const SYSTEM_PROMPT_LIST_URL = "/system-prompts?page=0&size=100"
 
 function getSystemPromptPath(promptType: string) {
   return `/system-prompts/${encodeURIComponent(promptType)}`
 }
 
-function revalidateSystemPromptRoutes(promptType?: string) {
-  revalidatePath("/system-prompts")
-
-  if (promptType) {
-    revalidatePath(getSystemPromptPath(promptType))
-    return
-  }
-
-  revalidatePath("/system-prompts/[promptType]", "page")
+function permissionDenied(message: string): BackendApiError {
+  const error = new Error(message) as BackendApiError
+  error.status = 403
+  return error
 }
 
 async function getSystemPromptsDictionary() {
   return getDictionary(await getRequestLocale())
 }
 
-export async function getSystemPrompts(
-  searchParams: SearchParams
-): Promise<Page<SystemPromptResponse>> {
-  return fetchAuthenticated<Page<SystemPromptResponse>>(
-    `/system-prompts?${queryParamsToString(searchParams)}`
-  )
+export async function getSystemPrompts(): Promise<
+  SystemPromptContentResponse[]
+> {
+  const [permissions, dictionary] = await Promise.all([
+    getCurrentPermissions(),
+    getServerDictionary(),
+  ])
+
+  if (!canReadSystemPrompts(permissions)) {
+    throw permissionDenied(dictionary.systemPrompts.readDenied)
+  }
+
+  let response: unknown
+  try {
+    response = await fetchAuthenticated<unknown>(SYSTEM_PROMPT_LIST_URL)
+  } catch (error: unknown) {
+    if (error instanceof Error && "status" in error && error.status === 403) {
+      throw permissionDenied(dictionary.systemPrompts.readDenied)
+    }
+    throw error
+  }
+  const parsed = systemPromptListResponseSchema.safeParse(response)
+
+  if (!parsed.success) {
+    throw new Error(dictionary.systemPrompts.responseInvalid)
+  }
+
+  return parsed.data.content
 }
 
 export async function getSystemPromptByType(
-  promptType: SystemPromptType
-): Promise<SystemPromptResponse> {
-  return fetchAuthenticated<SystemPromptResponse>(
-    getSystemPromptPath(promptType)
-  )
+  promptType: string
+): Promise<SystemPromptContentResponse> {
+  const [permissions, dictionary] = await Promise.all([
+    getCurrentPermissions(),
+    getServerDictionary(),
+  ])
+
+  if (!canReadSystemPrompts(permissions)) {
+    throw permissionDenied(dictionary.systemPrompts.readDenied)
+  }
+
+  let response: unknown
+  try {
+    response = await fetchAuthenticated<unknown>(
+      getSystemPromptPath(promptType)
+    )
+  } catch (error: unknown) {
+    if (error instanceof Error && "status" in error && error.status === 403) {
+      throw permissionDenied(dictionary.systemPrompts.readDenied)
+    }
+    throw error
+  }
+  const parsed = systemPromptContentResponseSchema.safeParse(response)
+
+  if (!parsed.success) {
+    throw new Error(dictionary.systemPrompts.responseInvalid)
+  }
+
+  return parsed.data
 }
 
 export async function getSystemPromptContentByType(
@@ -72,97 +117,77 @@ export async function getSystemPromptContentByType(
 
   try {
     const response = await fetchAuthenticated<unknown>(
-      `/system-prompts/${encodeURIComponent(rawPromptType)}`
+      getSystemPromptPath(rawPromptType)
     )
-    const result = SystemPromptContentResponseSchema.safeParse(response)
+    const parsed = SystemPromptContentResponseSchema.safeParse(response)
 
-    if (!result.success || result.data.promptType !== rawPromptType) {
+    if (!parsed.success || parsed.data.promptType !== rawPromptType) {
       throw new Error(dictionary.systemPrompts.viewError)
     }
 
-    return result.data
+    return parsed.data
   } catch {
     throw new Error(dictionary.systemPrompts.viewError)
   }
 }
 
-export async function createSystemPrompt(
-  request: CreateSystemPromptRequest
-): Promise<ActionResult<SystemPromptResponse>> {
-  try {
-    const data = await fetchAuthenticated<SystemPromptResponse>(
-      "/system-prompts",
-      {
-        method: "POST",
-        body: JSON.stringify(request),
-      }
-    )
+export async function updateSystemPrompt(
+  promptType: string,
+  request: UpdateSystemPromptContentRequest
+): Promise<ActionResult<SystemPromptContentResponse>> {
+  const [permissions, dictionary] = await Promise.all([
+    getCurrentPermissions(),
+    getServerDictionary(),
+  ])
+  const t = dictionary.systemPrompts
 
-    revalidateSystemPromptRoutes(request.promptType)
+  if (!canUpdateSystemPrompts(permissions)) {
+    return { success: false, error: t.updateDenied }
+  }
 
-    return { success: true, data }
-  } catch (error: unknown) {
-    const dictionary = await getSystemPromptsDictionary()
+  const parsedRequest =
+    updateSystemPromptContentRequestSchema.safeParse(request)
 
+  if (!parsedRequest.success) {
     return {
       success: false,
-      error:
-        error instanceof Error
-          ? error.message
-          : dictionary.systemPrompts.createError,
+      error: parsedRequest.error.issues.some(
+        (issue) => issue.code === "too_big"
+      )
+        ? t.contentTooLong
+        : t.contentRequired,
     }
   }
-}
 
-export async function updateSystemPrompt(
-  promptType: SystemPromptType,
-  request: UpdateSystemPromptRequest
-): Promise<ActionResult<SystemPromptResponse>> {
   try {
-    const data = await fetchAuthenticated<SystemPromptResponse>(
+    const response = await fetchAuthenticated<unknown>(
       getSystemPromptPath(promptType),
       {
         method: "PUT",
-        body: JSON.stringify(request),
+        body: JSON.stringify(parsedRequest.data),
       }
     )
+    const parsedResponse = systemPromptContentResponseSchema.safeParse(response)
 
-    revalidateSystemPromptRoutes(promptType)
-
-    return { success: true, data }
-  } catch (error: unknown) {
-    const dictionary = await getSystemPromptsDictionary()
-
-    return {
-      success: false,
-      error:
-        error instanceof Error
-          ? error.message
-          : dictionary.systemPrompts.updateError,
+    if (!parsedResponse.success) {
+      return { success: false, error: t.responseInvalid }
     }
-  }
-}
 
-export async function deleteSystemPrompt(
-  promptType: SystemPromptType
-): Promise<ActionResult> {
-  try {
-    await fetchAuthenticated<void>(getSystemPromptPath(promptType), {
-      method: "DELETE",
-    })
+    revalidatePath("/system-prompts")
+    revalidatePath("/system-prompts/[promptType]", "page")
 
-    revalidateSystemPromptRoutes(promptType)
-
-    return { success: true, data: undefined }
+    return { success: true, data: parsedResponse.data }
   } catch (error: unknown) {
-    const dictionary = await getSystemPromptsDictionary()
-
+    const status =
+      error instanceof Error && "status" in error ? error.status : undefined
     return {
       success: false,
       error:
-        error instanceof Error
-          ? error.message
-          : dictionary.systemPrompts.deleteError,
+        status === 403
+          ? t.updateDenied
+          : status === 400 && error instanceof Error
+            ? error.message
+            : t.updateError,
     }
   }
 }
