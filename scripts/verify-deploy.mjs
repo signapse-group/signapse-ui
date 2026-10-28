@@ -1,6 +1,7 @@
 import assert from "node:assert/strict"
 import { execFile } from "node:child_process"
-import { appendFile } from "node:fs/promises"
+import { readFile } from "node:fs/promises"
+import { parseEnv } from "node:util"
 import { resolve } from "node:path"
 import { promisify } from "node:util"
 import { pathToFileURL } from "node:url"
@@ -52,98 +53,71 @@ async function qualityPassed(sha, api) {
   return false
 }
 
-export async function findDeployment(expected, api = github) {
+const revisionUrl = "https://dev-dashboard.signapse.cloud/api/build-revision"
+
+export async function readRevision(request = fetch, secret) {
+  let response
+  try {
+    response = await request(revisionUrl, {
+      redirect: "manual",
+      cache: "no-store",
+      signal: AbortSignal.timeout(20_000),
+      headers: secret ? { "x-vercel-protection-bypass": secret } : {},
+    })
+  } catch {
+    throw new Error("Dev revision read failed: request unavailable")
+  }
+  if ([429, 503].includes(response.status)) return null
+  assert(
+    response.status === 200,
+    "Dev revision HTTP " + response.status + "; redirects are not followed."
+  )
+  assert(
+    response.headers.get("content-type")?.includes("application/json"),
+    "Invalid revision content type."
+  )
+  let body
+  try {
+    body = await response.json()
+  } catch {
+    throw new Error("Invalid revision JSON.")
+  }
+  assert(shaPattern.test(body?.revision ?? ""), "Invalid live revision.")
+  return body.revision
+}
+
+export async function findDeployment(
+  expected,
+  api = github,
+  read = readRevision
+) {
   assert(shaPattern.test(expected), "Supply the full 40-character merge SHA.")
+  const revision = await read()
+  if (!revision) return null
+  assert(shaPattern.test(revision), "Invalid live revision.")
   const main = (await api("commits/main")).sha
   assert(shaPattern.test(main), "Invalid main revision.")
-  const candidates = new Set([expected])
-  if (main !== expected) {
-    for (let page = 1; ; page++) {
-      const comparison = await api(
-        `compare/${expected}...${main}?per_page=100&page=${page}`
-      )
-      assert(
-        ["identical", "ahead"].includes(comparison.status),
-        "Merge is not contained in main."
-      )
-      assert(
-        Array.isArray(comparison.commits),
-        "Invalid commit comparison response."
-      )
-      for (const commit of comparison.commits) {
-        assert(shaPattern.test(commit.sha), "Invalid comparison revision.")
-        candidates.add(commit.sha)
-      }
-      if (comparison.commits.length < 100) break
-    }
+  if (
+    !(await contains(expected, revision, api)) ||
+    !(await contains(revision, main, api))
+  )
+    return null
+  if (!(await qualityPassed(revision, api))) return null
+  return {
+    status: "PASS",
+    merge: expected,
+    revision,
+    environment: "dev",
+    deployment: revisionUrl,
+    checkedAt: new Date().toISOString(),
   }
-  let failure
-  let pendingNewer = false
-  for (let page = 1; ; page++) {
-    const deployments = await api(
-      `deployments?environment=Production&per_page=100&page=${page}`
-    )
-    assert(Array.isArray(deployments), "Invalid deployment list response.")
-    for (const deployment of deployments) {
-      if (
-        deployment.creator?.login !== "vercel[bot]" ||
-        deployment.environment !== "Production" ||
-        !shaPattern.test(deployment.sha) ||
-        !candidates.has(deployment.sha)
-      )
-        continue
-      assert(Number.isSafeInteger(deployment.id), "Invalid deployment ID.")
-      if (!(await contains(expected, deployment.sha, api))) continue
-      const statuses = await api(
-        `deployments/${deployment.id}/statuses?per_page=1`
-      )
-      assert(Array.isArray(statuses), "Invalid deployment status response.")
-      const status = statuses[0]
-      // shortcut: observed deployment prefix; update if this Vercel project is renamed.
-      if (
-        !status ||
-        !/^https:\/\/signapse-[a-z0-9]+-signapse\.vercel\.app\/?$/.test(
-          status.environment_url ?? ""
-        )
-      )
-        continue
-      const commit = await api(`commits/${deployment.sha}/status`)
-      if (
-        !commit.statuses?.some((item) =>
-          /^https:\/\/vercel\.com\/signapse\/signapse-ui\/[^/]+$/.test(
-            item.target_url ?? ""
-          )
-        )
-      )
-        continue
-      if (status.state === "success") {
-        if (!(await qualityPassed(deployment.sha, api))) continue
-        return {
-          status: "PASS",
-          merge: expected,
-          revision: deployment.sha,
-          environment: "Production",
-          deployment: status.environment_url,
-          checkedAt: new Date().toISOString(),
-        }
-      }
-      if (["queued", "pending", "in_progress"].includes(status.state)) {
-        if (!failure) pendingNewer = true
-      } else if (["error", "failure"].includes(status.state)) {
-        failure ??= `Vercel deployment ${deployment.id} ${status.state} (${deployment.sha}).`
-      }
-      // Canceled/skipped/inactive is not success; a descendant may still deploy.
-    }
-    if (deployments.length < 100) break
-  }
-  if (failure && !pendingNewer) throw new Error(failure)
-  return null
 }
 
 export async function verifyDeployment(
   expected,
   {
     api = github,
+    read = readRevision,
     now = Date.now,
     sleep = (ms) => new Promise((done) => setTimeout(done, ms)),
     log = console.log,
@@ -157,34 +131,42 @@ export async function verifyDeployment(
   let readFailures = 0
   while (now() < deadline) {
     try {
-      const result = await findDeployment(expected, (path) => {
-        assert(
-          now() < deadline,
-          "Timed out: Vercel deployment could not be confirmed within 30 minutes."
-        )
-        return api(path)
-      })
+      const result = await findDeployment(
+        expected,
+        (path) => {
+          assert(
+            now() < deadline,
+            "Timed out: Live dev revision could not be confirmed within 30 minutes."
+          )
+          return api(path)
+        },
+        read
+      )
       readFailures = 0
       if (result) {
         assert(
           now() < deadline,
-          "Timed out: Vercel deployment could not be confirmed within 30 minutes."
+          "Timed out: Live dev revision could not be confirmed within 30 minutes."
         )
         return result
       }
     } catch (error) {
       if (
-        !error.message.startsWith("GitHub read failed:") ||
+        !/^GitHub read failed:|^Dev revision read failed:/.test(
+          error.message
+        ) ||
         ++readFailures >= 3
       )
         throw error
-      log("GitHub read unavailable; retrying within the existing wait budget.")
+      log(
+        "Delivery read unavailable; retrying within the existing wait budget."
+      )
     }
-    log(`Waiting for Vercel Production deployment containing ${expected}.`)
+    log(`Waiting for live dev revision containing ${expected}.`)
     await sleep(Math.min(30_000, Math.max(0, deadline - now())))
   }
   throw new Error(
-    "Timed out: Vercel deployment could not be confirmed within 30 minutes."
+    "Timed out: Live dev revision could not be confirmed within 30 minutes."
   )
 }
 
@@ -197,14 +179,21 @@ if (
       process.argv.length === 3,
       "Usage: pnpm verify:deploy <full-merge-sha>"
     )
-    const result = await verifyDeployment(process.argv[2])
-    console.log(JSON.stringify(result))
-    if (process.env.GITHUB_STEP_SUMMARY) {
-      await appendFile(
-        process.env.GITHUB_STEP_SUMMARY,
-        `### Vercel deployment confirmed\n\nMerge: \`${result.merge}\`\n\nDeployed: \`${result.revision}\`\n\nEnvironment: ${result.environment}\n\n[Deployment](${result.deployment})\n\nConfirmed: ${result.checkedAt}\n`
-      )
+    let secret
+    if (process.env.SIGNAPSE_UI_VERCEL_ENV) {
+      try {
+        secret = parseEnv(
+          await readFile(process.env.SIGNAPSE_UI_VERCEL_ENV, "utf8")
+        ).VERCEL_AUTOMATION_BYPASS_SECRET
+      } catch {
+        throw new Error("Cannot read Vercel bypass input.")
+      }
+      assert(secret?.trim(), "Vercel bypass input is empty.")
     }
+    const result = await verifyDeployment(process.argv[2], {
+      read: () => readRevision(fetch, secret),
+    })
+    console.log(JSON.stringify(result))
   } catch (error) {
     console.error(`FAIL: ${error.message}`)
     process.exitCode = 1

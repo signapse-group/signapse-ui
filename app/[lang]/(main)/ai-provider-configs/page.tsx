@@ -4,6 +4,7 @@ import { getAiProviderConfigs } from "@/app/api/ai-provider-configs/action"
 import { AI_PROVIDER_CONFIG_PERMISSIONS } from "@/app/lib/ai-provider-configs/permissions"
 import type { Dictionary } from "@/app/lib/i18n/dictionary-types"
 import { getServerDictionary } from "@/app/lib/i18n/server"
+import { parsePaginationQuery } from "@/app/lib/pagination/query"
 import { hasPermission } from "@/app/lib/permissions"
 import { getCurrentPermissions } from "@/app/lib/permissions-server"
 import { buildSortQuery } from "@/app/lib/utils"
@@ -13,6 +14,7 @@ import {
   AppListTableHead,
   AppListTableHeaderRow,
 } from "@/components/app-list-table"
+import { AppPaginationSkeleton } from "@/components/app-pagination-controls"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   Table,
@@ -64,20 +66,11 @@ async function AiProviderConfigsContent({
   searchParamsPromise: Promise<{ [key: string]: string | string[] | undefined }>
 }) {
   const resolvedParams = await searchParamsPromise
-  const pageValue = Array.isArray(resolvedParams.page)
-    ? resolvedParams.page[0]
-    : resolvedParams.page
-  const sizeValue = Array.isArray(resolvedParams.size)
-    ? resolvedParams.size[0]
-    : resolvedParams.size
   const sortValue = Array.isArray(resolvedParams.sort)
     ? resolvedParams.sort[0]
     : resolvedParams.sort
-  const parsedPage = Number(pageValue)
-  const parsedSize = Number(sizeValue)
-  const page = Number.isInteger(parsedPage) && parsedPage > 0 ? parsedPage : 1
-  const size = [10, 20, 50, 100].includes(parsedSize) ? parsedSize : 10
   const sort = sortValue === "id_asc" ? "id_asc" : "id_desc"
+  const { page, size } = parsePaginationQuery(resolvedParams)
 
   const providerPage = await getAiProviderConfigs({
     page: page - 1,
@@ -152,16 +145,7 @@ function ListSkeleton({ dictionary }: { dictionary: Dictionary }) {
         </Table>
       </AppListTable>
 
-      <div className="mt-4 flex flex-col gap-3 rounded-xl border bg-muted/20 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-        <Skeleton className="h-4 w-48" />
-        <div className="flex flex-wrap gap-2">
-          <Skeleton className="h-8 w-[120px]" />
-          <Skeleton className="h-8 w-20" />
-          <Skeleton className="h-8 w-8" />
-          <Skeleton className="h-8 w-8" />
-          <Skeleton className="h-8 w-20" />
-        </div>
-      </div>
+      <AppPaginationSkeleton className="mt-4" />
     </div>
   )
 }

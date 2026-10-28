@@ -19,7 +19,6 @@ export function AppPagination({
     itemsPerPage > 0 ? Math.ceil(totalElements / itemsPerPage) : 0
 
   const { currentPage, isPending, setPage } = useAppPaginationQuery({
-    defaultSize: itemsPerPage,
     totalPages,
   })
 

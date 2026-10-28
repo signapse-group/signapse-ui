@@ -41,7 +41,7 @@ describe("API contract guard", () => {
       expect(result.status).toBe(0)
       expect(result.stdout).toContain("Fixture consistency")
       expect(result.stdout).toContain("Scope: full")
-      expect(result.stdout).toContain("passed for 66 operations")
+      expect(result.stdout).toContain("passed for 71 operations")
       expect(result.stdout).not.toContain("live")
 
       const scopedResult = spawnSync(

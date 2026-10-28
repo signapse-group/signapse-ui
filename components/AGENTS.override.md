@@ -6,6 +6,8 @@ For changes to visual presentation, interaction, accessibility, or user-facing c
 
 Before implementing or reviewing forms, read [Forms](../docs/design/DESIGN.md#forms) and [UI Review Criteria](../docs/design/DESIGN.md#ui-review-criteria), including empty-field placeholder checks.
 
+Before implementing or reviewing dashboard layout/responsive behavior, read and apply the local [Responsive Contract](../docs/design/DESIGN.md#responsive-contract). Report the affected viewport/zoom/state/sidebar checks and any unverified coverage in the handoff. If the source cannot be read, report the gap before deciding dependent layout; do not infer a replacement rule from one imported screenshot.
+
 ## Component Placement
 
 - Keep route-specific components beside their route under `app/[lang]/`.

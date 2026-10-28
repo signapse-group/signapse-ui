@@ -141,6 +141,19 @@ fixtures =
     phase
   end
 
+assert String.contains?(settings.hooks.before_run, "refs/heads/main:refs/remotes/origin/main")
+assert String.contains?(workflow.prompt_template, "git show origin/main:<path>")
+root = Path.dirname(Path.expand(workflow_path))
+for path <- ["AGENTS.md", "components/AGENTS.override.md"] ++ Map.values(runbooks) do
+  source = File.read!(Path.join(root, path))
+  refute String.contains?(source, "signapse-planing/blob/main/workflow/project-execution-workflow.md#ui-design-gate")
+  refute String.contains?(source, "signapse-planing/blob/main/ui-design/references/DESIGN.md#responsive-contract")
+end
+design = File.read!(Path.join(root, "docs/design/DESIGN.md"))
+for rule <- ["## UI Design Gate", "## Responsive Contract", "390×844", "1024×768", "1520×1024", "767/768px", "1439/1440px", "200%"] do
+  assert String.contains?(design, rule)
+end
+
 assert length(fixtures) == 108
 
 for {state, phase} <- [

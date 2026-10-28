@@ -196,9 +196,6 @@ export function AiProviderConfigListPage({
       <AppPaginationControls
         page={providerPage}
         className="mt-4"
-        showPageSizeSelector
-        showPageSizeLabel
-        showWhenSinglePage={providerPage.totalElements > 0}
       />
 
       {providers.length > 0 ? (

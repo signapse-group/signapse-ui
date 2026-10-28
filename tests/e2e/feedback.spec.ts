@@ -5,6 +5,125 @@ import { expect, test, waitForClientHandler } from "./fixtures"
 test.describe("P0 feedback HTTP integration", () => {
   test.setTimeout(180_000)
 
+  test("loads personal feedback with the selected page size at the HTTP boundary", async ({
+    page,
+  }) => {
+    await page.goto("/vi/feedback?page=2&size=10")
+    await expect(
+      page.getByRole("link", {
+        name: "Phản hồi cá nhân bổ sung 6",
+        exact: true,
+      })
+    ).toBeVisible()
+
+    const pageSize = page.getByRole("combobox", {
+      name: "Số hàng mỗi trang",
+    })
+    await expect(pageSize).toContainText("10")
+    await waitForClientHandler(pageSize)
+    await pageSize.click()
+    await page.getByRole("option", { name: "20 / trang" }).click()
+    await expect(page).toHaveURL(/page=1&size=20/)
+    await expect(
+      page.getByRole("link", {
+        name: "Phản hồi cá nhân bổ sung 6",
+        exact: true,
+      })
+    ).toBeVisible()
+
+    await page.goto("/en/feedback?page=1&size=20")
+    await expect(
+      page.getByRole("combobox", { name: "Rows per page" })
+    ).toContainText("20")
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth
+      )
+    ).toBe(true)
+  })
+
+  test("updates moderation page size and repairs its URL without losing context", async ({
+    page,
+    fixture,
+  }) => {
+    await fixture.setPermissions(["feedback:read"])
+    await page.goto(
+      "/vi/feedback-submissions?status=PENDING_REVIEW&sort=createdDate_desc&page=1&size=10&search=Bi%E1%BB%83u+%C4%91%E1%BB%93&campaign=autumn"
+    )
+
+    const pageSize = page.getByRole("combobox", {
+      name: "Số hàng mỗi trang",
+    })
+    await expect(pageSize).toContainText("10")
+    await waitForClientHandler(pageSize)
+    await pageSize.click()
+    await page.getByRole("option", { name: "20 / trang" }).click()
+
+    const readPagingContext = () => {
+      const params = new URL(page.url()).searchParams
+      return {
+        campaign: params.get("campaign"),
+        page: params.get("page"),
+        search: params.get("search"),
+        size: params.get("size"),
+        sort: params.get("sort"),
+        status: params.get("status"),
+      }
+    }
+    await expect.poll(readPagingContext).toEqual({
+      campaign: "autumn",
+      page: "1",
+      search: "Biểu đồ",
+      size: "20",
+      sort: "createdDate_desc",
+      status: "PENDING_REVIEW",
+    })
+    await expect
+      .poll(async () => {
+        const { requests } = await fixture.state()
+        return requests.some((request) => {
+          const query = new URLSearchParams(String(request.query ?? ""))
+          return (
+            request.method === "GET" &&
+            request.path === "/feedback-submissions" &&
+            query.get("page") === "0" &&
+            query.get("size") === "20"
+          )
+        })
+      })
+      .toBe(true)
+
+    await page.goto(
+      "/vi/feedback-submissions?status=PENDING_REVIEW&sort=createdDate_desc&page=9&size=25&search=Bi%E1%BB%83u+%C4%91%E1%BB%93&campaign=autumn"
+    )
+    await expect.poll(readPagingContext).toEqual({
+      campaign: "autumn",
+      page: "1",
+      search: "Biểu đồ",
+      size: "10",
+      sort: "createdDate_desc",
+      status: "PENDING_REVIEW",
+    })
+
+    await page.goto(
+      "/vi/feedback-submissions?status=PENDING_REVIEW&sort=createdDate_desc&page=9&size=10&search=Bi%E1%BB%83u+%C4%91%E1%BB%93&campaign=autumn"
+    )
+    await expect.poll(readPagingContext).toEqual({
+      campaign: "autumn",
+      page: "1",
+      search: "Biểu đồ",
+      size: "10",
+      sort: "createdDate_desc",
+      status: "PENDING_REVIEW",
+    })
+    await expect(
+      page.getByRole("link", {
+        name: "Biểu đồ không giữ bộ lọc sau khi đổi ngôn ngữ",
+        exact: true,
+      })
+    ).toBeVisible()
+  })
+
   test("opens compose, validates content, and keeps a dirty draft", async ({
     page,
   }) => {
@@ -130,7 +249,9 @@ test.describe("P0 feedback HTTP integration", () => {
     })
     await waitForClientHandler(confirmWithdraw)
     await confirmWithdraw.click()
-    await expect(page.getByText("Đã rút phản hồi.", { exact: true })).toBeVisible()
+    await expect(
+      page.getByText("Đã rút phản hồi.", { exact: true })
+    ).toBeVisible()
     await expect(page).toHaveURL(/\/vi\/feedback$/, { timeout: 30_000 })
     await expect(
       page.getByRole("link", { name: /Biểu đồ không giữ bộ lọc/ })
@@ -175,9 +296,14 @@ test.describe("P0 feedback HTTP integration", () => {
       "/vi/feedback-submissions?status=PENDING_REVIEW&sort=createdDate_desc&page=1&size=10"
     )
     await expect(page.locator("h1")).toHaveText("Phản hồi người dùng")
-    await page
-      .getByRole("searchbox", { name: "Tìm trong nội dung phản hồi" })
-      .fill("Biểu đồ")
+    const search = page.getByRole("searchbox", {
+      name: "Tìm trong nội dung phản hồi",
+    })
+    const searchForm = page.locator("form").filter({ has: search })
+    await waitForClientHandler(search, "onChange")
+    await waitForClientHandler(searchForm, "onSubmit")
+    await search.fill("Biểu đồ")
+    await expect(search).toHaveValue("Biểu đồ")
     await page
       .getByRole("button", { name: "Tìm trong nội dung phản hồi", exact: true })
       .click()

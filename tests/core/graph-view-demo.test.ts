@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import { en } from "@/app/lib/i18n/dictionaries/en"
+import { graphViewResponseSchema } from "@/app/lib/graph-view/definitions"
 import {
   createGraphViewDemoFixture,
   createGraphViewDemoGraph,
@@ -76,6 +77,40 @@ describe("graph view demo fixture", () => {
     expect(graph.hasEdge("demo-edge-1")).toBe(true)
     expect(graph.source("demo-edge-1")).toBe(graphView.edges[0]?.sourceNodeId)
     expect(graph.target("demo-edge-1")).toBe(graphView.edges[0]?.targetNodeId)
+    for (const node of graphView.nodes) {
+      expect(graph.getNodeAttribute(node.id, "size") * 2).toBe(
+        getGraphViewNodeVisuals(en)[node.kind].size
+      )
+    }
+  })
+
+  it("seeds real IDs independently of database numbering and accepts nullable labels", () => {
+    const graphView = graphViewResponseSchema.parse({
+      nodes: [
+        {
+          id: "event:10001",
+          kind: "event",
+          label: "First",
+          secondaryLabel: null,
+        },
+        {
+          id: "event:10026",
+          kind: "event",
+          label: "Second",
+          metadata: { confidence: null, themes: null },
+        },
+      ],
+      edges: [],
+    })
+    const positions = createGraphViewDemoSeedPositions(graphView.nodes)
+    expect(positions["event:10001"].x).toBeGreaterThan(0)
+    expect(positions["event:10026"].x).toBeLessThan(0)
+    expect(() =>
+      graphViewResponseSchema.parse({
+        nodes: [{ id: "bad", kind: "invented", label: "Bad" }],
+        edges: [],
+      })
+    ).toThrow()
   })
 
   it("normalizes unknown edge counts to the standard preset", () => {

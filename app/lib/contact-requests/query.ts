@@ -1,7 +1,5 @@
-import {
-  CONTACT_REQUESTS_DEFAULT_PAGE_SIZE,
-  CONTACT_REQUESTS_PAGE_SIZE_OPTIONS,
-} from "./definitions"
+import { CONTACT_REQUESTS_PAGE_SIZE_OPTIONS } from "./definitions"
+import { parsePaginationQuery } from "@/app/lib/pagination/query"
 
 export interface ContactRequestsQuery {
   /** One-based page number used by the dashboard URL. */
@@ -9,34 +7,10 @@ export interface ContactRequestsQuery {
   size: (typeof CONTACT_REQUESTS_PAGE_SIZE_OPTIONS)[number]
 }
 
-function firstValue(value: string | string[] | undefined): string | undefined {
-  return Array.isArray(value) ? value[0] : value
-}
-
-function isPositiveInteger(value: string | undefined): boolean {
-  if (!value || !/^\d+$/.test(value)) return false
-  const parsed = Number(value)
-  return Number.isSafeInteger(parsed) && parsed > 0
-}
-
 export function parseContactRequestsQuery(
   input: URLSearchParams | Record<string, string | string[] | undefined>
 ): ContactRequestsQuery {
-  const get = (key: string) =>
-    input instanceof URLSearchParams
-      ? (input.get(key) ?? undefined)
-      : firstValue(input[key])
-  const requestedPage = get("page")
-  const requestedSize = Number(get("size"))
-
-  return {
-    page: isPositiveInteger(requestedPage) ? Number(requestedPage) : 1,
-    size: CONTACT_REQUESTS_PAGE_SIZE_OPTIONS.includes(
-      requestedSize as (typeof CONTACT_REQUESTS_PAGE_SIZE_OPTIONS)[number]
-    )
-      ? (requestedSize as (typeof CONTACT_REQUESTS_PAGE_SIZE_OPTIONS)[number])
-      : CONTACT_REQUESTS_DEFAULT_PAGE_SIZE,
-  }
+  return parsePaginationQuery(input)
 }
 
 export function serializeContactRequestsQuery(

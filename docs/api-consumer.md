@@ -4,7 +4,7 @@ Apply this reference to API integration, contract-sensitive design/review and pr
 
 ## Authority and lookup
 
-[Planning's API policy](https://github.com/signapse-group/signapse-planing/blob/main/workflow/project-execution-workflow.md#contract-api-và-handoff) owns the shared convention. Jira holds accepted requirements, scope and acceptance; the producer's published OpenAPI holds the supported HTTP API schema and consumer-facing business rules. BE publishes [OpenAPI dev](https://dev-api.signapse.cloud/v3/api-docs). Other services own their contracts; non-HTTP protocols use their producer's canonical reference. SSE events, payloads and semantics belong at the HTTP operation.
+Jira holds accepted requirements, scope and acceptance; the producer's published OpenAPI holds the supported HTTP API schema and consumer-facing business rules. BE publishes [OpenAPI dev](https://dev-api.signapse.cloud/v3/api-docs). Other services own their contracts; non-HTTP protocols use their producer's canonical reference. SSE events, payloads and semantics belong at the HTTP operation. This repository owns the consumer procedure below; it does not require a worker to fetch Planning policy for each assignment.
 
 Fetch the current contract for the actual target environment before concluding API design/integration readiness, on resume and before handoff. Record URL, environment, fetch time and available producer revision/version evidence. Use producer build metadata and deployment evidence to establish revision identity; `info.version` alone does not prove a Git revision. Unpublished API changes remain proposals.
 

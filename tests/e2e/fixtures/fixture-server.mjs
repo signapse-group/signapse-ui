@@ -14,6 +14,136 @@ const testRuns = new Map()
 
 const NOW = "2026-01-15T08:00:00.000Z"
 
+const AI_TASK_FIXTURES = [
+  [
+    "NEWS_CONTENT_NORMALIZATION",
+    "NEWS_PROCESSING",
+    16384,
+    ["NEWS_ARTICLE_CONTENT_LOCALIZATION", "FIRECRAWL_SOURCE_DOCUMENT_FILTER"],
+  ],
+  [
+    "ECONOMIC_CALENDAR_DESCRIPTION_TRANSLATION",
+    "ECONOMIC_CALENDAR",
+    8192,
+    ["ECONOMIC_CALENDAR_ENTRY_TEXT_LOCALIZATION"],
+  ],
+  [
+    "NEWS_EVENT_EXTRACTION",
+    "NEWS_PROCESSING",
+    8192,
+    ["NEWS_PRIMARY_EVENT_DERIVATION"],
+  ],
+  [
+    "EVENT_ASSET_THEME_ENRICHMENT",
+    "EVENT_INTELLIGENCE",
+    8192,
+    ["EVENT_ASSET_THEME_ENRICHMENT"],
+  ],
+  [
+    "MARKET_REACTION_ANALYSIS",
+    "EVENT_INTELLIGENCE",
+    8192,
+    ["EVENT_MARKET_REACTION_DERIVATION"],
+  ],
+  [
+    "MARKET_REACTION_SUMMARY",
+    "EVENT_INTELLIGENCE",
+    8192,
+    ["MARKET_REACTION_OUTCOME_SUMMARY"],
+  ],
+  [
+    "EVENT_NARRATIVE_REFRESH",
+    "EVENT_INTELLIGENCE",
+    8192,
+    ["EVENT_NARRATIVE_REFRESH"],
+  ],
+  [
+    "WARM_ABSORPTION_DECISION",
+    "WARM_KNOWLEDGE",
+    8192,
+    ["WARM_ABSORPTION_EVENT_ASSET_DECISION"],
+  ],
+  [
+    "MARKET_QUESTION_UNDERSTANDING",
+    "AI_ASSISTANT",
+    null,
+    ["MARKET_QUESTION_UNDERSTANDING"],
+  ],
+  [
+    "MARKET_CONVERSATION_RESPONSE",
+    "AI_ASSISTANT",
+    null,
+    ["MARKET_QUERY_CONVERSATION_ORCHESTRATION"],
+  ],
+  [
+    "SCHEDULED_TELEGRAM_ANALYSIS",
+    "SCHEDULED_TELEGRAM_ANALYSIS",
+    32768,
+    [
+      "TELEGRAM_MARKET_ANALYSIS_ASSESSMENT",
+      "TELEGRAM_MARKET_ANALYSIS_SCALPING",
+      "TELEGRAM_MARKET_ANALYSIS_EXPLANATION",
+    ],
+  ],
+]
+
+const SYSTEM_PROMPT_CONTENT_TYPES = new Set([
+  "ECONOMIC_CALENDAR_ENTRY_TEXT_LOCALIZATION",
+  "NEWS_ARTICLE_CONTENT_LOCALIZATION",
+  "NEWS_PRIMARY_EVENT_DERIVATION",
+  "EVENT_ASSET_THEME_ENRICHMENT",
+  "EVENT_MARKET_REACTION_DERIVATION",
+  "MARKET_REACTION_OUTCOME_SUMMARY",
+  "WARM_ABSORPTION_EVENT_ASSET_DECISION",
+  "EVENT_NARRATIVE_REFRESH",
+  "MARKET_QUESTION_UNDERSTANDING",
+  "MARKET_QUERY_CONVERSATION_ORCHESTRATION",
+  "TELEGRAM_MARKET_ANALYSIS_ASSESSMENT",
+  "TELEGRAM_MARKET_ANALYSIS_SCALPING",
+  "TELEGRAM_MARKET_ANALYSIS_EXPLANATION",
+])
+
+function aiTaskConfigurations() {
+  return AI_TASK_FIXTURES.map(
+    ([task, feature, defaultOutputTokens, promptTypes], index) => {
+      const configured = index < 3
+      const selectedConnectionId = configured ? 14 : null
+      const customOutputTokens =
+        task === "NEWS_CONTENT_NORMALIZATION" ? 20000 : null
+      return {
+        task,
+        feature,
+        purpose: task,
+        defaultOutputTokens,
+        promptTypes,
+        configured,
+        selectedConnectionId,
+        selectedProviderType: configured ? "DEEPSEEK" : null,
+        selectedModel: configured ? "deepseek-v4-flash" : null,
+        customOutputTokens,
+        effectiveOutputTokens: customOutputTokens ?? defaultOutputTokens,
+      }
+    }
+  )
+}
+
+function aiProviderConfigurations() {
+  return [
+    {
+      id: 14,
+      providerType: "DEEPSEEK",
+      description: "Fixture DeepSeek connection",
+      defaultProvider: true,
+    },
+    {
+      id: 15,
+      providerType: "OPENAI",
+      description: "Fixture OpenAI connection",
+      defaultProvider: false,
+    },
+  ]
+}
+
 function workspace(id, name, currentWorkspace = false) {
   return {
     id,
@@ -152,6 +282,16 @@ function feedbackRecords() {
     feedbackRecord(4, "Cải thiện trang tổng quan", "PENDING_REVIEW", { ownerId: 9010, createdDate: "2026-01-12T08:00:00.000Z" }),
     feedbackRecord(5, "Ảnh chụp màn hình không hiển thị", "PENDING_REVIEW", { screenshot: true, createdDate: "2026-01-11T08:00:00.000Z" }),
     feedbackRecord(6, "Tín hiệu thị trường cần thêm ngữ cảnh", "PENDING_REVIEW", { screenshot: true, createdDate: "2026-01-10T08:00:00.000Z" }),
+    ...Array.from({ length: 6 }, (_, index) =>
+      feedbackRecord(
+        index + 7,
+        `Phản hồi cá nhân bổ sung ${index + 1}`,
+        "PENDING_REVIEW",
+        {
+          createdDate: `2026-01-${String(9 - index).padStart(2, "0")}T08:00:00.000Z`,
+        }
+      )
+    ),
   ]
 }
 
@@ -230,6 +370,8 @@ function createState() {
       lastModifiedDate: NOW,
     },
     permissions: ["*"],
+    aiTaskConfigurations: aiTaskConfigurations(),
+    aiProviderConfigurations: aiProviderConfigurations(),
     feedbackScenarios: {},
     preferredLanguage: { isoCode: "vi", name: "Tiếng Việt" },
     assets: [
@@ -354,6 +496,17 @@ function createState() {
         createdDate: "2025-01-08T08:00:00.000Z",
         lastModifiedDate: NOW,
       },
+      ...Array.from({ length: 8 }, (_, index) => ({
+        id: index + 64,
+        title: `Fixture pagination event ${index + 1}`,
+        canonicalKey: `fixture-pagination-event-${index + 1}`,
+        description: "Synthetic event used to keep multiple pages in the fixture.",
+        status: "ENRICHED",
+        confidence: 0.7,
+        occurredAt: NOW,
+        createdDate: `2025-01-${String(index + 9).padStart(2, "0")}T08:00:00.000Z`,
+        lastModifiedDate: NOW,
+      })),
       {
         id: 63,
         title: "Macro liquidity conditions stabilize",
@@ -384,7 +537,7 @@ function createState() {
     streamConnections: 0,
     requests: [],
     violations: [],
-    nextIds: { workspace: 3, note: 32, schedule: 52, feedback: 7 },
+    nextIds: { workspace: 3, note: 32, schedule: 52, feedback: 13 },
   }
 }
 
@@ -1049,8 +1202,210 @@ async function streamLive(response, state, url, scenario) {
 }
 
 function hasFixturePermission(state, permission) {
-  return state.permissions.includes("*") ||
-    state.permissions.includes(permission)
+  return (
+    state.permissions.includes("*") || state.permissions.includes(permission)
+  )
+}
+
+function aiTaskConfigurationRouteResult(state, method, pathname, body, url) {
+  if (method === "GET" && pathname === "/ai-task-configurations") {
+    if (!hasFixturePermission(state, "ai-task-configuration:read")) {
+      return {
+        __status: 403,
+        payload: errorPayload(
+          "AI task configuration permission denied",
+          "FORBIDDEN"
+        ),
+      }
+    }
+    const configurations = state.aiTaskConfigurations.map((configuration) => ({
+      ...configuration,
+    }))
+    if (
+      getScenario(state, method, pathname) === "legacy-saved-provider-selection"
+    ) {
+      return configurations.map((configuration) =>
+        configuration.task === "MARKET_QUESTION_UNDERSTANDING"
+          ? {
+              ...configuration,
+              configured: true,
+              selectedConnectionId: 16,
+              selectedProviderType: "GROQ",
+              selectedModel: "legacy-model",
+            }
+          : configuration
+      )
+    }
+    return configurations
+  }
+
+  const selectionMatch = pathname.match(
+    /^\/ai-task-configurations\/([A-Z_]+)\/selection$/
+  )
+  if (method === "PUT" && selectionMatch) {
+    if (!hasFixturePermission(state, "ai-task-configuration:update")) {
+      return {
+        __status: 403,
+        payload: errorPayload("AI task update permission denied", "FORBIDDEN"),
+      }
+    }
+    const configuration = state.aiTaskConfigurations.find(
+      (item) => item.task === selectionMatch[1]
+    )
+    const connection = state.aiProviderConfigurations.find(
+      (item) => item.id === body?.connectionId
+    )
+    const allowedModels = {
+      DEEPSEEK: new Set(["deepseek-v4-flash", "deepseek-v4-pro"]),
+      OPENAI: new Set(["gpt-4.1-mini", "gpt-4.1"]),
+    }
+    if (
+      !configuration ||
+      !connection ||
+      !allowedModels[connection.providerType]?.has(body?.model) ||
+      Object.keys(body ?? {}).some(
+        (key) => !["connectionId", "model"].includes(key)
+      )
+    ) {
+      return {
+        __status: configuration ? 400 : 404,
+        payload: errorPayload(
+          "Invalid AI task selection",
+          "FIXTURE_VALIDATION"
+        ),
+      }
+    }
+    configuration.selectedConnectionId = connection.id
+    configuration.selectedProviderType = connection.providerType
+    configuration.selectedModel = body.model
+    configuration.configured = true
+    return { ...configuration }
+  }
+
+  const outputTokenMatch = pathname.match(
+    /^\/ai-task-configurations\/([A-Z_]+)\/output-token$/
+  )
+  if (method === "PUT" && outputTokenMatch) {
+    if (!hasFixturePermission(state, "ai-task-configuration:update")) {
+      return {
+        __status: 403,
+        payload: errorPayload("AI task update permission denied", "FORBIDDEN"),
+      }
+    }
+    const configuration = state.aiTaskConfigurations.find(
+      (item) => item.task === outputTokenMatch[1]
+    )
+    const tokenValue = body?.maxOutputTokens
+    if (
+      !configuration ||
+      !(
+        tokenValue === null ||
+        (Number.isInteger(tokenValue) &&
+          tokenValue > 0 &&
+          tokenValue <= 2_147_483_647)
+      ) ||
+      Object.keys(body ?? {}).some((key) => key !== "maxOutputTokens")
+    ) {
+      return {
+        __status: configuration ? 400 : 404,
+        payload: errorPayload(
+          "Invalid AI task output-token setting",
+          "FIXTURE_VALIDATION"
+        ),
+      }
+    }
+    configuration.customOutputTokens = tokenValue
+    configuration.effectiveOutputTokens =
+      tokenValue ?? configuration.defaultOutputTokens
+    return { ...configuration }
+  }
+
+  if (method === "GET" && pathname === "/ai-provider-configs") {
+    if (!hasFixturePermission(state, "ai-provider-config:read")) {
+      return {
+        __status: 403,
+        payload: errorPayload(
+          "AI provider read permission denied",
+          "FORBIDDEN"
+        ),
+      }
+    }
+    const connections =
+      getScenario(state, method, pathname) === "legacy-provider-options"
+        ? [
+            ...state.aiProviderConfigurations,
+            { id: 16, providerType: "GROQ" },
+            { id: 17, providerType: "ZAI" },
+          ]
+        : state.aiProviderConfigurations
+    return slicePage(connections, url)
+  }
+
+  const modelCatalogMatch = pathname.match(
+    /^\/ai-provider-configs\/(\d+)\/model-catalog$/
+  )
+  if (method === "GET" && modelCatalogMatch) {
+    if (!hasFixturePermission(state, "ai-provider-config:model-catalog")) {
+      return {
+        __status: 403,
+        payload: errorPayload(
+          "AI model catalog permission denied",
+          "FORBIDDEN"
+        ),
+      }
+    }
+    const connection = state.aiProviderConfigurations.find(
+      (item) => item.id === Number(modelCatalogMatch[1])
+    )
+    if (!connection) {
+      return {
+        __status: 404,
+        payload: errorPayload("AI provider connection not found", "NOT_FOUND"),
+      }
+    }
+    const modelsByProvider = {
+      DEEPSEEK: [
+        { id: "deepseek-v4-flash", label: "deepseek-v4-flash" },
+        { id: "deepseek-v4-pro", label: "deepseek-v4-pro" },
+      ],
+      OPENAI: [
+        { id: "gpt-4.1-mini", label: "gpt-4.1-mini" },
+        { id: "gpt-4.1", label: "gpt-4.1" },
+      ],
+    }
+    return {
+      providerType: connection.providerType,
+      models: modelsByProvider[connection.providerType] ?? [],
+    }
+  }
+
+  const promptMatch = pathname.match(/^\/system-prompts\/([^/]+)$/)
+  if (method === "GET" && promptMatch) {
+    if (!hasFixturePermission(state, "system-prompt:read")) {
+      return {
+        __status: 403,
+        payload: errorPayload(
+          "System prompt read permission denied",
+          "FORBIDDEN"
+        ),
+      }
+    }
+    const promptType = decodeURIComponent(promptMatch[1])
+    if (!SYSTEM_PROMPT_CONTENT_TYPES.has(promptType)) {
+      return {
+        __status: 404,
+        payload: errorPayload("System prompt not found", "NOT_FOUND"),
+      }
+    }
+    return {
+      promptType,
+      name: promptType.replaceAll("_", " "),
+      content: `Fixture content for ${promptType}.`,
+      requiredVariables: [],
+    }
+  }
+
+  return null
 }
 
 function smtpConfigurationResponse(configuration) {
@@ -1358,6 +1713,15 @@ function feedbackRouteResult(state, method, pathname, url, body) {
 }
 
 function responseForRoute(state, method, pathname, url, body) {
+  const aiTaskResult = aiTaskConfigurationRouteResult(
+    state,
+    method,
+    pathname,
+    body,
+    url
+  )
+  if (aiTaskResult) return aiTaskResult
+
   const smtpResult = smtpConfigurationRouteResult(state, method, pathname, body)
   if (smtpResult) return smtpResult
 
@@ -1959,6 +2323,7 @@ async function handleControl(request, response, url, body) {
       scenarios: state.scenarios,
       feedbackScenarios: state.feedbackScenarios,
       permissions: state.permissions,
+      aiTaskConfigurations: state.aiTaskConfigurations,
       smtpConfiguration: smtpConfigurationResponse(state.smtpConfiguration),
       streamConnections: state.streamConnections,
       pendingRequests: state.pendingRequests.size,
@@ -2011,6 +2376,9 @@ const server = createServer(async (request, response) => {
     testRunId,
     locale: request.headers["accept-language"] ?? null,
     hasAuthHeader,
+    ...(method === "PUT" && url.pathname.startsWith("/ai-task-configurations/")
+      ? { body }
+      : {}),
     ...(method === "PATCH" &&
     ["/me", "/me/preferred-language"].includes(url.pathname)
       ? { body }
@@ -2112,7 +2480,22 @@ const server = createServer(async (request, response) => {
     return
   }
   if (scenario === "mutation-failure" && method !== "GET") {
-    sendJson(response, 409, errorPayload("Fixture mutation failed; retry is safe", "FIXTURE_MUTATION_FAILURE"))
+    sendJson(
+      response,
+      409,
+      errorPayload(
+        "Fixture mutation failed; retry is safe",
+        "FIXTURE_MUTATION_FAILURE"
+      )
+    )
+    return
+  }
+  if (scenario === "permission-denied") {
+    sendJson(
+      response,
+      403,
+      errorPayload("Fixture permission denied", "FORBIDDEN")
+    )
     return
   }
 
@@ -2158,6 +2541,15 @@ const server = createServer(async (request, response) => {
     } else {
       sendJson(response, 200, result)
     }
+    return
+  }
+
+  if (
+    scenario === "short" &&
+    method === "GET" &&
+    url.pathname === "/contact-requests"
+  ) {
+    sendJson(response, 200, slicePage(state.contactRequests.slice(0, 3), url))
     return
   }
 
