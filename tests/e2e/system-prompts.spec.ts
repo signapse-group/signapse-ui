@@ -310,6 +310,17 @@ test.describe("P0 system prompt catalog and content hotfix", () => {
       missingPlaceholders
     )
     await expect(content).toHaveValue(rejectedContent)
+    await expect(page).toHaveURL(
+      /\/en\/system-prompts\/MARKET_QUESTION_UNDERSTANDING$/
+    )
+    const validationState = await fixture.state()
+    expect(
+      validationState.requests.some(
+        (request) =>
+          request.method === "PUT" &&
+          request.path === "/system-prompts/MARKET_QUESTION_UNDERSTANDING"
+      )
+    ).toBe(false)
 
     const editedContent =
       "Reworded fixture prompt while retaining {locale}, {asOfTime}, {rawQuestion}, {watchlistAssetCandidates}, {deterministicAssetMatches}, {deterministicThemeMatches}, and {previousConversationHints}."

@@ -230,10 +230,16 @@ describe("system prompt content editor", () => {
     )
 
     expect(await screen.findByRole("alert")).toHaveTextContent(producerError)
+    expect(screen.getByText(producerError)).toHaveAttribute(
+      "id",
+      "prompt-content-error"
+    )
     expect(content).toHaveValue(editedContent)
+    expect(content).toHaveAttribute("aria-invalid", "true")
     expect(updateSystemPrompt).toHaveBeenCalledWith(initialData.promptType, {
       content: editedContent,
     })
+    expect(routerPush).not.toHaveBeenCalled()
   })
 
   it("shows save confirmation and leaves the editor only after API success", async () => {

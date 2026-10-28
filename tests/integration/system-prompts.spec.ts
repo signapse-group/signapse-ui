@@ -1,6 +1,7 @@
 import { clerk } from "@clerk/testing/playwright"
 import { expect, test } from "@playwright/test"
 
+import { en } from "../../app/lib/i18n/dictionaries/en"
 import { systemPromptListResponseSchema } from "../../app/lib/system-prompts/definitions"
 
 test("system prompt hotfixes read the live catalog and preserve seed variables", async ({
@@ -47,6 +48,7 @@ test("system prompt hotfixes read the live catalog and preserve seed variables",
   const assistantPrompt = parsedList.content.find(
     (prompt) => prompt.promptType === "MARKET_QUESTION_UNDERSTANDING"
   )
+  const requiredVariables = assistantPrompt?.requiredVariables ?? []
   expect(assistantPrompt?.requiredVariables).toEqual([
     "locale",
     "asOfTime",
@@ -81,17 +83,43 @@ test("system prompt hotfixes read the live catalog and preserve seed variables",
     "/en/system-prompts/MARKET_QUESTION_UNDERSTANDING"
   )
   expect(editorResponse?.status()).toBe(200)
+  const placeholderLabels = await page
+    .locator('section[aria-labelledby="required-placeholders-title"] li')
+    .allTextContents()
+  expect(placeholderLabels).toEqual(
+    requiredVariables.map((variable) => `{${variable}}`)
+  )
   const content = page.getByRole("textbox", { name: /^Prompt content/ })
   await expect(content).toBeVisible()
+
+  let serverActionRequests = 0
+  await page.route("**/*", async (route) => {
+    const request = route.request()
+    if (request.method() === "POST" && request.headers()["next-action"]) {
+      serverActionRequests += 1
+      await route.abort()
+      return
+    }
+    await route.continue()
+  })
 
   const rejectedContent = "Live FE validation check with no seed variables."
   await content.fill(rejectedContent)
   await page.getByRole("button", { name: "Save hotfix" }).click()
 
-  const error = page.getByRole("alert")
+  const error = page.locator("#prompt-content-error")
   await expect(error).toBeVisible()
-  await expect(error).toContainText(/missing|placeholder|variable/i)
+  await expect(error).toHaveText(
+    en.systemPrompts.missingPlaceholders.replace(
+      "{variables}",
+      requiredVariables.map((variable) => `{${variable}}`).join(", ")
+    )
+  )
   await expect(content).toHaveValue(rejectedContent)
+  await expect(page).toHaveURL(
+    /\/en\/system-prompts\/MARKET_QUESTION_UNDERSTANDING$/
+  )
+  expect(serverActionRequests).toBe(0)
 })
 
 test.afterEach(async ({ page }) => {
