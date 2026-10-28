@@ -3,10 +3,7 @@ import { dirname } from "node:path"
 import { createServer } from "node:http"
 import { URL } from "node:url"
 
-import {
-  contractPathMatches,
-  fixtureContracts,
-} from "./contract-registry.mjs"
+import { contractPathMatches, fixtureContracts } from "./contract-registry.mjs"
 
 const port = Number(process.env.FIXTURE_PORT ?? 4100)
 const logFile = process.env.FIXTURE_LOG_FILE
@@ -134,12 +131,14 @@ function aiProviderConfigurations() {
       providerType: "DEEPSEEK",
       description: "Fixture DeepSeek connection",
       defaultProvider: true,
+      credentials: [],
     },
     {
       id: 15,
       providerType: "OPENAI",
       description: "Fixture OpenAI connection",
       defaultProvider: false,
+      credentials: [],
     },
   ]
 }
@@ -154,7 +153,12 @@ function workspace(id, name, currentWorkspace = false) {
   }
 }
 
-function page(content, pageNumber = 0, size = 10, totalElements = content.length) {
+function page(
+  content,
+  pageNumber = 0,
+  size = 10,
+  totalElements = content.length
+) {
   const totalPages = totalElements === 0 ? 0 : Math.ceil(totalElements / size)
 
   return {
@@ -216,12 +220,7 @@ const FEEDBACK_SCREENSHOT_BYTES = Buffer.from(
   "base64"
 )
 
-function feedbackRecord(
-  id,
-  content,
-  status = "PENDING_REVIEW",
-  options = {}
-) {
+function feedbackRecord(id, content, status = "PENDING_REVIEW", options = {}) {
   const screenshot = options.screenshot
     ? {
         id: 1000 + id,
@@ -236,7 +235,7 @@ function feedbackRecord(
     clientContext:
       options.clientContext === false
         ? null
-        : options.clientContext ?? {
+        : (options.clientContext ?? {
             pagePath: "/vi/dashboard",
             appVersion: "web",
             browserName: "Chrome",
@@ -244,7 +243,7 @@ function feedbackRecord(
             osName: "Windows",
             osVersion: "11",
             locale: "vi",
-          },
+          }),
     screenshot,
     status,
     createdDate: options.createdDate ?? NOW,
@@ -276,12 +275,36 @@ function feedbackDetail(record, moderation = false) {
 
 function feedbackRecords() {
   return [
-    feedbackRecord(1, "Biểu đồ không giữ bộ lọc sau khi đổi ngôn ngữ", "PENDING_REVIEW", { screenshot: true, createdDate: "2026-01-15T08:00:00.000Z" }),
-    feedbackRecord(2, "Thêm bộ lọc tài sản yêu thích", "REVIEWED", { clientContext: false, createdDate: "2026-01-14T08:00:00.000Z", reviewMessage: "Đã xem xét phản hồi của bạn." }),
-    feedbackRecord(3, "Thông báo lỗi thiếu hướng dẫn", "REVIEWED", { clientContext: false, createdDate: "2026-01-13T08:00:00.000Z", reviewMessage: "Đã xem xét phản hồi của bạn." }),
-    feedbackRecord(4, "Cải thiện trang tổng quan", "PENDING_REVIEW", { ownerId: 9010, createdDate: "2026-01-12T08:00:00.000Z" }),
-    feedbackRecord(5, "Ảnh chụp màn hình không hiển thị", "PENDING_REVIEW", { screenshot: true, createdDate: "2026-01-11T08:00:00.000Z" }),
-    feedbackRecord(6, "Tín hiệu thị trường cần thêm ngữ cảnh", "PENDING_REVIEW", { screenshot: true, createdDate: "2026-01-10T08:00:00.000Z" }),
+    feedbackRecord(
+      1,
+      "Biểu đồ không giữ bộ lọc sau khi đổi ngôn ngữ",
+      "PENDING_REVIEW",
+      { screenshot: true, createdDate: "2026-01-15T08:00:00.000Z" }
+    ),
+    feedbackRecord(2, "Thêm bộ lọc tài sản yêu thích", "REVIEWED", {
+      clientContext: false,
+      createdDate: "2026-01-14T08:00:00.000Z",
+      reviewMessage: "Đã xem xét phản hồi của bạn.",
+    }),
+    feedbackRecord(3, "Thông báo lỗi thiếu hướng dẫn", "REVIEWED", {
+      clientContext: false,
+      createdDate: "2026-01-13T08:00:00.000Z",
+      reviewMessage: "Đã xem xét phản hồi của bạn.",
+    }),
+    feedbackRecord(4, "Cải thiện trang tổng quan", "PENDING_REVIEW", {
+      ownerId: 9010,
+      createdDate: "2026-01-12T08:00:00.000Z",
+    }),
+    feedbackRecord(5, "Ảnh chụp màn hình không hiển thị", "PENDING_REVIEW", {
+      screenshot: true,
+      createdDate: "2026-01-11T08:00:00.000Z",
+    }),
+    feedbackRecord(
+      6,
+      "Tín hiệu thị trường cần thêm ngữ cảnh",
+      "PENDING_REVIEW",
+      { screenshot: true, createdDate: "2026-01-10T08:00:00.000Z" }
+    ),
     ...Array.from({ length: 6 }, (_, index) =>
       feedbackRecord(
         index + 7,
@@ -342,6 +365,15 @@ function createState() {
     notes: [note(31, "Morning brief", "Review the fixture market brief.")],
     feedback: feedbackRecords(),
     contactRequests: contactRequestRecords(),
+    aiProviderConfigs: [
+      {
+        id: 12,
+        providerType: "GROQ",
+        description: "Legacy connection retained after migration.",
+        defaultProvider: true,
+        credentials: [{ id: 101, keyPreview: "gsk-...legacy" }],
+      },
+    ],
     profile: {
       birthday: "1990-01-02T00:00:00.000Z",
       phone: "2025550199",
@@ -401,14 +433,17 @@ function createState() {
         lastModifiedDate: NOW,
       },
     ],
-    destinations: [destination, {
-      ...destination,
-      id: 22,
-      chatId: "-100000000022",
-      displayLabel: "Disabled channel",
-      chatTitle: "Disabled channel",
-      status: "DISABLED",
-    }],
+    destinations: [
+      destination,
+      {
+        ...destination,
+        id: 22,
+        chatId: "-100000000022",
+        displayLabel: "Disabled channel",
+        chatTitle: "Disabled channel",
+        status: "DISABLED",
+      },
+    ],
     featureSettings: [
       {
         id: 41,
@@ -491,7 +526,8 @@ function createState() {
         id: index + 64,
         title: `Fixture pagination event ${index + 1}`,
         canonicalKey: `fixture-pagination-event-${index + 1}`,
-        description: "Synthetic event used to keep multiple pages in the fixture.",
+        description:
+          "Synthetic event used to keep multiple pages in the fixture.",
         status: "ENRICHED",
         confidence: 0.7,
         occurredAt: NOW,
@@ -545,8 +581,10 @@ function trackResponse(state, response) {
 }
 
 function isPending(state, method, pathname) {
-  return getScenario(state, method, pathname) === "delayed" ||
+  return (
+    getScenario(state, method, pathname) === "delayed" ||
     feedbackScenarioFor(state, method, pathname) === "pending"
+  )
 }
 
 function holdResponse(state, response, method, pathname) {
@@ -566,7 +604,8 @@ function holdResponse(state, response, method, pathname) {
 
 function releasePending(state) {
   for (const pending of state.pendingRequests.values()) {
-    if (!isPending(state, pending.method, pending.pathname)) pending.resume(true)
+    if (!isPending(state, pending.method, pending.pathname))
+      pending.resume(true)
   }
 }
 
@@ -659,7 +698,11 @@ function getPageParams(url) {
       )
     )
     .concat(url.searchParams.get("filter") ?? "")
-  const filter = [...new Set(filterTerms.map((term) => term.trim().toLowerCase()).filter(Boolean))]
+  const filter = [
+    ...new Set(
+      filterTerms.map((term) => term.trim().toLowerCase()).filter(Boolean)
+    ),
+  ]
 
   return { pageNumber, size, filter }
 }
@@ -999,17 +1042,18 @@ function candles(url) {
   const countBack = Math.max(1, Number(url.searchParams.get("countBack") ?? 4))
   const to = url.searchParams.get("to") ?? NOW
   const anchorTimestamp = Date.parse(to)
-  const intervalMinutes = {
-    "1m": 1,
-    "5m": 5,
-    "15m": 15,
-    "30m": 30,
-    "1h": 60,
-    "4h": 240,
-    "1d": 1440,
-    "1w": 10080,
-    "1mo": 43200,
-  }[timeframe] ?? 60
+  const intervalMinutes =
+    {
+      "1m": 1,
+      "5m": 5,
+      "15m": 15,
+      "30m": 30,
+      "1h": 60,
+      "4h": 240,
+      "1d": 1440,
+      "1w": 10080,
+      "1mo": 43200,
+    }[timeframe] ?? 60
   const intervalMs = intervalMinutes * 60 * 1000
   const values = [
     [100, 104, 98, 102],
@@ -1019,22 +1063,20 @@ function candles(url) {
   ]
   const offsets = assetId === 102 ? [10, 7, 1] : [4, 3, 2, 1]
   const selectedOffsets = offsets.slice(-Math.min(countBack, offsets.length))
-  const times = selectedOffsets.map(
-    (offset) => {
-      if (timeframe === "1mo") {
-        const anchorDate = new Date(anchorTimestamp)
-        return new Date(
-          Date.UTC(
-            anchorDate.getUTCFullYear(),
-            anchorDate.getUTCMonth() - offset,
-            1
-          )
-        ).toISOString()
-      }
-
-      return new Date(anchorTimestamp - offset * intervalMs).toISOString()
+  const times = selectedOffsets.map((offset) => {
+    if (timeframe === "1mo") {
+      const anchorDate = new Date(anchorTimestamp)
+      return new Date(
+        Date.UTC(
+          anchorDate.getUTCFullYear(),
+          anchorDate.getUTCMonth() - offset,
+          1
+        )
+      ).toISOString()
     }
-  )
+
+    return new Date(anchorTimestamp - offset * intervalMs).toISOString()
+  })
   const from = times[0] ?? to
 
   return {
@@ -1075,14 +1117,14 @@ function liveSnapshot(
   const symbol = assetId === 102 ? "XAUUSD" : "BTCUSD"
   const quote =
     state === "MARKET_CLOSED" || (state === "CONNECTING" && !staleQuote)
-    ? null
-    : {
-        assetId,
-        symbol,
-        price: assetId === 102 ? 2500.25 : 110.5,
-        receivedAt: NOW,
-        stale: staleQuote,
-      }
+      ? null
+      : {
+          assetId,
+          symbol,
+          price: assetId === 102 ? 2500.25 : 110.5,
+          receivedAt: NOW,
+          stale: staleQuote,
+        }
   return {
     asset: {
       id: assetId,
@@ -1325,11 +1367,27 @@ function aiTaskConfigurationRouteResult(state, method, pathname, body, url) {
       getScenario(state, method, pathname) === "legacy-provider-options"
         ? [
             ...state.aiProviderConfigurations,
-            { id: 16, providerType: "GROQ" },
-            { id: 17, providerType: "ZAI" },
+            {
+              id: 16,
+              providerType: "GROQ",
+              defaultProvider: false,
+              credentials: [],
+            },
+            {
+              id: 17,
+              providerType: "ZAI",
+              defaultProvider: false,
+              credentials: [],
+            },
           ]
-        : state.aiProviderConfigurations
-    return slicePage(connections, url)
+        : state.aiProviderConfigs
+    const result = slicePage(connections, url)
+    const sort = { sorted: false, unsorted: true, empty: true }
+    return {
+      ...result,
+      pageable: { ...result.pageable, sort },
+      sort,
+    }
   }
 
   const modelCatalogMatch = pathname.match(
@@ -1421,13 +1479,15 @@ function smtpConfigurationResponse(configuration) {
 function smtpConfigurationRouteResult(state, method, pathname, body) {
   if (!pathname.startsWith("/smtp-configuration")) return null
 
-  const permission = method === "GET"
-    ? "smtp-configuration:read"
-    : "smtp-configuration:manage"
+  const permission =
+    method === "GET" ? "smtp-configuration:read" : "smtp-configuration:manage"
   if (!hasFixturePermission(state, permission)) {
     return {
       __status: 403,
-      payload: errorPayload("SMTP configuration permission required", "PERMISSION_DENIED"),
+      payload: errorPayload(
+        "SMTP configuration permission required",
+        "PERMISSION_DENIED"
+      ),
     }
   }
 
@@ -1443,20 +1503,27 @@ function smtpConfigurationRouteResult(state, method, pathname, body) {
     ) {
       return {
         __status: 409,
-        payload: errorPayload("SMTP configuration changed", "SMTP_CONFIGURATION_VERSION_CONFLICT"),
+        payload: errorPayload(
+          "SMTP configuration changed",
+          "SMTP_CONFIGURATION_VERSION_CONFLICT"
+        ),
       }
     }
     if (!current?.passwordConfigured && !body?.password) {
       return {
         __status: 422,
-        payload: errorPayload("SMTP password is required", "SMTP_PASSWORD_REQUIRED"),
+        payload: errorPayload(
+          "SMTP password is required",
+          "SMTP_PASSWORD_REQUIRED"
+        ),
       }
     }
 
     state.smtpConfiguration = {
       configured: true,
       enabled: current?.enabled ?? false,
-      passwordConfigured: Boolean(body?.password) || Boolean(current?.passwordConfigured),
+      passwordConfigured:
+        Boolean(body?.password) || Boolean(current?.passwordConfigured),
       version: current ? current.version + 1 : 1,
       host: body.host,
       port: body.port,
@@ -1474,7 +1541,10 @@ function smtpConfigurationRouteResult(state, method, pathname, body) {
     if (!body?.password && !current?.passwordConfigured) {
       return {
         __status: 422,
-        payload: errorPayload("SMTP password is required", "SMTP_PASSWORD_REQUIRED"),
+        payload: errorPayload(
+          "SMTP password is required",
+          "SMTP_PASSWORD_REQUIRED"
+        ),
       }
     }
     return { accepted: true }
@@ -1482,12 +1552,16 @@ function smtpConfigurationRouteResult(state, method, pathname, body) {
 
   if (
     method === "POST" &&
-    (pathname === "/smtp-configuration/enable" || pathname === "/smtp-configuration/disable")
+    (pathname === "/smtp-configuration/enable" ||
+      pathname === "/smtp-configuration/disable")
   ) {
     if (!current || body?.version !== current.version) {
       return {
         __status: 409,
-        payload: errorPayload("SMTP configuration changed", "SMTP_CONFIGURATION_VERSION_CONFLICT"),
+        payload: errorPayload(
+          "SMTP configuration changed",
+          "SMTP_CONFIGURATION_VERSION_CONFLICT"
+        ),
       }
     }
     state.smtpConfiguration = {
@@ -1503,13 +1577,19 @@ function smtpConfigurationRouteResult(state, method, pathname, body) {
     if (!current || body?.version !== current.version) {
       return {
         __status: 409,
-        payload: errorPayload("SMTP configuration changed", "SMTP_CONFIGURATION_VERSION_CONFLICT"),
+        payload: errorPayload(
+          "SMTP configuration changed",
+          "SMTP_CONFIGURATION_VERSION_CONFLICT"
+        ),
       }
     }
     if (current.enabled) {
       return {
         __status: 409,
-        payload: errorPayload("Disable SMTP delivery first", "SMTP_CONFIGURATION_ENABLED"),
+        payload: errorPayload(
+          "Disable SMTP delivery first",
+          "SMTP_CONFIGURATION_ENABLED"
+        ),
       }
     }
     state.smtpConfiguration = null
@@ -1533,29 +1613,53 @@ function feedbackScenarioFor(state, method, pathname) {
     return state.feedbackScenarios.erase ?? state.feedbackScenarios.feedback
   }
   if (pathname.includes("/screenshot")) {
-    return state.feedbackScenarios.screenshot ?? state.feedbackScenarios.feedback
+    return (
+      state.feedbackScenarios.screenshot ?? state.feedbackScenarios.feedback
+    )
   }
   return state.feedbackScenarios.feedback
 }
 
 function feedbackErrorForScenario(scenario, kind) {
   if (scenario === "validation-error") {
-    return { __status: 400, payload: errorPayload("Fixture validation failed", "FIXTURE_VALIDATION") }
+    return {
+      __status: 400,
+      payload: errorPayload("Fixture validation failed", "FIXTURE_VALIDATION"),
+    }
   }
   if (scenario === "payload-too-large") {
-    return { __status: 413, payload: errorPayload("Fixture payload is too large", "FIXTURE_PAYLOAD_TOO_LARGE") }
+    return {
+      __status: 413,
+      payload: errorPayload(
+        "Fixture payload is too large",
+        "FIXTURE_PAYLOAD_TOO_LARGE"
+      ),
+    }
   }
   if (scenario === "storage-failure") {
-    return { __status: 502, payload: errorPayload("Fixture storage unavailable", "FIXTURE_STORAGE_FAILURE") }
+    return {
+      __status: 502,
+      payload: errorPayload(
+        "Fixture storage unavailable",
+        "FIXTURE_STORAGE_FAILURE"
+      ),
+    }
   }
   if (scenario === "not-found") {
-    return { __status: 404, payload: errorPayload("Feedback not found", "NOT_FOUND") }
+    return {
+      __status: 404,
+      payload: errorPayload("Feedback not found", "NOT_FOUND"),
+    }
   }
   if (scenario === "lifecycle-conflict") {
-    const code = kind === "withdraw"
-      ? "FEEDBACK_NO_LONGER_WITHDRAWABLE"
-      : "FEEDBACK_ALREADY_REVIEWED"
-    return { __status: 409, payload: errorPayload("Feedback lifecycle changed", code) }
+    const code =
+      kind === "withdraw"
+        ? "FEEDBACK_NO_LONGER_WITHDRAWABLE"
+        : "FEEDBACK_ALREADY_REVIEWED"
+    return {
+      __status: 409,
+      payload: errorPayload("Feedback lifecycle changed", code),
+    }
   }
   if (scenario === "malformed") {
     return { __status: 200, payload: { id: "malformed" } }
@@ -1564,39 +1668,91 @@ function feedbackErrorForScenario(scenario, kind) {
 }
 
 function feedbackRouteResult(state, method, pathname, url, body) {
-  const personalDetailMatch = pathname.match(/^\/me\/feedback-submissions\/(\d+)$/)
-  const moderationDetailMatch = pathname.match(/^\/feedback-submissions\/(\d+)$/)
-  const personalScreenshotMatch = pathname.match(/^\/me\/feedback-submissions\/(\d+)\/screenshot$/)
-  const moderationScreenshotMatch = pathname.match(/^\/feedback-submissions\/(\d+)\/screenshot$/)
+  const personalDetailMatch = pathname.match(
+    /^\/me\/feedback-submissions\/(\d+)$/
+  )
+  const moderationDetailMatch = pathname.match(
+    /^\/feedback-submissions\/(\d+)$/
+  )
+  const personalScreenshotMatch = pathname.match(
+    /^\/me\/feedback-submissions\/(\d+)\/screenshot$/
+  )
+  const moderationScreenshotMatch = pathname.match(
+    /^\/feedback-submissions\/(\d+)\/screenshot$/
+  )
   const reviewMatch = pathname.match(/^\/feedback-submissions\/(\d+)\/review$/)
   const scenario = feedbackScenarioFor(state, method, pathname) ?? "success"
-  const kind = pathname.startsWith("/me/") && method === "DELETE"
-    ? "withdraw"
-    : pathname.endsWith("/review")
-      ? "review"
+  const kind =
+    pathname.startsWith("/me/") && method === "DELETE"
+      ? "withdraw"
+      : pathname.endsWith("/review")
+        ? "review"
         : pathname.startsWith("/feedback-submissions/") && method === "DELETE"
           ? "erase"
           : "feedback"
-  if (scenario === "timeout") return { __status: 504, payload: errorPayload("Fixture request timed out", "FIXTURE_TIMEOUT") }
-  if (scenario === "outage") return { __status: 503, payload: errorPayload("Fixture backend is unavailable", "FIXTURE_OUTAGE") }
-  if (scenario === "server-failure") return { __status: 500, payload: errorPayload("Fixture server failure", "FIXTURE_SERVER_FAILURE") }
+  if (scenario === "timeout")
+    return {
+      __status: 504,
+      payload: errorPayload("Fixture request timed out", "FIXTURE_TIMEOUT"),
+    }
+  if (scenario === "outage")
+    return {
+      __status: 503,
+      payload: errorPayload("Fixture backend is unavailable", "FIXTURE_OUTAGE"),
+    }
+  if (scenario === "server-failure")
+    return {
+      __status: 500,
+      payload: errorPayload("Fixture server failure", "FIXTURE_SERVER_FAILURE"),
+    }
   if (scenario === "mutation-failure") {
-    return { __status: 409, payload: errorPayload("Fixture mutation failed", kind === "withdraw" ? "FEEDBACK_NO_LONGER_WITHDRAWABLE" : "FEEDBACK_ALREADY_REVIEWED") }
+    return {
+      __status: 409,
+      payload: errorPayload(
+        "Fixture mutation failed",
+        kind === "withdraw"
+          ? "FEEDBACK_NO_LONGER_WITHDRAWABLE"
+          : "FEEDBACK_ALREADY_REVIEWED"
+      ),
+    }
   }
   const scenarioError = feedbackErrorForScenario(scenario, kind)
   if (scenarioError) return scenarioError
 
   const moderationPath = pathname.startsWith("/feedback-submissions")
-  if (moderationPath && pathname !== "/feedback-submissions" && !hasFixturePermission(state, pathname.endsWith("/review") ? "feedback:review" : pathname.endsWith("/screenshot") || method === "GET" ? "feedback:read" : "feedback:delete")) {
-    return { __status: 403, payload: errorPayload("Feedback permission denied", "FORBIDDEN") }
+  if (
+    moderationPath &&
+    pathname !== "/feedback-submissions" &&
+    !hasFixturePermission(
+      state,
+      pathname.endsWith("/review")
+        ? "feedback:review"
+        : pathname.endsWith("/screenshot") || method === "GET"
+          ? "feedback:read"
+          : "feedback:delete"
+    )
+  ) {
+    return {
+      __status: 403,
+      payload: errorPayload("Feedback permission denied", "FORBIDDEN"),
+    }
   }
-  if (moderationPath && pathname === "/feedback-submissions" && !hasFixturePermission(state, "feedback:read")) {
-    return { __status: 403, payload: errorPayload("Feedback permission denied", "FORBIDDEN") }
+  if (
+    moderationPath &&
+    pathname === "/feedback-submissions" &&
+    !hasFixturePermission(state, "feedback:read")
+  ) {
+    return {
+      __status: 403,
+      payload: errorPayload("Feedback permission denied", "FORBIDDEN"),
+    }
   }
 
   if (method === "GET" && pathname === "/me/feedback-submissions") {
     return slicePage(
-      state.feedback.filter((item) => item.ownerId === FEEDBACK_OWNER_ID).map(feedbackListItem),
+      state.feedback
+        .filter((item) => item.ownerId === FEEDBACK_OWNER_ID)
+        .map(feedbackListItem),
       url
     )
   }
@@ -1606,9 +1762,10 @@ function feedbackRouteResult(state, method, pathname, url, body) {
   if (method === "POST" && pathname === "/me/feedback-submissions") {
     const parsed = multipartSubmission(body)
     const submission = parsed?.submission
-    const submissionKeys = submission && typeof submission === "object"
-      ? Object.keys(submission)
-      : []
+    const submissionKeys =
+      submission && typeof submission === "object"
+        ? Object.keys(submission)
+        : []
     if (
       !submission ||
       typeof submission.content !== "string" ||
@@ -1616,20 +1773,40 @@ function feedbackRouteResult(state, method, pathname, url, body) {
       submission.content.trim().length > 5000 ||
       submissionKeys.some((key) => !["content", "clientContext"].includes(key))
     ) {
-      return { __status: 400, payload: errorPayload("Invalid feedback submission", "FIXTURE_VALIDATION") }
+      return {
+        __status: 400,
+        payload: errorPayload(
+          "Invalid feedback submission",
+          "FIXTURE_VALIDATION"
+        ),
+      }
     }
-    if (submission.clientContext && typeof submission.clientContext === "object") {
+    if (
+      submission.clientContext &&
+      typeof submission.clientContext === "object"
+    ) {
       const contextKeys = Object.keys(submission.clientContext)
-      if (contextKeys.some((key) => ![
-        "pagePath",
-        "appVersion",
-        "browserName",
-        "browserVersion",
-        "osName",
-        "osVersion",
-        "locale",
-      ].includes(key))) {
-        return { __status: 400, payload: errorPayload("Invalid feedback context", "FIXTURE_VALIDATION") }
+      if (
+        contextKeys.some(
+          (key) =>
+            ![
+              "pagePath",
+              "appVersion",
+              "browserName",
+              "browserVersion",
+              "osName",
+              "osVersion",
+              "locale",
+            ].includes(key)
+        )
+      ) {
+        return {
+          __status: 400,
+          payload: errorPayload(
+            "Invalid feedback context",
+            "FIXTURE_VALIDATION"
+          ),
+        }
       }
     }
     const created = feedbackRecord(
@@ -1646,11 +1823,23 @@ function feedbackRouteResult(state, method, pathname, url, body) {
   }
   if (personalDetailMatch) {
     const id = Number(personalDetailMatch[1])
-    const existing = state.feedback.find((item) => item.id === id && item.ownerId === FEEDBACK_OWNER_ID)
-    if (!existing) return { __status: 404, payload: errorPayload("Feedback not found", "NOT_FOUND") }
+    const existing = state.feedback.find(
+      (item) => item.id === id && item.ownerId === FEEDBACK_OWNER_ID
+    )
+    if (!existing)
+      return {
+        __status: 404,
+        payload: errorPayload("Feedback not found", "NOT_FOUND"),
+      }
     if (method === "DELETE") {
       if (existing.status !== "PENDING_REVIEW") {
-        return { __status: 409, payload: errorPayload("Feedback is no longer withdrawable", "FEEDBACK_NO_LONGER_WITHDRAWABLE") }
+        return {
+          __status: 409,
+          payload: errorPayload(
+            "Feedback is no longer withdrawable",
+            "FEEDBACK_NO_LONGER_WITHDRAWABLE"
+          ),
+        }
       }
       state.feedback = state.feedback.filter((item) => item.id !== id)
       return { __status: 204 }
@@ -1659,19 +1848,41 @@ function feedbackRouteResult(state, method, pathname, url, body) {
   }
   if (personalScreenshotMatch) {
     const id = Number(personalScreenshotMatch[1])
-    const existing = state.feedback.find((item) => item.id === id && item.ownerId === FEEDBACK_OWNER_ID)
-    if (!existing || !existing.screenshot) return { __status: 404, payload: errorPayload("Feedback screenshot not found", "NOT_FOUND") }
-    return { __binary: FEEDBACK_SCREENSHOT_BYTES, mimeType: existing.screenshot.mimeType }
+    const existing = state.feedback.find(
+      (item) => item.id === id && item.ownerId === FEEDBACK_OWNER_ID
+    )
+    if (!existing || !existing.screenshot)
+      return {
+        __status: 404,
+        payload: errorPayload("Feedback screenshot not found", "NOT_FOUND"),
+      }
+    return {
+      __binary: FEEDBACK_SCREENSHOT_BYTES,
+      mimeType: existing.screenshot.mimeType,
+    }
   }
   if (moderationScreenshotMatch) {
-    const existing = state.feedback.find((item) => item.id === Number(moderationScreenshotMatch[1]))
-    if (!existing || !existing.screenshot) return { __status: 404, payload: errorPayload("Feedback screenshot not found", "NOT_FOUND") }
-    return { __binary: FEEDBACK_SCREENSHOT_BYTES, mimeType: existing.screenshot.mimeType }
+    const existing = state.feedback.find(
+      (item) => item.id === Number(moderationScreenshotMatch[1])
+    )
+    if (!existing || !existing.screenshot)
+      return {
+        __status: 404,
+        payload: errorPayload("Feedback screenshot not found", "NOT_FOUND"),
+      }
+    return {
+      __binary: FEEDBACK_SCREENSHOT_BYTES,
+      mimeType: existing.screenshot.mimeType,
+    }
   }
   if (moderationDetailMatch) {
     const id = Number(moderationDetailMatch[1])
     const existing = state.feedback.find((item) => item.id === id)
-    if (!existing) return { __status: 404, payload: errorPayload("Feedback not found", "NOT_FOUND") }
+    if (!existing)
+      return {
+        __status: 404,
+        payload: errorPayload("Feedback not found", "NOT_FOUND"),
+      }
     if (method === "DELETE") {
       state.feedback = state.feedback.filter((item) => item.id !== id)
       return { __status: 204 }
@@ -1681,9 +1892,19 @@ function feedbackRouteResult(state, method, pathname, url, body) {
   if (reviewMatch) {
     const id = Number(reviewMatch[1])
     const existing = state.feedback.find((item) => item.id === id)
-    if (!existing) return { __status: 404, payload: errorPayload("Feedback not found", "NOT_FOUND") }
+    if (!existing)
+      return {
+        __status: 404,
+        payload: errorPayload("Feedback not found", "NOT_FOUND"),
+      }
     if (existing.status !== "PENDING_REVIEW") {
-      return { __status: 409, payload: errorPayload("Feedback already reviewed", "FEEDBACK_ALREADY_REVIEWED") }
+      return {
+        __status: 409,
+        payload: errorPayload(
+          "Feedback already reviewed",
+          "FEEDBACK_ALREADY_REVIEWED"
+        ),
+      }
     }
     const parsedBody = body && !body.__multipart ? body : {}
     if (
@@ -1693,7 +1914,10 @@ function feedbackRouteResult(state, method, pathname, url, body) {
       parsedBody.reviewMessage.trim().length > 1000 ||
       Object.keys(parsedBody).some((key) => key !== "reviewMessage")
     ) {
-      return { __status: 400, payload: errorPayload("Invalid review message", "FIXTURE_VALIDATION") }
+      return {
+        __status: 400,
+        payload: errorPayload("Invalid review message", "FIXTURE_VALIDATION"),
+      }
     }
     existing.status = "REVIEWED"
     existing.reviewMessage = parsedBody.reviewMessage.trim()
@@ -1788,6 +2012,106 @@ function responseForRoute(state, method, pathname, url, body) {
       : pageResponse
   }
 
+  if (method === "POST" && pathname === "/ai-provider-configs") {
+    if (!hasFixturePermission(state, "ai-provider-config:create")) {
+      return {
+        __status: 403,
+        payload: errorPayload(
+          "AI connection permission required",
+          "PERMISSION_DENIED"
+        ),
+      }
+    }
+
+    if (method === "GET") {
+      const result = slicePage(state.aiProviderConfigs, url)
+      const sort = { sorted: false, unsorted: true, empty: true }
+      return {
+        ...result,
+        pageable: { ...result.pageable, sort },
+        sort,
+      }
+    }
+
+    if (method === "POST") {
+      if (
+        !["DEEPSEEK", "GEMINI", "OPENAI"].includes(body?.providerType) ||
+        !Array.isArray(body?.credentials) ||
+        body.credentials.length < 1 ||
+        body.credentials.some(
+          (credential) =>
+            typeof credential?.apiKey !== "string" ||
+            !/\S/.test(credential.apiKey)
+        )
+      ) {
+        return {
+          __status: 400,
+          payload: errorPayload(
+            "Provider and non-empty API keys are required",
+            "FIXTURE_VALIDATION"
+          ),
+        }
+      }
+
+      const id = Math.max(...state.aiProviderConfigs.map((item) => item.id)) + 1
+      const connection = {
+        id,
+        providerType: body.providerType,
+        ...(typeof body.description === "string" && body.description
+          ? { description: body.description }
+          : {}),
+        ...(typeof body.baseUrl === "string" && body.baseUrl
+          ? { baseUrl: body.baseUrl }
+          : {}),
+        defaultProvider: false,
+        credentials: body.credentials.map((credential, index) => ({
+          id: id * 100 + index,
+          keyPreview: `key-...${credential.apiKey.slice(-4)}`,
+        })),
+      }
+      state.aiProviderConfigs.unshift(connection)
+      return { __status: 201, payload: connection }
+    }
+  }
+
+  const aiProviderConfigId = pathname.match(/^\/ai-provider-configs\/(\d+)$/)
+  if (method === "GET" && aiProviderConfigId) {
+    if (!hasFixturePermission(state, "ai-provider-config:read")) {
+      return {
+        __status: 403,
+        payload: errorPayload(
+          "AI connection read permission required",
+          "PERMISSION_DENIED"
+        ),
+      }
+    }
+    const connection = state.aiProviderConfigs.find(
+      (item) => item.id === Number(aiProviderConfigId[1])
+    )
+    return connection
+      ? { ...connection, taskReferences: [] }
+      : {
+          __status: 404,
+          payload: errorPayload("AI connection not found", "NOT_FOUND"),
+        }
+  }
+
+  if (method === "POST" && pathname === "/ai-provider-configs/model-catalog") {
+    if (!hasFixturePermission(state, "ai-provider-config:model-catalog")) {
+      return {
+        __status: 403,
+        payload: errorPayload(
+          "AI catalog permission required",
+          "PERMISSION_DENIED"
+        ),
+      }
+    }
+    return {
+      providerType: body?.providerType,
+      models: [{ id: "fixture-model", label: "Fixture model" }],
+    }
+  }
+
   const blogIdMatch = pathname.match(/^\/blogs\/(\d+)$/)
   if (method === "GET" && blogIdMatch) {
     const id = Number(blogIdMatch[1])
@@ -1835,19 +2159,31 @@ function responseForRoute(state, method, pathname, url, body) {
   }
 
   if (method === "POST" && pathname === "/me/workspaces") {
-    const next = workspace(state.nextIds.workspace++, String(body?.name ?? "New workspace"))
+    const next = workspace(
+      state.nextIds.workspace++,
+      String(body?.name ?? "New workspace")
+    )
     state.workspaces.push(next)
     return next
   }
 
-  const workspaceIdMatch = pathname.match(/^\/me\/workspaces\/(\d+)(?:\/set-current)?$/)
+  const workspaceIdMatch = pathname.match(
+    /^\/me\/workspaces\/(\d+)(?:\/set-current)?$/
+  )
   if (workspaceIdMatch) {
     const id = Number(workspaceIdMatch[1])
     const selected = state.workspaces.find((item) => item.id === id)
-    if (!selected) return { __status: 404, payload: errorPayload("Workspace not found", "NOT_FOUND") }
+    if (!selected)
+      return {
+        __status: 404,
+        payload: errorPayload("Workspace not found", "NOT_FOUND"),
+      }
 
     if (pathname.endsWith("/set-current")) {
-      state.workspaces = state.workspaces.map((item) => ({ ...item, currentWorkspace: item.id === id }))
+      state.workspaces = state.workspaces.map((item) => ({
+        ...item,
+        currentWorkspace: item.id === id,
+      }))
     } else if (method === "PUT" && body?.name) {
       selected.name = String(body.name)
       selected.lastModifiedDate = NOW
@@ -1856,13 +2192,18 @@ function responseForRoute(state, method, pathname, url, body) {
   }
 
   if (method === "GET" && pathname === "/dashboard/summary") {
-    const current = state.workspaces.find((item) => item.currentWorkspace) ?? state.workspaces[0]
+    const current =
+      state.workspaces.find((item) => item.currentWorkspace) ??
+      state.workspaces[0]
     return dashboardSummary(current?.id ?? 1)
   }
 
   if (method === "GET" && pathname === "/graph-view") return graphView(state)
 
-  if (method === "GET" && (pathname === "/watchlists" || pathname === "/watchlists/assets")) {
+  if (
+    method === "GET" &&
+    (pathname === "/watchlists" || pathname === "/watchlists/assets")
+  ) {
     const assets = state.assets.map((item) => ({
       ...item,
       lastModifiedDate: undefined,
@@ -1896,7 +2237,11 @@ function responseForRoute(state, method, pathname, url, body) {
   }
 
   if (method === "POST" && pathname === "/watchlists/assets") {
-    return { items: state.assets, createdAssetIds: body?.assetIds ?? [], existingAssetIds: [] }
+    return {
+      items: state.assets,
+      createdAssetIds: body?.assetIds ?? [],
+      existingAssetIds: [],
+    }
   }
 
   if (method === "DELETE" && /^\/watchlists\/assets\/\d+$/.test(pathname)) {
@@ -1950,14 +2295,21 @@ function responseForRoute(state, method, pathname, url, body) {
   }
 
   if (method === "GET" && pathname === "/me/notes") {
-    return slicePage(state.notes.map((item) => ({ ...item, content: undefined })), url)
+    return slicePage(
+      state.notes.map((item) => ({ ...item, content: undefined })),
+      url
+    )
   }
 
   const noteMatch = pathname.match(/^\/me\/notes\/(\d+)$/)
   if (noteMatch) {
     const id = Number(noteMatch[1])
     const existing = state.notes.find((item) => item.id === id)
-    if (!existing) return { __status: 404, payload: errorPayload("Note not found", "NOT_FOUND") }
+    if (!existing)
+      return {
+        __status: 404,
+        payload: errorPayload("Note not found", "NOT_FOUND"),
+      }
 
     if (method === "PUT") {
       existing.title = body?.title ?? null
@@ -1972,16 +2324,24 @@ function responseForRoute(state, method, pathname, url, body) {
   }
 
   if (method === "POST" && pathname === "/me/notes") {
-    const created = note(state.nextIds.note++, body?.title ?? null, extractText(body?.content))
+    const created = note(
+      state.nextIds.note++,
+      body?.title ?? null,
+      extractText(body?.content)
+    )
     created.content = body?.content ?? created.content
     state.notes.unshift(created)
     return created
   }
 
-  if (method === "GET" && pathname === "/telegram/bot-connections") return state.botConnections
-  if (method === "GET" && pathname === "/telegram/destinations") return state.destinations
-  if (method === "GET" && pathname === "/telegram/feature-settings") return state.featureSettings
-  if (method === "GET" && pathname === "/telegram/market-analysis-schedules") return state.schedules
+  if (method === "GET" && pathname === "/telegram/bot-connections")
+    return state.botConnections
+  if (method === "GET" && pathname === "/telegram/destinations")
+    return state.destinations
+  if (method === "GET" && pathname === "/telegram/feature-settings")
+    return state.featureSettings
+  if (method === "GET" && pathname === "/telegram/market-analysis-schedules")
+    return state.schedules
   if (method === "GET" && pathname === "/languages") {
     return {
       currentLanguage: "vi",
@@ -2001,47 +2361,69 @@ function responseForRoute(state, method, pathname, url, body) {
     }
   }
 
-  if (method === "PATCH" && /^\/telegram\/bot-connections\/\d+\/disable$/.test(pathname)) {
+  if (
+    method === "PATCH" &&
+    /^\/telegram\/bot-connections\/\d+\/disable$/.test(pathname)
+  ) {
     const id = Number(pathname.split("/")[3])
     const item = state.botConnections.find((connection) => connection.id === id)
     if (item) item.status = "DISABLED"
     return item ?? state.botConnections[0]
   }
 
-  if (method === "DELETE" && /^\/telegram\/bot-connections\/\d+$/.test(pathname)) {
+  if (
+    method === "DELETE" &&
+    /^\/telegram\/bot-connections\/\d+$/.test(pathname)
+  ) {
     return { __status: 204 }
   }
 
   if (method === "POST" && pathname === "/telegram/destinations/link-token") {
-    return { botConnectionId: body?.botConnectionId ?? 11, token: "fixture-token", startCommand: "/start fixture-token", expiresAt: NOW }
+    return {
+      botConnectionId: body?.botConnectionId ?? 11,
+      token: "fixture-token",
+      startCommand: "/start fixture-token",
+      expiresAt: NOW,
+    }
   }
 
-  if (method === "POST" && /^\/telegram\/destinations\/\d+\/test-message$/.test(pathname)) {
+  if (
+    method === "POST" &&
+    /^\/telegram\/destinations\/\d+\/test-message$/.test(pathname)
+  ) {
     return { __status: 204 }
   }
 
-  if (method === "PATCH" && /^\/telegram\/destinations\/\d+\/disable$/.test(pathname)) {
+  if (
+    method === "PATCH" &&
+    /^\/telegram\/destinations\/\d+\/disable$/.test(pathname)
+  ) {
     const id = Number(pathname.split("/")[3])
     const item = state.destinations.find((destination) => destination.id === id)
     if (item) item.status = "DISABLED"
     return item ?? state.destinations[0]
   }
 
-  if (method === "DELETE" && /^\/telegram\/destinations\/\d+$/.test(pathname)) return { __status: 204 }
+  if (method === "DELETE" && /^\/telegram\/destinations\/\d+$/.test(pathname))
+    return { __status: 204 }
 
   if (method === "PUT" && pathname === "/telegram/feature-settings") {
-    const existing = state.featureSettings.find((item) => item.featureKey === body?.featureKey && item.workspaceId === Number(body?.workspaceId))
+    const existing = state.featureSettings.find(
+      (item) =>
+        item.featureKey === body?.featureKey &&
+        item.workspaceId === Number(body?.workspaceId)
+    )
     if (existing) {
       existing.enabled = body?.enabled ?? existing.enabled
-      existing.destination = state.destinations.find((item) => item.id === Number(body?.destinationId))
+      existing.destination = state.destinations.find(
+        (item) => item.id === Number(body?.destinationId)
+      )
       const outputLanguageIsoCode =
         typeof body?.outputLanguageIsoCode === "string"
           ? body.outputLanguageIsoCode.trim()
           : ""
       existing.outputLanguage = outputLanguageIsoCode
-        ? state.languages.find(
-            (item) => item.isoCode === outputLanguageIsoCode
-          )
+        ? state.languages.find((item) => item.isoCode === outputLanguageIsoCode)
         : undefined
       existing.lastModifiedDate = NOW
       return existing
@@ -2050,17 +2432,25 @@ function responseForRoute(state, method, pathname, url, body) {
   }
 
   if (method === "POST" && pathname === "/telegram/market-analysis-schedules") {
-    const currentWorkspace = state.workspaces.find((item) => item.currentWorkspace) ?? state.workspaces[0]
+    const currentWorkspace =
+      state.workspaces.find((item) => item.currentWorkspace) ??
+      state.workspaces[0]
     const created = {
       id: state.nextIds.schedule++,
       name: body?.name ?? "Fixture schedule",
       workspaceId: Number(body?.workspaceId ?? currentWorkspace.id),
       workspaceName: currentWorkspace.name,
-      destination: state.destinations.find((item) => item.id === Number(body?.destinationId)),
+      destination: state.destinations.find(
+        (item) => item.id === Number(body?.destinationId)
+      ),
       timezone: body?.timezone ?? "Asia/Ho_Chi_Minh",
       localTimes: body?.localTimes ?? ["08:30"],
-      asset: state.assets.find((item) => item.assetId === Number(body?.assetId)),
-      outputLanguage: state.languages.find((item) => item.isoCode === body?.outputLanguageIsoCode),
+      asset: state.assets.find(
+        (item) => item.assetId === Number(body?.assetId)
+      ),
+      outputLanguage: state.languages.find(
+        (item) => item.isoCode === body?.outputLanguageIsoCode
+      ),
       status: "ACTIVE",
       createdDate: NOW,
       lastModifiedDate: NOW,
@@ -2069,11 +2459,17 @@ function responseForRoute(state, method, pathname, url, body) {
     return created
   }
 
-  const scheduleMatch = pathname.match(/^\/telegram\/market-analysis-schedules\/(\d+)(?:\/disable)?$/)
+  const scheduleMatch = pathname.match(
+    /^\/telegram\/market-analysis-schedules\/(\d+)(?:\/disable)?$/
+  )
   if (scheduleMatch) {
     const id = Number(scheduleMatch[1])
     const existing = state.schedules.find((item) => item.id === id)
-    if (!existing) return { __status: 404, payload: errorPayload("Schedule not found", "NOT_FOUND") }
+    if (!existing)
+      return {
+        __status: 404,
+        payload: errorPayload("Schedule not found", "NOT_FOUND"),
+      }
     if (pathname.endsWith("/disable")) existing.status = "DISABLED"
     if (method === "PUT") {
       existing.name = body?.name ?? existing.name
@@ -2087,18 +2483,28 @@ function responseForRoute(state, method, pathname, url, body) {
     return existing
   }
 
-  if (method === "GET" && pathname === "/market-charts/candles") return candles(url)
+  if (method === "GET" && pathname === "/market-charts/candles")
+    return candles(url)
   if (method === "GET" && pathname === "/market-charts/annotations") {
     return marketChartAnnotations(url, getScenario(state, method, pathname))
   }
-  if (method === "GET" && pathname === "/market-charts/economic-calendar-events") {
+  if (
+    method === "GET" &&
+    pathname === "/market-charts/economic-calendar-events"
+  ) {
     return marketChartEconomicCalendarEvents(
       url,
       getScenario(state, method, pathname)
     )
   }
 
-  return { __status: 404, payload: errorPayload(`Unhandled fixture route: ${method} ${pathname}`, "UNHANDLED_ROUTE") }
+  return {
+    __status: 404,
+    payload: errorPayload(
+      `Unhandled fixture route: ${method} ${pathname}`,
+      "UNHANDLED_ROUTE"
+    ),
+  }
 }
 
 function extractText(value) {
@@ -2118,14 +2524,23 @@ async function appendLog(entry) {
 
 async function handleControl(request, response, url, body) {
   if (url.pathname === "/__test/health" && request.method === "GET") {
-    sendJson(response, 200, { status: "ok", mode: "fixture", production: false })
+    sendJson(response, 200, {
+      status: "ok",
+      mode: "fixture",
+      production: false,
+    })
     return true
   }
 
   if (url.pathname === "/__test/reset" && request.method === "POST") {
-    const testRunId = body?.testRunId ?? request.headers["x-signapse-test-run-id"]
+    const testRunId =
+      body?.testRunId ?? request.headers["x-signapse-test-run-id"]
     if (!testRunId) {
-      sendJson(response, 400, errorPayload("testRunId is required", "TEST_RUN_ID_REQUIRED"))
+      sendJson(
+        response,
+        400,
+        errorPayload("testRunId is required", "TEST_RUN_ID_REQUIRED")
+      )
       return true
     }
     const previous = testRuns.get(String(testRunId))
@@ -2135,28 +2550,57 @@ async function handleControl(request, response, url, body) {
     return true
   }
 
-  if (url.pathname === "/__test/preferred-language" && request.method === "POST") {
-    const testRunId = body?.testRunId ?? request.headers["x-signapse-test-run-id"]
-    if (!testRunId || !(body?.isoCode === null || typeof body?.isoCode === "string")) {
-      sendJson(response, 400, errorPayload("testRunId and isoCode are required", "PREFERRED_LANGUAGE_REQUIRED"))
+  if (
+    url.pathname === "/__test/preferred-language" &&
+    request.method === "POST"
+  ) {
+    const testRunId =
+      body?.testRunId ?? request.headers["x-signapse-test-run-id"]
+    if (
+      !testRunId ||
+      !(body?.isoCode === null || typeof body?.isoCode === "string")
+    ) {
+      sendJson(
+        response,
+        400,
+        errorPayload(
+          "testRunId and isoCode are required",
+          "PREFERRED_LANGUAGE_REQUIRED"
+        )
+      )
       return true
     }
     const state = getState(String(testRunId))
-    state.preferredLanguage = body.isoCode === null
-      ? null
-      : state.languages.find((language) => language.isoCode === body.isoCode) ?? null
+    state.preferredLanguage =
+      body.isoCode === null
+        ? null
+        : (state.languages.find(
+            (language) => language.isoCode === body.isoCode
+          ) ?? null)
     if (body.isoCode !== null && !state.preferredLanguage) {
-      sendJson(response, 400, errorPayload("Language is not in the catalog", "INVALID_LANGUAGE"))
+      sendJson(
+        response,
+        400,
+        errorPayload("Language is not in the catalog", "INVALID_LANGUAGE")
+      )
       return true
     }
-    sendJson(response, 200, { testRunId, preferredLanguage: state.preferredLanguage })
+    sendJson(response, 200, {
+      testRunId,
+      preferredLanguage: state.preferredLanguage,
+    })
     return true
   }
 
   if (url.pathname === "/__test/scenario" && request.method === "POST") {
-    const testRunId = body?.testRunId ?? request.headers["x-signapse-test-run-id"]
+    const testRunId =
+      body?.testRunId ?? request.headers["x-signapse-test-run-id"]
     if (!testRunId || typeof body?.scenario !== "string") {
-      sendJson(response, 400, errorPayload("testRunId and scenario are required", "SCENARIO_REQUIRED"))
+      sendJson(
+        response,
+        400,
+        errorPayload("testRunId and scenario are required", "SCENARIO_REQUIRED")
+      )
       return true
     }
     const state = getState(String(testRunId))
@@ -2167,23 +2611,43 @@ async function handleControl(request, response, url, body) {
     return true
   }
 
-  if (url.pathname === "/__test/feedback-scenario" && request.method === "POST") {
-    const testRunId = body?.testRunId ?? request.headers["x-signapse-test-run-id"]
+  if (
+    url.pathname === "/__test/feedback-scenario" &&
+    request.method === "POST"
+  ) {
+    const testRunId =
+      body?.testRunId ?? request.headers["x-signapse-test-run-id"]
     if (!testRunId || typeof body?.scenario !== "string") {
-      sendJson(response, 400, errorPayload("testRunId and scenario are required", "SCENARIO_REQUIRED"))
+      sendJson(
+        response,
+        400,
+        errorPayload("testRunId and scenario are required", "SCENARIO_REQUIRED")
+      )
       return true
     }
     const state = getState(String(testRunId))
     state.feedbackScenarios[body.kind ?? "feedback"] = body.scenario
     releasePending(state)
-    sendJson(response, 200, { testRunId, kind: body.kind ?? "feedback", scenario: body.scenario })
+    sendJson(response, 200, {
+      testRunId,
+      kind: body.kind ?? "feedback",
+      scenario: body.scenario,
+    })
     return true
   }
 
   if (url.pathname === "/__test/permissions" && request.method === "POST") {
-    const testRunId = body?.testRunId ?? request.headers["x-signapse-test-run-id"]
+    const testRunId =
+      body?.testRunId ?? request.headers["x-signapse-test-run-id"]
     if (!testRunId || !Array.isArray(body?.permissions)) {
-      sendJson(response, 400, errorPayload("testRunId and permissions are required", "PERMISSIONS_REQUIRED"))
+      sendJson(
+        response,
+        400,
+        errorPayload(
+          "testRunId and permissions are required",
+          "PERMISSIONS_REQUIRED"
+        )
+      )
       return true
     }
     const state = getState(String(testRunId))
@@ -2192,8 +2656,12 @@ async function handleControl(request, response, url, body) {
     return true
   }
 
-  if (url.pathname === "/__test/smtp-configuration" && request.method === "POST") {
-    const testRunId = body?.testRunId ?? request.headers["x-signapse-test-run-id"]
+  if (
+    url.pathname === "/__test/smtp-configuration" &&
+    request.method === "POST"
+  ) {
+    const testRunId =
+      body?.testRunId ?? request.headers["x-signapse-test-run-id"]
     if (!testRunId || !body || !("configuration" in body)) {
       sendJson(
         response,
@@ -2215,7 +2683,9 @@ async function handleControl(request, response, url, body) {
   }
 
   if (url.pathname === "/__test/state" && request.method === "GET") {
-    const testRunId = request.headers["x-signapse-test-run-id"] ?? url.searchParams.get("testRunId")
+    const testRunId =
+      request.headers["x-signapse-test-run-id"] ??
+      url.searchParams.get("testRunId")
     const state = getState(String(testRunId ?? "anonymous"))
     sendJson(response, 200, {
       testRunId,
@@ -2236,7 +2706,10 @@ async function handleControl(request, response, url, body) {
 }
 
 const server = createServer(async (request, response) => {
-  const url = new URL(request.url ?? "/", `http://${request.headers.host ?? "127.0.0.1"}`)
+  const url = new URL(
+    request.url ?? "/",
+    `http://${request.headers.host ?? "127.0.0.1"}`
+  )
   const method = request.method ?? "GET"
   const body = await readBody(request)
 
@@ -2260,7 +2733,14 @@ const server = createServer(async (request, response) => {
       reason: "missing-test-run-id",
     }
     getState("anonymous").violations.push(violation)
-    sendJson(response, 400, errorPayload("P0 fixture requires x-signapse-test-run-id", "MISSING_TEST_RUN_ID"))
+    sendJson(
+      response,
+      400,
+      errorPayload(
+        "P0 fixture requires x-signapse-test-run-id",
+        "MISSING_TEST_RUN_ID"
+      )
+    )
     return
   }
 
@@ -2288,16 +2768,31 @@ const server = createServer(async (request, response) => {
 
   if (hasAuthHeader) {
     state.violations.push({ ...logEntry, reason: "unexpected-auth-header" })
-    sendJson(response, 403, errorPayload("P0 fixture rejects authenticated network calls", "UNEXPECTED_AUTH"))
+    sendJson(
+      response,
+      403,
+      errorPayload(
+        "P0 fixture rejects authenticated network calls",
+        "UNEXPECTED_AUTH"
+      )
+    )
     return
   }
 
   const contract = fixtureContracts.find(
-    (item) => item.method === method && contractPathMatches(item.path, url.pathname)
+    (item) =>
+      item.method === method && contractPathMatches(item.path, url.pathname)
   )
   if (!contract) {
     state.violations.push({ ...logEntry, reason: "unregistered-route" })
-    sendJson(response, 404, errorPayload(`Unregistered fixture route: ${method} ${url.pathname}`, "UNREGISTERED_ROUTE"))
+    sendJson(
+      response,
+      404,
+      errorPayload(
+        `Unregistered fixture route: ${method} ${url.pathname}`,
+        "UNREGISTERED_ROUTE"
+      )
+    )
     return
   }
 
@@ -2308,7 +2803,11 @@ const server = createServer(async (request, response) => {
   const scenario = getScenario(state, method, url.pathname)
   if (scenario === "timeout") {
     await new Promise((resolve) => setTimeout(resolve, 250))
-    sendJson(response, 504, errorPayload("Fixture request timed out", "FIXTURE_TIMEOUT"))
+    sendJson(
+      response,
+      504,
+      errorPayload("Fixture request timed out", "FIXTURE_TIMEOUT")
+    )
     return
   }
   if (scenario === "delayed" || scenario === "delayed-outage") {
@@ -2318,9 +2817,7 @@ const server = createServer(async (request, response) => {
           ? 1_500
           : 3_000
         : 350
-    await new Promise((resolve) =>
-      setTimeout(resolve, delayMs)
-    )
+    await new Promise((resolve) => setTimeout(resolve, delayMs))
   }
   if (
     scenario === "preopen-unavailable" &&
@@ -2361,7 +2858,11 @@ const server = createServer(async (request, response) => {
     (scenario === "outage" || scenario === "delayed-outage") &&
     !(method === "GET" && url.pathname === "/market-charts/live")
   ) {
-    sendJson(response, 503, errorPayload("Fixture backend is unavailable", "FIXTURE_OUTAGE"))
+    sendJson(
+      response,
+      503,
+      errorPayload("Fixture backend is unavailable", "FIXTURE_OUTAGE")
+    )
     return
   }
   if (
@@ -2375,7 +2876,11 @@ const server = createServer(async (request, response) => {
     await new Promise((resolve) => setTimeout(resolve, 5000))
   }
   if (scenario === "validation-error") {
-    sendJson(response, 422, errorPayload("Fixture validation failed", "FIXTURE_VALIDATION"))
+    sendJson(
+      response,
+      422,
+      errorPayload("Fixture validation failed", "FIXTURE_VALIDATION")
+    )
     return
   }
   if (scenario === "mutation-failure" && method !== "GET") {
@@ -2410,7 +2915,11 @@ const server = createServer(async (request, response) => {
     return
   }
   if (status >= 400) {
-    sendJson(response, status, result.payload ?? errorPayload("Fixture route failed"))
+    sendJson(
+      response,
+      status,
+      result.payload ?? errorPayload("Fixture route failed")
+    )
     return
   }
   if (result?.__binary) {
@@ -2452,7 +2961,12 @@ const server = createServer(async (request, response) => {
     return
   }
 
-  if (scenario === "short" && method === "GET" && result && Array.isArray(result.candles)) {
+  if (
+    scenario === "short" &&
+    method === "GET" &&
+    result &&
+    Array.isArray(result.candles)
+  ) {
     sendJson(response, 200, {
       ...result,
       candles: result.candles.slice(-1),
@@ -2460,18 +2974,35 @@ const server = createServer(async (request, response) => {
     return
   }
 
-  if (scenario === "full-then-empty" && method === "GET" && result && Array.isArray(result.candles)) {
-    const candleRequestCount = state.requests.filter((request) => request.path === "/market-charts/candles").length
+  if (
+    scenario === "full-then-empty" &&
+    method === "GET" &&
+    result &&
+    Array.isArray(result.candles)
+  ) {
+    const candleRequestCount = state.requests.filter(
+      (request) => request.path === "/market-charts/candles"
+    ).length
     if (candleRequestCount > 1) {
       const anchor = url.searchParams.get("to") ?? result.to
-      sendJson(response, 200, { ...result, from: anchor, to: anchor, candles: [] })
+      sendJson(response, 200, {
+        ...result,
+        from: anchor,
+        to: anchor,
+        candles: [],
+      })
     } else {
       sendJson(response, 200, result)
     }
     return
   }
 
-  if (scenario === "short-then-empty" && method === "GET" && result && Array.isArray(result.candles)) {
+  if (
+    scenario === "short-then-empty" &&
+    method === "GET" &&
+    result &&
+    Array.isArray(result.candles)
+  ) {
     const candleRequestCount = state.requests.filter(
       (request) => request.path === "/market-charts/candles"
     ).length
@@ -2493,7 +3024,13 @@ const server = createServer(async (request, response) => {
     return
   }
 
-  sendJson(response, status, result)
+  sendJson(
+    response,
+    status,
+    result && typeof result === "object" && "__status" in result
+      ? (result.payload ?? result)
+      : result
+  )
 })
 
 server.listen(port, "127.0.0.1", () => {
