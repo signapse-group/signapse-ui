@@ -22,7 +22,7 @@ For an accepted BE → FE breaking change **on dev**, use BE deploy/publish Open
 
 ## Contract lookup and feature acceptance
 
-Reading the published contract and verifying a new/changed API dependency are consumer integration requirements, distinct from executing features against live services. Verify consumer behavior locally at the actual HTTP boundary in its runtime; browser interception alone does not verify SSR fetching. Live feature/hosted acceptance requires the assigned operation, phase, scope and inputs under [verification standards](../CONTRIBUTING.md#verification). Missing in-scope producer schemas, permissions or required publication evidence remains an integration gap.
+Reading the published contract and verifying a new/changed API dependency are consumer integration requirements, distinct from executing features against live services. Verify affected consumer behavior with focused action/schema/component tests under [test ownership and selection](../CONTRIBUTING.md#test-ownership-and-selection); choose a local fixture HTTP/browser check when needed to establish runtime behavior. Browser interception alone does not verify SSR fetching. Live feature acceptance belongs to QA/coordinator in every FE phase. Missing in-scope producer schemas, permission semantics or required publication evidence remains an integration gap; missing a real QA account alone does not.
 
 ## Verification and evidence
 

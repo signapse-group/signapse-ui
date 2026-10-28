@@ -1,8 +1,14 @@
 ---
-status: accepted
+status: partially superseded
 ---
 
 # Adopt layered automated quality gates
+
+## Supersession — 2026-10-28
+
+The following decision records the historical test-foundation direction. Current FE gates and ownership follow [test ownership and selection](../../CONTRIBUTING.md#test-ownership-and-selection): focused local tests, selective fixture browser checks and QA/coordinator live feature verification across all FE phases. Mandatory per-PR browser journeys and FE live-canary execution below no longer define FE gates. Existing suites remain references; this update does not provision a canary or migrate scripts into QA.
+
+## Original decision
 
 Signapse will use GitHub Actions to make deterministic Vitest coverage and Chromium browser journeys against a resettable fixture backend required for every pull request. A separate disposable Clerk test instance and backend test environment will run permission checks, selected visual assertions, Firefox/WebKit coverage, and a Telegram Test message canary nightly and before release; this keeps merge feedback isolated and fast without treating mock-mode success as proof of authorization or external delivery. PR authors remediate failures, a required reviewer approves intentional visual changes, and the release owner handles failed canaries.
 
