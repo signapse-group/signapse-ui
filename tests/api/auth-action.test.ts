@@ -119,6 +119,28 @@ describe("authenticated transport", () => {
     )
   })
 
+  it("preserves RFC 9457 validation details", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {})
+    fetchMock.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          title: "Bad Request",
+          status: 400,
+          detail: "Missing prompt variables: {locale}, {asOfTime}",
+        }),
+        { status: 400 }
+      )
+    )
+
+    await expect(
+      fetchAuthenticated("/system-prompts/example")
+    ).rejects.toMatchObject({
+      message: "Missing prompt variables: {locale}, {asOfTime}",
+      status: 400,
+    })
+    expect(consoleError).toHaveBeenCalledTimes(1)
+  })
+
   it("aborts a request after the transport timeout", async () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => {})
     vi.useFakeTimers()

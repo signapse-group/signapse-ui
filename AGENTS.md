@@ -10,7 +10,7 @@ When framework versions, the UI preset, CI, or repository ownership change, refr
 - Before implementing or reviewing `app/api/**`, read `app/api/AGENTS.override.md`.
 - Before implementing or reviewing `app/lib/**`, read `app/lib/AGENTS.override.md`.
 - For UI implementation or review under `app/[lang]/**` or `components/**`, read `components/AGENTS.override.md`. For changes to visual presentation, interaction, accessibility, or user-facing content, read the relevant sections of `docs/design/DESIGN.md`, the UI/UX source of truth.
-- For assigned Jira UI work, read and apply the planning-owned [UI design gate](https://github.com/signapse-group/signapse-planing/blob/main/workflow/project-execution-workflow.md#ui-design-gate). Resolve the approved design from the native parent in every Survey/Implement/Review session, open the actual references and use them with `docs/design/DESIGN.md`; a child attachment is not required. Direct work retains its accepted contract: inspect any supplied approved reference before coding and compare affected rendered UI before handoff. Report inaccessible, ambiguous or conflicting references before coding dependent UI.
+- For assigned Jira UI work, read and apply the local [UI design gate](docs/design/DESIGN.md#ui-design-gate). Resolve the approved design from the native parent in every Survey/Implement/Review session, open the actual references and use them with `docs/design/DESIGN.md`; a child attachment is not required. Direct work retains its accepted contract: inspect any supplied approved reference before coding and compare affected rendered UI before handoff. Report inaccessible, ambiguous or conflicting references before coding dependent UI.
 - When a task spans multiple domains, read every applicable scoped instruction file.
 - Scoped instructions extend this file; the more specific instruction wins when guidance conflicts.
 - `.agents/skills` holds repository-specific or non-overlapping recipes.
@@ -21,6 +21,10 @@ When framework versions, the UI preset, CI, or repository ownership change, refr
 - `frontend-design`: redesign, UI polish, dashboards/workbenches, or new layouts that need visual direction.
 - `accessibility`: keyboard, focus, screen reader, semantic markup, dialog/form accessibility.
 - For API integration, contract changes or reviews, read the [API consumer standards](docs/api-consumer.md). The producer's published OpenAPI owns the supported HTTP API contract; Jira owns accepted requirements and acceptance.
+
+## Execution inputs
+
+Live Subtask/parent, accepted decisions, dependencies and explicit assignment references supply the requirement. This repository supplies execution authority, standards and phase procedure. Planning policy links are provenance for maintainers, not required reading or a network prerequisite for workers. Do not redo definition/decomposition or block solely because a Planning policy page is unavailable. Approved design/ADR and producer contracts explicitly needed for the assignment still must be accessible; report the affected AC/check and owner when those inputs are missing. Missing mandatory local instructions remains deployment drift; do not substitute legacy/backup policy.
 
 ## Dev handoff boundary
 

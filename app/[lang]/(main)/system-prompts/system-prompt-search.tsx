@@ -1,48 +1,30 @@
 "use client"
 
 import { Search } from "lucide-react"
-import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { useTransition } from "react"
-import { useDebouncedCallback } from "use-debounce"
 
+import { useLocalization } from "@/app/lib/i18n/provider"
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
 } from "@/components/ui/input-group"
 import { Spinner } from "@/components/ui/spinner"
-import { useLocalization } from "@/app/lib/i18n/provider"
 
-const SEARCH_PARAM_KEY =
-  "promptType[containsIgnoreCase],name[containsIgnoreCase],content[containsIgnoreCase]"
 const SEARCH_INPUT_ID = "system-prompt-search"
 
-export function SystemPromptSearch() {
-  const searchParams = useSearchParams()
-  const pathname = usePathname()
-  const { replace } = useRouter()
-  const [isPending, startTransition] = useTransition()
+interface SystemPromptSearchProps {
+  value: string
+  isPending: boolean
+  onValueChange: (value: string) => void
+}
+
+export function SystemPromptSearch({
+  value,
+  isPending,
+  onValueChange,
+}: SystemPromptSearchProps) {
   const { dictionary } = useLocalization()
   const t = dictionary.systemPrompts
-  const currentSearch = searchParams.get(SEARCH_PARAM_KEY)?.toString() || ""
-
-  const handleSearch = useDebouncedCallback((term: string) => {
-    const trimmedTerm = term.trim()
-    const params = new URLSearchParams(searchParams)
-    params.set("page", "1")
-
-    if (trimmedTerm) {
-      params.set(SEARCH_PARAM_KEY, trimmedTerm)
-    } else {
-      params.delete(SEARCH_PARAM_KEY)
-    }
-
-    const query = params.toString()
-
-    startTransition(() => {
-      replace(query ? `${pathname}?${query}` : pathname)
-    })
-  }, 300)
 
   return (
     <div className="w-full sm:w-80 lg:w-96">
@@ -58,14 +40,11 @@ export function SystemPromptSearch() {
           )}
         </InputGroupAddon>
         <InputGroupInput
-          key={currentSearch}
-          defaultValue={currentSearch}
           id={SEARCH_INPUT_ID}
           type="search"
+          value={value}
           placeholder={t.searchPlaceholder}
-          onChange={(event) => {
-            handleSearch(event.target.value)
-          }}
+          onChange={(event) => onValueChange(event.target.value)}
         />
       </InputGroup>
     </div>

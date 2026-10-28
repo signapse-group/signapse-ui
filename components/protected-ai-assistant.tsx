@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import dynamic from "next/dynamic"
+import { usePathname } from "next/navigation"
 import { TriangleAlertIcon } from "lucide-react"
 
 import { useLocalization } from "@/app/lib/i18n/provider"
@@ -31,11 +32,13 @@ export function ProtectedAiAssistant({
   workspaceId,
 }: ProtectedAiAssistantProps) {
   const { dictionary } = useLocalization()
+  const pathname = usePathname()
   const canExecuteMarketQuery = useHasAnyPermission(
     MARKET_QUERY_EXECUTE_PERMISSIONS
   )
+  const isSystemPromptRoute = pathname?.split("/").includes("system-prompts")
 
-  if (!canExecuteMarketQuery) {
+  if (!canExecuteMarketQuery || isSystemPromptRoute) {
     return null
   }
 

@@ -3,6 +3,7 @@ import { Suspense } from "react"
 import { ArrowLeft } from "lucide-react"
 
 import { getServerDictionary } from "@/app/lib/i18n/server"
+import { AI_PROVIDER_CONFIG_PERMISSIONS } from "@/app/lib/ai-provider-configs/permissions"
 import { hasPermission } from "@/app/lib/permissions"
 import { getCurrentPermissions } from "@/app/lib/permissions-server"
 import { AccessDenied } from "@/components/access-denied"
@@ -18,20 +19,30 @@ export default async function CreateAiProviderConfigPage() {
     getServerDictionary(),
   ])
 
-  if (!hasPermission(permissions, "ai-provider-config:create")) {
+  if (!hasPermission(permissions, AI_PROVIDER_CONFIG_PERMISSIONS.create)) {
     return (
-      <AccessDenied
-        description={dictionary.aiProviderConfigs.createDenied}
-        permission="ai-provider-config:create"
-      />
+      <>
+        <h1 className="sr-only">{dictionary.aiProviderConfigs.createTitle}</h1>
+        <AccessDenied
+          description={dictionary.aiProviderConfigs.createDenied}
+          permission={AI_PROVIDER_CONFIG_PERMISSIONS.create}
+        />
+      </>
     )
   }
+
+  const backHref = hasPermission(
+    permissions,
+    AI_PROVIDER_CONFIG_PERMISSIONS.read
+  )
+    ? "/ai-provider-configs"
+    : "/dashboard"
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center">
         <Link
-          href="/ai-provider-configs"
+          href={backHref}
           className={buttonVariants({ variant: "secondary", size: "sm" })}
         >
           <ArrowLeft data-icon="inline-start" />
@@ -39,65 +50,61 @@ export default async function CreateAiProviderConfigPage() {
         </Link>
       </div>
 
-      <Suspense fallback={<AiProviderConfigCreateSkeleton />}>
+      <Suspense
+        fallback={
+          <>
+            <h1 className="sr-only">
+              {dictionary.aiProviderConfigs.createTitle}
+            </h1>
+            <AiProviderConfigCreateSkeleton
+              loadingLabel={dictionary.aiProviderConfigs.loadingCreate}
+            />
+          </>
+        }
+      >
         <AiProviderConfigCreateForm />
       </Suspense>
     </div>
   )
 }
 
-function AiProviderConfigCreateSkeleton() {
+function AiProviderConfigCreateSkeleton({
+  loadingLabel,
+}: {
+  loadingLabel: string
+}) {
   return (
-    <AppFormShellSkeleton width="lg">
-      <div className="flex flex-col gap-2 px-6 pt-6">
-        <Skeleton className="h-6 w-72 max-w-full" />
-        <Skeleton className="h-4 w-full max-w-xl" />
-      </div>
-
-      <div className="px-6 py-6">
-        <div className="flex flex-col gap-7">
-          <Skeleton className="h-9 w-full" />
-
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-              <div className="flex flex-col gap-2">
-                <Skeleton className="h-5 w-40" />
-                <Skeleton className="h-4 w-64 max-w-full" />
-              </div>
-              <Skeleton className="h-9 w-36" />
-            </div>
-
-            <div className="flex flex-col gap-4 rounded-lg border p-4">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <Skeleton className="h-3 w-24" />
-                <div className="flex gap-2">
-                  <Skeleton className="h-8 w-36" />
-                  <Skeleton className="size-8" />
-                </div>
-              </div>
-              <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(14rem,0.75fr)]">
-                <div className="flex flex-col gap-2">
-                  <Skeleton className="h-4 w-16" />
-                  <Skeleton className="h-9 w-full" />
-                </div>
-                <div className="flex flex-col gap-2">
-                  <Skeleton className="h-4 w-16" />
-                  <Skeleton className="h-9 w-full" />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <Skeleton className="h-9 w-full" />
-          <Skeleton className="h-24 w-full" />
-          <Skeleton className="h-16 w-full" />
+    <div aria-busy="true">
+      <p role="status" className="sr-only">
+        {loadingLabel}
+      </p>
+      <AppFormShellSkeleton width="lg">
+        <div className="flex flex-col gap-2 px-6 pt-6">
+          <Skeleton className="h-6 w-72 max-w-full" />
+          <Skeleton className="h-4 w-full max-w-xl" />
         </div>
-      </div>
 
-      <div className="flex flex-col-reverse gap-3 border-t bg-muted/20 px-6 py-4 sm:flex-row sm:justify-end">
-        <Skeleton className="h-9 w-full sm:w-20" />
-        <Skeleton className="h-9 w-full sm:w-32" />
-      </div>
-    </AppFormShellSkeleton>
+        <div className="px-6 py-6">
+          <div className="flex flex-col gap-6">
+            <Skeleton className="h-9 w-full" />
+            <Skeleton className="h-9 w-full" />
+            <Skeleton className="h-24 w-full" />
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <Skeleton className="h-5 w-28" />
+                <Skeleton className="h-9 w-24" />
+              </div>
+              <Skeleton className="h-9 w-full" />
+            </div>
+            <Skeleton className="h-20 w-full" />
+          </div>
+        </div>
+
+        <div className="flex flex-col-reverse gap-3 border-t bg-muted/20 px-6 py-4 sm:flex-row sm:justify-end">
+          <Skeleton className="h-9 w-full sm:w-20" />
+          <Skeleton className="h-9 w-full sm:w-32" />
+        </div>
+      </AppFormShellSkeleton>
+    </div>
   )
 }

@@ -354,9 +354,47 @@ Signapse entity quick detail là local, modal reading overlay cho một entity �
 - User-facing copy phải được localization và tiếng Việt phải tự nhiên, đúng dấu; technical instructions chịu trách nhiệm quy định helper cụ thể.
 - Vendor/license attribution phải ở vị trí người dùng truy cập được khi rời main surface.
 
+## UI Design Gate
+
+This section owns FE execution of the accepted design gate. Planning/coordinator owns design approval and handoff; no Planning policy fetch is required to implement or review.
+
+- Every Survey, Implement and Review session, including resume, reads the live native parent and opens its designated approved images/frames. Verify approval basis, current version, assigned screen/state/viewport coverage and accepted exceptions. Attachment metadata, filenames or newest upload alone do not prove approval. A child attachment is unnecessary when the parent source is accessible.
+- Use approved references with this design system and the Responsive Contract below. Common states may reuse an identified approved component baseline; do not require separate mockups for every state. Images do not override behavioral AC, permissions, real data or localization.
+- Survey cannot enter Progress with an inaccessible, ambiguous or conflicting required design. Implement cannot enter In Review, and Review cannot merge/complete, with missing comparison evidence or an unaccepted deviation. Report the affected input/AC and owner; continue meaningful independent work, applying the phase's Blocked rules only when exhausted.
+- Compare affected rendered UI against the same approved version/frame and record candidate, viewport/zoom, state and sidebar mode in PR/artifact evidence. Review assesses this independently. A design change invalidates affected comparison/checks and requires renewed review; do not change expected/design to match code.
+- Direct work keeps its accepted scope and supplied approved references, without requiring a Jira ticket or adding lifecycle actions.
+
 ## Responsive Contract
 
-Dashboard viewport groups, layout defaults, design references and verification coverage are owned by the planning [Responsive Contract](https://github.com/signapse-group/signapse-planing/blob/main/ui-design/references/DESIGN.md#responsive-contract). Read and apply it before implementing or reviewing layout/responsive changes; report the affected checks and gaps in the handoff. Keep feature exceptions explicit and accepted. The local component geometry below and Quick Detail resolver remain applicable; do not maintain a second breakpoint table here.
+This is the complete FE execution contract for dashboard layout and verification, aligned with the accepted shared design rules of 2026-10-26. Maintainers coordinate shared changes with Planning; workers use this local section without fetching policy pages. Feature exceptions require explicit acceptance. Landing remains outside this dashboard contract.
+
+### Viewport Groups And Reference Frames
+
+Đo bằng chiều rộng CSS viewport hiệu lực, kể cả khi browser zoom; không dùng loại thiết bị hoặc user agent. Hai breakpoint cấp layout là `768px` và `1440px`.
+
+| Nhóm | Chiều rộng CSS viewport | Frame đại diện | Bố cục mặc định |
+| --- | --- | --- | --- |
+| Mobile | Dưới `768px` | `390×844` | Một cột nội dung chính; sidebar mở bằng overlay; toolbar/search reflow theo chiều rộng. |
+| Compact | Từ `768px` đến dưới `1440px` | `1024×768` | Sidebar mặc định thu gọn; nội dung 1–2 cột theo khoảng trống thực tế. |
+| Wide | Từ `1440px` | `1520×1024` | Sidebar mặc định mở rộng; dùng bố cục desktop đã duyệt và content-width mode phù hợp. |
+
+Đây là defaults cho shell; giữ khả năng người dùng đóng/mở sidebar khi đủ chỗ và không tự ghi đè lựa chọn trên mỗi resize. Frame đại diện là reference thiết kế/kiểm tra, không phải kích thước cố định của runtime. Layout co giãn liên tục giữa các mốc; số cột và wrap của component phụ thuộc chiều rộng container khả dụng. Utility breakpoint cục bộ chỉ phục vụ reflow, không tạo thêm mode cấp ứng dụng hoặc thay resolver đã chốt.
+
+### Required Behavior
+
+- Giữ nội dung, thứ tự đọc và thao tác chính truy cập được ở mọi nhóm. Không thu nhỏ chữ/control chỉ để ép desktop vừa mobile; metadata thứ cấp có thể gộp/ẩn khi vẫn có đường truy cập cần thiết.
+- Không có horizontal overflow toàn trang. Table, chart, code hoặc media rộng chỉ scroll trong surface chủ đích; toolbar, form và pagination reflow trong container. Giữ các content-width modes và readable measure của từng surface.
+- Mobile/coarse pointer có đường click/tap cho hành trình chính; không phụ thuộc hover. Giữ keyboard, visible focus và touch targets theo mục Accessibility bên dưới.
+- Resize, zoom và đổi placement giữ draft/input, selected entity và reading context khi surface còn mở; không reset dữ liệu chỉ vì đổi nhóm viewport. Header/composer/actions không che nội dung hoặc focus; vùng cuộn chủ đích phải rõ.
+- Quick detail dùng geometry tại [Placement And Geometry](#placement-and-geometry): bottom sheet dưới `1440px`, side sheet từ `1440px`, giữ profile Event/Article và fullscreen portal exception. Không áp rule sidebar để tự thay placement drawer.
+- Loading/skeleton, empty, error và permission states phải reflow tương ứng với layout cuối.
+
+### Design And Verification Coverage
+
+- Feature mới hoặc layout đổi đáng kể dùng approved Wide/Mobile references của assignment; Compact cần reference khi cấu trúc khác đáng kể. Thay đổi nhỏ dùng shared responsive rules và kiểm tra vùng bị ảnh hưởng. Worker không tự tạo/duyệt design còn thiếu.
+- Khi implement/review thay đổi layout, kiểm tra surface bị ảnh hưởng tại ba frame đại diện và chiều rộng `360px`; kiểm điểm chuyển `767/768px` và `1439/1440px` khi hành vi tại mốc đó bị ảnh hưởng, cùng browser zoom `200%`. Giữ các kiểm tra desktop rộng/sidebar hiện có khi thay đổi shell/content width; không coi frame 1520px là giới hạn trên.
+- Bằng chứng bàn giao ghi viewport/zoom, state, sidebar mode đã kiểm, kết quả và giới hạn chưa kiểm. Không báo responsive đạt chỉ từ một screenshot desktop hoặc việc tồn tại responsive classes.
+- Handoff dùng rule execution tại đây và ngoại lệ feature đã được chấp nhận. Thiếu required mobile reference hoặc xung đột ảnh/design phải được nêu rõ trước khi chốt layout phụ thuộc.
 
 ## Accessibility And Responsive Behavior
 

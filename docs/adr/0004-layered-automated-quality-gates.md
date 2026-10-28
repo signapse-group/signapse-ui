@@ -14,7 +14,7 @@ Signapse will use GitHub Actions to make deterministic Vitest coverage and Chrom
 
 ## Consequences
 
-- The disposable release canary must never target development or production systems. A maintainer-authorized read-only smoke may use a configured public development backend and an explicitly supplied account; it must not mutate application data or send external messages.
+- The disposable release canary must never target development or production systems. A maintainer-authorized read-only smoke may use a configured public development backend and an explicitly supplied account; it must not mutate application data or send external messages. This read-only rule is scoped to that canary/smoke lane; it does not prohibit an explicitly assigned test-environment integration from changing synthetic test data. A valid test mutation is a data-test concern, not an implementation blocker, unless the assignment explicitly requires isolated/resettable state and that required capability is unavailable.
 - P0 is delivered within Signapse UI as a secret-free PR lane; P1 is a cross-system dependency for the disposable backend, Clerk tenant, and external canary.
 - P0 exposes a runnable browser-test command to agents and developers; `test:integration` now runs a password/session/public-backend smoke and fails closed when its private environment is missing. It does not replace the full disposable-environment permission and delivery canary.
 - Future work is split into a P0 UI/browser-test foundation task followed by a P1 authenticated-quality-canary task.

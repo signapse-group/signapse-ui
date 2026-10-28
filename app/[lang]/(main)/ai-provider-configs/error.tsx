@@ -13,7 +13,6 @@ import {
 } from "@/components/ui/empty"
 
 export default function Error({
-  error,
   reset,
 }: {
   error: Error & { digest?: string }
@@ -24,6 +23,7 @@ export default function Error({
 
   return (
     <div className="flex h-[400px] w-full items-center justify-center">
+      <h1 className="sr-only">{t.errorTitle}</h1>
       <Empty>
         <EmptyHeader>
           <EmptyMedia
@@ -33,9 +33,7 @@ export default function Error({
             <AlertCircle />
           </EmptyMedia>
           <EmptyTitle>{t.errorTitle}</EmptyTitle>
-          <EmptyDescription>
-            {error.message || t.errorDescription}
-          </EmptyDescription>
+          <EmptyDescription>{t.errorDescription}</EmptyDescription>
         </EmptyHeader>
         <div className="mt-4 flex justify-center">
           <Button onClick={() => reset()} variant="outline">
