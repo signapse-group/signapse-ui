@@ -388,9 +388,11 @@ describe("AI connection UI", () => {
       en
     )
 
-    expect(
-      screen.getByRole("button", { name: "Remove API key 1" })
-    ).toBeDisabled()
+    const removeLastKey = screen.getByRole("button", {
+      name: "Remove API key 1",
+    })
+    expect(removeLastKey).toBeDisabled()
+    expect(removeLastKey).toHaveClass("bg-secondary")
     expect(
       screen.getByRole("button", {
         name: en.aiProviderConfigs.deleteConnection,
@@ -428,8 +430,22 @@ describe("AI connection UI", () => {
       en
     )
 
-    await user.click(screen.getByRole("button", { name: "Remove API key 1" }))
+    const removeKeyButton = screen.getByRole("button", {
+      name: "Remove API key 1",
+    })
+    expect(removeKeyButton).toHaveClass("bg-destructive/10")
+    await user.click(removeKeyButton)
     const keyDialog = screen.getByRole("alertdialog")
+    expect(keyDialog).toHaveAttribute("data-size", "sm")
+    expect(
+      keyDialog.querySelector('[data-slot="alert-dialog-media"]')
+    ).toHaveClass("bg-destructive/10", "text-destructive")
+    expect(
+      within(keyDialog).getByRole("button", { name: en.common.cancel })
+    ).toHaveClass("border-border")
+    expect(
+      within(keyDialog).getByRole("button", { name: en.common.delete })
+    ).toHaveClass("bg-destructive/10")
     expect(within(keyDialog).getByText(/gsk-\.\.\.legacy/)).toBeVisible()
     await user.click(
       within(keyDialog).getByRole("button", { name: en.common.delete })
@@ -439,12 +455,26 @@ describe("AI connection UI", () => {
     )
     expect(screen.queryByText("gsk-...legacy")).not.toBeInTheDocument()
 
-    await user.click(
-      screen.getByRole("button", {
-        name: en.aiProviderConfigs.deleteConnection,
-      })
-    )
+    const deleteConnectionButton = screen.getByRole("button", {
+      name: en.aiProviderConfigs.deleteConnection,
+    })
+    expect(deleteConnectionButton).toHaveClass("bg-destructive/10")
+    await user.click(deleteConnectionButton)
     const connectionDialog = screen.getByRole("alertdialog")
+    expect(connectionDialog).toHaveAttribute("data-size", "sm")
+    expect(
+      connectionDialog.querySelector('[data-slot="alert-dialog-media"]')
+    ).toHaveClass("bg-destructive/10", "text-destructive")
+    expect(
+      within(connectionDialog).getByRole("button", {
+        name: en.common.cancel,
+      })
+    ).toHaveClass("border-border")
+    expect(
+      within(connectionDialog).getByRole("button", {
+        name: en.common.delete,
+      })
+    ).toHaveClass("bg-destructive/10")
     expect(
       within(connectionDialog).getByRole("heading", {
         name: "Delete Groq connection #12?",

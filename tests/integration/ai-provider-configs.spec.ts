@@ -171,12 +171,41 @@ test("AI connection list and detail reach the producer and render through FE SSR
         page.getByText(detail.data.credentials[0].keyPreview, { exact: true })
       ).toBeVisible()
     }
+    const expectedTaskCounts = new Map<string, number>()
+    const expectedModelCounts = new Map<string, number>()
     for (const reference of detail.data.taskReferences) {
-      if (reference.model) {
-        await expect(
-          page.getByText(reference.model, { exact: true })
-        ).toBeVisible()
+      if (reference.task) {
+        const taskName = vi.aiTaskConfigurations.taskNames[reference.task]
+        expectedTaskCounts.set(
+          taskName,
+          (expectedTaskCounts.get(taskName) ?? 0) + 1
+        )
       }
+      if (reference.model) {
+        expectedModelCounts.set(
+          reference.model,
+          (expectedModelCounts.get(reference.model) ?? 0) + 1
+        )
+      }
+    }
+
+    const referenceSection = page.locator("section").filter({
+      has: page.getByRole("heading", {
+        name: vi.aiProviderConfigs.usedByTitle.replace(
+          "{count}",
+          formatNumber(detail.data.taskReferences.length, DEFAULT_APP_LOCALE)
+        ),
+      }),
+    })
+    for (const [taskName, count] of expectedTaskCounts) {
+      await expect(
+        referenceSection.getByText(taskName, { exact: true })
+      ).toHaveCount(count)
+    }
+    for (const [model, count] of expectedModelCounts) {
+      await expect(
+        referenceSection.getByText(model, { exact: true })
+      ).toHaveCount(count)
     }
   } else {
     await expect(
@@ -197,9 +226,10 @@ test("read-only actor can load detail and is denied update permission", async ({
   }
 
   const profileResponse = await request.get(`${backendUrl}/me`, { headers })
-  expect(profileResponse.status(), "The integration actor must be authenticated").toBe(
-    200
-  )
+  expect(
+    profileResponse.status(),
+    "The integration actor must be authenticated"
+  ).toBe(200)
   const profile: unknown = await profileResponse.json()
   const permissions =
     typeof profile === "object" &&

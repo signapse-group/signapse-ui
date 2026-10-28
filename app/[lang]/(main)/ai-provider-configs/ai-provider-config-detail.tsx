@@ -38,6 +38,7 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
+  AlertDialogMedia,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field"
@@ -407,10 +408,7 @@ function AiProviderConfigDetailContent({
               const isLastCredential = credentials.length === 1
 
               return (
-                <li
-                  key={credential.id}
-                  className="min-w-0"
-                >
+                <li key={credential.id} className="min-w-0">
                   <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
                     <span className="min-w-0 truncate font-mono text-sm">
                       {credential.keyPreview}
@@ -418,7 +416,7 @@ function AiProviderConfigDetailContent({
                     {canDelete ? (
                       <Button
                         type="button"
-                        variant="outline"
+                        variant={isLastCredential ? "secondary" : "destructive"}
                         onClick={() => {
                           setDeleteError("")
                           setPendingDelete({ kind: "credential", credential })
@@ -502,10 +500,7 @@ function AiProviderConfigDetailContent({
         )}
 
         {canAddKey ? (
-          <form
-            className="mt-6 flex flex-col gap-3"
-            onSubmit={addKey}
-          >
+          <form className="mt-6 flex flex-col gap-3" onSubmit={addKey}>
             <Field className="flex-1">
               <FieldLabel htmlFor="ai-provider-new-key">{t.newKey}</FieldLabel>
               <Input
@@ -606,8 +601,11 @@ function AiProviderConfigDetailContent({
           }
         }}
       >
-        <AlertDialogContent>
+        <AlertDialogContent size="sm">
           <AlertDialogHeader>
+            <AlertDialogMedia className="bg-destructive/10 text-destructive">
+              <Trash2 />
+            </AlertDialogMedia>
             <AlertDialogTitle>
               {pendingDelete?.kind === "credential"
                 ? t.deleteKeyTitle
@@ -630,7 +628,10 @@ function AiProviderConfigDetailContent({
             </p>
           ) : null}
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={pendingOperation === "delete"}>
+            <AlertDialogCancel
+              variant="outline"
+              disabled={pendingOperation === "delete"}
+            >
               {dictionary.common.cancel}
             </AlertDialogCancel>
             <AlertDialogAction
