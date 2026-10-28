@@ -44,6 +44,7 @@ const prompt = {
   name: "Telegram · Assessment",
   content: "Assess {locale} at {asOfTime}.",
   requiredVariables: [],
+  lastModifiedDate: "2026-10-18T13:21:00.000Z",
 }
 
 describe("system prompt actions", () => {
@@ -60,6 +61,17 @@ describe("system prompt actions", () => {
     await expect(getSystemPrompts()).resolves.toEqual([prompt])
     expect(fetchAuthenticated).toHaveBeenCalledWith(
       "/system-prompts?page=0&size=100"
+    )
+  })
+
+  it("rejects producer catalog rows without audit timestamps", async () => {
+    vi.mocked(getCurrentPermissions).mockResolvedValue(["system-prompt:read"])
+    vi.mocked(fetchAuthenticated).mockResolvedValue({
+      content: [{ ...prompt, lastModifiedDate: undefined }],
+    })
+
+    await expect(getSystemPrompts()).rejects.toThrow(
+      testDictionary.systemPrompts.responseInvalid
     )
   })
 
@@ -128,6 +140,7 @@ describe("system prompt actions", () => {
       data: {
         ...prompt,
         content: "Reworded {locale} at {asOfTime}.",
+        lastModifiedDate: "2026-10-18T13:21:00.000Z",
       },
     })
     expect(fetchAuthenticated).toHaveBeenCalledWith(

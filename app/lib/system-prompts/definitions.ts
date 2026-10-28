@@ -27,6 +27,7 @@ const promptContentFields = {
   name: z.string(),
   content: z.string().max(SYSTEM_PROMPT_MAX_CONTENT_LENGTH),
   requiredVariables: z.array(z.string()),
+  lastModifiedDate: z.string().datetime({ offset: true }).nullable(),
 }
 
 export const SystemPromptContentResponseSchema = z.object({

@@ -364,6 +364,7 @@ function systemPromptRecords() {
               .join(" ")}`
           : `Fixture content for ${promptType}.`,
       requiredVariables: variables,
+      lastModifiedDate: "2026-10-18T13:21:00.000Z",
     }
   })
 }
@@ -1919,6 +1920,7 @@ function responseForRoute(state, method, pathname, url, body) {
         }
       }
       prompt.content = body.content
+      prompt.lastModifiedDate = "2026-10-28T03:45:00.000Z"
       return { ...prompt }
     }
   }

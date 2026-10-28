@@ -33,22 +33,31 @@ vi.mock("@/components/permission-provider", () => ({
 }))
 
 import { LocalizationProvider } from "@/app/lib/i18n/provider"
+import { en as enDictionary } from "@/app/lib/i18n/dictionaries/en"
 import { vi as viDictionary } from "@/app/lib/i18n/dictionaries/vi"
+import { SYSTEM_PROMPT_CONTENT_TYPES } from "@/app/lib/system-prompts/definitions"
 import { SystemPromptList } from "@/app/[lang]/(main)/system-prompts/system-prompt-list"
 
-const prompts = Array.from({ length: 13 }, (_, index) => ({
-  promptType:
-    index < 3
-      ? `TELEGRAM_MARKET_ANALYSIS_STAGE_${index + 1}`
-      : `PRODUCER_PROMPT_${index + 1}`,
-  name: index < 3 ? `Telegram stage ${index + 1}` : `Purpose ${index + 1}`,
+const telegramTypes = SYSTEM_PROMPT_CONTENT_TYPES.filter((promptType) =>
+  promptType.startsWith("TELEGRAM_")
+)
+const updatedAt = "2026-10-18T13:21:00.000Z"
+const prompts = SYSTEM_PROMPT_CONTENT_TYPES.map((promptType, index) => ({
+  promptType,
+  name: promptType.startsWith("TELEGRAM_")
+    ? `Telegram stage ${telegramTypes.indexOf(promptType) + 1}`
+    : `Purpose ${index + 1}`,
   content: `Content ${index + 1}`,
   requiredVariables: [],
+  lastModifiedDate: index === 1 ? null : updatedAt,
 }))
 
-function renderList() {
+function renderList(locale: "en" | "vi" = "vi") {
   return render(
-    <LocalizationProvider locale="vi" dictionary={viDictionary}>
+    <LocalizationProvider
+      locale={locale}
+      dictionary={locale === "en" ? enDictionary : viDictionary}
+    >
       <SystemPromptList prompts={prompts} />
     </LocalizationProvider>
   )
@@ -82,7 +91,7 @@ describe("system prompt list", () => {
   it("searches producer purpose and type locally without changing the count", () => {
     renderList()
     fireEvent.change(screen.getByRole("searchbox"), {
-      target: { value: "telegram_market_analysis_stage_2" },
+      target: { value: "telegram_market_analysis_scalping" },
     })
 
     expect(screen.getByRole("status")).toHaveTextContent("13 prompt")
@@ -94,7 +103,7 @@ describe("system prompt list", () => {
   it("stores search in the URL and restores it from the current query", async () => {
     renderList()
     const search = screen.getByRole("searchbox")
-    const query = "telegram_market_analysis_stage_2"
+    const query = "telegram_market_analysis_scalping"
 
     fireEvent.change(search, { target: { value: query } })
 
@@ -121,7 +130,7 @@ describe("system prompt list", () => {
 
     expect(screen.getByRole("link", { name: "Purpose 4" })).toHaveAttribute(
       "href",
-      "/system-prompts/PRODUCER_PROMPT_4"
+      "/system-prompts/EVENT_ASSET_THEME_ENRICHMENT"
     )
     expect(
       screen.queryByRole("link", { name: "Chỉnh sửa nội dung" })
@@ -130,4 +139,35 @@ describe("system prompt list", () => {
       screen.queryByRole("button", { name: "Chỉnh sửa nội dung" })
     ).not.toBeInTheDocument()
   })
+
+  it.each([
+    ["en", "en-US"],
+    ["vi", "vi-VN"],
+  ] as const)(
+    "formats producer audit times for %s and shows no-data only for null",
+    (locale, intlLocale) => {
+      renderList(locale)
+
+      const expectedDate = new Intl.DateTimeFormat(intlLocale, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        timeZone: "UTC",
+      }).format(new Date(updatedAt))
+
+      const formattedTimes = screen.getAllByText(expectedDate)
+      expect(formattedTimes).toHaveLength(12)
+      expect(formattedTimes[0].closest("time")).toHaveAttribute(
+        "datetime",
+        updatedAt
+      )
+      expect(screen.getByText("—")).toHaveAttribute(
+        "aria-label",
+        (locale === "en" ? enDictionary : viDictionary).systemPrompts
+          .updatedUnavailable
+      )
+    }
+  )
 })

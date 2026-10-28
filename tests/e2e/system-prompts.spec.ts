@@ -1,3 +1,4 @@
+import AxeBuilder from "@axe-core/playwright"
 import { expect, test } from "./fixtures"
 import { en } from "../../app/lib/i18n/dictionaries/en"
 import { vi } from "../../app/lib/i18n/dictionaries/vi"
@@ -20,6 +21,10 @@ test.describe("P0 system prompt catalog and content hotfix", () => {
     await expect(
       page.getByRole("row").filter({ hasText: "Telegram" })
     ).toHaveCount(3)
+    const listAccessibility = await new AxeBuilder({ page })
+      .include("main")
+      .analyze()
+    expect(listAccessibility.violations).toEqual([])
 
     await testInfo.attach("system-prompt-list-1520x1340", {
       body: await page.screenshot(),
@@ -281,6 +286,10 @@ test.describe("P0 system prompt catalog and content hotfix", () => {
         page.getByText(`{${variable}}`, { exact: true })
       ).toBeVisible()
     }
+    const editorAccessibility = await new AxeBuilder({ page })
+      .include("main")
+      .analyze()
+    expect(editorAccessibility.violations).toEqual([])
 
     await testInfo.attach("system-prompt-editor-1520x1600", {
       body: await page.screenshot(),
@@ -340,6 +349,22 @@ test.describe("P0 system prompt catalog and content hotfix", () => {
       timeout: 10_000,
     })
     await expect(page).toHaveURL(/\/en\/system-prompts$/)
+    const updatedAt = "2026-10-28T03:45:00.000Z"
+    const expectedUpdatedAt = await page.evaluate(
+      (date) =>
+        new Intl.DateTimeFormat("en-US", {
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+          hour: "numeric",
+          minute: "2-digit",
+          timeZone: "UTC",
+        }).format(new Date(date)),
+      updatedAt
+    )
+    await expect(page.locator(`time[datetime="${updatedAt}"]`)).toHaveText(
+      expectedUpdatedAt
+    )
 
     const state = await fixture.state()
     const updateRequest = state.requests.find(

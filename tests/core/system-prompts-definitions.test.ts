@@ -32,6 +32,7 @@ describe("system prompt contracts", () => {
       name: "AI assistant · Question understanding",
       content: "Use {locale} and {rawQuestion}.",
       requiredVariables: ["locale", "rawQuestion"],
+      lastModifiedDate: "2026-10-18T13:21:00.000Z",
     }
 
     expect(systemPromptContentResponseSchema.parse(prompt)).toEqual(prompt)
@@ -42,11 +43,29 @@ describe("system prompt contracts", () => {
       }).success
     ).toBe(false)
     expect(
+      systemPromptContentResponseSchema.safeParse({
+        ...prompt,
+        lastModifiedDate: undefined,
+      }).success
+    ).toBe(false)
+    expect(
       systemPromptContentResponseSchema.parse({
         ...prompt,
         requiredVariables: [],
       }).requiredVariables
     ).toEqual([])
+    expect(
+      systemPromptContentResponseSchema.parse({
+        ...prompt,
+        lastModifiedDate: null,
+      }).lastModifiedDate
+    ).toBeNull()
+    expect(
+      systemPromptContentResponseSchema.safeParse({
+        ...prompt,
+        lastModifiedDate: "not-a-date",
+      }).success
+    ).toBe(false)
   })
 
   it.each([

@@ -2629,7 +2629,7 @@ export const en: Dictionary = {
     noResultsTitle: "No matching prompts",
     noResultsDescription: "Try another purpose or prompt type.",
     editContent: "Edit content",
-    updatedUnavailable: "Update time is not provided by the producer.",
+    updatedUnavailable: "No update time is recorded.",
     listWarningTitle: "Temporary prompt hotfixes",
     listWarningDescription:
       "Changes apply to new runs. Restarting the backend or deploying restores the official seed. Include lasting fixes in the next release.",

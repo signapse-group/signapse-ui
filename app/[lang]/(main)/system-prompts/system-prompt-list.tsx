@@ -1,6 +1,6 @@
 "use client"
 
-import { Pencil } from "lucide-react"
+import { Clock, Pencil } from "lucide-react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useDebouncedCallback } from "use-debounce"
 import { useEffect, useRef, useState, useTransition } from "react"
@@ -9,6 +9,7 @@ import type { SystemPromptContentResponse } from "@/app/lib/system-prompts/defin
 import { getSystemPromptWorkflowGroup } from "@/app/lib/system-prompts/definitions"
 import { useLocalization } from "@/app/lib/i18n/provider"
 import { SYSTEM_PROMPT_UPDATE_PERMISSIONS } from "@/app/lib/system-prompts/permissions"
+import { AppTimeMetadata } from "@/components/app-time-metadata"
 import {
   AppListTable,
   AppListTableEmptyState,
@@ -40,6 +41,14 @@ interface SystemPromptListProps {
 }
 
 const SEARCH_PARAM_KEY = "search"
+const UPDATED_DATE_OPTIONS: Intl.DateTimeFormatOptions = {
+  year: "numeric",
+  month: "short",
+  day: "numeric",
+  hour: "numeric",
+  minute: "2-digit",
+  timeZone: "UTC",
+}
 
 function getPromptHref(promptType: string) {
   return `/system-prompts/${encodeURIComponent(promptType)}`
@@ -54,7 +63,8 @@ export function SystemPromptList({ prompts }: SystemPromptListProps) {
   const previousSearch = useRef(currentSearch)
   const [isPending, startTransition] = useTransition()
   const canUpdate = useHasAnyPermission(SYSTEM_PROMPT_UPDATE_PERMISSIONS)
-  const { dictionary, formatMessage, formatNumber, locale } = useLocalization()
+  const { dictionary, formatDateTime, formatMessage, formatNumber, locale } =
+    useLocalization()
   const t = dictionary.systemPrompts
   const updateSearch = useDebouncedCallback((term: string) => {
     const trimmedTerm = term.trim()
@@ -157,12 +167,27 @@ export function SystemPromptList({ prompts }: SystemPromptListProps) {
                     )}
                   </TableCell>
                   <TableCell className="py-3">
-                    <span
-                      title={t.updatedUnavailable}
-                      aria-label={t.updatedUnavailable}
-                    >
-                      —
-                    </span>
+                    {prompt.lastModifiedDate ? (
+                      <time dateTime={prompt.lastModifiedDate}>
+                        <AppTimeMetadata
+                          className="whitespace-nowrap"
+                          icon={Clock}
+                        >
+                          {formatDateTime(
+                            prompt.lastModifiedDate,
+                            UPDATED_DATE_OPTIONS
+                          )}
+                        </AppTimeMetadata>
+                      </time>
+                    ) : (
+                      <span
+                        className="text-xs text-muted-foreground tabular-nums"
+                        title={t.updatedUnavailable}
+                        aria-label={t.updatedUnavailable}
+                      >
+                        —
+                      </span>
+                    )}
                   </TableCell>
                   <TableCell className="py-3 text-right">
                     {canUpdate ? (

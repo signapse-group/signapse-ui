@@ -2613,7 +2613,7 @@ export const vi = {
     noResultsTitle: "Không tìm thấy prompt phù hợp",
     noResultsDescription: "Thử tìm bằng mục đích hoặc loại prompt khác.",
     editContent: "Chỉnh sửa nội dung",
-    updatedUnavailable: "Producer không cung cấp thời điểm cập nhật.",
+    updatedUnavailable: "Chưa ghi nhận thời điểm cập nhật.",
     listWarningTitle: "Prompt hotfix tạm thời",
     listWarningDescription:
       "Thay đổi chỉ áp dụng cho các lượt mới. Khởi động lại backend hoặc triển khai phiên bản mới sẽ khôi phục seed chính thức. Hãy đưa thay đổi lâu dài vào bản phát hành tiếp theo.",
