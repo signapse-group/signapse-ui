@@ -193,10 +193,7 @@ export function AiProviderConfigListPage({
         </div>
       </AppListTable>
 
-      <AppPaginationControls
-        page={providerPage}
-        className="mt-4"
-      />
+      <AppPaginationControls page={providerPage} className="mt-4" />
 
       {providers.length > 0 ? (
         <section className="mt-6 rounded-xl border bg-muted/20 px-4 py-3">

@@ -20,7 +20,7 @@ export const supportedProviderOptions = providerOptions.filter((provider) =>
 )
 
 export function getProviderOptionLabel(
-  providerType: AiProviderType,
+  providerType: AiProviderType | undefined,
   dictionary: Dictionary
 ) {
   return (
