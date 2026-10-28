@@ -2642,7 +2642,7 @@ export const vi = {
     cancel: "Hủy",
     discardTitle: "Bỏ các thay đổi chưa lưu?",
     discardDescription:
-      "Nội dung prompt đã chỉnh sửa sẽ bị mất nếu bạn rời khỏi trang này.",
+      "Nội dung prompt đã chỉnh sửa sẽ bị xóa nếu bạn chọn bỏ thay đổi.",
     discardChanges: "Bỏ thay đổi",
     keepEditing: "Tiếp tục chỉnh sửa",
     updateSuccess:

@@ -32,6 +32,7 @@ import { en as enDictionary } from "@/app/lib/i18n/dictionaries/en"
 import { vi as viDictionary } from "@/app/lib/i18n/dictionaries/vi"
 import type { Dictionary } from "@/app/lib/i18n/dictionary-types"
 import { SystemPromptForm } from "@/app/[lang]/(main)/system-prompts/system-prompt-form"
+import { SystemPromptDraftProvider } from "@/app/[lang]/(main)/system-prompts/system-prompt-draft-provider"
 import { toast } from "sonner"
 
 const initialData = {
@@ -63,7 +64,9 @@ function renderForm(
 ) {
   return render(
     <LocalizationProvider locale={locale} dictionary={dictionary}>
-      <SystemPromptForm initialData={prompt} readOnly={readOnly} />
+      <SystemPromptDraftProvider>
+        <SystemPromptForm initialData={prompt} readOnly={readOnly} />
+      </SystemPromptDraftProvider>
     </LocalizationProvider>
   )
 }

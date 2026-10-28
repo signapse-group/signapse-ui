@@ -375,6 +375,62 @@ test.describe("P0 system prompt catalog and content hotfix", () => {
     expect(updateRequest?.bodyKeys).toEqual(["content"])
   })
 
+  test("preserves a draft across shell and browser history navigation", async ({
+    fixture,
+    page,
+  }) => {
+    await fixture.setPermissions(["*"])
+    await page.goto("/en/system-prompts/MARKET_QUESTION_UNDERSTANDING")
+
+    const content = page.getByRole("textbox", {
+      name: new RegExp(`^${en.systemPrompts.content}`),
+    })
+    const originalContent = await content.inputValue()
+    const draft = `${originalContent}\n\nRetained local draft.`
+    await content.fill(draft)
+
+    await page
+      .getByRole("link", {
+        name: en.navigation.systemPrompts,
+        exact: true,
+      })
+      .first()
+      .click()
+    await expect(page).toHaveURL(/\/en\/system-prompts$/)
+
+    await page.goBack()
+    await expect(content).toHaveValue(draft)
+    await page.goForward()
+    await expect(page).toHaveURL(/\/en\/system-prompts$/)
+    await page.goBack()
+    await expect(content).toHaveValue(draft)
+
+    const backToList = page.getByRole("button", {
+      name: en.systemPrompts.backToList,
+    })
+    await backToList.click()
+    await expect(page.getByRole("alertdialog")).toBeVisible()
+    await page
+      .getByRole("button", { name: en.systemPrompts.keepEditing })
+      .click()
+    await expect(backToList).toBeFocused()
+    await expect(content).toHaveValue(draft)
+
+    await backToList.click()
+    await page
+      .getByRole("button", { name: en.systemPrompts.discardChanges })
+      .click()
+    await expect(page).toHaveURL(/\/en\/system-prompts$/)
+
+    await page
+      .getByRole("link", {
+        name: "AI assistant · Question understanding",
+        exact: true,
+      })
+      .click()
+    await expect(content).toHaveValue(originalContent)
+  })
+
   test("shows the catalog and content to Vietnamese read-only users", async ({
     fixture,
     page,

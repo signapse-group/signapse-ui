@@ -2658,7 +2658,7 @@ export const en: Dictionary = {
     cancel: "Cancel",
     discardTitle: "Discard unsaved changes?",
     discardDescription:
-      "Your prompt edits will be lost if you leave this page.",
+      "Your prompt edits will be removed if you choose to discard them.",
     discardChanges: "Discard changes",
     keepEditing: "Keep editing",
     updateSuccess:

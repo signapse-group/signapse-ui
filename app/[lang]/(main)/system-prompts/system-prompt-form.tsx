@@ -20,6 +20,7 @@ import {
 } from "@/components/app-form-shell"
 import { useLocalizedPath } from "@/components/localized-link"
 import { SystemPromptLifecycleWarning } from "./system-prompt-lifecycle-warning"
+import { useSystemPromptDrafts } from "./system-prompt-draft-provider"
 import { Button } from "@/components/ui/button"
 import {
   AlertDialog,
@@ -52,8 +53,12 @@ export function SystemPromptForm({
   const router = useRouter()
   const promptsPath = useLocalizedPath("/system-prompts")
   const { dictionary, formatNumber, formatMessage } = useLocalization()
+  const { drafts, setDraft, clearDraft } = useSystemPromptDrafts()
   const t = dictionary.systemPrompts
-  const [content, setContent] = useState(initialData.content)
+  const promptType = initialData.promptType
+  const [content, setContent] = useState(
+    () => (readOnly ? undefined : drafts[promptType]) ?? initialData.content
+  )
   const [error, setError] = useState("")
   const [discardOpen, setDiscardOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
@@ -71,6 +76,11 @@ export function SystemPromptForm({
       return
     }
 
+    router.push(promptsPath)
+  }
+
+  function discardDraft() {
+    clearDraft(promptType)
     router.push(promptsPath)
   }
 
@@ -114,6 +124,7 @@ export function SystemPromptForm({
         return
       }
 
+      clearDraft(promptType)
       toast.success(t.updateSuccess)
       router.push(promptsPath)
     })
@@ -196,7 +207,13 @@ export function SystemPromptForm({
                     maxLength={SYSTEM_PROMPT_MAX_CONTENT_LENGTH + 1}
                     value={content}
                     onChange={(event) => {
-                      setContent(event.target.value)
+                      const nextContent = event.target.value
+                      setContent(nextContent)
+                      if (nextContent === initialData.content) {
+                        clearDraft(promptType)
+                      } else {
+                        setDraft(promptType, nextContent)
+                      }
                       if (error) setError("")
                     }}
                     aria-invalid={readOnly ? undefined : Boolean(error)}
@@ -292,10 +309,7 @@ export function SystemPromptForm({
             <AlertDialogCancel variant="outline">
               {t.keepEditing}
             </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => router.push(promptsPath)}
-              variant="destructive"
-            >
+            <AlertDialogAction onClick={discardDraft} variant="destructive">
               {t.discardChanges}
             </AlertDialogAction>
           </AlertDialogFooter>

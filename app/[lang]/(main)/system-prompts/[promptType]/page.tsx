@@ -64,6 +64,7 @@ export default async function EditSystemPromptPage({
 
   return (
     <SystemPromptForm
+      key={prompt.promptType}
       initialData={prompt}
       readOnly={!canUpdateSystemPrompts(permissions)}
     />
