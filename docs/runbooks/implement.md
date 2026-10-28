@@ -10,7 +10,7 @@ The profile is a native Jira `SIGN` dev Subtask, parent Story/Task/Bug, exactly 
 
 Progress permits scoped edits/checks, commits/push/PR, CI follow-up, owned conditional handoff/blocker records and Progress → In Review/Blocked under the gates below. Independent review, merge, Production delivery and Done belong to the fresh In Review session. Implement does not call a reviewer as an In Review admission gate.
 
-The coordinator retains scope/priority, new tickets, Open → Ready, Blocked resume, parent/QA/Bug lifecycle and acceptance. Business/design/API decisions remain with their owners; infra/secrets/DNS/indexing changes, rollback and unassigned shared live feature operations are outside this grant.
+The coordinator retains scope/priority, new tickets, Open → Ready, Blocked resume, parent/QA/Bug lifecycle and acceptance. Business/design/API decisions remain with their owners; infra/secrets/DNS/indexing changes, rollback and live feature testing are outside this grant. Apply [test ownership and selection](../../CONTRIBUTING.md#test-ownership-and-selection) for contribution checks and QA/coordinator handoff.
 
 ## Receive existing work
 

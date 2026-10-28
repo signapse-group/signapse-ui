@@ -21,7 +21,7 @@ For API integration, apply [API consumer standards](../../../docs/api-consumer.m
 
 Choose the highest stable public seam reaching the changed behavior; use testing or diagnosis techniques when needed. Keep slices small, run focused checks and fix failures caused by the change.
 
-Apply [verification standards](../../../CONTRIBUTING.md#verification) and the [runner scope/evidence guide](../../../docs/testing/browser-tests.md#runner-scopes-and-evidence). Preserve required public contract documentation and actual check evidence. Missing mandatory evidence remains a gap.
+Apply [verification standards](../../../CONTRIBUTING.md#verification), including [test ownership and selection](../../../CONTRIBUTING.md#test-ownership-and-selection), and the [change-scope matrix](../../../docs/testing/browser-tests.md#selecting-checks-by-change-scope). Preserve required public contract documentation and actual check evidence. Missing mandatory evidence remains a gap.
 
 ## Decisions and Resume
 

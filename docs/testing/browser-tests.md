@@ -2,6 +2,8 @@
 
 The P0 lane is a secret-free, fixture-backed Chromium check for the highest-risk Signapse UI workflows. It runs the real Next.js application in non-production mode and points `API_BASE_URL` at the local fixture HTTP service, so Server Components and server actions use the same request boundary as the application.
 
+Use [test ownership and selection](../../CONTRIBUTING.md#test-ownership-and-selection) for every FE phase. This file owns command/fixture mechanics, not additional gates. Live suite and host-activation details below are legacy references; FE does not run or extend live feature tests, and these scripts are not an accepted QA entrypoint.
+
 ## Commands
 
 ```text
@@ -11,7 +13,7 @@ pnpm test:contract      # offline fixture operation consistency; no live API con
 pnpm test:quality       # lightweight CI: lint, typecheck, Vitest, fixture guard, verifier unit tests
 pnpm test:full          # explicit full regression: quality, build, browser suite
 pnpm verify:deploy <sha> # confirm live dev revision and GitHub quality
-pnpm test:integration   # live OpenAPI preflight, password auth and dev backend; requires private credentials
+pnpm test:integration   # legacy live suite reference; outside FE contribution gates
 ```
 
 The Playwright config starts both local services and sets the P0-only process contract:
@@ -36,11 +38,11 @@ The `delayed` HTTP and feedback `pending` scenarios hold responses until the tes
 | Change                                                | Focused evidence                                                                  | Completion check                                                                                               |
 | ----------------------------------------------------- | --------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
 | Documentation only                                    | Check the edited content, links, and formatting.                                  | No application test lane is needed unless the documentation change affects a command or contract.              |
-| UI behavior or presentation                           | Run the focused Vitest/component test and the narrowest relevant P0 browser spec. | Lightweight CI and Vercel Preview build; review screenshot diffs before updating a baseline. |
-| API integration, schema, or server action             | Run affected action/schema tests and the fixture guard when routes change. | Lightweight CI and Preview; live integration only when the assignment names scope/inputs. |
-| Authentication, backend transport, or protected pages | Run affected auth/permission/action tests and relevant browser coverage. | Lightweight CI and Preview; fixtures do not prove live auth. Run assigned live checks with their inputs. |
+| UI behavior or presentation                           | Focused Vitest/component checks; select P0 browser cases only for behavior those checks cannot establish. Compare affected local render with design. | Lightweight CI and Vercel Preview build; reuse valid rendered evidence. No new screenshot-regression suite required per ticket. |
+| API integration, schema, or server action             | Affected action/schema tests and fixture guard when routes change; local HTTP/browser fixture checks only when runtime behavior needs them. | Lightweight CI and Preview; retain producer OpenAPI/publication checks. Live feature acceptance goes to QA/coordinator. |
+| Authentication, backend transport, or protected pages | Affected local auth/permission/action checks; select fixture browser cases only when needed for browser behavior. | Lightweight CI and Preview; fixtures do not prove live auth. Missing QA accounts/results alone do not block FE. |
 
-CI owns the full lightweight gate; local work runs affected checks without repeating all CI checks. Run `pnpm test:full` for explicitly requested full regression or when affected coverage cannot be narrowed. On Symphony, browser checks retain the host guide and wrapper/lock; verify the selected workspace tests are actually run after activation. Live checks require their assigned scope/inputs. Fixture P0 success does not prove real auth/backend access.
+CI owns the full lightweight gate; local work runs affected checks without repeating all CI checks. When selecting browser checks, record why they are needed and what they cover. Run `pnpm test:full` only under the shared selection rules. Select fixture browser cases with `pnpm test:browser <spec-path> --grep '<case-pattern>'`; these use Playwright selectors, not the legacy integration runner's `--scope`/`--case`. On Symphony, selected browser checks retain the host guide and wrapper/lock; verify the selected workspace tests are actually run. Fixture P0 success does not prove real auth/backend access.
 
 ## Scope and evidence
 
@@ -54,13 +56,17 @@ The suite covers the application shell/workspace, canonical list URL/search/pagi
 
 Explicit P0 browser runs retain traces, screenshots, videos, reports and logs under ignored `test-results/`; link required evidence from the run rather than claiming it was uploaded by CI. Verify uploads only the Vitest JUnit report for seven days. Live integration artifacts follow the stricter rules below.
 
-P0 does not prove real authentication. The live integration smoke below verifies password
-authentication and backend access. The broader disposable-environment permission matrix,
-cross-browser release coverage, and Telegram delivery canary remain separate work.
+P0 does not prove real authentication. QA/coordinator owns live feature coverage through
+the existing QA workflow. The legacy smoke below documents its limited capability;
+its presence does not establish approved QA coverage, migration or execution readiness.
 
 ## Runner scopes and evidence
 
-The contract and integration runner is version 2. Full execution is the default; use
+The offline/public OpenAPI contract guard remains available to FE under
+[API consumer standards](../api-consumer.md). The integration examples in this section
+are legacy reference syntax, not FE execution instructions.
+
+The contract and legacy integration runner is version 2. Full execution is the default; use
 `--full` to make that choice explicit. Select contract operations by the exact
 `METHOD /path` identity, comma-separated. Select browser cases by the exact
 `tests/integration/file:line#[project] title` identity printed by `--list`;
@@ -100,14 +106,18 @@ entrypoint from the workspace under test; it must not force the suite from the s
 runtime checkout. The coordinator performs this wrapper activation after merge. See
 [Coordinator activation and rollback](#coordinator-activation-and-rollback).
 
-Visual baseline changes are intentional test changes: run the update command narrowly, inspect the diff, and obtain reviewer approval. A feature or bug fix that changes an interactive state should add the narrowest effective test layer (unit, component, browser, or P1 integration) rather than broadening snapshots.
+Visual baseline changes are intentional test changes: run the update command narrowly, inspect the diff, and obtain reviewer approval. A feature or bug fix that changes an interactive state uses the narrowest effective local layer under the shared selection rules rather than broadening snapshots or adding FE live tests.
 
 ## Live password and backend integration
 
+**Legacy/reference only from 2026-10-28.** Retain the suite, safeguards and setup below;
+do not execute or extend it in FE Survey/Implement/Review. It has not been migrated to QA.
+The account-free public OpenAPI check documented below remains a consumer contract check.
+
 `playwright.integration.config.ts` runs a local Next.js server with Clerk auth enabled and the
 public HTTPS backend from `API_BASE_URL`. It uses a separate test directory and never loads
-the P0 fixture config. Run it only for an explicitly assigned live operation with its scope
-and inputs. It is a read-only development smoke, not the full release canary in ADR 0004; it
+the P0 fixture config. The historical setup required an explicitly assigned live operation
+with its scope and inputs. It is a read-only development smoke, not the full release canary in ADR 0004; it
 sends no Telegram message and changes no application data.
 
 After environment validation, the runner fetches `/v3/api-docs` from that backend
@@ -193,7 +203,12 @@ and [Clerk Playwright setup](https://clerk.com/docs/guides/development/testing/p
 
 ## Coordinator activation and rollback
 
-This host change belongs to the coordinator after the reviewed PR is merged. The
+**Historical live-runner activation reference.** This procedure is not required by the
+FE test-policy update and does not authorize live testing or QA adoption. Policy rollout
+uses [worker activation](../delivery.md#worker-activation), preserving the selected
+fixture browser wrapper/lock; it does not require changing this legacy live wrapper.
+
+This host change belonged to the coordinator after the reviewed PR was merged. The
 implementation agent updates only repository files. Use the runtime's existing
 checkout/activation procedure from `/opt/apps/symphony/runtime/README-fe-testing.md`;
 never edit the service checkout or wrapper as part of local handoff.

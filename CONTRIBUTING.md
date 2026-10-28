@@ -41,7 +41,7 @@ For API integration, contract-sensitive design/review or producer/consumer hando
 
 Use the repository's pnpm scripts (or equivalent slash commands when available); [README](README.md#local-development) lists local commands.
 
-Use the [change-scope matrix](docs/testing/browser-tests.md#selecting-checks-by-change-scope) and its versioned runner selectors. Run focused checks for affected behavior locally. CI owns the full lightweight `pnpm test:quality` gate; use `pnpm test:full` when explicitly requested or affected coverage cannot be narrowed.
+Use the [change-scope matrix](docs/testing/browser-tests.md#selecting-checks-by-change-scope) and applicable selectors under the ownership rules below. CI owns the full lightweight `pnpm test:quality` gate; local work runs focused checks without repeating all CI checks. Use `pnpm test:full` only for explicitly requested full fixture regression or when affected coverage cannot be narrowed; explain why broader coverage is needed.
 
 For documentation-only work, verify rule/exception preservation, links/anchors, formatting and encoding. Moving/deleting documents also requires checking current references and preserving reachable historical evidence. A `WORKFLOW.md` prompt change requires offline rendering with Symphony's actual parser/template engine: every supported phase, unsupported states, missing optional context and resume/attempt. For organization-only changes, compare YAML before/after and verify that each phase selects only its runbook. Skill changes require valid frontmatter/metadata and preserved invocation policies.
 
@@ -53,9 +53,21 @@ mix run --no-start /path/to/signapse-ui/scripts/check-symphony-workflow.exs /pat
 
 The check uses fixture credentials and the actual config, Jira normalization and strict Liquid implementation; it refuses a started application. Do not start polling, clone hooks or live tracker writes to validate the workflow.
 
-Approved design references, accessibility and local SSR checks remain required for affected UI. Inspect the reference before implementation and compare the affected rendered UI before handoff under scoped instructions and `docs/design/DESIGN.md`.
+### Test ownership and selection
 
-Run `pnpm test:integration` only when the assignment names a live operation, scope and required inputs. Protected-page changes or reuse of authenticated transport alone do not add live smoke. Report live results separately from fixture P0: local fixtures do not prove producer publication, real authorization, hosted behavior or external effects. A missing mandatory input/check remains a gap; pending owner/QA acceptance alone does not add a developer check.
+Effective 2026-10-28, these rules apply to direct FE work and every Survey, Implement and Review phase in `signapse-ui`. They do not change BE, MDG or landing verification policy.
+
+Run focused unit, component and action/schema tests at existing Vitest seams for changed behavior; select the layers needed rather than requiring every layer for every change. Choose local fixture browser automation only for behavior not adequately established by those checks, such as hydration, routing/SSR, focus/keyboard or browser-specific interactions. When selecting browser checks, record the reason, selected scope, results and limits. Full browser regression is not a default gate. Preserve security, trust-boundary validation, accessibility and fail-closed permissions.
+
+Approved design references and affected local SSR checks remain required. Inspect the approved reference before implementation and compare locally rendered UI for the affected region/state/viewport before handoff under scoped instructions and `docs/design/DESIGN.md`. Preserve screenshots tied to the candidate and design version/frame. Reviewers assess independently and reuse still-valid evidence; changed behavior/design invalidates affected evidence. Do not require a new screenshot-regression suite or baseline for every ticket.
+
+FE does not run or add live feature tests in any phase, including Review. QA owns live UI/API, login/auth, permission, persistence, integration and regression checks within approved scope. For a Task without dedicated QA, the coordinator verifies/accepts under the existing lifecycle; this policy does not create a QA ticket. Missing real accounts or pending QA live results alone do not block FE contribution completion. Handoff identifies the live coverage and receiving QA/coordinator without claiming it ran. FE Done confirms contribution/delivery, independently of feature/parent acceptance.
+
+Keep producer-published OpenAPI lookup and required publication/revision evidence under [API consumer standards](docs/api-consumer.md), lint/typecheck, required CI/build/Preview, independent review and deployed-revision verification under the delivery runbook. These are contract/delivery checks, not live feature tests. Necessary contract gaps, known defects and change-induced regressions remain blocking for the affected contribution; do not relabel them as pending QA.
+
+Existing live suite/runner code remains reference material: do not execute or extend it for FE contribution gates. Script availability does not establish a QA entrypoint. Migration/deletion/dependency removal and changes to QA instructions/harness are outside this policy update; only reconcile ticket coverage/handoff through the existing QA workflow when needed.
+
+New FE tickets use this boundary. Before applying it to unfinished tickets, reconcile their Verification and QA/coordinator coverage while preserving identity, status, history, output and earlier evidence. A conflicting live-test requirement goes to the coordinator for reconciliation; do not execute it or silently drop coverage. Do not self-resume/dispatch or reopen Done.
 
 On Symphony, required browser checks use the host testing guide and existing wrapper/lock. Verify that the wrapper runs the suite from the workspace under test. Application inputs use the operator-managed ignored `.env.local`; private accounts remain external. Never commit real `.env` files, passwords, Clerk secrets, JWTs, cookies or auth artifacts; keep them out of logs/evidence.
 
