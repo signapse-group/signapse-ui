@@ -56,6 +56,27 @@ export type AiProviderConfigCreateRequest = z.infer<
   typeof aiProviderConfigCreateRequestSchema
 >
 
+export const aiProviderConfigUpdateRequestSchema = z
+  .object({
+    description: z.string().optional(),
+    baseUrl: z.string().optional(),
+  })
+  .strict()
+
+export type AiProviderConfigUpdateRequest = z.infer<
+  typeof aiProviderConfigUpdateRequestSchema
+>
+
+export const aiProviderCredentialUpdateRequestSchema = z
+  .object({
+    apiKey: apiKeySchema.optional(),
+  })
+  .strict()
+
+export type AiProviderCredentialUpdateRequest = z.infer<
+  typeof aiProviderCredentialUpdateRequestSchema
+>
+
 export const aiProviderCredentialResponseSchema = z
   .object({
     id: z.number().int(),

@@ -5,15 +5,21 @@ import userEvent from "@testing-library/user-event"
 import { Suspense } from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-const { routerPush, routerRefresh, getCurrentPermissions } = vi.hoisted(() => ({
-  routerPush: vi.fn(),
-  routerRefresh: vi.fn(),
-  getCurrentPermissions: vi.fn(async () => ["ai-provider-config:read"]),
-}))
+const { routerPush, routerRefresh, routerReplace, getCurrentPermissions } =
+  vi.hoisted(() => ({
+    routerPush: vi.fn(),
+    routerRefresh: vi.fn(),
+    routerReplace: vi.fn(),
+    getCurrentPermissions: vi.fn(async () => ["ai-provider-config:read"]),
+  }))
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/vi/ai-provider-configs",
-  useRouter: () => ({ push: routerPush, refresh: routerRefresh }),
+  useRouter: () => ({
+    push: routerPush,
+    refresh: routerRefresh,
+    replace: routerReplace,
+  }),
   useSearchParams: () => new URLSearchParams("page=1&size=10"),
 }))
 
@@ -25,9 +31,14 @@ vi.mock("@/components/localized-link", () => ({
 }))
 
 vi.mock("@/app/api/ai-provider-configs/action", () => ({
+  createAiProviderCredential: vi.fn(),
   createAiProviderConfig: vi.fn(),
+  deleteAiProviderConfig: vi.fn(),
+  deleteAiProviderCredential: vi.fn(),
   getAiProviderConfigById: vi.fn(),
   getAiProviderConfigs: vi.fn(),
+  updateAiProviderConfig: vi.fn(),
+  updateAiProviderCredential: vi.fn(),
 }))
 
 vi.mock("@/app/lib/permissions-server", () => ({ getCurrentPermissions }))
@@ -36,9 +47,14 @@ vi.mock("@/app/lib/i18n/server", () => ({
 }))
 
 import {
+  createAiProviderCredential,
   createAiProviderConfig,
+  deleteAiProviderConfig,
+  deleteAiProviderCredential,
   getAiProviderConfigById,
   getAiProviderConfigs,
+  updateAiProviderConfig,
+  updateAiProviderCredential,
 } from "@/app/api/ai-provider-configs/action"
 import { en } from "@/app/lib/i18n/dictionaries/en"
 import { vi as viDictionary } from "@/app/lib/i18n/dictionaries/vi"
@@ -99,8 +115,14 @@ describe("AI connection UI", () => {
   beforeEach(() => {
     routerPush.mockReset()
     routerRefresh.mockReset()
+    routerReplace.mockReset()
+    vi.mocked(createAiProviderCredential).mockReset()
     vi.mocked(createAiProviderConfig).mockReset()
+    vi.mocked(deleteAiProviderConfig).mockReset()
+    vi.mocked(deleteAiProviderCredential).mockReset()
     vi.mocked(getAiProviderConfigById).mockReset()
+    vi.mocked(updateAiProviderConfig).mockReset()
+    vi.mocked(updateAiProviderCredential).mockReset()
     getCurrentPermissions
       .mockReset()
       .mockResolvedValue(["ai-provider-config:read"])
@@ -190,7 +212,7 @@ describe("AI connection UI", () => {
     expect(getAiProviderConfigs).not.toHaveBeenCalled()
   })
 
-  it("renders only actual detail references and keeps legacy task models out of the view", () => {
+  it("shows real task and model references to read-only actors without edit controls", () => {
     renderWithProviders(
       <AiProviderConfigDetail
         provider={{
@@ -203,14 +225,240 @@ describe("AI connection UI", () => {
       />
     )
 
-    expect(screen.getByText("2 tác vụ")).toBeVisible()
+    expect(screen.getByText(/2 tác vụ/)).toBeVisible()
     expect(screen.getByText("gsk-...legacy")).toBeVisible()
-    expect(screen.queryByText(/legacy-model/)).not.toBeInTheDocument()
-    expect(screen.queryByText("secret-model-choice")).not.toBeInTheDocument()
+    expect(screen.getByText("Suy luận phản ứng thị trường")).toBeVisible()
+    expect(screen.getByText("secret-model-choice")).toBeVisible()
+    expect(screen.getByText("another-legacy-model")).toBeVisible()
     expect(screen.queryByText("Nhà cung cấp mặc định")).not.toBeInTheDocument()
+    expect(screen.queryByLabelText("Endpoint")).not.toBeInTheDocument()
+    expect(screen.queryByLabelText("Mô tả")).not.toBeInTheDocument()
     expect(
-      screen.queryByRole("button", { name: /sửa|xóa/i })
+      screen.queryByRole("button", { name: /xóa|thêm|thay/i })
     ).not.toBeInTheDocument()
+  })
+
+  it("keeps endpoint and description drafts after a failed model validation and saves only editable fields", async () => {
+    const user = userEvent.setup()
+    const provider = {
+      ...legacyProvider,
+      baseUrl: "https://api.example.test/v1",
+      taskReferences: [],
+    }
+    vi.mocked(updateAiProviderConfig)
+      .mockResolvedValueOnce({
+        success: false,
+        error: "A referenced model is unavailable at this endpoint.",
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          ...provider,
+          baseUrl: "https://custom.example.test/v1",
+          description: "Updated connection",
+        },
+      })
+
+    renderWithProviders(
+      <AiProviderConfigDetail provider={provider} />,
+      ["ai-provider-config:read", "ai-provider-config:update"],
+      en
+    )
+
+    const endpoint = screen.getByLabelText(en.aiProviderConfigs.endpoint)
+    const description = screen.getByLabelText(en.aiProviderConfigs.description)
+    await user.clear(endpoint)
+    await user.type(endpoint, "https://custom.example.test/v1")
+    await user.clear(description)
+    await user.type(description, "Updated connection")
+
+    await user.click(
+      screen.getByRole("button", { name: en.aiProviderConfigs.saveConnection })
+    )
+    await vi.waitFor(() =>
+      expect(updateAiProviderConfig).toHaveBeenCalledTimes(1)
+    )
+    expect(endpoint).toHaveValue("https://custom.example.test/v1")
+    expect(description).toHaveValue("Updated connection")
+
+    await user.click(
+      screen.getByRole("button", { name: en.aiProviderConfigs.saveConnection })
+    )
+    await vi.waitFor(() =>
+      expect(updateAiProviderConfig).toHaveBeenCalledTimes(2)
+    )
+    expect(updateAiProviderConfig).toHaveBeenLastCalledWith(12, {
+      baseUrl: "https://custom.example.test/v1",
+      description: "Updated connection",
+    })
+  })
+
+  it("keeps API key input on failure, clears it after confirmation, and an empty replacement keeps the saved key", async () => {
+    const user = userEvent.setup()
+    const provider = {
+      ...legacyProvider,
+      taskReferences: [],
+    }
+    vi.mocked(updateAiProviderCredential)
+      .mockResolvedValueOnce({
+        success: false,
+        error: "Key cannot access model.",
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        data: { id: 101, keyPreview: "gsk-...replacement" },
+      })
+    vi.mocked(createAiProviderCredential)
+      .mockResolvedValueOnce({ success: false, error: "Catalog check failed." })
+      .mockResolvedValueOnce({
+        success: true,
+        data: { id: 102, keyPreview: "gsk-...added" },
+      })
+
+    renderWithProviders(
+      <AiProviderConfigDetail provider={provider} />,
+      [
+        "ai-provider-config:read",
+        "ai-provider-config:update",
+        "ai-provider-config:create",
+      ],
+      en
+    )
+
+    const replaceButton = screen.getByRole("button", {
+      name: en.aiProviderConfigs.replaceKey,
+    })
+    expect(replaceButton).toBeDisabled()
+    expect(screen.getByText("gsk-...legacy")).toBeVisible()
+
+    const replacementInput = screen.getByLabelText(
+      en.aiProviderConfigs.replacementKey
+    )
+    await user.type(replacementInput, "replacement-secret")
+    await user.click(replaceButton)
+    await vi.waitFor(() =>
+      expect(updateAiProviderCredential).toHaveBeenCalledTimes(1)
+    )
+    expect(replacementInput).toHaveValue("replacement-secret")
+
+    await user.click(replaceButton)
+    await vi.waitFor(() =>
+      expect(updateAiProviderCredential).toHaveBeenCalledTimes(2)
+    )
+    expect(replacementInput).toHaveValue("")
+    expect(screen.getByText("gsk-...replacement")).toBeVisible()
+
+    const newKeyInput = screen.getByLabelText(en.aiProviderConfigs.newKey)
+    const addButton = screen.getByRole("button", {
+      name: en.aiProviderConfigs.addKey,
+    })
+    expect(addButton).toBeDisabled()
+    await user.type(newKeyInput, "new-key-secret")
+    await user.click(addButton)
+    await vi.waitFor(() =>
+      expect(createAiProviderCredential).toHaveBeenCalledTimes(1)
+    )
+    expect(newKeyInput).toHaveValue("new-key-secret")
+
+    await user.click(addButton)
+    await vi.waitFor(() =>
+      expect(createAiProviderCredential).toHaveBeenCalledTimes(2)
+    )
+    expect(newKeyInput).toHaveValue("")
+    expect(screen.getByText("gsk-...added")).toBeVisible()
+    expect(updateAiProviderCredential).toHaveBeenCalledWith(12, 101, {
+      apiKey: "replacement-secret",
+    })
+    expect(createAiProviderCredential).toHaveBeenCalledWith(12, {
+      apiKey: "new-key-secret",
+    })
+  })
+
+  it("blocks removal of the last key and blocks deleting a referenced connection with actual task details", () => {
+    renderWithProviders(
+      <AiProviderConfigDetail
+        provider={{
+          ...legacyProvider,
+          taskReferences: [
+            { task: "MARKET_REACTION_ANALYSIS", model: "gpt-4.1" },
+          ],
+        }}
+      />,
+      ["ai-provider-config:read", "ai-provider-config:delete"],
+      en
+    )
+
+    expect(
+      screen.getByRole("button", { name: "Remove API key 1" })
+    ).toBeDisabled()
+    expect(
+      screen.getByRole("button", {
+        name: en.aiProviderConfigs.deleteConnection,
+      })
+    ).toBeDisabled()
+    expect(screen.getByText("Market reaction derivation")).toBeVisible()
+    expect(screen.getByText("gpt-4.1")).toBeVisible()
+    expect(
+      screen.getByText(en.aiProviderConfigs.deleteConnectionBlocked)
+    ).toBeVisible()
+  })
+
+  it("requires confirmation to remove a non-final key and to delete an unreferenced connection", async () => {
+    const user = userEvent.setup()
+    const provider = {
+      ...legacyProvider,
+      credentials: [
+        { id: 101, keyPreview: "gsk-...legacy" },
+        { id: 102, keyPreview: "gsk-...second" },
+      ],
+      taskReferences: [],
+    }
+    vi.mocked(deleteAiProviderCredential).mockResolvedValue({
+      success: true,
+      data: undefined,
+    })
+    vi.mocked(deleteAiProviderConfig).mockResolvedValue({
+      success: true,
+      data: undefined,
+    })
+
+    renderWithProviders(
+      <AiProviderConfigDetail provider={provider} />,
+      ["ai-provider-config:read", "ai-provider-config:delete"],
+      en
+    )
+
+    await user.click(screen.getByRole("button", { name: "Remove API key 1" }))
+    const keyDialog = screen.getByRole("alertdialog")
+    expect(within(keyDialog).getByText(/gsk-\.\.\.legacy/)).toBeVisible()
+    await user.click(
+      within(keyDialog).getByRole("button", { name: en.common.delete })
+    )
+    await vi.waitFor(() =>
+      expect(deleteAiProviderCredential).toHaveBeenCalledWith(12, 101)
+    )
+    expect(screen.queryByText("gsk-...legacy")).not.toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: en.aiProviderConfigs.deleteConnection,
+      })
+    )
+    const connectionDialog = screen.getByRole("alertdialog")
+    expect(
+      within(connectionDialog).getByRole("heading", {
+        name: "Delete Groq connection #12?",
+      })
+    ).toBeVisible()
+    await user.click(
+      within(connectionDialog).getByRole("button", {
+        name: en.common.delete,
+      })
+    )
+    await vi.waitFor(() =>
+      expect(deleteAiProviderConfig).toHaveBeenCalledWith(12)
+    )
+    expect(routerReplace).toHaveBeenCalledWith("/vi/ai-provider-configs")
   })
 
   it("allows a reader without update permission to reach the detail route", async () => {

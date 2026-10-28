@@ -3,13 +3,21 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 const { testDictionary, getCurrentPermissions } = vi.hoisted(() => ({
   testDictionary: {
     aiProviderConfigs: {
+      addKeyDenied: "Key creation permission required",
+      addKeyError: "Key creation failed safely",
       createError: "Create failed safely",
+      deleteConnectionError: "Connection deletion failed safely",
+      deleteKeyError: "Key deletion failed safely",
+      deleteDenied: "Delete permission required",
       detailErrorDescription: "Detail failed safely",
       listErrorDescription: "List failed safely",
       modelCatalogDenied: "Catalog permission required",
       modelCatalogError: "Catalog failed safely",
       responseInvalid: "Connection response invalid",
+      replaceKeyError: "Key replacement failed safely",
       validationError: "Connection request invalid",
+      updateDenied: "Update permission required",
+      updateError: "Update failed safely",
     },
   },
   getCurrentPermissions: vi.fn(async () => [
@@ -31,10 +39,15 @@ vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }))
 
 import { fetchAuthenticated } from "@/app/api/auth/action"
 import {
+  createAiProviderCredential,
   createAiProviderConfig,
+  deleteAiProviderConfig,
+  deleteAiProviderCredential,
   getAiProviderConfigById,
   getAiProviderConfigs,
   getAiProviderModelCatalog,
+  updateAiProviderConfig,
+  updateAiProviderCredential,
 } from "@/app/api/ai-provider-configs/action"
 import { revalidatePath } from "next/cache"
 
@@ -225,6 +238,155 @@ describe("AI connection actions", () => {
 
     await expect(getAiProviderConfigById(42)).resolves.toEqual(detailResponse)
     expect(fetchAuthenticated).toHaveBeenCalledWith("/ai-provider-configs/42")
+  })
+
+  it("updates only endpoint and description after update permission and validates the detail response", async () => {
+    getCurrentPermissions.mockResolvedValue(["ai-provider-config:update"])
+    vi.mocked(fetchAuthenticated).mockResolvedValue(detailResponse)
+
+    await expect(
+      updateAiProviderConfig(42, {
+        baseUrl: "https://custom.deepseek.test/v1",
+        description: "New description",
+      })
+    ).resolves.toEqual({ success: true, data: detailResponse })
+
+    expect(fetchAuthenticated).toHaveBeenCalledWith("/ai-provider-configs/42", {
+      method: "PUT",
+      body: JSON.stringify({
+        description: "New description",
+        baseUrl: "https://custom.deepseek.test/v1",
+      }),
+    })
+    expect(
+      JSON.stringify(vi.mocked(fetchAuthenticated).mock.calls[0])
+    ).not.toContain("providerType")
+    expect(
+      JSON.stringify(vi.mocked(fetchAuthenticated).mock.calls[0])
+    ).not.toContain("defaultProvider")
+    expect(
+      JSON.stringify(vi.mocked(fetchAuthenticated).mock.calls[0])
+    ).not.toContain('"model"')
+    expect(revalidatePath).toHaveBeenCalledWith("/ai-provider-configs")
+    expect(revalidatePath).toHaveBeenCalledWith("/ai-provider-configs/42")
+  })
+
+  it("checks endpoint update permission and rejects immutable or empty credential payloads before the API call", async () => {
+    getCurrentPermissions.mockResolvedValue(["ai-provider-config:read"])
+    await expect(
+      updateAiProviderConfig(42, { description: "No permission" })
+    ).resolves.toEqual({
+      success: false,
+      error: "Update permission required",
+    })
+
+    getCurrentPermissions.mockResolvedValue(["ai-provider-config:update"])
+    const immutableFields = await updateAiProviderConfig(42, {
+      providerType: "OPENAI",
+      defaultProvider: true,
+    } as never)
+    const emptyReplacement = await updateAiProviderCredential(42, 8, {
+      apiKey: "   ",
+    })
+
+    expect(immutableFields).toEqual({
+      success: false,
+      error: "Connection request invalid",
+    })
+    expect(emptyReplacement).toEqual({
+      success: false,
+      error: "Connection request invalid",
+    })
+    expect(fetchAuthenticated).not.toHaveBeenCalled()
+  })
+
+  it("adds and replaces masked credentials with only the submitted key in the request", async () => {
+    getCurrentPermissions.mockResolvedValue(["ai-provider-config:create"])
+    vi.mocked(fetchAuthenticated).mockResolvedValue({
+      id: 9,
+      keyPreview: "sk-...new",
+    })
+
+    const addResult = await createAiProviderCredential(42, {
+      apiKey: "sk-new-secret",
+    })
+    expect(addResult).toEqual({
+      success: true,
+      data: { id: 9, keyPreview: "sk-...new" },
+    })
+    expect(JSON.stringify(addResult)).not.toContain("sk-new-secret")
+    expect(fetchAuthenticated).toHaveBeenCalledWith(
+      "/ai-provider-configs/42/credentials",
+      { method: "POST", body: JSON.stringify({ apiKey: "sk-new-secret" }) }
+    )
+
+    getCurrentPermissions.mockResolvedValue(["ai-provider-config:update"])
+    vi.mocked(fetchAuthenticated).mockResolvedValue({
+      id: 8,
+      keyPreview: "sk-...replacement",
+    })
+    const replaceResult = await updateAiProviderCredential(42, 8, {
+      apiKey: "sk-replacement-secret",
+    })
+    expect(replaceResult).toEqual({
+      success: true,
+      data: { id: 8, keyPreview: "sk-...replacement" },
+    })
+    expect(JSON.stringify(replaceResult)).not.toContain("sk-replacement-secret")
+    expect(fetchAuthenticated).toHaveBeenLastCalledWith(
+      "/ai-provider-configs/42/credentials/8",
+      {
+        method: "PUT",
+        body: JSON.stringify({ apiKey: "sk-replacement-secret" }),
+      }
+    )
+  })
+
+  it("redacts submitted keys from provider validation errors", async () => {
+    getCurrentPermissions.mockResolvedValue(["ai-provider-config:create"])
+    const apiKey = "sk-credential-secret"
+    vi.mocked(fetchAuthenticated).mockRejectedValue(
+      Object.assign(new Error(`Catalog rejected ${apiKey}`), { status: 400 })
+    )
+
+    await expect(createAiProviderCredential(42, { apiKey })).resolves.toEqual({
+      success: false,
+      error: "Catalog rejected [redacted]",
+    })
+  })
+
+  it("gates destructive calls and sends DELETE requests without response bodies", async () => {
+    getCurrentPermissions.mockResolvedValue(["ai-provider-config:read"])
+    await expect(deleteAiProviderCredential(42, 8)).resolves.toEqual({
+      success: false,
+      error: "Delete permission required",
+    })
+    await expect(deleteAiProviderConfig(42)).resolves.toEqual({
+      success: false,
+      error: "Delete permission required",
+    })
+    expect(fetchAuthenticated).not.toHaveBeenCalled()
+
+    getCurrentPermissions.mockResolvedValue(["ai-provider-config:delete"])
+    vi.mocked(fetchAuthenticated).mockResolvedValue(undefined)
+    await expect(deleteAiProviderCredential(42, 8)).resolves.toEqual({
+      success: true,
+      data: undefined,
+    })
+    await expect(deleteAiProviderConfig(42)).resolves.toEqual({
+      success: true,
+      data: undefined,
+    })
+    expect(fetchAuthenticated).toHaveBeenNthCalledWith(
+      1,
+      "/ai-provider-configs/42/credentials/8",
+      { method: "DELETE" }
+    )
+    expect(fetchAuthenticated).toHaveBeenNthCalledWith(
+      2,
+      "/ai-provider-configs/42",
+      { method: "DELETE" }
+    )
   })
 
   it("rejects a response that tries to return a plaintext credential", async () => {

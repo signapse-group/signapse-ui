@@ -77,6 +77,10 @@ export function AppBreadcrumb() {
     segments.length === 1 && segments[0] === "email-delivery"
   const isSystemPromptDetailRoute =
     segments[0] === "system-prompts" && segments.length === 2
+  const isAiProviderConfigDetailRoute =
+    segments.length === 2 &&
+    segments[0] === "ai-provider-configs" &&
+    /^\d+$/.test(segments[1])
   const isSystemPromptViewRoute =
     segments.length === 3 &&
     segments[0] === "system-prompts" &&
@@ -127,6 +131,8 @@ export function AppBreadcrumb() {
           const title =
             isSystemPromptViewRoute && segment === "view"
               ? dictionary.aiTaskConfigurations.promptViewTitle
+              : isAiProviderConfigDetailRoute && index === 1
+                ? dictionary.common.edit
               : formatSegment(segment, index, dictionary)
           const showSeparator = showOverviewCrumb || index > 0
 

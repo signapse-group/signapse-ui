@@ -1254,12 +1254,15 @@ export const vi = {
   aiProviderConfigs: {
     readDenied: "Bạn không có quyền xem kết nối AI.",
     createDenied: "Bạn không có quyền tạo kết nối AI.",
+    updateDenied: "Bạn không có quyền cập nhật kết nối AI.",
+    addKeyDenied: "Bạn không có quyền thêm API key.",
+    deleteDenied: "Bạn không có quyền xóa API key hoặc kết nối.",
     modelCatalogDenied: "Bạn không có quyền tra cứu danh mục nhà cung cấp.",
     unknownProvider: "Nhà cung cấp AI",
     addConnection: "Thêm kết nối",
     connectionCount: "{count} kết nối",
     connectionCountOne: "{count} kết nối",
-    connectionIdentifier: "Kết nối #{id}",
+    connectionIdentifier: "{provider} · Kết nối #{id}",
     connectionNumber: "#{id}",
     connectionColumn: "Kết nối",
     endpointColumn: "Endpoint",
@@ -1291,6 +1294,21 @@ export const vi = {
     endpointPlaceholder: "Dùng endpoint của nhà cung cấp",
     endpointDescription:
       "Chỉ nhập URL khi cần dùng endpoint tùy chỉnh được hỗ trợ.",
+    editTitle: "Chỉnh sửa kết nối AI",
+    fixedProviderType: "Nhà cung cấp cố định",
+    providerTypeDescription:
+      "Loại nhà cung cấp đã cố định. Hãy tạo kết nối khác để dùng nhà cung cấp khác.",
+    providerTypeDescriptionMobile: "Không thể thay đổi loại nhà cung cấp.",
+    endpointUpdateDescription:
+      "Khi đổi endpoint, mọi key đã lưu sẽ được kiểm tra với các model đang sử dụng.",
+    endpointUpdateDescriptionMobile:
+      "Sẽ kiểm tra mọi key và model đang dùng trước khi lưu.",
+    saveConnection: "Lưu kết nối",
+    saveConnectionPending: "Đang lưu kết nối...",
+    connectionSettingsPersisted: "Cài đặt kết nối được lưu sau khi khởi động lại.",
+    updateSuccess: "Đã cập nhật kết nối AI.",
+    updateError:
+      "Không thể lưu kết nối. Hãy kiểm tra endpoint và mô tả rồi thử lại.",
     description: "Mô tả",
     descriptionPlaceholder: "Mô tả kết nối này",
     descriptionDescription:
@@ -1298,8 +1316,47 @@ export const vi = {
     apiKeys: "API key",
     apiKeysDescription:
       "Cần ít nhất một key. Key đã lưu được che và không thể xem lại.",
+    connectionKeysDescription:
+      "Mọi key phải truy cập được tất cả model mà kết nối này đang dùng.",
+    connectionKeysDescriptionMobile:
+      "Mỗi key phải truy cập được các model đang dùng bên dưới.",
+    replacementKey: "Key thay thế",
+    replacementKeyPlaceholder: "Dán API key thay thế",
+    replacementKeyDescription: "Để trống để giữ key đã lưu.",
+    replaceKey: "Thay key",
+    replaceKeyPending: "Đang thay key...",
+    replaceKeySuccess: "Đã thay API key.",
+    replaceKeyError: "Không thể thay API key. Hãy kiểm tra key rồi thử lại.",
+    newKey: "Key mới",
+    newKeyPlaceholder: "Dán API key mới",
     addKey: "Thêm key",
+    addKeyPending: "Đang thêm key...",
+    addKeySuccess: "Đã thêm API key.",
+    addKeyError: "Không thể thêm API key. Hãy kiểm tra key rồi thử lại.",
     removeKey: "Xóa API key {index}",
+    removeKeyAction: "Xóa key",
+    lastKeyRemovalBlocked:
+      "Đây là key cuối. Hãy thêm key khác trước khi xóa.",
+    lastKeyRemovalBlockedMobile: "Key cuối. Hãy thêm key khác trước khi xóa.",
+    deleteKeyTitle: "Xóa API key này?",
+    deleteKeyDescription:
+      "API key đã che {keyPreview} sẽ bị xóa vĩnh viễn khỏi kết nối. Bạn không thể hoàn tác.",
+    deleteKeySuccess: "Đã xóa API key.",
+    deleteKeyError: "Không thể xóa API key này.",
+    deletePending: "Đang xóa...",
+    deleteConnection: "Xóa kết nối",
+    deleteConnectionTitle: "Xóa kết nối {provider} #{id}?",
+    deleteConnectionDescription:
+      "Kết nối và các API key đã lưu sẽ bị xóa vĩnh viễn. Bạn không thể hoàn tác.",
+    deleteConnectionSuccess: "Đã xóa kết nối AI.",
+    deleteConnectionError: "Không thể xóa kết nối này.",
+    deleteConnectionBlocked:
+      "Hãy chuyển các tác vụ này sang kết nối khác trước khi xóa kết nối.",
+    deleteConnectionBlockedMobile:
+      "Hãy chuyển các tác vụ này trước khi xóa kết nối.",
+    usedByTitle: "Được dùng bởi {count} tác vụ",
+    noTaskReferences: "Không có tác vụ nào dùng kết nối này.",
+    keyValidationError: "Nhập API key không rỗng rồi thử lại.",
     noKeysAdded: "Chưa thêm API key nào.",
     apiKey: "API key",
     apiKeyIndex: "Key {index}",

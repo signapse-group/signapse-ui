@@ -111,17 +111,35 @@ test.describe("P0 AI connections", () => {
     await expect(
       page.getByText(vi.pagination.pageSize, { exact: true })
     ).toBeVisible()
+    await fixture.setPermissions([
+      "ai-provider-config:read",
+      "ai-task-configuration:read",
+    ])
     await page.getByRole("link", { name: "Groq #12" }).click()
     await expect(page).toHaveURL(/\/vi\/ai-provider-configs\/12$/, {
       timeout: 30_000,
     })
-    await expect(page.getByRole("heading", { name: "Groq" })).toBeVisible({
-      timeout: 30_000,
-    })
-    await expect(page.getByText("0 tác vụ", { exact: true })).toBeVisible()
+    await expect(
+      page.getByRole("heading", { name: vi.aiProviderConfigs.editTitle })
+    ).toBeVisible({ timeout: 30_000 })
+    await expect(page.getByText(/3 tác vụ/)).toBeVisible()
     await expect(page.getByText("gsk-...legacy", { exact: true })).toBeVisible()
-    await expect(page.getByText("Mô hình", { exact: true })).toHaveCount(0)
-    await expect(page.getByRole("button", { name: /sửa|xóa/i })).toHaveCount(0)
+    await expect(
+      page.getByText(
+        vi.aiTaskConfigurations.taskNames.NEWS_EVENT_EXTRACTION,
+        { exact: true }
+      )
+    ).toBeVisible()
+    await expect(
+      page.getByText("deepseek-v4-flash", { exact: true })
+    ).toHaveCount(3)
+    await expect(page.getByLabel("Endpoint", { exact: true })).toHaveCount(0)
+    await expect(page.getByRole("button", { name: "Add key" })).toHaveCount(0)
+    await expect(
+      page.getByRole("link", {
+        name: vi.aiProviderConfigs.openTaskConfiguration,
+      })
+    ).toHaveAttribute("href", "/vi/ai-task-configurations")
 
     const state = await fixture.state()
     expect(
@@ -143,6 +161,108 @@ test.describe("P0 AI connections", () => {
       },
       { method: "GET", path: "/ai-provider-configs/12" },
     ])
+  })
+
+  test("matches the approved edit design at 1520x1600 and stays usable on mobile", async ({
+    page,
+    fixture,
+  }, testInfo) => {
+    await fixture.setPermissions([
+      "ai-provider-config:read",
+      "ai-provider-config:create",
+      "ai-provider-config:update",
+      "ai-provider-config:delete",
+      "ai-task-configuration:read",
+    ])
+    await page.emulateMedia({ colorScheme: "dark" })
+    await page.setViewportSize({ width: 1520, height: 1600 })
+    await page.goto("/en/ai-provider-configs/12")
+
+    await expect(
+      page.getByRole("heading", { name: en.aiProviderConfigs.editTitle })
+    ).toBeVisible()
+    await expect(page.getByText("Groq · Connection #12")).toBeVisible()
+    await expect(
+      page
+        .getByRole("navigation", { name: en.navigation.breadcrumb })
+        .getByText(en.common.edit)
+    ).toBeVisible()
+    await expect(page.getByLabel("Provider")).toHaveValue(
+      "Groq · Fixed provider type"
+    )
+    await expect(page.getByLabel("Endpoint")).toBeVisible()
+    await expect(page.getByLabel("Description")).toHaveValue(
+      "Legacy connection retained after migration."
+    )
+    await expect(page.getByText("gsk-...legacy", { exact: true })).toBeVisible()
+    await expect(
+      page.getByLabel("Replacement key", { exact: true })
+    ).toHaveValue("")
+    await expect(page.getByLabel("New key", { exact: true })).toHaveValue("")
+    await expect(
+      page.getByText("deepseek-v4-flash", { exact: true })
+    ).toHaveCount(3)
+    await expect(
+      page.getByRole("button", { name: en.aiProviderConfigs.deleteConnection })
+    ).toBeDisabled()
+    await expect(
+      page.getByText("Default provider", { exact: true })
+    ).toHaveCount(0)
+
+    const screenshot = await page.screenshot({
+      fullPage: false,
+      style: "nextjs-portal { display: none !important; }",
+    })
+    await testInfo.attach("ai-connections-edit-en-1520x1600.png", {
+      body: screenshot,
+      contentType: "image/png",
+    })
+
+    await page.getByLabel("Endpoint").focus()
+    await page.keyboard.press("Tab")
+    await expect(page.getByLabel("Description")).toBeFocused()
+    await page.keyboard.press("Tab")
+    await expect(
+      page.getByLabel("Replacement key", { exact: true })
+    ).toBeFocused()
+
+    const axe = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa"])
+      .analyze()
+    expect(
+      axe.violations.filter(
+        (violation) =>
+          violation.impact === "serious" || violation.impact === "critical"
+      )
+    ).toEqual([])
+
+    for (const viewport of responsiveViewports) {
+      await page.setViewportSize(viewport)
+      await page.context().addCookies([
+        {
+          name: "sidebar_state",
+          value: viewport.width >= 1440 ? "true" : "false",
+          url: "http://127.0.0.1:3100/",
+        },
+      ])
+      await page.goto("/en/ai-provider-configs/12")
+      await expect(page.getByLabel("Endpoint")).toBeVisible()
+      if (viewport.width === 390) {
+        const mobileScreenshot = await page.screenshot({
+          fullPage: true,
+          style: "nextjs-portal { display: none !important; }",
+        })
+        await testInfo.attach("ai-connections-edit-en-mobile-390.png", {
+          body: mobileScreenshot,
+          contentType: "image/png",
+        })
+      }
+      const dimensions = await page.evaluate(() => ({
+        body: document.body.scrollWidth,
+        viewport: document.documentElement.clientWidth,
+      }))
+      expect(dimensions.body).toBeLessThanOrEqual(dimensions.viewport)
+    }
   })
 
   test("creates only supported-provider connections after API confirmation", async ({
