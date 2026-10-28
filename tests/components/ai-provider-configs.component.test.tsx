@@ -112,10 +112,12 @@ describe("AI connection UI", () => {
     const user = userEvent.setup()
     renderWithProviders(<AiProviderConfigListPage providerPage={listPage} />)
 
-    expect(
-      screen.getByRole("link", { name: "Groq Kết nối #12" })
-    ).toHaveAttribute("href", "/ai-provider-configs/12")
-    expect(screen.getByText("Kết nối #12")).toBeVisible()
+    expect(screen.getByRole("link", { name: "Groq #12" })).toHaveAttribute(
+      "href",
+      "/ai-provider-configs/12"
+    )
+    expect(screen.getByText("·")).toBeVisible()
+    expect(screen.getByText("#12")).toBeVisible()
     expect(screen.getByText("Endpoint mặc định của Groq")).toBeVisible()
     expect(screen.getByText("Endpoint của nhà cung cấp")).toBeVisible()
     expect(screen.getByText("gsk-...legacy")).toBeVisible()
@@ -125,6 +127,11 @@ describe("AI connection UI", () => {
 
     expect(
       screen.queryByRole("link", { name: "Thêm kết nối" })
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("link", {
+        name: viDictionary.aiProviderConfigs.openTaskConfiguration,
+      })
     ).not.toBeInTheDocument()
     const navigation = screen.getByRole("navigation", {
       name: viDictionary.pagination.navigationLabel,
@@ -152,6 +159,19 @@ describe("AI connection UI", () => {
       "/ai-provider-configs/create"
     )
     expect(screen.getByText("21 kết nối")).toBeVisible()
+  })
+
+  it("shows the task-configuration shortcut only with its read permission", () => {
+    renderWithProviders(<AiProviderConfigListPage providerPage={listPage} />, [
+      "ai-provider-config:read",
+      "ai-task-configuration:read",
+    ])
+
+    expect(
+      screen.getByRole("link", {
+        name: viDictionary.aiProviderConfigs.openTaskConfiguration,
+      })
+    ).toHaveAttribute("href", "/ai-task-configurations")
   })
 
   it("denies the list route to a user without read permission", async () => {

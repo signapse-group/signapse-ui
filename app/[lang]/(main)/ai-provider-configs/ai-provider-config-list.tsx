@@ -1,10 +1,11 @@
 "use client"
 
-import { Bot, Plus } from "lucide-react"
+import { ArrowRight, Bot, Plus } from "lucide-react"
 import { LocalizedLink as Link } from "@/components/localized-link"
 
 import type { AiProviderConfigListResponse } from "@/app/lib/ai-provider-configs/definitions"
 import { AI_PROVIDER_CONFIG_PERMISSIONS } from "@/app/lib/ai-provider-configs/permissions"
+import { AI_TASK_CONFIGURATION_READ_PERMISSION } from "@/app/lib/ai-task-configurations/definitions"
 import type { Page } from "@/app/lib/definitions"
 import { useLocalization } from "@/app/lib/i18n/provider"
 import { AppPaginationControls } from "@/components/app-pagination-controls"
@@ -46,6 +47,9 @@ export function AiProviderConfigListPage({
   const providers = providerPage.content
   const canCreateProvider = useHasPermission(
     AI_PROVIDER_CONFIG_PERMISSIONS.create
+  )
+  const canReadTaskConfigurations = useHasPermission(
+    AI_TASK_CONFIGURATION_READ_PERMISSION
   )
   const { dictionary, formatMessage, formatNumber } = useLocalization()
   const t = dictionary.aiProviderConfigs
@@ -103,7 +107,7 @@ export function AiProviderConfigListPage({
                       <div className="flex min-w-0 flex-col gap-1">
                         <Link
                           href={`/ai-provider-configs/${provider.id}`}
-                          className="flex w-fit max-w-full flex-col gap-1 break-words text-foreground hover:underline"
+                          className="flex w-fit max-w-full flex-wrap items-baseline gap-x-1 break-words text-foreground hover:underline"
                         >
                           <span className="font-medium">
                             {getProviderOptionLabel(
@@ -111,8 +115,14 @@ export function AiProviderConfigListPage({
                               dictionary
                             )}
                           </span>
+                          <span
+                            aria-hidden="true"
+                            className="text-muted-foreground"
+                          >
+                            ·
+                          </span>
                           <span className="text-xs text-muted-foreground">
-                            {formatMessage(t.connectionIdentifier, {
+                            {formatMessage(t.connectionNumber, {
                               id: formatNumber(provider.id),
                             })}
                           </span>
@@ -196,12 +206,25 @@ export function AiProviderConfigListPage({
       <AppPaginationControls page={providerPage} className="mt-4" />
 
       {providers.length > 0 ? (
-        <section className="mt-6 rounded-xl border bg-muted/20 px-4 py-3">
-          <h2 className="text-sm font-medium">{t.modelsBelongToTasksTitle}</h2>
-          <p className="mt-1 text-sm leading-6 text-muted-foreground">
-            {t.modelsBelongToTasksDescription}
-          </p>
-        </section>
+        <>
+          <section className="mt-6 rounded-xl border bg-muted/20 px-4 py-3">
+            <h2 className="text-sm font-medium">
+              {t.modelsBelongToTasksTitle}
+            </h2>
+            <p className="mt-1 text-sm leading-6 text-muted-foreground">
+              {t.modelsBelongToTasksDescription}
+            </p>
+          </section>
+          {canReadTaskConfigurations ? (
+            <Link
+              href="/ai-task-configurations"
+              className={`${buttonVariants({ variant: "secondary" })} mt-6`}
+            >
+              <ArrowRight data-icon="inline-start" />
+              {t.openTaskConfiguration}
+            </Link>
+          ) : null}
+        </>
       ) : null}
     </div>
   )

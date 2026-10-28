@@ -1266,6 +1266,7 @@ export const en: Dictionary = {
     connectionCount: "{count} connections",
     connectionCountOne: "{count} connection",
     connectionIdentifier: "Connection #{id}",
+    connectionNumber: "#{id}",
     connectionColumn: "Connection",
     endpointColumn: "Endpoint",
     apiKeysColumn: "API keys",
@@ -1280,6 +1281,7 @@ export const en: Dictionary = {
     modelsBelongToTasksTitle: "Models belong to tasks",
     modelsBelongToTasksDescription:
       "Manage connections and keys here. Select each task's connection, model and output token limit in AI task configuration.",
+    openTaskConfiguration: "Open AI task configuration",
     referencesNotProvided: "Not provided",
     noKeys: "No API keys",
     emptyTitle: "No AI connections yet",

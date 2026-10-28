@@ -86,7 +86,7 @@ test("AI connection list reaches the producer and is fetched during FE SSR", asy
     const first = parsed.data.content[0]
     await expect(
       page.getByText(
-        vi.aiProviderConfigs.connectionIdentifier.replace(
+        vi.aiProviderConfigs.connectionNumber.replace(
           "{id}",
           formatNumber(first.id, DEFAULT_APP_LOCALE)
         ),

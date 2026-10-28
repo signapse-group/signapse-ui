@@ -300,7 +300,7 @@ export function AiProviderConfigCreateForm() {
               </FieldLegend>
               <Button
                 id="ai-provider-config-add-key"
-                className="absolute top-0 right-0"
+                className="absolute -top-6 right-0"
                 type="button"
                 variant="outline"
                 aria-describedby={

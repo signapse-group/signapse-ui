@@ -25,6 +25,7 @@ test.describe("P0 AI connections", () => {
     await fixture.setPermissions([
       "ai-provider-config:read",
       "ai-provider-config:create",
+      "ai-task-configuration:read",
     ])
     await page.emulateMedia({ colorScheme: "dark" })
     await page.setViewportSize({ width: 1520, height: 1024 })
@@ -72,6 +73,11 @@ test.describe("P0 AI connections", () => {
       page.getByRole("link", { name: en.aiProviderConfigs.addConnection })
     ).toBeVisible()
     await expect(
+      page.getByRole("link", {
+        name: en.aiProviderConfigs.openTaskConfiguration,
+      })
+    ).toHaveAttribute("href", "/en/ai-task-configurations")
+    await expect(
       page.getByText("Default provider", { exact: true })
     ).toHaveCount(0)
     await expect(page.getByText("Model", { exact: true })).toHaveCount(0)
@@ -105,8 +111,13 @@ test.describe("P0 AI connections", () => {
     await expect(
       page.getByText(vi.pagination.pageSize, { exact: true })
     ).toBeVisible()
-    await page.getByRole("link", { name: "Groq Kết nối #12" }).click()
-    await expect(page.getByRole("heading", { name: "Groq" })).toBeVisible()
+    await page.getByRole("link", { name: "Groq #12" }).click()
+    await expect(page).toHaveURL(/\/vi\/ai-provider-configs\/12$/, {
+      timeout: 30_000,
+    })
+    await expect(page.getByRole("heading", { name: "Groq" })).toBeVisible({
+      timeout: 30_000,
+    })
     await expect(page.getByText("0 tác vụ", { exact: true })).toBeVisible()
     await expect(page.getByText("gsk-...legacy", { exact: true })).toBeVisible()
     await expect(page.getByText("Mô hình", { exact: true })).toHaveCount(0)

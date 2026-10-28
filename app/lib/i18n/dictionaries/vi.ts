@@ -1260,6 +1260,7 @@ export const vi = {
     connectionCount: "{count} kết nối",
     connectionCountOne: "{count} kết nối",
     connectionIdentifier: "Kết nối #{id}",
+    connectionNumber: "#{id}",
     connectionColumn: "Kết nối",
     endpointColumn: "Endpoint",
     apiKeysColumn: "API key",
@@ -1274,6 +1275,7 @@ export const vi = {
     modelsBelongToTasksTitle: "Model thuộc về từng tác vụ",
     modelsBelongToTasksDescription:
       "Quản lý kết nối và key tại đây. Chọn kết nối, model và giới hạn token đầu ra riêng trong phần cấu hình tác vụ AI.",
+    openTaskConfiguration: "Mở cấu hình tác vụ AI",
     referencesNotProvided: "API chưa cung cấp",
     noKeys: "Chưa có API key",
     emptyTitle: "Chưa có kết nối AI",
