@@ -42,7 +42,7 @@ Before handoff, reread live contract/status/routing/dependencies. Ready → Prog
 
 ## Blocker and resume
 
-Use Blocked only for required external input/access/decision/dependency when no meaningful independent survey remains. Keep an in-scope diagnosed baseline failure for Implement rather than making it an external blocker. Before transition, save/read back a separate owned blocker record:
+Use Blocked only for required external input/access/decision/dependency when no meaningful independent survey remains. Keep an in-scope diagnosed baseline failure for Implement rather than making it an external blocker. A mutation of synthetic data during an explicitly assigned test-environment integration is not, by itself, external input or a blocker; record the test-data effect and continue the assigned work when implementation and required evidence remain assessable. Before transition, save/read back a separate owned blocker record:
 
 ```text
 Blocked — <vướng mắc và output/AC/check bị chặn>.

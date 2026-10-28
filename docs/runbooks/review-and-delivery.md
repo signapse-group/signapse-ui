@@ -76,7 +76,7 @@ Docs-only output uses artifact location/version, review and applicable checks ra
 
 Pending delivery within budget stays In Review. Reread runs/deployments before retries; reuse existing runs and read back ambiguous writes to avoid duplicates. In-scope code/build/check defects return Progress with saved actionable feedback. Temporary infrastructure failure permits at most two reruns, with reasons/counters saved and the original deadline retained. No autonomous infrastructure repair or rollback is granted.
 
-Use Blocked for required external input/access/decision/dependency or exhausted wait only when no meaningful independent work remains. Save/read back a separate owned blocker record before resolving/readback In Review → Blocked:
+Use Blocked for required external input/access/decision/dependency or exhausted wait only when no meaningful independent work remains. A mutation of synthetic data during an explicitly assigned test-environment integration is not, by itself, external input or a blocker; record the test-data effect and continue review when the implementation and required evidence remain assessable. Save/read back a separate owned blocker record before resolving/readback In Review → Blocked:
 
 ```text
 Blocked — <vướng mắc và output/AC/check bị chặn>.

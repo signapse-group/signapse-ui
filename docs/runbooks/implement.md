@@ -48,7 +48,7 @@ A missing mandatory check is not an exception that waives the gate. Follow [reco
 
 ## Failure, blocker and resume
 
-Implementation/check failures remain in Progress for repair. Blocked is reserved for required external input/access/decision/dependency when no meaningful independent work remains. Save/read back a separate owned blocker record before transition:
+Implementation/check failures remain in Progress for repair. Blocked is reserved for required external input/access/decision/dependency when no meaningful independent work remains. A mutation of synthetic data during an explicitly assigned test-environment integration is not, by itself, external input or a blocker; record the test-data effect and continue the assigned work when implementation and required evidence remain assessable. Save/read back a separate owned blocker record before transition:
 
 ```text
 Blocked — <vướng mắc và output/AC/check bị chặn>.
