@@ -40,7 +40,7 @@ hooks:
     /opt/apps/symphony/runtime/prepare-fe-workspace
   timeout_ms: 900000
 agent:
-  max_concurrent_agents: 2
+  max_concurrent_agents: 1
   max_turns: 20
 codex:
   command: codex --config shell_environment_policy.inherit=all --config 'model="gpt-6-luna"' --config model_reasoning_effort=max app-server
