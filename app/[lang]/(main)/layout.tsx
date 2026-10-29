@@ -21,6 +21,7 @@ import { ModeToggle } from "@/components/mode-toggle"
 import { PermissionProvider } from "@/components/permission-provider"
 import { PersonalNotesQuickSheet } from "@/components/personal-notes-quick-sheet"
 import { ProtectedAiAssistant } from "@/components/protected-ai-assistant"
+import { SystemPromptDraftProvider } from "./system-prompts/system-prompt-draft-provider"
 import {
   SidebarInset,
   SidebarProvider,
@@ -91,7 +92,7 @@ export default async function Layout({
           permissions={permissions}
           isP0FixtureMode={p0FixtureMode}
         />
-        <SidebarInset>
+        <SidebarInset className="min-w-0">
           <header className="flex min-h-12 shrink-0 items-center border-b px-2 py-2 transition-[width,height] ease-linear">
             <div className="flex w-full flex-col gap-2 md:flex-row md:items-center md:justify-between">
               <div className="flex min-w-0 items-center gap-2">
@@ -105,7 +106,7 @@ export default async function Layout({
                 <AppBreadcrumb />
               </div>
 
-              <div className="flex min-w-0 items-center gap-2 md:justify-end">
+              <div className="flex min-w-0 flex-wrap items-center gap-1 sm:gap-2 md:justify-end">
                 {canReadWorkspace ? (
                   <WorkspaceSwitcher
                     workspaces={workspaces}
@@ -145,7 +146,7 @@ export default async function Layout({
             </div>
           </header>
           <div className="flex min-h-0 flex-1 flex-col gap-4 p-5">
-            {children}
+            <SystemPromptDraftProvider>{children}</SystemPromptDraftProvider>
           </div>
         </SidebarInset>
         <ProtectedAiAssistant

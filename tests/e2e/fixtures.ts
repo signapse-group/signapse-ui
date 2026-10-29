@@ -37,6 +37,8 @@ type FixtureController = {
     route: string,
     scenario:
       | "success"
+      | "legacy-saved-provider-selection"
+      | "legacy-provider-options"
       | "empty"
       | "short"
       | "short-then-empty"
@@ -47,6 +49,7 @@ type FixtureController = {
       | "delayed-outage"
       | "outage"
       | "mutation-failure"
+      | "permission-denied"
       | "reconnect"
       | "error-reconnect"
       | "post-open-error"
@@ -72,10 +75,12 @@ type FixtureController = {
     method?: string
   ): Promise<void>
   state(): Promise<{
+    pendingRequests: number
     requests: Array<Record<string, unknown>>
     violations: Array<Record<string, unknown>>
     streamConnections: number
     smtpConfiguration?: Record<string, unknown>
+    aiTaskConfigurations?: Array<Record<string, unknown>>
   }>
   setFeedbackScenario(
     scenario:

@@ -17,8 +17,10 @@ For API work, read the [API consumer standards](../../../docs/api-consumer.md)
 and current producer contract for the relevant environment. Requirement adherence
 uses accepted requirements; Correctness & Standards checks consumer schema, auth,
 status/error/media/protocol and business semantics against that contract. Verify
-applicable producer publication/revision and FE live evidence when those gates are
-in the accepted scope. A structural guard or P0 pass does not prove full integration.
+applicable producer publication/revision and local consumer evidence under
+[test ownership and selection](../../../CONTRIBUTING.md#test-ownership-and-selection);
+live feature evidence belongs to QA/coordinator, not FE review gates.
+A structural guard or P0 pass does not prove full integration.
 Raise discrepancies to the owner instead of changing expected behavior or inferring
 filter scope from generic runtime fields.
 

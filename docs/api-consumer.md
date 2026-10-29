@@ -4,7 +4,7 @@ Apply this reference to API integration, contract-sensitive design/review and pr
 
 ## Authority and lookup
 
-[Planning's API policy](https://github.com/signapse-group/signapse-planing/blob/main/workflow/project-execution-workflow.md#contract-api-và-handoff) owns the shared convention. Jira holds accepted requirements, scope and acceptance; the producer's published OpenAPI holds the supported HTTP API schema and consumer-facing business rules. BE publishes [OpenAPI dev](https://dev-api.signapse.cloud/v3/api-docs). Other services own their contracts; non-HTTP protocols use their producer's canonical reference. SSE events, payloads and semantics belong at the HTTP operation.
+Jira holds accepted requirements, scope and acceptance; the producer's published OpenAPI holds the supported HTTP API schema and consumer-facing business rules. BE publishes [OpenAPI dev](https://dev-api.signapse.cloud/v3/api-docs). Other services own their contracts; non-HTTP protocols use their producer's canonical reference. SSE events, payloads and semantics belong at the HTTP operation. This repository owns the consumer procedure below; it does not require a worker to fetch Planning policy for each assignment.
 
 Fetch the current contract for the actual target environment before concluding API design/integration readiness, on resume and before handoff. Record URL, environment, fetch time and available producer revision/version evidence. Use producer build metadata and deployment evidence to establish revision identity; `info.version` alone does not prove a Git revision. Unpublished API changes remain proposals.
 
@@ -22,7 +22,7 @@ For an accepted BE → FE breaking change **on dev**, use BE deploy/publish Open
 
 ## Contract lookup and feature acceptance
 
-Reading the published contract and verifying a new/changed API dependency are consumer integration requirements, distinct from executing features against live services. Verify consumer behavior locally at the actual HTTP boundary in its runtime; browser interception alone does not verify SSR fetching. Live feature/hosted acceptance requires the assigned operation, phase, scope and inputs under [verification standards](../CONTRIBUTING.md#verification). Missing in-scope producer schemas, permissions or required publication evidence remains an integration gap.
+Reading the published contract and verifying a new/changed API dependency are consumer integration requirements, distinct from executing features against live services. Verify affected consumer behavior with focused action/schema/component tests under [test ownership and selection](../CONTRIBUTING.md#test-ownership-and-selection); choose a local fixture HTTP/browser check when needed to establish runtime behavior. Browser interception alone does not verify SSR fetching. Live feature acceptance belongs to QA/coordinator in every FE phase. Missing in-scope producer schemas, permission semantics or required publication evidence remains an integration gap; missing a real QA account alone does not.
 
 ## Verification and evidence
 
