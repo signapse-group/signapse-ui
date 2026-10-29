@@ -313,6 +313,61 @@ describe("AI connection UI", () => {
     expect(endpoint).toHaveValue("")
   })
 
+  it("warns before discarding unsaved endpoint, description, and key drafts", async () => {
+    const user = userEvent.setup()
+    renderWithProviders(
+      <AiProviderConfigDetail provider={{ ...legacyProvider, taskReferences: [] }} />,
+      [
+        "ai-provider-config:read",
+        "ai-provider-config:update",
+        "ai-provider-config:create",
+      ],
+      en
+    )
+
+    const endpoint = screen.getByLabelText(en.aiProviderConfigs.endpoint)
+    const description = screen.getByLabelText(
+      en.aiProviderConfigs.description
+    )
+    const replacementKey = screen.getByLabelText(
+      en.aiProviderConfigs.replacementKey
+    )
+    const newKey = screen.getByLabelText(en.aiProviderConfigs.newKey)
+    await user.type(endpoint, "https://custom.example.test/v1")
+    await user.clear(description)
+    await user.type(description, "Updated description")
+    await user.type(replacementKey, "replacement-secret")
+    await user.type(newKey, "new-secret")
+
+    const back = screen.getByRole("link", { name: en.common.back })
+    await user.click(back)
+
+    const dialog = screen.getByRole("alertdialog")
+    expect(
+      within(dialog).getByRole("heading", {
+        name: en.aiProviderConfigs.discardChangesTitle,
+      })
+    ).toBeVisible()
+    await user.click(
+      within(dialog).getByRole("button", {
+        name: en.aiProviderConfigs.continueEditing,
+      })
+    )
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument()
+    expect(endpoint).toHaveValue("https://custom.example.test/v1")
+    expect(description).toHaveValue("Updated description")
+    expect(replacementKey).toHaveValue("replacement-secret")
+    expect(newKey).toHaveValue("new-secret")
+
+    await user.click(back)
+    await user.click(
+      within(screen.getByRole("alertdialog")).getByRole("button", {
+        name: en.aiProviderConfigs.discardChanges,
+      })
+    )
+    expect(routerPush).toHaveBeenCalledWith("/vi/ai-provider-configs")
+  })
+
   it("keeps API key input on failure, clears it after confirmation, and an empty replacement keeps the saved key", async () => {
     const user = userEvent.setup()
     const provider = {

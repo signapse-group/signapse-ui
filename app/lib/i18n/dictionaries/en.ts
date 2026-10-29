@@ -1359,6 +1359,10 @@ export const en: Dictionary = {
       "This permanently deletes the connection and its saved API keys. You cannot undo this.",
     deleteConnectionSuccess: "AI connection deleted.",
     deleteConnectionError: "Could not delete this connection.",
+    discardChangesTitle: "Discard unsaved changes?",
+    discardChangesDescription: "Changes you haven't saved will be lost.",
+    continueEditing: "Continue editing",
+    discardChanges: "Discard changes",
     deleteConnectionBlocked:
       "Move these tasks to another connection before deleting this connection.",
     deleteConnectionBlockedMobile:

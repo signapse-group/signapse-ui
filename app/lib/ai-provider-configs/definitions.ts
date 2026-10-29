@@ -59,7 +59,7 @@ export type AiProviderConfigCreateRequest = z.infer<
 export const aiProviderConfigUpdateRequestSchema = z
   .object({
     description: z.string().optional(),
-    baseUrl: z.string().optional(),
+    baseUrl: z.string().nullable().optional(),
   })
   .strict()
 

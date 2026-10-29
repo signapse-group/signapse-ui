@@ -90,9 +90,15 @@ function AiProviderConfigDetailContent({
   const [pendingOperation, setPendingOperation] = useState<string | null>(null)
   const [pendingDelete, setPendingDelete] = useState<PendingDelete>(null)
   const [deleteError, setDeleteError] = useState("")
+  const [discardDialogOpen, setDiscardDialogOpen] = useState(false)
 
   const endpointChanged = endpoint !== (savedProvider.baseUrl ?? "")
   const descriptionChanged = description !== (savedProvider.description ?? "")
+  const hasUnsavedChanges =
+    endpointChanged ||
+    descriptionChanged ||
+    newKey.length > 0 ||
+    Object.values(replacementKeys).some((key) => key.length > 0)
   const hasReferences = provider.taskReferences.length > 0
 
   async function saveConnection(event: React.FormEvent<HTMLFormElement>) {
@@ -241,6 +247,11 @@ function AiProviderConfigDetailContent({
         <Link
           href="/ai-provider-configs"
           className={buttonVariants({ variant: "secondary" })}
+          onClick={(event) => {
+            if (!hasUnsavedChanges) return
+            event.preventDefault()
+            setDiscardDialogOpen(true)
+          }}
         >
           <ArrowLeft data-icon="inline-start" />
           {dictionary.common.back}
@@ -591,6 +602,34 @@ function AiProviderConfigDetailContent({
           ) : null}
         </div>
       </section>
+
+      <AlertDialog
+        open={discardDialogOpen}
+        onOpenChange={setDiscardDialogOpen}
+      >
+        <AlertDialogContent size="sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t.discardChangesTitle}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t.discardChangesDescription}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel variant="outline">
+              {t.continueEditing}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={(event) => {
+                event.preventDefault()
+                router.push(connectionsPath)
+              }}
+            >
+              {t.discardChanges}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog
         open={pendingDelete !== null}

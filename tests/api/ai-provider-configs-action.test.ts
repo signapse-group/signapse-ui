@@ -271,6 +271,20 @@ describe("AI connection actions", () => {
     expect(revalidatePath).toHaveBeenCalledWith("/ai-provider-configs/42")
   })
 
+  it("passes nullable baseUrl through unchanged because null keeps the endpoint", async () => {
+    getCurrentPermissions.mockResolvedValue(["ai-provider-config:update"])
+    vi.mocked(fetchAuthenticated).mockResolvedValue(detailResponse)
+
+    await expect(
+      updateAiProviderConfig(42, { baseUrl: null })
+    ).resolves.toEqual({ success: true, data: detailResponse })
+
+    expect(fetchAuthenticated).toHaveBeenCalledWith("/ai-provider-configs/42", {
+      method: "PUT",
+      body: JSON.stringify({ baseUrl: null }),
+    })
+  })
+
   it("checks endpoint update permission and rejects immutable or empty credential payloads before the API call", async () => {
     getCurrentPermissions.mockResolvedValue(["ai-provider-config:read"])
     await expect(

@@ -236,6 +236,29 @@ test.describe("P0 AI connections", () => {
       )
     ).toEqual([])
 
+    const endpoint = page.getByLabel(en.aiProviderConfigs.endpoint)
+    const back = page.getByRole("link", { name: en.common.back })
+    await endpoint.fill("https://draft.example.test/v1")
+    await back.focus()
+    await page.keyboard.press("Enter")
+
+    const discardDialog = page.getByRole("alertdialog")
+    await expect(
+      discardDialog.getByRole("heading", {
+        name: en.aiProviderConfigs.discardChangesTitle,
+      })
+    ).toBeVisible()
+    await page.keyboard.press("Escape")
+    await expect(discardDialog).not.toBeVisible()
+    await expect(back).toBeFocused()
+    await expect(endpoint).toHaveValue("https://draft.example.test/v1")
+
+    await page.keyboard.press("Enter")
+    await page
+      .getByRole("button", { name: en.aiProviderConfigs.discardChanges })
+      .click()
+    await expect(page).toHaveURL(/\/en\/ai-provider-configs$/)
+
     for (const viewport of responsiveViewports) {
       await page.setViewportSize(viewport)
       await page.context().addCookies([

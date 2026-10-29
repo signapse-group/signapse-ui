@@ -1350,6 +1350,10 @@ export const vi = {
       "Kết nối và các API key đã lưu sẽ bị xóa vĩnh viễn. Bạn không thể hoàn tác.",
     deleteConnectionSuccess: "Đã xóa kết nối AI.",
     deleteConnectionError: "Không thể xóa kết nối này.",
+    discardChangesTitle: "Bỏ các thay đổi chưa lưu?",
+    discardChangesDescription: "Các thay đổi chưa lưu sẽ bị mất.",
+    continueEditing: "Tiếp tục chỉnh sửa",
+    discardChanges: "Bỏ thay đổi",
     deleteConnectionBlocked:
       "Hãy chuyển các tác vụ này sang kết nối khác trước khi xóa kết nối.",
     deleteConnectionBlockedMobile:
