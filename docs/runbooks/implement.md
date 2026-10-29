@@ -6,7 +6,7 @@ This runbook owns the Implement procedure and is loaded only when `WORKFLOW.md` 
 
 ## Assignment and authority
 
-The profile is a native Jira `SIGN` dev Subtask, parent Story/Task/Bug, exactly one recognized route `route-frontend`, output owned by `signapse-group/signapse-ui`, PR into `main`, product dev environment `https://dev-dashboard.signapse.cloud`. Use the recognized routes in WORKFLOW; business labels may coexist. Direct/no-PR operations retain their separately assigned boundary and are outside this profile.
+The profile is a native Jira `SIGN` dev Subtask, parent Story/Task/Bug, exactly one recognized route `route-frontend`, output owned by `signapse-group/signapse-ui`, PR into `dev`, product dev environment `https://dev-dashboard.signapse.cloud`. Use the recognized routes in WORKFLOW; business labels may coexist. Direct/no-PR operations retain their separately assigned boundary and are outside this profile.
 
 Progress permits scoped edits/checks, commits/push/PR, CI follow-up, owned conditional handoff/blocker records and Progress → In Review/Blocked under the gates below. Independent review, merge, Production delivery and Done belong to the fresh In Review session. Implement does not call a reviewer as an In Review admission gate.
 
@@ -27,7 +27,7 @@ Use [material decision handling](../../CONTRIBUTING.md#decisions-and-evidence) f
 
 ## Prepare output and PR evidence
 
-Keep one PR for unmerged work, targeting `main`; stage only contribution-owned files. After a merge, an in-scope fix before Done uses a follow-up branch/PR from current main, retaining previous PR/evidence. Do not overwrite or revive completed contributions.
+Keep one PR for unmerged work, targeting `dev`; stage only contribution-owned files. After a merge, an in-scope fix before Done uses a follow-up branch/PR from current dev, retaining previous PR/evidence. Do not overwrite or revive completed contributions.
 
 The PR owns the concrete problem, final change, source contract, candidate, actual checks/results/coverage and technical limits. Refresh it against the final candidate. Include the Subtask key in its title; verify Jira Development-panel linkage before claiming it. Coordinator-owned metadata/link verification may be reported pending when output is accessible/reviewable; this does not waive publication/check/access requirements.
 

@@ -75,7 +75,7 @@ On Symphony, required browser checks use the host testing guide and existing wra
 
 For the current PR head, require successful `Verify / check` from this PR's `pull_request` event, a successful Vercel Preview build for that head and any additional required GitHub checks. Preview adds no mandatory website/browser check. Preserve the candidate identity and actual command/results/coverage/limits in accessible evidence; green CI alone does not prove local coverage or acceptance criteria.
 
-Changed head/contract or a concrete base impact invalidates affected evidence. Main advancing alone does not require rebase, retesting or re-review of unchanged head. Missing/failing mandatory evidence cannot be reported as Pass.
+Changed head/contract or a concrete base impact invalidates affected evidence. The target branch advancing alone does not require rebase, retesting or re-review of unchanged head. Missing/failing mandatory evidence cannot be reported as Pass.
 
 ## Review standards
 

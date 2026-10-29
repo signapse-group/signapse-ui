@@ -6,9 +6,9 @@ This runbook owns Review/delivery and is loaded only when `WORKFLOW.md` assigns 
 
 ## Assignment and authority
 
-The profile is a native Jira `SIGN` dev Subtask, parent Story/Task/Bug, exactly one recognized route `route-frontend`, output owned by `signapse-group/signapse-ui`, PR into `main`, product dev environment `https://dev-dashboard.signapse.cloud`. Use WORKFLOW's recognized route set; business labels may coexist. Direct/no-PR operations retain their assigned boundary and are outside this profile.
+The profile is a native Jira `SIGN` dev Subtask, parent Story/Task/Bug, exactly one recognized route `route-frontend`, output owned by `signapse-group/signapse-ui`, PR into `dev`, product dev environment `https://dev-dashboard.signapse.cloud`. Use WORKFLOW's recognized route set; business labels may coexist. Direct/no-PR operations retain their assigned boundary and are outside this profile.
 
-The fresh In Review session is the independent reviewer. It directly assesses contract/code/evidence and does not replace itself with another reviewer. Review permits owned feedback/handoff/blocker records, merge of the assigned PR into main, bounded delivery recovery and In Review → Progress/Blocked/Done under the gates below. The reviewer does not edit implementation or resolve conflicts.
+The fresh In Review session is the independent reviewer. It directly assesses contract/code/evidence and does not replace itself with another reviewer. Review permits owned feedback/handoff/blocker records, merge of the assigned PR into dev, bounded delivery recovery and In Review → Progress/Blocked/Done under the gates below. The reviewer does not edit implementation or resolve conflicts.
 
 The coordinator retains scope/priority, new tickets, Open → Ready, Blocked resume, parent/QA/Bug lifecycle and acceptance. Business/design/API decisions remain with their owners; infra/secrets/DNS/indexing changes, autonomous rollback and live feature testing are outside this grant. Apply [test ownership and selection](../../CONTRIBUTING.md#test-ownership-and-selection) during review as well as implementation.
 
@@ -36,22 +36,22 @@ Reread live contract/status/routing/dependencies, resolve the destination from n
 
 ## Merge the approved candidate
 
-Only a candidate passing both review axes and applicable checks proceeds. Reread live assignment, approved PR/head, checks, base main, open/non-draft state and mergeability. Pending mergeability permits three reads with 5/10-second backoff. With verified `PR` and `HEAD_SHA`, use the worker's existing `gh` CLI:
+Only a candidate passing both review axes and applicable checks proceeds. Reread live assignment, approved PR/head, checks, base dev, open/non-draft state and mergeability. Pending mergeability permits three reads with 5/10-second backoff. With verified `PR` and `HEAD_SHA`, use the worker's existing `gh` CLI:
 
 ```sh
 gh pr merge "$PR" --repo signapse-group/signapse-ui --merge --match-head-commit "$HEAD_SHA"
 gh pr view "$PR" --repo signapse-group/signapse-ui --json state,url,headRefOid,mergeCommit
 ```
 
-No admin bypass. Read back ambiguous writes before retry; MERGED and actual merge SHA confirm merge. An already merged candidate proceeds through reconciliation/delivery. Conflicts and in-scope code fixes return Progress; an accepted fix after merge uses a follow-up PR from current main with old evidence retained.
+No admin bypass. Read back ambiguous writes before retry; MERGED and actual merge SHA confirm merge. An already merged candidate proceeds through reconciliation/delivery. Conflicts and in-scope code fixes return Progress; an accepted fix after merge uses a follow-up PR from current dev with old evidence retained.
 
 ## Verify the delivered build
 
-For app delivery, require a verified live revision on **https://dev-dashboard.signapse.cloud** containing the contribution, with successful main quality checks. Owner/QA verifies website, auth and features; these are not FE developer delivery gates. Deployment confirmation does not certify website behavior or later rollbacks.
+For app delivery, require a verified live revision on **https://dev-dashboard.signapse.cloud** containing the contribution, with successful dev quality checks. Owner/QA verifies website, auth and features; these are not FE developer delivery gates. Deployment confirmation does not certify website behavior or later rollbacks.
 
 Read [CI/Vercel technical setup](../delivery.md#ci-and-vercel-setup) when setup evidence is needed. Local configuration does not prove hosting activation. Required developer delivery evidence connects the reviewed candidate to the actual merge and deployed build; overall green CI, merge or a health check alone is insufficient.
 
-After merge, select the main Verify push run for a SHA containing that merge. Save merge/run/build identity, start time, absolute deadline (30 minutes per tracked run) and retry counter in an existing durable owned delivery record before waiting. Reuse them across restart/resume; neither reconnect nor rerun resets the budget. Require its actual `check` job to succeed:
+After merge, select the dev Verify push run for a SHA containing that merge. Save merge/run/build identity, start time, absolute deadline (30 minutes per tracked run) and retry counter in an existing durable owned delivery record before waiting. Reuse them across restart/resume; neither reconnect nor rerun resets the budget. Require its actual `check` job to succeed:
 
 ```sh
 gh run watch "$VERIFY_RUN" --repo signapse-group/signapse-ui --interval 30 --exit-status
@@ -68,7 +68,7 @@ timeout "${remaining_seconds}s" /opt/apps/symphony/runtime/run-fe-deploy "$PWD" 
 
 `DELIVERY_WAIT_DEADLINE_EPOCH` comes from the saved absolute deadline; do not create a new deadline when starting the verifier. Bound `gh run watch` by that same remaining deadline. Use short tool yields, checking the same terminal every 30–60 seconds during quiet waits. A tool disconnect/timeout is not deployment failure; reread live state and reconnect only within the remaining budget. Do not end merely to obtain a new scheduler attempt/deadline.
 
-Use the [deployment verifier reference](../delivery.md#confirm-live-dev-revision) for prerequisites, candidate validation, polling and read-retry behavior. Its per-invocation timeout does not reset the saved deadline. A skipped/canceled check, overall green CI or merge alone is insufficient. Require verifier exit code 0 and PASS; it also checks main quality success for the actual deployed SHA. Save its merge/deployed SHA, environment/URL and confirmation time with the corresponding Actions quality-run link in existing PR/delivery evidence before handoff. Never infer deployed SHA from local HEAD. A confirmed containing descendant may satisfy delivery.
+Use the [deployment verifier reference](../delivery.md#confirm-live-dev-revision) for prerequisites, candidate validation, polling and read-retry behavior. Its per-invocation timeout does not reset the saved deadline. A skipped/canceled check, overall green CI or merge alone is insufficient. Require verifier exit code 0 and PASS; it also checks dev quality success for the actual deployed SHA. Save its merge/deployed SHA, environment/URL and confirmation time with the corresponding Actions quality-run link in existing PR/delivery evidence before handoff. Never infer deployed SHA from local HEAD. A confirmed containing descendant may satisfy delivery.
 
 Docs-only output uses artifact location/version, review and applicable checks rather than mandatory app deployment. Runtime/workflow output still needs activation evidence when the accepted assignment requires it; source edits alone do not establish worker adoption.
 
@@ -100,4 +100,4 @@ Cần <owner>: <hành động cụ thể — chỉ khi có>.
 
 Use artifact location/version for output without app deployment. Keep detailed review, commands/CI run IDs and candidate/merge/deployed-build relation in linked evidence; Jira keeps coordination/actions, not duplicate reports. For API output, distinguish FE output from producer revision/environment/publication and pending integration. For Bug fixes, connect the addressed Bug and QA run/report to the delivered source/build/environment and corrected coverage; dev checks do not close the Bug or replace QA retest.
 
-Reread live contract/status/routing/dependencies and verify review, required PR checks/Preview, merge, applicable main/deployment or artifact/activation gates, and saved/read-back handoff. Resolve live In Review → Done, transition/read back and end the session. Done confirms the contribution and its required delivery, independently of QA/product/parent acceptance. New work after Done needs a new coordinator-assigned contribution.
+Reread live contract/status/routing/dependencies and verify review, required PR checks/Preview, merge, applicable dev/deployment or artifact/activation gates, and saved/read-back handoff. Resolve live In Review → Done, transition/read back and end the session. Done confirms the contribution and its required delivery, independently of QA/product/parent acceptance. New work after Done needs a new coordinator-assigned contribution.
