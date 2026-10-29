@@ -33,14 +33,14 @@ async function contains(base, head, api) {
 
 async function qualityPassed(sha, api) {
   const runs = await api(
-    `actions/workflows/verify.yml/runs?head_sha=${sha}&branch=main&event=push&per_page=100`
+    `actions/workflows/verify.yml/runs?head_sha=${sha}&branch=dev&event=push&per_page=100`
   )
   assert(Array.isArray(runs.workflow_runs), "Invalid workflow run response.")
   for (const workflow of runs.workflow_runs) {
     if (
       workflow.head_sha !== sha ||
       workflow.event !== "push" ||
-      workflow.head_branch !== "main"
+      workflow.head_branch !== "dev"
     )
       continue
     const jobs = await api(`actions/runs/${workflow.id}/jobs?per_page=100`)
@@ -95,11 +95,11 @@ export async function findDeployment(
   const revision = await read()
   if (!revision) return null
   assert(shaPattern.test(revision), "Invalid live revision.")
-  const main = (await api("commits/main")).sha
-  assert(shaPattern.test(main), "Invalid main revision.")
+  const dev = (await api("commits/dev")).sha
+  assert(shaPattern.test(dev), "Invalid dev revision.")
   if (
     !(await contains(expected, revision, api)) ||
-    !(await contains(revision, main, api))
+    !(await contains(revision, dev, api))
   )
     return null
   if (!(await qualityPassed(revision, api))) return null

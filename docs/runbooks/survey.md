@@ -6,7 +6,7 @@ This runbook owns the Survey procedure and is loaded only when `WORKFLOW.md` ass
 
 ## Assignment and authority
 
-The profile is a native Jira `SIGN` dev Subtask, parent Story/Task/Bug, exactly one recognized route `route-frontend`, output owned by `signapse-group/signapse-ui`, PR into `main`, product dev environment `https://dev-dashboard.signapse.cloud`. The recognized route set comes from WORKFLOW; business labels may coexist. Direct/no-PR operations retain their separately assigned boundary and are outside this profile.
+The profile is a native Jira `SIGN` dev Subtask, parent Story/Task/Bug, exactly one recognized route `route-frontend`, output owned by `signapse-group/signapse-ui`, PR into `dev`, product dev environment `https://dev-dashboard.signapse.cloud`. The recognized route set comes from WORKFLOW; business labels may coexist. Direct/no-PR operations retain their separately assigned boundary and are outside this profile.
 
 Ready permits reading contract/code/design/API and targeted existing checks on isolated local data. It permits clarifying accepted wording/references in the assigned Subtask body, an owned conditional survey/blocker comment, and Ready → Progress/Blocked under the gates below. It does not permit edits to versioned source/tests/config, commits/push/PR, merge/deploy or shared-environment effects.
 

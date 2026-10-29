@@ -7,19 +7,29 @@ import {
 } from "./verify-deploy.mjs"
 const merge = "a".repeat(40),
   build = "b".repeat(40)
-function api({ quality = true, compare = "ahead", latestFail = false } = {}) {
+function api({
+  quality = true,
+  compare = "ahead",
+  latestFail = false,
+  branch = "dev",
+} = {}) {
   return async (path) => {
-    if (path === "commits/main") return { sha: build }
+    if (path === "commits/dev") return { sha: build }
     if (path.startsWith("compare/")) return { status: compare }
-    if (path.startsWith("actions/workflows/"))
+    if (path.startsWith("actions/workflows/")) {
+      assert.equal(
+        new URL(path, "https://github.invalid/").searchParams.get("branch"),
+        "dev"
+      )
       return {
         workflow_runs: [
-          { id: 2, head_sha: build, event: "push", head_branch: "main" },
+          { id: 2, head_sha: build, event: "push", head_branch: branch },
           ...(latestFail
-            ? [{ id: 1, head_sha: build, event: "push", head_branch: "main" }]
+            ? [{ id: 1, head_sha: build, event: "push", head_branch: branch }]
             : []),
         ],
       }
+    }
     if (path.startsWith("actions/runs/"))
       return {
         jobs: [
@@ -85,6 +95,7 @@ test("accepts checked live descendant; rejects unrelated revision and failed lat
     { quality: false },
     { compare: "diverged" },
     { latestFail: true },
+    { branch: "main" },
   ])
     assert.equal(
       await findDeployment(merge, api(options), async () => build),
@@ -95,6 +106,22 @@ test("accepts checked live descendant; rejects unrelated revision and failed lat
     /40-character/
   )
   assert.equal(await findDeployment(merge, api(), async () => null), null)
+})
+test("rejects a live revision outside dev even when it contains the merge", async () => {
+  const dev = "c".repeat(40)
+  const readApi = api()
+  assert.equal(
+    await findDeployment(
+      merge,
+      async (path) => {
+        if (path === "commits/dev") return { sha: dev }
+        if (path === `compare/${build}...${dev}`) return { status: "diverged" }
+        return readApi(path)
+      },
+      async () => build
+    ),
+    null
+  )
 })
 test("bounds polling and read failures", async () => {
   let time = 0,

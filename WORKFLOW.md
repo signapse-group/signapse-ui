@@ -33,11 +33,11 @@ workspace:
   root: $SYMPHONY_WORKSPACE_ROOT
 hooks:
   after_create: |
-    git -c credential.helper=/opt/apps/symphony/runtime/git-credential-github clone --depth 1 https://github.com/signapse-group/signapse-ui.git .
+    git -c credential.helper=/opt/apps/symphony/runtime/git-credential-github clone --depth 1 --branch dev https://github.com/signapse-group/signapse-ui.git .
     git config credential.helper /opt/apps/symphony/runtime/git-credential-github
     pnpm install --frozen-lockfile
   before_run: |
-    git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
+    git fetch --no-tags origin +refs/heads/dev:refs/remotes/origin/dev
     /opt/apps/symphony/runtime/prepare-fe-workspace
   timeout_ms: 900000
 agent:
@@ -54,7 +54,8 @@ codex:
 {% assign state = issue.state | strip | downcase %}
 
 You are executing Jira Subtask `{{ issue.identifier }}` in `signapse-group/signapse-ui`.
-Read `AGENTS.md`, `CONTRIBUTING.md` and applicable scoped instructions from the current `origin/main` policy revision using `git show origin/main:<path>`. Resolve relative policy links at that same revision, including the phase runbook selected below. The before_run fetch updates policy refs without changing the task branch or working output.
+Feature/fix work starts from current origin/dev and targets dev. Promotion to main and product production deployment are outside this worker profile.
+Read `AGENTS.md`, `CONTRIBUTING.md` and applicable scoped instructions from the current `origin/dev` policy revision using `git show origin/dev:<path>`. Resolve relative policy links at that same revision, including the phase runbook selected below. The before_run fetch updates policy refs without changing the task branch or working output.
 
 - Immutable ID: {{ issue.id }}
 - Identifier: {{ issue.identifier }}
@@ -81,7 +82,7 @@ Description:
 Description not provided in the snapshot.
 {% endif %}
 
-Retain the live Jira `dependencies` envelope and apply the [dependency contract](https://github.com/signapse-group/signapse-symphony/blob/main/elixir/README.md#jira-dependency-contract). Use the current origin/main instruction/runbook sources specified above. Planning policy links are maintainer provenance, not execution prerequisites; live assignment design/ADR/API references remain required when relevant. Do not fetch Planning policy to manufacture an additional admission gate. If a required local source is missing, report deployment drift and stop the affected phase instead of searching legacy checkouts or backups for substitute policy.
+Retain the live Jira `dependencies` envelope and apply the [dependency contract](https://github.com/signapse-group/signapse-symphony/blob/main/elixir/README.md#jira-dependency-contract). Use the current origin/dev instruction/runbook sources specified above. Planning policy links are maintainer provenance, not execution prerequisites; live assignment design/ADR/API references remain required when relevant. Do not fetch Planning policy to manufacture an additional admission gate. If a required local source is missing, report deployment drift and stop the affected phase instead of searching legacy checkouts or backups for substitute policy.
 
 {% if state == "ready" %}
 ## Phase: Survey
