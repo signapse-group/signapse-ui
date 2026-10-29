@@ -2226,7 +2226,26 @@ function responseForRoute(state, method, pathname, url, body) {
       (item) => item.id === Number(aiProviderConfigId[1])
     )
     return connection
-      ? { ...connection, taskReferences: [] }
+      ? {
+          ...connection,
+          taskReferences:
+            connection.id === 12
+              ? [
+                  {
+                    task: "NEWS_CONTENT_NORMALIZATION",
+                    model: "deepseek-v4-flash",
+                  },
+                  {
+                    task: "ECONOMIC_CALENDAR_DESCRIPTION_TRANSLATION",
+                    model: "deepseek-v4-flash",
+                  },
+                  {
+                    task: "NEWS_EVENT_EXTRACTION",
+                    model: "deepseek-v4-flash",
+                  },
+                ]
+              : [],
+        }
       : {
           __status: 404,
           payload: errorPayload("AI connection not found", "NOT_FOUND"),

@@ -1259,13 +1259,17 @@ export const en: Dictionary = {
   aiProviderConfigs: {
     readDenied: "You do not have permission to view AI connections.",
     createDenied: "You do not have permission to create AI connections.",
+    updateDenied: "You do not have permission to update AI connections.",
+    addKeyDenied: "You do not have permission to add API keys.",
+    deleteDenied:
+      "You do not have permission to remove API keys or connections.",
     modelCatalogDenied:
       "You do not have permission to query the provider catalog.",
     unknownProvider: "AI provider",
     addConnection: "Add connection",
     connectionCount: "{count} connections",
     connectionCountOne: "{count} connection",
-    connectionIdentifier: "Connection #{id}",
+    connectionIdentifier: "{provider} · Connection #{id}",
     connectionNumber: "#{id}",
     connectionColumn: "Connection",
     endpointColumn: "Endpoint",
@@ -1298,6 +1302,21 @@ export const en: Dictionary = {
     endpointPlaceholder: "Use the provider endpoint",
     endpointDescription:
       "Only enter a URL when a supported custom endpoint is needed.",
+    editTitle: "Edit AI connection",
+    fixedProviderType: "Fixed provider type",
+    providerTypeDescription:
+      "Provider type is fixed. Create another connection to use a different provider.",
+    providerTypeDescriptionMobile: "Provider type cannot be changed.",
+    endpointUpdateDescription:
+      "Changing the endpoint checks every saved key against the models in use.",
+    endpointUpdateDescriptionMobile:
+      "Checks all keys and models in use before saving.",
+    saveConnection: "Save connection",
+    saveConnectionPending: "Saving connection...",
+    connectionSettingsPersisted: "Connection settings are kept after restart.",
+    updateSuccess: "AI connection updated.",
+    updateError:
+      "Could not save the connection. Check the endpoint and description, then try again.",
     description: "Description",
     descriptionPlaceholder: "Describe this connection",
     descriptionDescription:
@@ -1305,8 +1324,55 @@ export const en: Dictionary = {
     apiKeys: "API keys",
     apiKeysDescription:
       "At least one key is required. Saved keys are masked and cannot be revealed.",
+    connectionKeysDescription:
+      "All keys must access every model used by this connection.",
+    connectionKeysDescriptionMobile:
+      "Every key must access the models used below.",
+    replacementKey: "Replacement key",
+    replacementKeyPlaceholder: "Paste a replacement API key",
+    replacementKeyDescription: "Leave blank to keep the saved key.",
+    replaceKey: "Replace key",
+    replaceKeyPending: "Replacing key...",
+    replaceKeySuccess: "API key replaced.",
+    replaceKeyError:
+      "Could not replace this API key. Check the key and try again.",
+    newKey: "New key",
+    newKeyPlaceholder: "Paste a new API key",
+    newKeyDescription:
+      "Adding or replacing a key verifies access to all models below.",
+    newKeyDescriptionMobile: "Verifies access to all models below.",
     addKey: "Add key",
+    addKeyPending: "Adding key...",
+    addKeySuccess: "API key added.",
+    addKeyError: "Could not add this API key. Check the key and try again.",
     removeKey: "Remove API key {index}",
+    removeKeyAction: "Remove key",
+    lastKeyRemovalBlocked:
+      "This is the last key. Add another key before removing it.",
+    lastKeyRemovalBlockedMobile: "Last key. Add another before removing it.",
+    deleteKeyTitle: "Remove this API key?",
+    deleteKeyDescription:
+      "This permanently removes the masked key {keyPreview}. You cannot undo this.",
+    deleteKeySuccess: "API key removed.",
+    deleteKeyError: "Could not remove this API key.",
+    deletePending: "Deleting...",
+    deleteConnection: "Delete connection",
+    deleteConnectionTitle: "Delete {provider} connection #{id}?",
+    deleteConnectionDescription:
+      "This permanently deletes the connection and its saved API keys. You cannot undo this.",
+    deleteConnectionSuccess: "AI connection deleted.",
+    deleteConnectionError: "Could not delete this connection.",
+    discardChangesTitle: "Discard unsaved changes?",
+    discardChangesDescription: "Changes you haven't saved will be lost.",
+    continueEditing: "Continue editing",
+    discardChanges: "Discard changes",
+    deleteConnectionBlocked:
+      "Move these tasks to another connection before deleting this connection.",
+    deleteConnectionBlockedMobile:
+      "Move these tasks before deleting this connection.",
+    usedByTitle: "Used by {count} tasks",
+    noTaskReferences: "No tasks use this connection.",
+    keyValidationError: "Enter a non-empty API key and try again.",
     noKeysAdded: "No API keys added yet.",
     apiKey: "API key",
     apiKeyIndex: "Key {index}",
