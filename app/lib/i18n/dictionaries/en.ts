@@ -1338,6 +1338,9 @@ export const en: Dictionary = {
       "Could not replace this API key. Check the key and try again.",
     newKey: "New key",
     newKeyPlaceholder: "Paste a new API key",
+    newKeyDescription:
+      "Adding or replacing a key verifies access to all models below.",
+    newKeyDescriptionMobile: "Verifies access to all models below.",
     addKey: "Add key",
     addKeyPending: "Adding key...",
     addKeySuccess: "API key added.",

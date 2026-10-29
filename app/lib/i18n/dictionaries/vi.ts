@@ -1329,6 +1329,9 @@ export const vi = {
     replaceKeyError: "Không thể thay API key. Hãy kiểm tra key rồi thử lại.",
     newKey: "Key mới",
     newKeyPlaceholder: "Dán API key mới",
+    newKeyDescription:
+      "Thêm hoặc thay API key sẽ kiểm tra quyền truy cập vào tất cả model bên dưới.",
+    newKeyDescriptionMobile: "Kiểm tra quyền truy cập vào các model bên dưới.",
     addKey: "Thêm key",
     addKeyPending: "Đang thêm key...",
     addKeySuccess: "Đã thêm API key.",

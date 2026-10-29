@@ -200,6 +200,9 @@ test.describe("P0 AI connections", () => {
     ).toHaveValue("")
     await expect(page.getByLabel("New key", { exact: true })).toHaveValue("")
     await expect(
+      page.getByText(en.aiProviderConfigs.newKeyDescription, { exact: true })
+    ).toBeVisible()
+    await expect(
       page.getByText("deepseek-v4-flash", { exact: true })
     ).toHaveCount(3)
     await expect(
@@ -273,6 +276,30 @@ test.describe("P0 AI connections", () => {
       await expect(page.getByLabel("Replacement key")).toBeEmpty()
       await expect(page.getByLabel("New key")).toBeEmpty()
       if (viewport.width === 390) {
+        const mobileBreadcrumb = page.getByRole("navigation", {
+          name: en.navigation.breadcrumb,
+        })
+        await expect(
+          mobileBreadcrumb.getByRole("link", {
+            name: en.navigation.aiProviders,
+            exact: true,
+          })
+        ).toBeVisible()
+        await expect(
+          mobileBreadcrumb.getByText(en.common.edit, { exact: true })
+        ).toBeVisible()
+        await expect(
+          mobileBreadcrumb.getByRole("link", {
+            name: en.navigation.overview,
+            exact: true,
+          })
+        ).not.toBeVisible()
+        await expect(
+          page.getByText(en.aiProviderConfigs.newKeyDescriptionMobile, {
+            exact: true,
+          })
+        ).toBeVisible()
+
         const mobileScreenshot = await page.screenshot({
           fullPage: true,
           style: "nextjs-portal { display: none !important; }",

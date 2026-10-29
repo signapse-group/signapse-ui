@@ -1,6 +1,6 @@
 "use client"
 
-import { ArrowLeft, Plus, Trash2 } from "lucide-react"
+import { ArrowLeft, ArrowRight, Plus, Trash2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
@@ -604,6 +604,14 @@ function AiProviderConfigDetailContent({
                 placeholder={t.newKeyPlaceholder}
                 disabled={pendingOperation !== null}
               />
+              <FieldDescription>
+                <span className="hidden sm:inline">
+                  {t.newKeyDescription}
+                </span>
+                <span className="sm:hidden">
+                  {t.newKeyDescriptionMobile}
+                </span>
+              </FieldDescription>
             </Field>
             <Button
               type="submit"
@@ -678,6 +686,7 @@ function AiProviderConfigDetailContent({
               href="/ai-task-configurations"
               className={`${buttonVariants({ variant: "outline" })} w-full sm:w-auto sm:self-end`}
             >
+              <ArrowRight data-icon="inline-start" />
               {t.openTaskConfiguration}
             </Link>
           ) : null}
