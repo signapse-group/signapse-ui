@@ -77,6 +77,10 @@ export function AppBreadcrumb() {
     segments.length === 1 && segments[0] === "email-delivery"
   const isSystemPromptDetailRoute =
     segments[0] === "system-prompts" && segments.length === 2
+  const isAiProviderConfigDetailRoute =
+    segments.length === 2 &&
+    segments[0] === "ai-provider-configs" &&
+    /^\d+$/.test(segments[1])
   const isSystemPromptViewRoute =
     segments.length === 3 &&
     segments[0] === "system-prompts" &&
@@ -124,19 +128,35 @@ export function AppBreadcrumb() {
         {visibleSegments.map((segment, index) => {
           const href = `/${visibleSegments.slice(0, index + 1).join("/")}`
           const isLast = index === visibleSegments.length - 1
+          const showAiProviderParentOnMobile =
+            isAiProviderConfigDetailRoute && index === 0
+          const showAiProviderSeparatorOnMobile =
+            isAiProviderConfigDetailRoute && index === 1
           const title =
             isSystemPromptViewRoute && segment === "view"
               ? dictionary.aiTaskConfigurations.promptViewTitle
+              : isAiProviderConfigDetailRoute && index === 1
+                ? dictionary.common.edit
               : formatSegment(segment, index, dictionary)
           const showSeparator = showOverviewCrumb || index > 0
 
           return (
             <React.Fragment key={href}>
               {showSeparator ? (
-                <BreadcrumbSeparator className="hidden md:block" />
+                <BreadcrumbSeparator
+                  className={
+                    showAiProviderSeparatorOnMobile
+                      ? undefined
+                      : "hidden md:block"
+                  }
+                />
               ) : null}
               <BreadcrumbItem
-                className={!isLast ? "hidden md:block" : "min-w-0"}
+                className={
+                  !isLast && !showAiProviderParentOnMobile
+                    ? "hidden md:block"
+                    : "min-w-0"
+                }
               >
                 {isLast ? (
                   <BreadcrumbPage className="max-w-[45vw] truncate md:max-w-[36rem]">

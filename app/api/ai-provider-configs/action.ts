@@ -5,15 +5,23 @@ import * as z from "zod"
 
 import { fetchAuthenticated } from "@/app/api/auth/action"
 import {
+  aiProviderConfigUpdateRequestSchema,
   aiProviderConfigCreateRequestSchema,
   aiProviderConfigDetailResponseSchema,
   aiProviderConfigPageResponseSchema,
   aiProviderConfigResponseSchema,
+  aiProviderCredentialCreateRequestSchema,
+  aiProviderCredentialResponseSchema,
+  aiProviderCredentialUpdateRequestSchema,
   aiProviderModelCatalogRequestSchema,
   aiProviderModelCatalogResponseSchema,
   type AiProviderConfigCreateRequest,
   type AiProviderConfigDetailResponse,
   type AiProviderConfigListResponse,
+  type AiProviderConfigUpdateRequest,
+  type AiProviderCredentialCreateRequest,
+  type AiProviderCredentialResponse,
+  type AiProviderCredentialUpdateRequest,
   type AiProviderModelCatalogRequest,
   type AiProviderModelCatalogResponse,
 } from "@/app/lib/ai-provider-configs/definitions"
@@ -224,4 +232,260 @@ export async function createAiProviderConfig(
 
   revalidateAiProviderConfig(parsedResponse.data.id)
   return { success: true, data: parsedResponse.data }
+}
+
+export async function updateAiProviderConfig(
+  id: number,
+  request: AiProviderConfigUpdateRequest
+): Promise<ActionResult<AiProviderConfigDetailResponse>> {
+  const dictionary = await getServerDictionary()
+  if (
+    !hasPermission(
+      await getCurrentPermissions(),
+      AI_PROVIDER_CONFIG_PERMISSIONS.update
+    )
+  ) {
+    return { success: false, error: dictionary.aiProviderConfigs.updateDenied }
+  }
+
+  const parsedId = idSchema.safeParse(id)
+  const parsedRequest = aiProviderConfigUpdateRequestSchema.safeParse(request)
+  if (!parsedId.success || !parsedRequest.success) {
+    return {
+      success: false,
+      error: dictionary.aiProviderConfigs.validationError,
+    }
+  }
+
+  let value: unknown
+  try {
+    value = await fetchAuthenticated<unknown>(
+      `/ai-provider-configs/${parsedId.data}`,
+      {
+        method: "PUT",
+        body: JSON.stringify(parsedRequest.data),
+      }
+    )
+  } catch (error: unknown) {
+    return {
+      success: false,
+      error: getSafeBackendError(
+        error,
+        dictionary.aiProviderConfigs.updateError
+      ),
+    }
+  }
+
+  const parsedResponse = aiProviderConfigDetailResponseSchema.safeParse(value)
+  if (!parsedResponse.success) {
+    return {
+      success: false,
+      error: dictionary.aiProviderConfigs.responseInvalid,
+    }
+  }
+
+  revalidateAiProviderConfig(parsedId.data)
+  return { success: true, data: parsedResponse.data }
+}
+
+export async function createAiProviderCredential(
+  id: number,
+  request: AiProviderCredentialCreateRequest
+): Promise<ActionResult<AiProviderCredentialResponse>> {
+  const dictionary = await getServerDictionary()
+  if (
+    !hasPermission(
+      await getCurrentPermissions(),
+      AI_PROVIDER_CONFIG_PERMISSIONS.create
+    )
+  ) {
+    return { success: false, error: dictionary.aiProviderConfigs.addKeyDenied }
+  }
+
+  const parsedId = idSchema.safeParse(id)
+  const parsedRequest =
+    aiProviderCredentialCreateRequestSchema.safeParse(request)
+  if (!parsedId.success || !parsedRequest.success) {
+    return {
+      success: false,
+      error: dictionary.aiProviderConfigs.validationError,
+    }
+  }
+
+  let value: unknown
+  try {
+    value = await fetchAuthenticated<unknown>(
+      `/ai-provider-configs/${parsedId.data}/credentials`,
+      {
+        method: "POST",
+        body: JSON.stringify(parsedRequest.data),
+      }
+    )
+  } catch (error: unknown) {
+    return {
+      success: false,
+      error: getSafeBackendError(
+        error,
+        dictionary.aiProviderConfigs.addKeyError,
+        [parsedRequest.data.apiKey]
+      ),
+    }
+  }
+
+  const parsedResponse = aiProviderCredentialResponseSchema.safeParse(value)
+  if (!parsedResponse.success) {
+    return {
+      success: false,
+      error: dictionary.aiProviderConfigs.responseInvalid,
+    }
+  }
+
+  revalidateAiProviderConfig(parsedId.data)
+  return { success: true, data: parsedResponse.data }
+}
+
+export async function updateAiProviderCredential(
+  id: number,
+  credentialId: number,
+  request: AiProviderCredentialUpdateRequest
+): Promise<ActionResult<AiProviderCredentialResponse>> {
+  const dictionary = await getServerDictionary()
+  if (
+    !hasPermission(
+      await getCurrentPermissions(),
+      AI_PROVIDER_CONFIG_PERMISSIONS.update
+    )
+  ) {
+    return {
+      success: false,
+      error: dictionary.aiProviderConfigs.updateDenied,
+    }
+  }
+
+  const parsedId = idSchema.safeParse(id)
+  const parsedCredentialId = idSchema.safeParse(credentialId)
+  const parsedRequest =
+    aiProviderCredentialUpdateRequestSchema.safeParse(request)
+  if (
+    !parsedId.success ||
+    !parsedCredentialId.success ||
+    !parsedRequest.success
+  ) {
+    return {
+      success: false,
+      error: dictionary.aiProviderConfigs.validationError,
+    }
+  }
+
+  let value: unknown
+  try {
+    value = await fetchAuthenticated<unknown>(
+      `/ai-provider-configs/${parsedId.data}/credentials/${parsedCredentialId.data}`,
+      {
+        method: "PUT",
+        body: JSON.stringify(parsedRequest.data),
+      }
+    )
+  } catch (error: unknown) {
+    return {
+      success: false,
+      error: getSafeBackendError(
+        error,
+        dictionary.aiProviderConfigs.replaceKeyError,
+        parsedRequest.data.apiKey ? [parsedRequest.data.apiKey] : []
+      ),
+    }
+  }
+
+  const parsedResponse = aiProviderCredentialResponseSchema.safeParse(value)
+  if (!parsedResponse.success) {
+    return {
+      success: false,
+      error: dictionary.aiProviderConfigs.responseInvalid,
+    }
+  }
+
+  revalidateAiProviderConfig(parsedId.data)
+  return { success: true, data: parsedResponse.data }
+}
+
+export async function deleteAiProviderCredential(
+  id: number,
+  credentialId: number
+): Promise<ActionResult> {
+  const dictionary = await getServerDictionary()
+  if (
+    !hasPermission(
+      await getCurrentPermissions(),
+      AI_PROVIDER_CONFIG_PERMISSIONS.delete
+    )
+  ) {
+    return { success: false, error: dictionary.aiProviderConfigs.deleteDenied }
+  }
+
+  const parsedId = idSchema.safeParse(id)
+  const parsedCredentialId = idSchema.safeParse(credentialId)
+  if (!parsedId.success || !parsedCredentialId.success) {
+    return {
+      success: false,
+      error: dictionary.aiProviderConfigs.validationError,
+    }
+  }
+
+  try {
+    await fetchAuthenticated<unknown>(
+      `/ai-provider-configs/${parsedId.data}/credentials/${parsedCredentialId.data}`,
+      { method: "DELETE" }
+    )
+  } catch (error: unknown) {
+    return {
+      success: false,
+      error: getSafeBackendError(
+        error,
+        dictionary.aiProviderConfigs.deleteKeyError
+      ),
+    }
+  }
+
+  revalidateAiProviderConfig(parsedId.data)
+  return { success: true, data: undefined }
+}
+
+export async function deleteAiProviderConfig(
+  id: number
+): Promise<ActionResult> {
+  const dictionary = await getServerDictionary()
+  if (
+    !hasPermission(
+      await getCurrentPermissions(),
+      AI_PROVIDER_CONFIG_PERMISSIONS.delete
+    )
+  ) {
+    return { success: false, error: dictionary.aiProviderConfigs.deleteDenied }
+  }
+
+  const parsedId = idSchema.safeParse(id)
+  if (!parsedId.success) {
+    return {
+      success: false,
+      error: dictionary.aiProviderConfigs.validationError,
+    }
+  }
+
+  try {
+    await fetchAuthenticated<unknown>(`/ai-provider-configs/${parsedId.data}`, {
+      method: "DELETE",
+    })
+  } catch (error: unknown) {
+    return {
+      success: false,
+      error: getSafeBackendError(
+        error,
+        dictionary.aiProviderConfigs.deleteConnectionError
+      ),
+    }
+  }
+
+  revalidateAiProviderConfig(parsedId.data)
+  return { success: true, data: undefined }
 }
