@@ -269,7 +269,9 @@ test.describe("P0 AI connections", () => {
         },
       ])
       await page.goto("/en/ai-provider-configs/12")
-      await expect(page.getByLabel("Endpoint")).toBeVisible()
+      await expect(page.getByLabel("Endpoint")).toBeEmpty()
+      await expect(page.getByLabel("Replacement key")).toBeEmpty()
+      await expect(page.getByLabel("New key")).toBeEmpty()
       if (viewport.width === 390) {
         const mobileScreenshot = await page.screenshot({
           fullPage: true,
@@ -286,6 +288,77 @@ test.describe("P0 AI connections", () => {
       }))
       expect(dimensions.body).toBeLessThanOrEqual(dimensions.viewport)
     }
+  })
+
+  test("retains edit drafts through breadcrumb, sidebar, and browser history navigation", async ({
+    page,
+    fixture,
+  }) => {
+    await fixture.setPermissions([
+      "ai-provider-config:read",
+      "ai-provider-config:create",
+      "ai-provider-config:update",
+      "ai-task-configuration:read",
+    ])
+    await page.emulateMedia({ colorScheme: "dark" })
+    await page.setViewportSize({ width: 1520, height: 1600 })
+    await page.goto("/en/ai-provider-configs/12")
+
+    await page
+      .getByLabel(en.aiProviderConfigs.endpoint)
+      .fill("https://breadcrumb-draft.example.test/v1")
+    await page
+      .getByLabel(en.aiProviderConfigs.description)
+      .fill("Draft retained across navigation")
+    await page
+      .getByLabel(en.aiProviderConfigs.replacementKey)
+      .fill("replacement-draft")
+    await page.getByLabel(en.aiProviderConfigs.newKey).fill("new-key-draft")
+
+    await page
+      .getByRole("navigation", { name: en.navigation.breadcrumb })
+      .getByRole("link", { name: en.navigation.aiProviders })
+      .click()
+    await expect(page).toHaveURL(/\/en\/ai-provider-configs$/)
+    await page.getByRole("link", { name: "Groq #12" }).click()
+    await expect(page).toHaveURL(/\/en\/ai-provider-configs\/12$/)
+    await expect(page.getByLabel(en.aiProviderConfigs.endpoint)).toHaveValue(
+      "https://breadcrumb-draft.example.test/v1"
+    )
+    await expect(page.getByLabel(en.aiProviderConfigs.newKey)).toHaveValue(
+      "new-key-draft"
+    )
+
+    await page
+      .locator('[data-sidebar="sidebar"]')
+      .getByRole("link", { name: en.navigation.overview, exact: true })
+      .click()
+    await expect(page).toHaveURL(/\/en\/dashboard$/)
+    await page.goBack()
+    await expect(page).toHaveURL(/\/en\/ai-provider-configs\/12$/)
+    await expect(page.getByLabel(en.aiProviderConfigs.description)).toHaveValue(
+      "Draft retained across navigation"
+    )
+    await expect(
+      page.getByLabel(en.aiProviderConfigs.replacementKey)
+    ).toHaveValue("replacement-draft")
+
+    await page.goBack()
+    await expect(page).toHaveURL(/\/en\/ai-provider-configs$/)
+    await page.goForward()
+    await expect(page).toHaveURL(/\/en\/ai-provider-configs\/12$/)
+    await expect(page.getByLabel(en.aiProviderConfigs.endpoint)).toHaveValue(
+      "https://breadcrumb-draft.example.test/v1"
+    )
+    await expect(page.getByLabel(en.aiProviderConfigs.description)).toHaveValue(
+      "Draft retained across navigation"
+    )
+    await expect(
+      page.getByLabel(en.aiProviderConfigs.replacementKey)
+    ).toHaveValue("replacement-draft")
+    await expect(page.getByLabel(en.aiProviderConfigs.newKey)).toHaveValue(
+      "new-key-draft"
+    )
   })
 
   test("creates only supported-provider connections after API confirmation", async ({

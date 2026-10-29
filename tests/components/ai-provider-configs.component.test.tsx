@@ -1,8 +1,14 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen, within } from "@testing-library/react"
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { Suspense } from "react"
+import { Suspense, useState } from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 const { routerPush, routerRefresh, routerReplace, getCurrentPermissions } =
@@ -62,6 +68,7 @@ import type { Dictionary } from "@/app/lib/i18n/dictionary-types"
 import { LocalizationProvider } from "@/app/lib/i18n/provider"
 import { PermissionProvider } from "@/components/permission-provider"
 import { AiProviderConfigCreateForm } from "@/app/[lang]/(main)/ai-provider-configs/ai-provider-config-create-form"
+import { AiProviderConfigDraftProvider } from "@/app/[lang]/(main)/ai-provider-configs/ai-provider-config-draft-provider"
 import { AiProviderConfigDetail } from "@/app/[lang]/(main)/ai-provider-configs/ai-provider-config-detail"
 import { AiProviderConfigListPage } from "@/app/[lang]/(main)/ai-provider-configs/ai-provider-config-list"
 import AiProviderConfigDetailPage from "@/app/[lang]/(main)/ai-provider-configs/[id]/page"
@@ -105,9 +112,31 @@ function renderWithProviders(
   return render(
     <LocalizationProvider locale="vi" dictionary={dictionary}>
       <PermissionProvider permissions={permissions}>
-        {children}
+        <AiProviderConfigDraftProvider>
+          {children}
+        </AiProviderConfigDraftProvider>
       </PermissionProvider>
     </LocalizationProvider>
+  )
+}
+
+function RemountableAiProviderConfigDetail() {
+  const [isVisible, setIsVisible] = useState(true)
+
+  return (
+    <>
+      <button type="button" onClick={() => setIsVisible(false)}>
+        Leave edit page
+      </button>
+      <button type="button" onClick={() => setIsVisible(true)}>
+        Return to edit page
+      </button>
+      {isVisible ? (
+        <AiProviderConfigDetail
+          provider={{ ...legacyProvider, taskReferences: [] }}
+        />
+      ) : null}
+    </>
   )
 }
 
@@ -354,6 +383,7 @@ describe("AI connection UI", () => {
       })
     )
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument()
+    expect(back).toHaveFocus()
     expect(endpoint).toHaveValue("https://custom.example.test/v1")
     expect(description).toHaveValue("Updated description")
     expect(replacementKey).toHaveValue("replacement-secret")
@@ -366,6 +396,76 @@ describe("AI connection UI", () => {
       })
     )
     expect(routerPush).toHaveBeenCalledWith("/vi/ai-provider-configs")
+  })
+
+  it("retains unsaved endpoint, description, and key drafts when detail unmounts", async () => {
+    const user = userEvent.setup()
+    renderWithProviders(
+      <RemountableAiProviderConfigDetail />,
+      [
+        "ai-provider-config:read",
+        "ai-provider-config:update",
+        "ai-provider-config:create",
+      ],
+      en
+    )
+
+    await user.type(
+      screen.getByLabelText(en.aiProviderConfigs.endpoint),
+      "https://draft.example.test/v1"
+    )
+    await user.clear(screen.getByLabelText(en.aiProviderConfigs.description))
+    await user.type(
+      screen.getByLabelText(en.aiProviderConfigs.description),
+      "Draft description"
+    )
+    await user.type(
+      screen.getByLabelText(en.aiProviderConfigs.replacementKey),
+      "replacement-secret"
+    )
+    await user.type(
+      screen.getByLabelText(en.aiProviderConfigs.newKey),
+      "new-secret"
+    )
+
+    await user.click(screen.getByRole("button", { name: "Leave edit page" }))
+    expect(screen.queryByLabelText(en.aiProviderConfigs.endpoint)).toBeNull()
+    await user.click(
+      screen.getByRole("button", { name: "Return to edit page" })
+    )
+
+    expect(screen.getByLabelText(en.aiProviderConfigs.endpoint)).toHaveValue(
+      "https://draft.example.test/v1"
+    )
+    expect(screen.getByLabelText(en.aiProviderConfigs.description)).toHaveValue(
+      "Draft description"
+    )
+    expect(
+      screen.getByLabelText(en.aiProviderConfigs.replacementKey)
+    ).toHaveValue("replacement-secret")
+    expect(screen.getByLabelText(en.aiProviderConfigs.newKey)).toHaveValue(
+      "new-secret"
+    )
+  })
+
+  it("warns before a hard unload while edit drafts are dirty", async () => {
+    const user = userEvent.setup()
+    renderWithProviders(
+      <AiProviderConfigDetail
+        provider={{ ...legacyProvider, taskReferences: [] }}
+      />,
+      ["ai-provider-config:read", "ai-provider-config:update"],
+      en
+    )
+
+    await user.type(
+      screen.getByLabelText(en.aiProviderConfigs.endpoint),
+      "https://draft.example.test/v1"
+    )
+    const unloadEvent = new Event("beforeunload", { cancelable: true })
+    fireEvent(window, unloadEvent)
+
+    expect(unloadEvent.defaultPrevented).toBe(true)
   })
 
   it("keeps API key input on failure, clears it after confirmation, and an empty replacement keeps the saved key", async () => {

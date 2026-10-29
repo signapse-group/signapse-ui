@@ -2,7 +2,7 @@
 
 import { ArrowLeft, Plus, Trash2 } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { toast } from "sonner"
 
 import {
@@ -45,6 +45,10 @@ import { Field, FieldDescription, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Spinner } from "@/components/ui/spinner"
 
+import {
+  useAiProviderConfigDrafts,
+  type AiProviderConfigEditDraft,
+} from "./ai-provider-config-draft-provider"
 import { getProviderOptionLabel } from "./ai-provider-config-shared"
 
 type PendingDelete =
@@ -79,14 +83,20 @@ function AiProviderConfigDetailContent({
   const canReadTaskConfigurations = useHasPermission(
     AI_TASK_CONFIGURATION_READ_PERMISSION
   )
+  const { drafts, setDraft, clearDraft } = useAiProviderConfigDrafts()
+  const editDraft = drafts[provider.id]
   const [savedProvider, setSavedProvider] = useState(provider)
   const [credentials, setCredentials] = useState(provider.credentials)
-  const [endpoint, setEndpoint] = useState(provider.baseUrl ?? "")
-  const [description, setDescription] = useState(provider.description ?? "")
-  const [newKey, setNewKey] = useState("")
+  const [endpoint, setEndpoint] = useState(
+    editDraft?.endpoint ?? provider.baseUrl ?? ""
+  )
+  const [description, setDescription] = useState(
+    editDraft?.description ?? provider.description ?? ""
+  )
+  const [newKey, setNewKey] = useState(editDraft?.newKey ?? "")
   const [replacementKeys, setReplacementKeys] = useState<
     Record<number, string>
-  >({})
+  >(editDraft?.replacementKeys ?? {})
   const [pendingOperation, setPendingOperation] = useState<string | null>(null)
   const [pendingDelete, setPendingDelete] = useState<PendingDelete>(null)
   const [deleteError, setDeleteError] = useState("")
@@ -100,6 +110,36 @@ function AiProviderConfigDetailContent({
     newKey.length > 0 ||
     Object.values(replacementKeys).some((key) => key.length > 0)
   const hasReferences = provider.taskReferences.length > 0
+
+  function persistDraft(
+    next: AiProviderConfigEditDraft,
+    baseline: AiProviderConfigDetailResponse = savedProvider
+  ) {
+    const isDirty =
+      next.endpoint !== (baseline.baseUrl ?? "") ||
+      next.description !== (baseline.description ?? "") ||
+      next.newKey.length > 0 ||
+      Object.values(next.replacementKeys).some((key) => key.length > 0)
+
+    if (isDirty) setDraft(provider.id, next)
+    else clearDraft(provider.id)
+  }
+
+  function updateDraft(patch: Partial<AiProviderConfigEditDraft>) {
+    persistDraft({ endpoint, description, newKey, replacementKeys, ...patch })
+  }
+
+  useEffect(() => {
+    if (!hasUnsavedChanges) return
+
+    function warnBeforeUnload(event: BeforeUnloadEvent) {
+      event.preventDefault()
+      event.returnValue = ""
+    }
+
+    window.addEventListener("beforeunload", warnBeforeUnload)
+    return () => window.removeEventListener("beforeunload", warnBeforeUnload)
+  }, [hasUnsavedChanges])
 
   async function saveConnection(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -119,6 +159,15 @@ function AiProviderConfigDetailContent({
       setSavedProvider(result.data)
       setEndpoint(result.data.baseUrl ?? "")
       setDescription(result.data.description ?? "")
+      persistDraft(
+        {
+          endpoint: result.data.baseUrl ?? "",
+          description: result.data.description ?? "",
+          newKey,
+          replacementKeys,
+        },
+        result.data
+      )
       toast.success(t.updateSuccess)
       router.refresh()
     } catch {
@@ -147,6 +196,7 @@ function AiProviderConfigDetailContent({
 
       setCredentials((current) => [...current, result.data])
       setNewKey("")
+      updateDraft({ newKey: "" })
       toast.success(t.addKeySuccess)
       router.refresh()
     } catch {
@@ -179,7 +229,14 @@ function AiProviderConfigDetailContent({
           credential.id === credentialId ? result.data : credential
         )
       )
-      setReplacementKeys((current) => ({ ...current, [credentialId]: "" }))
+      const nextReplacementKeys = { ...replacementKeys, [credentialId]: "" }
+      setReplacementKeys(nextReplacementKeys)
+      persistDraft({
+        endpoint,
+        description,
+        newKey,
+        replacementKeys: nextReplacementKeys,
+      })
       toast.success(t.replaceKeySuccess)
       router.refresh()
     } catch {
@@ -214,15 +271,25 @@ function AiProviderConfigDetailContent({
       }
 
       if (pendingDelete.kind === "credential") {
+        const nextReplacementKeys = { ...replacementKeys }
+        delete nextReplacementKeys[pendingDelete.credential.id]
         setCredentials((current) =>
           current.filter(
             (credential) => credential.id !== pendingDelete.credential.id
           )
         )
+        setReplacementKeys(nextReplacementKeys)
+        persistDraft({
+          endpoint,
+          description,
+          newKey,
+          replacementKeys: nextReplacementKeys,
+        })
         setPendingDelete(null)
         toast.success(t.deleteKeySuccess)
         router.refresh()
       } else {
+        clearDraft(provider.id)
         toast.success(t.deleteConnectionSuccess)
         router.replace(connectionsPath)
       }
@@ -238,7 +305,9 @@ function AiProviderConfigDetailContent({
   }
 
   function updateReplacement(credentialId: number, value: string) {
-    setReplacementKeys((current) => ({ ...current, [credentialId]: value }))
+    const nextReplacementKeys = { ...replacementKeys, [credentialId]: value }
+    setReplacementKeys(nextReplacementKeys)
+    updateDraft({ replacementKeys: nextReplacementKeys })
   }
 
   return (
@@ -297,7 +366,11 @@ function AiProviderConfigDetailContent({
                   <Input
                     id="ai-provider-endpoint"
                     value={endpoint}
-                    onChange={(event) => setEndpoint(event.target.value)}
+                    onChange={(event) => {
+                      const value = event.target.value
+                      setEndpoint(value)
+                      updateDraft({ endpoint: value })
+                    }}
                     placeholder={t.endpointPlaceholder}
                     autoComplete="url"
                     disabled={pendingOperation !== null}
@@ -319,7 +392,11 @@ function AiProviderConfigDetailContent({
                   <Input
                     id="ai-provider-description"
                     value={description}
-                    onChange={(event) => setDescription(event.target.value)}
+                    onChange={(event) => {
+                      const value = event.target.value
+                      setDescription(value)
+                      updateDraft({ description: value })
+                    }}
                     placeholder={t.descriptionPlaceholder}
                     disabled={pendingOperation !== null}
                   />
@@ -519,7 +596,11 @@ function AiProviderConfigDetailContent({
                 type="password"
                 autoComplete="new-password"
                 value={newKey}
-                onChange={(event) => setNewKey(event.target.value)}
+                onChange={(event) => {
+                  const value = event.target.value
+                  setNewKey(value)
+                  updateDraft({ newKey: value })
+                }}
                 placeholder={t.newKeyPlaceholder}
                 disabled={pendingOperation !== null}
               />
@@ -603,10 +684,7 @@ function AiProviderConfigDetailContent({
         </div>
       </section>
 
-      <AlertDialog
-        open={discardDialogOpen}
-        onOpenChange={setDiscardDialogOpen}
-      >
+      <AlertDialog open={discardDialogOpen} onOpenChange={setDiscardDialogOpen}>
         <AlertDialogContent size="sm">
           <AlertDialogHeader>
             <AlertDialogTitle>{t.discardChangesTitle}</AlertDialogTitle>
@@ -622,6 +700,7 @@ function AiProviderConfigDetailContent({
               variant="destructive"
               onClick={(event) => {
                 event.preventDefault()
+                clearDraft(provider.id)
                 router.push(connectionsPath)
               }}
             >
