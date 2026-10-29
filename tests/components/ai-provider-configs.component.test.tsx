@@ -238,7 +238,7 @@ describe("AI connection UI", () => {
     ).not.toBeInTheDocument()
   })
 
-  it("keeps endpoint and description drafts after a failed model validation and saves only editable fields", async () => {
+  it("keeps endpoint and description drafts after a failed model validation, saves only editable fields, and resets a cleared endpoint", async () => {
     const user = userEvent.setup()
     const provider = {
       ...legacyProvider,
@@ -255,6 +255,14 @@ describe("AI connection UI", () => {
         data: {
           ...provider,
           baseUrl: "https://custom.example.test/v1",
+          description: "Updated connection",
+        },
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          ...provider,
+          baseUrl: undefined,
           description: "Updated connection",
         },
       })
@@ -291,6 +299,18 @@ describe("AI connection UI", () => {
       baseUrl: "https://custom.example.test/v1",
       description: "Updated connection",
     })
+
+    await user.clear(endpoint)
+    await user.click(
+      screen.getByRole("button", { name: en.aiProviderConfigs.saveConnection })
+    )
+    await vi.waitFor(() =>
+      expect(updateAiProviderConfig).toHaveBeenCalledTimes(3)
+    )
+    expect(updateAiProviderConfig).toHaveBeenLastCalledWith(12, {
+      baseUrl: "",
+    })
+    expect(endpoint).toHaveValue("")
   })
 
   it("keeps API key input on failure, clears it after confirmation, and an empty replacement keeps the saved key", async () => {
