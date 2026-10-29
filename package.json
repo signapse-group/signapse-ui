@@ -22,7 +22,6 @@
     "verify:deploy": "node scripts/verify-deploy.mjs"
   },
   "dependencies": {
-    "@antv/g6": "^5.1.1",
     "@ariakit/react": "^0.4.37",
     "@base-ui/react": "^1.7.0",
     "@clerk/localizations": "^4.15.4",
@@ -60,7 +59,6 @@
     "@platejs/table": "^53.0.9",
     "@platejs/toc": "^53.0.0",
     "@platejs/toggle": "^53.0.0",
-    "@react-sigma/core": "^5.0.6",
     "@shadcn/react": "^0.2.1",
     "@udecode/cn": "^52.3.4",
     "@vercel/analytics": "^2.0.1",

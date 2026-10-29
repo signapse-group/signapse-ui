@@ -1,26 +1,26 @@
 "use client"
 
 import { createD3Layout } from "./d3-layout"
+import { pickGraphEdges, type PickNode } from "./edge-picking"
 import {
   getNodeLabelPriority,
   measureNodeLabel,
   placeNodeLabels,
-  type LabelSide,
   type PlacedNodeLabel,
 } from "./node-labels"
-import { GraphNodeInspectorMetadata } from "../graph-view/graph-node-inspector-metadata"
+import { GraphNodeInspectorMetadata } from "./graph-node-inspector-metadata"
 import {
-  ArrowUpRight,
+  ArrowDown,
   ExternalLink,
   LocateFixed,
   Minus,
   Plus,
-  RefreshCw,
   X,
 } from "lucide-react"
 import { useTheme } from "next-themes"
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import Sigma from "sigma"
+import type { SigmaEventPayload } from "sigma/types"
 import { drawStraightEdgeLabel } from "sigma/rendering"
 
 import type { AppLocale } from "@/app/lib/i18n/config"
@@ -29,7 +29,6 @@ import {
   createGraphViewDemoFixture,
   createGraphViewDemoGraph,
   createGraphViewDemoSeedPositions,
-  GRAPH_VIEW_DEMO_EDGE_COUNTS,
   GRAPH_VIEW_DEMO_FIXTURE_VERSION,
   GRAPH_VIEW_DEMO_LAYOUT_VERSION,
   type GraphViewDemoEdgeAttributes,
@@ -54,14 +53,6 @@ import { useLocalization } from "@/app/lib/i18n/provider"
 import type { EventResponse } from "@/app/lib/events/definitions"
 import type { NewsArticleResponse } from "@/app/lib/news-articles/definitions"
 import { Button, buttonVariants } from "@/components/ui/button"
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { ButtonGroup } from "@/components/ui/button-group"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
@@ -74,7 +65,7 @@ import {
 import {
   getGraphViewEdgeVisuals,
   getGraphViewNodeVisuals,
-} from "../graph-view/graph-view-visuals"
+} from "./graph-view-visuals"
 
 type GraphDemoThemeMode = "light" | "dark"
 type GraphDemoLayoutStatus =
@@ -110,6 +101,14 @@ const GRAPH_DEMO_NODE_KIND_ORDER = [
   "news-article",
   "narrative",
 ] as const satisfies readonly GraphViewNodeKind[]
+const GRAPH_DEMO_EDGE_KIND_ORDER = [
+  "event-asset",
+  "news-article-event",
+  "narrative-event",
+  "narrative-asset",
+] as const
+const GRAPH_DEMO_INSPECTOR_CLASS_NAME =
+  "pointer-events-auto absolute inset-x-4 bottom-4 z-20 flex max-h-[min(60%,calc(100%_-_16rem))] flex-col overflow-hidden rounded-2xl border border-border/80 bg-popover/95 text-popover-foreground shadow-xl backdrop-blur-md min-[1440px]:inset-x-auto min-[1440px]:top-16 min-[1440px]:right-4 min-[1440px]:bottom-auto min-[1440px]:max-h-[calc(100%-5rem)] min-[1440px]:w-[22rem]"
 
 function createGraphDemoPalette(mode: GraphDemoThemeMode): GraphDemoPalette {
   if (mode === "dark") {
@@ -164,7 +163,10 @@ function fitSigmaGraph(
 ) {
   sigma.refresh()
   const { width, height } = sigma.getDimensions()
-  const covered = hasInspector && width > 768 ? Math.min(400, width * 0.4) : 0
+  const covered =
+    hasInspector && window.matchMedia("(min-width: 1440px)").matches
+      ? Math.min(400, width * 0.4)
+      : 0
   const bounds = {
     minX: Infinity,
     minY: Infinity,
@@ -253,30 +255,6 @@ function getFocusedGraphParts(
   }
 
   return { edges: new Set<string>(), nodes: new Set<string>() }
-}
-
-function getGraphNodeRelationCounts(
-  graphView: { edges: readonly GraphViewEdge[] },
-  nodeId: string | null
-) {
-  if (!nodeId) {
-    return { edges: 0, nodes: 0 }
-  }
-
-  const relatedNodeIds = new Set([nodeId])
-  let relatedEdgeCount = 0
-
-  for (const edge of graphView.edges) {
-    if (edge.sourceNodeId !== nodeId && edge.targetNodeId !== nodeId) {
-      continue
-    }
-
-    relatedEdgeCount += 1
-    relatedNodeIds.add(edge.sourceNodeId)
-    relatedNodeIds.add(edge.targetNodeId)
-  }
-
-  return { edges: relatedEdgeCount, nodes: relatedNodeIds.size }
 }
 
 function getDemoStatusLabel(
@@ -371,9 +349,9 @@ function DemoControlButton({
     <Button
       aria-label={ariaLabel}
       data-testid={testId}
-      size="icon"
+      size="icon-sm"
       type="button"
-      variant="ghost"
+      variant="outline"
       onClick={onClick}
     >
       {children}
@@ -386,12 +364,6 @@ function DemoNodeInspector({
   nodeVisuals,
   onClose,
   onOpenQuickDetail,
-  relatedEdgeCount,
-  relatedNodeCount,
-  graphView,
-  onSelectNode,
-  onSelectEdge,
-  isLive,
 }: {
   node: GraphViewNode
   nodeVisuals: Record<GraphViewNodeKind, GraphDemoNodeVisual>
@@ -400,69 +372,51 @@ function DemoNodeInspector({
     entity: LocalQuickDetailEntity,
     trigger: HTMLElement
   ) => void
-  relatedEdgeCount: number
-  relatedNodeCount: number
-  graphView: GraphViewResponse
-  onSelectNode: (id: string) => void
-  onSelectEdge: (id: string) => void
-  isLive: boolean
 }) {
-  const { dictionary, formatMessage, formatNumber } = useLocalization()
+  const { dictionary } = useLocalization()
   const visual = nodeVisuals[node.kind]
   const metadata = node.metadata ?? {}
-  const relatedEdges = graphView.edges.filter(
-    (edge) => edge.sourceNodeId === node.id || edge.targetNodeId === node.id
-  )
-  const neighbors = graphView.nodes.filter(
-    (item) =>
-      item.id !== node.id &&
-      relatedEdges.some(
-        (edge) => edge.sourceNodeId === item.id || edge.targetNodeId === item.id
-      )
-  )
   const entityId = getGraphViewNodeEntityId(node.id, node.kind)
   const quickDetailEntity =
     entityId !== null && (node.kind === "event" || node.kind === "news-article")
       ? { id: entityId, kind: node.kind }
       : null
-  const relationSummary = formatMessage(
-    dictionary.graphView.inspector.relationSummary,
-    {
-      edges: formatNumber(relatedEdgeCount),
-      nodes: formatNumber(Math.max(relatedNodeCount - 1, 0)),
-    }
-  )
+  const sourceUrl =
+    node.kind === "news-article" && /^https?:\/\//i.test(metadata.url ?? "")
+      ? metadata.url
+      : null
 
   return (
     <aside
       aria-label={dictionary.graphView.demo.selectedNode}
       data-graph-label-obstacle
-      className="pointer-events-auto absolute inset-x-3 bottom-14 z-20 flex max-h-[26rem] flex-col overflow-hidden rounded-2xl border border-border/80 bg-popover/95 text-popover-foreground shadow-2xl backdrop-blur-md md:inset-x-auto md:top-16 md:right-4 md:bottom-auto md:max-h-[calc(100%-5rem)] md:w-[22rem]"
+      className={GRAPH_DEMO_INSPECTOR_CLASS_NAME}
       data-testid="graph-demo-inspector"
     >
-      <div className="flex items-start gap-3 border-b border-border/70 px-3.5 py-3">
+      <div className="flex items-start gap-3 border-b border-border/70 p-4">
         <span
           aria-hidden="true"
-          className="mt-1 size-3.5 shrink-0 rounded-full shadow-sm"
+          className="mt-1 size-3 shrink-0 rounded-full"
           style={{ backgroundColor: visual.color }}
         />
         <div className="min-w-0 flex-1">
-          <p className="text-[11px] font-semibold tracking-[0.14em] text-muted-foreground uppercase">
+          <p className="text-xs font-semibold text-muted-foreground">
             {visual.label}
           </p>
           <h2 className="mt-1 text-sm leading-snug font-semibold break-words">
             {node.label}
           </h2>
           {node.secondaryLabel ? (
-            <p className="mt-1 truncate text-xs text-muted-foreground">
+            <p className="mt-1 text-xs break-words text-muted-foreground">
               {node.secondaryLabel}
             </p>
           ) : null}
         </div>
         <Button
-          aria-label={dictionary.graphView.demo.closeDetails}
+          aria-label={dictionary.graphView.inspector.closeNodeDetails}
+          className="size-11 min-[1440px]:size-8"
           data-testid="graph-demo-close-inspector"
-          size="icon-xs"
+          size="icon"
           type="button"
           variant="ghost"
           onClick={onClose}
@@ -470,91 +424,45 @@ function DemoNodeInspector({
           <X aria-hidden="true" data-icon="inline-start" />
         </Button>
       </div>
-
-      <div className="min-h-0 overflow-y-auto p-3.5">
+      <div className="flex min-h-0 flex-col gap-3 overflow-y-auto p-4 [&_.line-clamp-4]:line-clamp-none">
         <GraphNodeInspectorMetadata node={node} />
-
-        <p className="mt-3 rounded-full border border-border/60 bg-background/45 px-2.5 py-1 text-[11px] text-muted-foreground">
-          {relationSummary}
-        </p>
-
-        {quickDetailEntity ? (
-          <Button
-            data-testid="graph-demo-open-quick-detail"
-            size="sm"
-            type="button"
-            variant="secondary"
-            onClick={(event) =>
-              onOpenQuickDetail(quickDetailEntity, event.currentTarget)
-            }
-          >
-            <ArrowUpRight aria-hidden="true" data-icon="inline-start" />
-            {node.kind === "event"
-              ? isLive
-                ? dictionary.graphView.inspector.readEvent
-                : dictionary.graphView.demo.openEvent
-              : isLive
-                ? dictionary.graphView.inspector.readArticle
-                : dictionary.graphView.demo.openArticle}
-          </Button>
+        {quickDetailEntity || sourceUrl ? (
+          <div className="flex flex-wrap items-center gap-2">
+            {quickDetailEntity ? (
+              <Button
+                className="min-h-11 min-[1440px]:min-h-0"
+                data-testid="graph-demo-open-quick-detail"
+                type="button"
+                onClick={(event) =>
+                  onOpenQuickDetail(quickDetailEntity, event.currentTarget)
+                }
+              >
+                {node.kind === "event"
+                  ? dictionary.graphView.inspector.readEvent
+                  : dictionary.graphView.inspector.readArticle}
+              </Button>
+            ) : null}
+            {sourceUrl ? (
+              <a
+                className={buttonVariants({
+                  variant: "outline",
+                  className: "min-h-11 min-[1440px]:min-h-0",
+                })}
+                href={sourceUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <ExternalLink aria-hidden="true" data-icon="inline-start" />
+                {dictionary.graphView.inspector.openOriginalSource}
+              </a>
+            ) : null}
+          </div>
         ) : null}
-        {node.kind === "news-article" &&
-        /^https?:\/\//i.test(metadata.url ?? "") ? (
-          <a
-            className={buttonVariants({ variant: "outline", size: "sm" })}
-            href={metadata.url!}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <ExternalLink aria-hidden="true" data-icon="inline-start" />
-            {dictionary.graphView.inspector.openOriginalSource}
-          </a>
-        ) : node.kind === "news-article" ? (
-          <p className="mt-2 text-xs text-muted-foreground">
+        {node.kind === "news-article" && !sourceUrl ? (
+          <p className="text-xs text-muted-foreground">
             {dictionary.graphView.demo.sourceUnavailable}
           </p>
         ) : null}
-        <div className="mt-3 flex flex-col gap-2">
-          <h3 className="text-xs font-semibold">
-            {dictionary.graphView.inspector.relatedNodes}
-          </h3>
-          {neighbors.map((neighbor) => (
-            <Button
-              key={neighbor.id}
-              variant="outline"
-              className="w-full justify-start"
-              onClick={() => onSelectNode(neighbor.id)}
-            >
-              <span className="truncate">
-                {nodeVisuals[neighbor.kind].label}: {neighbor.label}
-              </span>
-            </Button>
-          ))}
-          <h3 className="text-xs font-semibold">
-            {dictionary.graphView.inspector.relatedEdges}
-          </h3>
-          {relatedEdges.map((edge) => (
-            <Button
-              key={edge.id}
-              variant="outline"
-              className="w-full justify-start"
-              onClick={() => onSelectEdge(edge.id)}
-            >
-              <span className="truncate">
-                {getGraphViewRelationLabel(edge.relationType, dictionary)}:{" "}
-                {
-                  graphView.nodes.find((item) => item.id === edge.sourceNodeId)
-                    ?.label
-                }{" "}
-                →{" "}
-                {
-                  graphView.nodes.find((item) => item.id === edge.targetNodeId)
-                    ?.label
-                }
-              </span>
-            </Button>
-          ))}
-        </div>
       </div>
     </aside>
   )
@@ -565,58 +473,45 @@ function DemoEdgeInspector({
   edgeVisuals,
   onClose,
   graphView,
-  onSelectNode,
 }: {
   edge: GraphViewEdge
   edgeVisuals: Record<string, GraphDemoEdgeVisual>
   onClose: () => void
   graphView: GraphViewResponse
-  onSelectNode: (id: string) => void
 }) {
   const { dictionary } = useLocalization()
-  const visual = edgeVisuals[edge.kind]
   const source = graphView.nodes.find((node) => node.id === edge.sourceNodeId)
   const target = graphView.nodes.find((node) => node.id === edge.targetNodeId)
-  const relationLabel = getGraphViewRelationLabel(edge.relationType, dictionary)
+  const nodeVisuals = getGraphViewNodeVisuals(dictionary)
   const fields = [
-    { label: dictionary.graphView.demo.relation, value: visual.label },
     {
-      label: dictionary.graphView.demo.direction,
-      value: `${source?.label ?? edge.sourceNodeId} → ${target?.label ?? edge.targetNodeId}`,
+      label: dictionary.graphView.demo.connectionGroup,
+      value: edgeVisuals[edge.kind].label,
     },
-    { label: dictionary.graphView.demo.relationMeaning, value: relationLabel },
-    edge.note
-      ? { label: dictionary.graphView.demo.note, value: edge.note }
-      : null,
-  ].filter((field): field is { label: string; value: string } =>
-    Boolean(field?.value)
-  )
-
+    {
+      label: dictionary.graphView.demo.relationMeaning,
+      value: getGraphViewRelationLabel(edge.relationType, dictionary),
+    },
+    ...(edge.note?.trim()
+      ? [{ label: dictionary.graphView.demo.note, value: edge.note }]
+      : []),
+  ]
   return (
     <aside
       aria-label={dictionary.graphView.demo.selectedEdge}
       data-graph-label-obstacle
-      className="pointer-events-auto absolute inset-x-3 bottom-14 z-20 flex max-h-[26rem] flex-col overflow-hidden rounded-2xl border border-border/80 bg-popover/95 text-popover-foreground shadow-2xl backdrop-blur-md md:inset-x-auto md:top-16 md:right-4 md:bottom-auto md:max-h-[calc(100%-5rem)] md:w-[22rem]"
+      className={GRAPH_DEMO_INSPECTOR_CLASS_NAME}
       data-testid="graph-demo-edge-inspector"
     >
-      <div className="flex items-start gap-3 border-b border-border/70 px-3.5 py-3">
-        <span
-          aria-hidden="true"
-          className="mt-1 size-3.5 shrink-0 rounded-full shadow-sm"
-          style={{ backgroundColor: visual?.color }}
-        />
-        <div className="min-w-0 flex-1">
-          <p className="text-[11px] font-semibold tracking-[0.14em] text-muted-foreground uppercase">
-            {dictionary.graphView.demo.selectedEdge}
-          </p>
-          <h2 className="mt-1 line-clamp-2 text-sm leading-snug font-semibold">
-            {relationLabel}
-          </h2>
-        </div>
+      <div className="flex items-center justify-between gap-3 border-b border-border/70 p-4">
+        <h2 className="text-base font-semibold">
+          {dictionary.graphView.demo.relation}
+        </h2>
         <Button
-          aria-label={dictionary.graphView.demo.closeDetails}
+          aria-label={dictionary.graphView.demo.closeRelationship}
+          className="size-11 min-[1440px]:size-8"
           data-testid="graph-demo-close-edge-inspector"
-          size="icon-xs"
+          size="icon"
           type="button"
           variant="ghost"
           onClick={onClose}
@@ -624,41 +519,53 @@ function DemoEdgeInspector({
           <X aria-hidden="true" data-icon="inline-start" />
         </Button>
       </div>
-
-      <dl className="flex min-h-0 flex-col gap-2 overflow-y-auto p-3.5">
-        {fields.map((field) => (
-          <div
-            className="min-w-0 rounded-lg border border-border/60 bg-background/55 px-2.5 py-2"
-            key={field.label}
-          >
-            <dt className="text-[10px] font-semibold tracking-[0.12em] text-muted-foreground uppercase">
-              {field.label}
+      <div className="flex min-h-0 flex-col gap-3 overflow-y-auto p-4">
+        <dl className="flex flex-col gap-3">
+          <div>
+            <dt className="text-xs font-medium text-muted-foreground">
+              {dictionary.graphView.demo.source}
+              {source ? " · " + nodeVisuals[source.kind].label : ""}
             </dt>
-            <dd className="mt-1 text-xs font-medium break-words text-foreground">
-              {field.value}
+            <dd className="mt-1 text-sm font-medium break-words">
+              {source?.label ?? edge.sourceNodeId}
             </dd>
           </div>
-        ))}
-      </dl>
-      <div className="flex flex-wrap gap-2 p-3.5">
-        {[source, target].map((node) =>
-          node ? (
-            <Button
-              variant="outline"
-              key={node.id}
-              className="max-w-full"
-              onClick={() => onSelectNode(node.id)}
+          <div>
+            <ArrowDown
+              aria-hidden="true"
+              className="mb-3 size-4 text-muted-foreground"
+            />
+            <dt className="text-xs font-medium text-muted-foreground">
+              {dictionary.graphView.demo.target}
+              {target ? " · " + nodeVisuals[target.kind].label : ""}
+            </dt>
+            <dd className="mt-1 text-sm font-medium break-words">
+              {target?.label ?? edge.targetNodeId}
+            </dd>
+          </div>
+          {fields.map((field) => (
+            <div
+              className="rounded-lg border border-border/60 bg-background/55 p-3"
+              key={field.label}
             >
-              <span className="truncate">{node.label}</span>
-            </Button>
-          ) : null
-        )}
+              <dt className="text-xs font-medium text-muted-foreground">
+                {field.label}
+              </dt>
+              <dd className="mt-1 text-sm font-medium break-words">
+                {field.value}
+              </dd>
+            </div>
+          ))}
+        </dl>
+        <p className="text-xs leading-5 text-muted-foreground">
+          {dictionary.graphView.demo.relationshipInterpretation}
+        </p>
       </div>
     </aside>
   )
 }
 
-export function SigmaGraphViewDemo({
+export function SigmaGraphView({
   initialEdgeCount = 400,
   graphView: liveGraphView,
 }: {
@@ -668,11 +575,12 @@ export function SigmaGraphViewDemo({
   const localization = useLocalization()
   const { dictionary, formatMessage, formatNumber, locale } = localization
   const { resolvedTheme } = useTheme()
-  const [edgeCount, setEdgeCount] = useState(initialEdgeCount)
+  const edgeCount = initialEdgeCount
   const [layoutStatus, setLayoutStatus] =
     useState<GraphDemoLayoutStatus>("seed")
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null)
+  const [edgeChoices, setEdgeChoices] = useState<string[]>([])
   const [quickDetailEntity, setQuickDetailEntity] =
     useState<LocalQuickDetailEntity | null>(null)
   const [renderError, setRenderError] = useState(false)
@@ -681,12 +589,10 @@ export function SigmaGraphViewDemo({
     GraphViewDemoNodeAttributes,
     GraphViewDemoEdgeAttributes
   > | null>(null)
-  const graphRef = useRef<GraphViewDemoGraph | null>(null)
-  const layoutRef = useRef<ReturnType<typeof createD3Layout> | null>(null)
   const selectedNodeIdRef = useRef<string | null>(null)
   const selectedEdgeIdRef = useRef<string | null>(null)
-  const pendingPanNodeIdRef = useRef<string | null>(null)
   const hoveredNodeIdRef = useRef<string | null>(null)
+  const hoveredEdgeIdRef = useRef<string | null>(null)
   const activeNodesRef = useRef<Set<string>>(new Set())
   const activeEdgesRef = useRef<Set<string>>(new Set())
   const savedViewRef = useRef<{
@@ -695,14 +601,16 @@ export function SigmaGraphViewDemo({
     settled: boolean
     bbox: ReturnType<Sigma["getBBox"]>
   } | null>(null)
-  const dragStartRef = useRef<{ x: number; y: number } | null>(null)
   const draggedNodeIdRef = useRef<string | null>(null)
   const draggedNodeMovedRef = useRef(false)
-  const frozenLabelsRef = useRef<Map<string, LabelSide> | null>(null)
   const renderedLabelsRef = useRef<PlacedNodeLabel[]>([])
-  const freezeNextLabelsRef = useRef(false)
   const pointerRef = useRef<{ x: number; y: number } | null>(null)
+  const clearHoverRef = useRef<(() => void) | null>(null)
+  const selectTargetRef = useRef<
+    ((node: string | null, edge: string | null) => void) | null
+  >(null)
   const quickDetailReturnFocusRef = useRef<HTMLElement | null>(null)
+  const edgeChoicesCloseRef = useRef<HTMLButtonElement | null>(null)
   const graphThemeMode: GraphDemoThemeMode =
     resolvedTheme === "dark" ? "dark" : "light"
   const graphPalette = useMemo(
@@ -736,10 +644,6 @@ export function SigmaGraphViewDemo({
   const selectedEdge = selectedEdgeId
     ? (graphView.edges.find((edge) => edge.id === selectedEdgeId) ?? null)
     : null
-  const selectedNodeRelationCounts = useMemo(
-    () => getGraphNodeRelationCounts(graphView, selectedNodeId),
-    [graphView, selectedNodeId]
-  )
   const quickDetailFixture = useMemo(
     () =>
       !liveGraphView && selectedNode
@@ -750,63 +654,22 @@ export function SigmaGraphViewDemo({
   const layoutStatusLabel = getDemoStatusLabel(layoutStatus, dictionary)
 
   useEffect(() => {
+    if (edgeChoices.length < 2) return
+    const previous = document.activeElement
+    edgeChoicesCloseRef.current?.focus({ preventScroll: true })
+    return () => {
+      if (previous instanceof HTMLElement && previous.isConnected)
+        previous.focus({ preventScroll: true })
+    }
+  }, [edgeChoices])
+
+  useEffect(() => {
     selectedNodeIdRef.current = selectedNodeId
   }, [selectedNodeId])
 
   useEffect(() => {
     selectedEdgeIdRef.current = selectedEdgeId
   }, [selectedEdgeId])
-
-  useEffect(() => {
-    const nodeId = pendingPanNodeIdRef.current
-    pendingPanNodeIdRef.current = null
-    const sigma = sigmaRef.current
-    const container = containerRef.current
-    if (!nodeId || !sigma || !container) return
-    const frame = window.requestAnimationFrame(() => {
-      const data = sigma.getNodeDisplayData(nodeId)
-      if (!data) return
-      const point = sigma.framedGraphToViewport(data)
-      const radius = sigma.scaleSize(data.size) + 6 * sigma.scaleSize(1)
-      const { width, height } = sigma.getDimensions()
-      const canvasBox = container.getBoundingClientRect()
-      const inspector = container.parentElement
-        ?.querySelector(
-          '[data-testid="graph-demo-inspector"], [data-testid="graph-demo-edge-inspector"]'
-        )
-        ?.getBoundingClientRect()
-      const left = 16
-      const top = 96
-      const sideInspector = window.matchMedia("(min-width: 768px)").matches
-      const right =
-        inspector && sideInspector
-          ? Math.max(left, inspector.left - canvasBox.left - 16)
-          : width - 16
-      const bottom =
-        inspector && !sideInspector
-          ? Math.max(top, inspector.top - canvasBox.top - 16)
-          : height - 16
-      const destination = {
-        x: Math.max(left + radius, Math.min(point.x, right - radius)),
-        y: Math.max(top + radius, Math.min(point.y, bottom - radius)),
-      }
-      if (destination.x === point.x && destination.y === point.y) return
-      const from = sigma.viewportToFramedGraph(point)
-      const to = sigma.viewportToFramedGraph(destination)
-      const camera = sigma.getCamera()
-      const current = camera.getState()
-      void camera
-        .animate(
-          {
-            x: current.x + from.x - to.x,
-            y: current.y + from.y - to.y,
-          },
-          { duration: getMotionDuration(180) }
-        )
-        .catch(() => undefined)
-    })
-    return () => window.cancelAnimationFrame(frame)
-  }, [selectedNodeId, selectedEdgeId])
 
   useEffect(() => {
     const container = containerRef.current
@@ -822,6 +685,8 @@ export function SigmaGraphViewDemo({
     let graph: GraphViewDemoGraph | null = null
     let layout: ReturnType<typeof createD3Layout> | null = null
     let isDisposed = false
+    let hoverFrame: number | null = null
+    let pickNodes = new Map<string, PickNode>()
     const nodeIds = getNodeIds(graphView)
     const cachedPositions = liveGraphView
       ? null
@@ -865,7 +730,11 @@ export function SigmaGraphViewDemo({
       container.dataset.renderedLabelBoxes = JSON.stringify(
         renderedLabelsRef.current
       )
-      container.dataset.labelsFrozen = String(frozenLabelsRef.current !== null)
+      container.dataset.draggingNodeId = draggedNodeMovedRef.current
+        ? (draggedNodeIdRef.current ?? "")
+        : ""
+      container.dataset.hoveredNodeId = hoveredNodeIdRef.current ?? ""
+      container.dataset.hoveredEdgeId = hoveredEdgeIdRef.current ?? ""
       container.dataset.benchmarkAnchorId = nodeId
       container.dataset.benchmarkAnchorX = String(viewportPosition.x)
       container.dataset.benchmarkAnchorY = String(viewportPosition.y)
@@ -890,12 +759,11 @@ export function SigmaGraphViewDemo({
       setSelectedEdgeId(null)
     }
     draggedNodeIdRef.current = null
-    frozenLabelsRef.current = null
     renderedLabelsRef.current = []
-    freezeNextLabelsRef.current = false
     pointerRef.current = null
-    dragStartRef.current = null
     hoveredNodeIdRef.current = null
+    hoveredEdgeIdRef.current = null
+    setEdgeChoices([])
     setQuickDetailEntity((entity) =>
       entity &&
       graphView.nodes.some((node) => node.id === entity.kind + ":" + entity.id)
@@ -938,9 +806,38 @@ export function SigmaGraphViewDemo({
       refreshFocus()
     }
 
+    const clearHover = () => {
+      if (hoverFrame !== null) window.cancelAnimationFrame(hoverFrame)
+      hoverFrame = null
+      pointerRef.current = null
+      hoveredNodeIdRef.current = null
+      hoveredEdgeIdRef.current = null
+      container.style.cursor = ""
+      updateFocus(selectedNodeIdRef.current, selectedEdgeIdRef.current)
+    }
+    clearHoverRef.current = clearHover
+
     const restoreHover = () => {
       if (!sigma || !graph) return
-      const pointer = pointerRef.current
+      let pointer = pointerRef.current
+      if (pointer) {
+        const canvasBox = container.getBoundingClientRect()
+        const { x, y } = pointer
+        const overHud = Array.from(
+          container.parentElement?.querySelectorAll<HTMLElement>(
+            "[data-graph-label-obstacle]"
+          ) ?? []
+        ).some((element) => {
+          const box = element.getBoundingClientRect()
+          return (
+            x >= box.left - canvasBox.left &&
+            x < box.right - canvasBox.left &&
+            y >= box.top - canvasBox.top &&
+            y < box.bottom - canvasBox.top
+          )
+        })
+        if (overHud) pointer = pointerRef.current = null
+      }
       const { width, height } = sigma.getDimensions()
       let hovered: string | null = null
       if (
@@ -948,9 +845,7 @@ export function SigmaGraphViewDemo({
         pointer.x >= 0 &&
         pointer.x <= width &&
         pointer.y >= 0 &&
-        pointer.y <= height &&
-        !selectedNodeIdRef.current &&
-        !selectedEdgeIdRef.current
+        pointer.y <= height
       ) {
         let nearest = Infinity
         graph.forEachNode((id) => {
@@ -964,10 +859,30 @@ export function SigmaGraphViewDemo({
           }
         })
       }
+      let hoveredEdge =
+        pointer &&
+        !hovered &&
+        pointer.x >= 0 &&
+        pointer.x <= width &&
+        pointer.y >= 0 &&
+        pointer.y <= height
+          ? (pickGraphEdges(pointer, pickNodes, graphView.edges)[0] ?? null)
+          : null
+      container.style.cursor = hovered || hoveredEdge ? "pointer" : ""
+      if (selectedNodeIdRef.current || selectedEdgeIdRef.current) {
+        hovered = null
+        hoveredEdge = null
+      }
+      if (
+        hoveredNodeIdRef.current === hovered &&
+        hoveredEdgeIdRef.current === hoveredEdge
+      )
+        return
       hoveredNodeIdRef.current = hovered
+      hoveredEdgeIdRef.current = hoveredEdge
       updateFocus(
         selectedNodeIdRef.current ?? hovered,
-        selectedEdgeIdRef.current
+        selectedEdgeIdRef.current ?? hoveredEdge
       )
     }
 
@@ -985,7 +900,7 @@ export function SigmaGraphViewDemo({
       const scale = sigma.scaleSize(1)
       context.clearRect(0, 0, width, height)
       context.font = "600 11px Geist, sans-serif"
-      const edgeId = selectedEdgeIdRef.current
+      const edgeId = selectedEdgeIdRef.current ?? hoveredEdgeIdRef.current
       const edgeEndpoints = new Set(edgeId ? graph.extremities(edgeId) : [])
       const state = {
         selected: selectedNodeIdRef.current,
@@ -1002,6 +917,7 @@ export function SigmaGraphViewDemo({
           return { id, attributes, data, ...point, radius }
         })
         .filter((node) => !node.data.hidden)
+      pickNodes = new Map(nodes.map((node) => [node.id, node]))
       const candidates = nodes.flatMap(({ id, attributes, x, y, radius }) => {
         const priority = getNodeLabelPriority(id, attributes.kind, state)
         if (priority === null) return []
@@ -1022,66 +938,30 @@ export function SigmaGraphViewDemo({
             y,
             radius,
             priority,
-            required: priority <= 2,
           },
         ]
       })
-      const canvasBox = container.getBoundingClientRect()
-      const overlays = Array.from(
-        container.parentElement?.querySelectorAll<HTMLElement>(
-          "[data-graph-label-obstacle]"
-        ) ?? [],
-        (element) => {
-          const box = element.getBoundingClientRect()
-          return {
-            x: box.left - canvasBox.left,
-            y: box.top - canvasBox.top,
-            width: box.width,
-            height: box.height,
-          }
-        }
-      )
-      const labels = placeNodeLabels(
-        candidates,
-        [
-          ...overlays,
-          ...nodes.map(({ x, y, radius }) => ({
-            x: x - radius,
-            y: y - radius,
-            width: radius * 2,
-            height: radius * 2,
-          })),
-        ],
-        { width, height, scale },
-        frozenLabelsRef.current,
-        new Set(renderedLabelsRef.current.map((label) => label.id))
-      )
+      const labels = placeNodeLabels(candidates, { width, height, scale })
       context.font = `600 ${11 * scale}px Geist, sans-serif`
       context.textBaseline = "middle"
-      // Draw the focus labels last as well as reserving their space first.
+      // Focus labels draw last, without moving or hiding baseline labels.
       for (const label of [...labels].reverse()) {
         context.fillStyle =
           label.priority <= 3
             ? paletteRef.current.labelFocusFill
-            : paletteRef.current.labelFill
+            : state.active.size > 0
+              ? paletteRef.current.labelDimFill
+              : paletteRef.current.labelFill
         context.fillText(label.text, label.x, label.y + label.height / 2)
       }
       renderedLabelsRef.current = labels
-      if (freezeNextLabelsRef.current) {
-        frozenLabelsRef.current = new Map(
-          labels.map((label) => [label.id, label.side])
-        )
-        freezeNextLabelsRef.current = false
-      }
     }
 
     let initialFitPending = !savedView?.settled
     const finishLayout = () => {
       if (!graph || isDisposed) return
 
-      frozenLabelsRef.current = null
-      freezeNextLabelsRef.current = false
-      restoreHover()
+      refreshFocus()
 
       if (!liveGraphView)
         writeGraphViewDemoLayoutCache(
@@ -1113,7 +993,6 @@ export function SigmaGraphViewDemo({
         positions: initialPositions,
       })
       graph = layoutGraph
-      graphRef.current = layoutGraph
 
       sigma = new Sigma(layoutGraph, container, {
         autoCenter: true,
@@ -1125,6 +1004,8 @@ export function SigmaGraphViewDemo({
         zIndex: true,
         itemSizesReference: "positions",
         doubleClickZoomingRatio: 1,
+        // Our distance threshold decides click vs drag, regardless of event count.
+        draggedEventsTolerance: Infinity,
         zoomingRatio: 1.18,
         zoomToSizeRatioFunction: (ratio) => ratio,
         defaultNodeColor: paletteRef.current.nodeDimFill,
@@ -1147,12 +1028,13 @@ export function SigmaGraphViewDemo({
               settings.edgeLabelSize,
           }),
         defaultDrawNodeHover: (context, data) => {
-          // Sigma also calls this for its internal hover; only selection gets a halo.
-          if (data.key !== selectedNodeIdRef.current) return
+          const isDragged =
+            draggedNodeMovedRef.current && data.key === draggedNodeIdRef.current
+          if (data.key !== selectedNodeIdRef.current && !isDragged) return
           context.save()
           context.strokeStyle = data.color
-          context.globalAlpha = 0.25
-          context.lineWidth = 12 * (sigma?.scaleSize(1) ?? 1)
+          context.globalAlpha = isDragged ? 0.8 : 0.25
+          context.lineWidth = (isDragged ? 3 : 12) * (sigma?.scaleSize(1) ?? 1)
           context.beginPath()
           context.arc(data.x, data.y, data.size, 0, Math.PI * 2)
           context.stroke()
@@ -1163,12 +1045,15 @@ export function SigmaGraphViewDemo({
         nodeReducer: (node, data) => {
           const hasFocus =
             activeNodesRef.current.size > 0 || activeEdgesRef.current.size > 0
-          const isActive = activeNodesRef.current.has(node)
+          const isDragged =
+            draggedNodeMovedRef.current && node === draggedNodeIdRef.current
+          const isActive = activeNodesRef.current.has(node) || isDragged
           const isFocused =
             node === selectedNodeIdRef.current ||
-            node === hoveredNodeIdRef.current
+            node === hoveredNodeIdRef.current ||
+            isDragged
 
-          if (!hasFocus) {
+          if (!hasFocus && !isDragged) {
             return {
               ...data,
               label: null,
@@ -1199,6 +1084,7 @@ export function SigmaGraphViewDemo({
             activeNodesRef.current.size > 0 || activeEdgesRef.current.size > 0
           const isActive = activeEdgesRef.current.has(edge)
           const isSelected = edge === selectedEdgeIdRef.current
+          const isHovered = edge === hoveredEdgeIdRef.current
 
           if (!hasFocus) {
             return {
@@ -1212,9 +1098,10 @@ export function SigmaGraphViewDemo({
           if (isActive) {
             return {
               ...data,
-              forceLabel: isSelected,
-              label: isSelected ? data.label : null,
-              size: data.size,
+              forceLabel: isSelected || isHovered,
+              label: isSelected || isHovered ? data.label : null,
+              size:
+                isSelected || isHovered ? Math.max(data.size, 2.5) : data.size,
             }
           }
 
@@ -1267,163 +1154,156 @@ export function SigmaGraphViewDemo({
           setLayoutStatus("error")
         }
       })
-      layoutRef.current = layout
 
-      sigma.on("enterNode", ({ node }) => {
-        if (
-          draggedNodeIdRef.current ||
-          frozenLabelsRef.current ||
-          selectedNodeIdRef.current ||
-          selectedEdgeIdRef.current
-        ) {
-          return
-        }
+      let gestureStart: { x: number; y: number } | null = null
+      let gestureMoved = false
+      let multiTouch = false
+      let grabOffset = { x: 0, y: 0 }
+      const selectTarget = (node: string | null, edge: string | null) => {
+        clearHover()
+        setEdgeChoices([])
+        const nextNode = node === selectedNodeIdRef.current ? null : node
+        const nextEdge = edge === selectedEdgeIdRef.current ? null : edge
+        selectedNodeIdRef.current = nextNode
+        selectedEdgeIdRef.current = nextEdge
+        setSelectedNodeId(nextNode)
+        setSelectedEdgeId(nextEdge)
+        updateFocus(nextNode, nextEdge)
+      }
+      selectTargetRef.current = selectTarget
 
-        hoveredNodeIdRef.current = node
-        updateFocus(node, null)
-      })
-      sigma.on("leaveNode", ({ node }) => {
-        if (
-          draggedNodeIdRef.current ||
-          frozenLabelsRef.current ||
-          selectedNodeIdRef.current ||
-          selectedEdgeIdRef.current
-        )
-          return
-        if (hoveredNodeIdRef.current !== node) {
-          return
-        }
-
-        hoveredNodeIdRef.current = null
-        updateFocus(null, null)
-      })
-      sigma.on("clickNode", ({ node, preventSigmaDefault }) => {
-        preventSigmaDefault()
-
-        if (draggedNodeMovedRef.current) {
-          draggedNodeMovedRef.current = false
-          return
-        }
-
-        frozenLabelsRef.current = null
-        freezeNextLabelsRef.current = false
-        hoveredNodeIdRef.current = null
-
-        if (selectedNodeIdRef.current === node) {
-          selectedNodeIdRef.current = null
-          setSelectedNodeId(null)
-          updateFocus(null, null)
-          return
-        }
-
-        selectedNodeIdRef.current = node
-        selectedEdgeIdRef.current = null
-        setSelectedNodeId(node)
-        setSelectedEdgeId(null)
-        updateFocus(node, null)
-      })
-      sigma.on("clickEdge", ({ edge, preventSigmaDefault }) => {
-        preventSigmaDefault()
-        if (draggedNodeMovedRef.current) {
-          draggedNodeMovedRef.current = false
-          return
-        }
-        frozenLabelsRef.current = null
-        freezeNextLabelsRef.current = false
-        hoveredNodeIdRef.current = null
-        selectedNodeIdRef.current = null
-        setSelectedNodeId(null)
-
-        if (selectedEdgeIdRef.current === edge) {
-          selectedEdgeIdRef.current = null
-          setSelectedEdgeId(null)
-          updateFocus(null, null)
-          return
-        }
-
-        selectedEdgeIdRef.current = edge
-        setSelectedEdgeId(edge)
-        updateFocus(null, edge)
-      })
-      sigma.on("clickStage", () => {
-        if (draggedNodeMovedRef.current) {
-          draggedNodeMovedRef.current = false
-          return
-        }
-        frozenLabelsRef.current = null
-        freezeNextLabelsRef.current = false
-        hoveredNodeIdRef.current = null
-        selectedNodeIdRef.current = null
-        selectedEdgeIdRef.current = null
-        setSelectedNodeId(null)
-        setSelectedEdgeId(null)
-        updateFocus(null, null)
-      })
-      let suppressDoubleClickUntil = 0
-      for (const event of [
-        "doubleClickNode",
+      // Sigma treats the second rapid click/tap as doubleClick, even on another target.
+      for (const name of ["clickNode", "doubleClickNode"] as const) {
+        sigma.on(name, ({ node, preventSigmaDefault }) => {
+          preventSigmaDefault()
+          if (!gestureMoved && !multiTouch) selectTarget(node, null)
+        })
+      }
+      for (const name of [
+        "clickEdge",
+        "clickStage",
         "doubleClickEdge",
         "doubleClickStage",
       ] as const) {
-        sigma.on(
-          event,
-          ({ preventSigmaDefault }: { preventSigmaDefault: () => void }) => {
-            if (Date.now() < suppressDoubleClickUntil) preventSigmaDefault()
-          }
-        )
+        sigma.on(name, ({ event, preventSigmaDefault }: SigmaEventPayload) => {
+          preventSigmaDefault()
+          if (gestureMoved || multiTouch) return
+          const edges = pickGraphEdges(
+            event,
+            pickNodes,
+            graphView.edges,
+            "touches" in event.original ? 12 : 8
+          )
+          if (edges.length > 1) {
+            clearHover()
+            setEdgeChoices(edges)
+          } else selectTarget(null, edges[0] ?? null)
+        })
       }
+
       const endDrag = () => {
-        if (draggedNodeMovedRef.current)
-          suppressDoubleClickUntil = Date.now() + 400
-        layout?.release()
+        const hadGesture =
+          gestureStart !== null || draggedNodeIdRef.current !== null
+        if (draggedNodeIdRef.current && draggedNodeMovedRef.current)
+          layout?.release()
         draggedNodeIdRef.current = null
-        dragStartRef.current = null
+        gestureStart = null
+        // Hover and labels unlock at drop; force cooldown is independent.
+        if (hadGesture) clearHover()
       }
-      let grabOffset = { x: 0, y: 0 }
-      sigma.on("downNode", ({ node, event }) => {
-        if (sigma) {
-          const pointer = sigma.viewportToGraph(event)
-          grabOffset = {
-            x: layoutGraph.getNodeAttribute(node, "x") - pointer.x,
-            y: layoutGraph.getNodeAttribute(node, "y") - pointer.y,
+      const beginGesture = (event: SigmaEventPayload["event"]) => {
+        if ("touches" in event.original) {
+          if (event.original.touches.length !== 1) {
+            multiTouch = true
+            gestureMoved = true
+            endDrag()
+            return false
           }
+          if (multiTouch) return false
+        } else if (event.original.button !== 0) return false
+        gestureStart = { x: event.x, y: event.y }
+        gestureMoved = false
+        draggedNodeMovedRef.current = false
+        initialFitPending = false
+        clearHover()
+        return true
+      }
+      sigma.on("downNode", ({ node, event }) => {
+        if (!sigma || !beginGesture(event)) return
+        const pointer = sigma.viewportToGraph(event)
+        grabOffset = {
+          x: layoutGraph.getNodeAttribute(node, "x") - pointer.x,
+          y: layoutGraph.getNodeAttribute(node, "y") - pointer.y,
         }
         draggedNodeIdRef.current = node
-        dragStartRef.current = { x: event.x, y: event.y }
-        draggedNodeMovedRef.current = false
+      })
+      sigma.on("downStage", ({ event }) => {
+        beginGesture(event)
+      })
+      sigma.on("downEdge", ({ event }) => {
+        beginGesture(event)
       })
       sigma.on("moveBody", ({ event, preventSigmaDefault }) => {
-        pointerRef.current =
-          "touches" in event.original ? null : { x: event.x, y: event.y }
+        const touch = "touches" in event.original
+        if (
+          gestureStart &&
+          Math.hypot(event.x - gestureStart.x, event.y - gestureStart.y) >= 5
+        )
+          gestureMoved = true
         const node = draggedNodeIdRef.current
-        const start = dragStartRef.current
-        if (!node || !start || !sigma) return
+        if (!node || !sigma) {
+          if (!sigma) return
+          const { width, height } = sigma.getDimensions()
+          const onCanvas =
+            event.original.target === sigma.getCanvases().mouse &&
+            event.x >= 0 &&
+            event.x <= width &&
+            event.y >= 0 &&
+            event.y <= height
+          if (
+            gestureStart ||
+            touch ||
+            ("buttons" in event.original && event.original.buttons !== 0) ||
+            !onCanvas
+          ) {
+            if (
+              pointerRef.current ||
+              hoveredNodeIdRef.current ||
+              hoveredEdgeIdRef.current ||
+              hoverFrame !== null
+            )
+              clearHover()
+            return
+          }
+          pointerRef.current = { x: event.x, y: event.y }
+          if (hoverFrame === null)
+            hoverFrame = window.requestAnimationFrame(() => {
+              hoverFrame = null
+              if (!isDisposed) restoreHover()
+            })
+          return
+        }
         if (
           "touches" in event.original &&
           event.original.touches.length !== 1
         ) {
+          multiTouch = true
+          gestureMoved = true
           endDrag()
           return
         }
-        preventSigmaDefault()
-        if (
-          !draggedNodeMovedRef.current &&
-          Math.hypot(event.x - start.x, event.y - start.y) < 5
-        )
+        if ("buttons" in event.original && (event.original.buttons & 1) === 0) {
+          cancelGesture()
           return
-        if (!draggedNodeMovedRef.current) {
-          // Freeze membership through the force cooldown, while labels follow nodes.
-          frozenLabelsRef.current ??= new Map(
-            renderedLabelsRef.current.map((label) => [label.id, label.side])
-          )
-          if (!frozenLabelsRef.current.has(node))
-            frozenLabelsRef.current.set(node, "right")
-          refreshFocus()
-          initialFitPending = false
-          setLayoutStatus("refining")
-          draggedNodeMovedRef.current = true
         }
-        const position = sigma.viewportToGraph({ x: event.x, y: event.y })
+        preventSigmaDefault()
+        if (!gestureMoved) return
+        if (!draggedNodeMovedRef.current) {
+          draggedNodeMovedRef.current = true
+          clearHover()
+          setLayoutStatus("refining")
+        }
+        const position = sigma.viewportToGraph(event)
         position.x += grabOffset.x
         position.y += grabOffset.y
         layoutGraph.mergeNodeAttributes(node, { ...position })
@@ -1432,22 +1312,36 @@ export function SigmaGraphViewDemo({
       sigma.on("upNode", endDrag)
       sigma.on("upEdge", endDrag)
       sigma.on("upStage", endDrag)
-      sigma.on("leaveStage", () => {
-        pointerRef.current = null
-      })
-      sigma.on("downStage", () => {
-        initialFitPending = false
-        draggedNodeMovedRef.current = false
-      })
-      sigma.on("downEdge", () => {
-        draggedNodeMovedRef.current = false
-      })
-      const cancelDrag = () => {
+      sigma.on("leaveStage", clearHover)
+      for (const name of ["wheelNode", "wheelEdge", "wheelStage"] as const)
+        sigma.on(name, clearHover)
+      const cancelGesture = () => {
         endDrag()
-        draggedNodeMovedRef.current = false
+        gestureMoved = true
+        multiTouch = false
+        if (sigma) {
+          sigma.getMouseCaptor().isMouseDown = false
+          sigma.getMouseCaptor().isMoving = false
+        }
+        clearHover()
       }
-      container.addEventListener("touchcancel", cancelDrag)
-      window.addEventListener("blur", cancelDrag)
+      const releaseMouse = (event: MouseEvent) => {
+        if (event.button === 0) endDrag()
+      }
+      const releaseTouch = (event: TouchEvent) => {
+        if (!event.touches.length) {
+          endDrag()
+          // Sigma dispatches tap synchronously before this event completes.
+          window.queueMicrotask(() => {
+            multiTouch = false
+          })
+        }
+      }
+      document.addEventListener("mouseup", releaseMouse)
+      document.addEventListener("touchend", releaseTouch)
+      document.addEventListener("touchcancel", cancelGesture)
+      container.addEventListener("pointercancel", cancelGesture)
+      window.addEventListener("blur", cancelGesture)
 
       const resizeObserver = new ResizeObserver(() => {
         if (!isDisposed && sigma) {
@@ -1462,7 +1356,6 @@ export function SigmaGraphViewDemo({
           if (!isDisposed) setLayoutStatus("ready")
         })
       } else {
-        freezeNextLabelsRef.current = true
         layout.start()
         window.queueMicrotask(() => {
           if (!isDisposed) setLayoutStatus("refining")
@@ -1471,9 +1364,16 @@ export function SigmaGraphViewDemo({
 
       return () => {
         isDisposed = true
+        if (hoverFrame !== null) window.cancelAnimationFrame(hoverFrame)
+        container.style.cursor = ""
         resizeObserver.disconnect()
-        container.removeEventListener("touchcancel", cancelDrag)
-        window.removeEventListener("blur", cancelDrag)
+        document.removeEventListener("mouseup", releaseMouse)
+        document.removeEventListener("touchend", releaseTouch)
+        document.removeEventListener("touchcancel", cancelGesture)
+        container.removeEventListener("pointercancel", cancelGesture)
+        window.removeEventListener("blur", cancelGesture)
+        clearHoverRef.current = null
+        selectTargetRef.current = null
         if (graph && sigma)
           savedViewRef.current = {
             settled: !layout?.isRunning(),
@@ -1484,15 +1384,8 @@ export function SigmaGraphViewDemo({
 
         layout?.kill()
         sigma?.kill()
-
-        if (layoutRef.current === layout) {
-          layoutRef.current = null
-        }
         if (sigmaRef.current === sigma) {
           sigmaRef.current = null
-        }
-        if (graphRef.current === graph) {
-          graphRef.current = null
         }
       }
     } catch (error) {
@@ -1512,15 +1405,8 @@ export function SigmaGraphViewDemo({
 
       layout?.kill()
       sigma?.kill()
-
-      if (layoutRef.current === layout) {
-        layoutRef.current = null
-      }
       if (sigmaRef.current === sigma) {
         sigmaRef.current = null
-      }
-      if (graphRef.current === graph) {
-        graphRef.current = null
       }
     }
   }, [
@@ -1533,6 +1419,7 @@ export function SigmaGraphViewDemo({
   ])
 
   const handleZoom = (direction: "in" | "out") => {
+    clearHoverRef.current?.()
     const sigma = sigmaRef.current
 
     if (!sigma) {
@@ -1560,6 +1447,7 @@ export function SigmaGraphViewDemo({
   }
 
   const handleRecenter = () => {
+    clearHoverRef.current?.()
     const sigma = sigmaRef.current
 
     if (!sigma) {
@@ -1572,90 +1460,36 @@ export function SigmaGraphViewDemo({
     )
   }
 
-  const handleReLayout = () => {
-    const graph = graphRef.current
-    const layout = layoutRef.current
-
-    if (!graph || !layout) {
-      return
-    }
-
-    const seedPositions = createGraphViewDemoSeedPositions(graphView.nodes)
-
-    graph.updateEachNodeAttributes((node, attributes) => ({
-      ...attributes,
-      fixed: false,
-      x: seedPositions[node]?.x ?? attributes.x,
-      y: seedPositions[node]?.y ?? attributes.y,
-    }))
-    selectedNodeIdRef.current = null
-    selectedEdgeIdRef.current = null
-    hoveredNodeIdRef.current = null
-    frozenLabelsRef.current = null
-    freezeNextLabelsRef.current = false
-    activeNodesRef.current = new Set()
-    activeEdgesRef.current = new Set()
-    setSelectedNodeId(null)
-    setSelectedEdgeId(null)
-    setQuickDetailEntity(null)
-    setLayoutStatus("refining")
-
-    freezeNextLabelsRef.current = true
-    layout.start()
-  }
-
-  const handleEdgePresetChange = (nextEdgeCount: GraphViewDemoEdgeCount) => {
-    if (nextEdgeCount === edgeCount) {
-      return
-    }
-
-    setEdgeCount(nextEdgeCount)
-  }
-
   const handleOpenQuickDetail = (
     entity: LocalQuickDetailEntity,
     trigger: HTMLElement
   ) => {
     quickDetailReturnFocusRef.current = trigger
+    clearHoverRef.current?.()
     setQuickDetailEntity(entity)
   }
 
   const statusIsBlocking = layoutStatus === "unsupported" || renderError
 
-  const selectItem = (nodeId: string | null, edgeId: string | null) => {
-    const graph = graphRef.current
-    if (!graph) return
-    selectedNodeIdRef.current = nodeId
-    selectedEdgeIdRef.current = edgeId
-    hoveredNodeIdRef.current = null
-    frozenLabelsRef.current = null
-    freezeNextLabelsRef.current = false
-    setSelectedNodeId(nodeId)
-    setSelectedEdgeId(edgeId)
-    const focused = getFocusedGraphParts(graph, nodeId, edgeId)
-    activeNodesRef.current = focused.nodes
-    activeEdgesRef.current = focused.edges
-    const sigma = sigmaRef.current
-    sigma?.scheduleRefresh()
-    const targetId = nodeId ?? (edgeId ? graph.source(edgeId) : null)
-    pendingPanNodeIdRef.current = targetId
+  const clearSelection = () => {
+    selectTargetRef.current?.(null, null)
   }
 
   return (
     <section
-      className="relative h-[calc(100svh-6.5rem)] min-h-[36rem] w-full max-w-full overflow-hidden rounded-xl border bg-card shadow-sm"
+      className="relative -m-5 h-[calc(100svh-5.5rem)] min-h-[24rem] w-[calc(100%+2.5rem)] overflow-hidden bg-card min-[1440px]:m-0 min-[1440px]:h-[calc(100svh-6.5rem)] min-[1440px]:min-h-[36rem] min-[1440px]:w-full min-[1440px]:rounded-xl min-[1440px]:border min-[1440px]:shadow-sm md:max-[1440px]:h-[calc(100svh-3rem)]"
       data-engine="sigma"
       data-fixture-version={
         liveGraphView ? undefined : GRAPH_VIEW_DEMO_FIXTURE_VERSION
       }
       data-layout-status={layoutStatus}
       data-layout-version={GRAPH_VIEW_DEMO_LAYOUT_VERSION}
-      data-testid="graph-view-sigma-demo"
+      data-testid="graph-view"
     >
       <div
         aria-hidden={statusIsBlocking}
         className={cn(
-          "size-full min-h-[36rem] max-w-full",
+          "size-full min-h-[24rem] max-w-full min-[1440px]:min-h-[36rem]",
           statusIsBlocking && "invisible"
         )}
         data-engine-canvas="sigma"
@@ -1682,21 +1516,22 @@ export function SigmaGraphViewDemo({
 
       <div
         data-graph-label-obstacle
-        className="pointer-events-none absolute inset-x-3 top-3 z-10 flex flex-wrap items-start justify-between gap-2 sm:inset-x-4 sm:top-4"
+        className="pointer-events-none absolute inset-x-4 top-3 z-10 flex flex-wrap items-start justify-between gap-3 min-[1440px]:top-4"
       >
-        <div className="pointer-events-auto max-w-[min(100%,34rem)] min-w-0">
-          <h1 className="mt-1 max-w-[min(70vw,32rem)] truncate text-lg font-semibold tracking-tight text-foreground sm:text-xl">
-            {dictionary.graphView.demo.title}
-          </h1>
-        </div>
-
-        <div className="pointer-events-auto flex max-w-[min(100%,34rem)] flex-wrap items-center justify-end gap-1.5">
+        <h1 className="sr-only text-xl font-semibold tracking-tight min-[1440px]:not-sr-only">
+          {dictionary.graphView.title}
+        </h1>
+        <div
+          className="grid grid-cols-2 gap-2 min-[1440px]:flex"
+          data-testid="graph-demo-node-legend"
+        >
           {GRAPH_DEMO_NODE_KIND_ORDER.map((kind) => (
-            <Badge
-              className={nodeVisuals[kind].chipClassName}
-              key={kind}
-              variant="outline"
-            >
+            <Badge key={kind} variant="outline">
+              <span
+                aria-hidden="true"
+                className="size-1.5 shrink-0 rounded-full"
+                style={{ backgroundColor: nodeVisuals[kind].color }}
+              />
               {nodeVisuals[kind].label}{" "}
               {formatNumber(
                 graphView.nodes.filter((node) => node.kind === kind).length
@@ -1705,41 +1540,9 @@ export function SigmaGraphViewDemo({
           ))}
         </div>
       </div>
-
       <div
         data-graph-label-obstacle
-        className="absolute top-20 left-3 z-10 w-56 max-w-[calc(100%-5rem)] sm:top-16 sm:left-4"
-      >
-        <Select
-          value={selectedNodeId ?? ""}
-          onValueChange={(id) => {
-            if (id) selectItem(id, null)
-          }}
-        >
-          <SelectTrigger
-            aria-label={dictionary.graphView.demo.selectNode}
-            className="w-full"
-            data-testid="graph-demo-node-selector"
-          >
-            <SelectValue placeholder={dictionary.graphView.demo.selectNode}>
-              {selectedNode?.label ?? dictionary.graphView.demo.selectNode}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              {graphView.nodes.map((node) => (
-                <SelectItem key={node.id} value={node.id}>
-                  {nodeVisuals[node.kind].label}: {node.label}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div
-        data-graph-label-obstacle
-        className="pointer-events-auto absolute top-[5.75rem] right-3 z-10 flex flex-col gap-2 sm:top-16 sm:right-4"
+        className="pointer-events-auto absolute top-24 left-4 z-10 min-[1440px]:top-16"
       >
         <ButtonGroup orientation="vertical">
           <DemoControlButton
@@ -1764,104 +1567,133 @@ export function SigmaGraphViewDemo({
             <Plus aria-hidden="true" data-icon="inline-start" />
           </DemoControlButton>
         </ButtonGroup>
-        <Button
-          aria-label={dictionary.graphView.demo.reLayout}
-          data-testid="graph-demo-re-layout"
-          size="icon"
-          type="button"
-          variant="outline"
-          onClick={handleReLayout}
-        >
-          <RefreshCw aria-hidden="true" data-icon="inline-start" />
-        </Button>
       </div>
-
+      <p
+        data-graph-label-obstacle
+        className="pointer-events-none absolute top-24 right-4 left-18 z-10 text-xs leading-5 text-muted-foreground min-[1440px]:top-16"
+      >
+        {dictionary.graphView.demo.interactionHint}
+      </p>
       <div
         data-graph-label-obstacle
-        className="pointer-events-auto absolute inset-x-3 bottom-3 z-10 flex flex-col gap-2 sm:inset-x-4 sm:bottom-4"
+        className="pointer-events-none absolute inset-x-4 bottom-20 z-10 flex flex-col gap-3 min-[1440px]:right-20 min-[1440px]:bottom-4 min-[1440px]:flex-row min-[1440px]:items-end min-[1440px]:justify-between"
       >
-        <div className="flex flex-wrap items-end justify-between gap-2">
-          <div className="rounded-full border border-border/60 bg-background/80 px-2.5 py-1 text-[10px] text-muted-foreground shadow-sm backdrop-blur">
-            <span data-testid="graph-demo-node-count">
-              {formatMessage(dictionary.graphView.demo.nodeCount, {
-                count: formatNumber(graphView.nodes.length),
-              })}
-            </span>
-            <span aria-hidden="true"> · </span>
-            <span data-testid="graph-demo-edge-count">
-              {formatMessage(dictionary.graphView.demo.edgeCount, {
-                count: formatNumber(graphView.edges.length),
-              })}
-            </span>
-          </div>
-
-          {!liveGraphView ? (
-            <div
-              aria-label={dictionary.graphView.demo.density}
-              className="flex flex-wrap justify-end gap-1.5"
-              data-testid="graph-demo-density-controls"
-              role="group"
-            >
-              {GRAPH_VIEW_DEMO_EDGE_COUNTS.map((preset) => {
-                const label = formatMessage(
-                  dictionary.graphView.demo.edgePreset,
-                  {
-                    edges: formatNumber(preset),
-                  }
-                )
-
-                return (
-                  <Button
-                    aria-pressed={preset === edgeCount}
-                    data-edge-count={preset}
-                    data-testid={`graph-demo-density-${preset}`}
-                    key={preset}
-                    size="sm"
-                    type="button"
-                    variant={preset === edgeCount ? "secondary" : "outline"}
-                    onClick={() => handleEdgePresetChange(preset)}
-                  >
-                    {label}
-                  </Button>
-                )
-              })}
-            </div>
-          ) : null}
-        </div>
-
-        <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] text-muted-foreground">
-          <span data-testid="graph-demo-layout-status">
-            {layoutStatusLabel}
+        <Badge variant="outline">
+          <span data-testid="graph-demo-node-count">
+            {formatMessage(dictionary.graphView.demo.nodeCount, {
+              count: formatNumber(graphView.nodes.length),
+            })}
           </span>
-          <span>
-            {dictionary.graphView.demo.layoutVersion.replace(
-              "{version}",
-              GRAPH_VIEW_DEMO_LAYOUT_VERSION
-            )}
+          <span aria-hidden="true"> · </span>
+          <span data-testid="graph-demo-edge-count">
+            {formatMessage(dictionary.graphView.demo.edgeCount, {
+              count: formatNumber(graphView.edges.length),
+            })}
           </span>
+        </Badge>
+        <div
+          className="grid w-fit grid-cols-2 gap-2 min-[1440px]:flex"
+          data-testid="graph-demo-edge-legend"
+        >
+          {GRAPH_DEMO_EDGE_KIND_ORDER.map((kind) => (
+            <Badge key={kind} variant="outline">
+              <span
+                aria-hidden="true"
+                className="size-1.5 shrink-0 rounded-full"
+                style={{ backgroundColor: edgeVisuals[kind].color }}
+              />
+              {edgeVisuals[kind].label}{" "}
+              {formatNumber(
+                graphView.edges.filter((edge) => edge.kind === kind).length
+              )}
+            </Badge>
+          ))}
         </div>
       </div>
-
-      {selectedNode ? (
+      <span
+        aria-live="polite"
+        className="sr-only"
+        data-testid="graph-demo-layout-status"
+        role="status"
+      >
+        {layoutStatusLabel}
+      </span>
+      {edgeChoices.length > 1 ? (
+        <aside
+          aria-label={dictionary.graphView.demo.chooseRelationship}
+          data-graph-label-obstacle
+          className={GRAPH_DEMO_INSPECTOR_CLASS_NAME}
+          data-testid="graph-demo-edge-choices"
+          onKeyDown={(event) => {
+            if (event.key === "Escape") {
+              event.stopPropagation()
+              setEdgeChoices([])
+            }
+          }}
+        >
+          <div className="flex items-center justify-between gap-3 border-b border-border/70 p-4">
+            <h2 className="text-base font-semibold">
+              {dictionary.graphView.demo.chooseRelationship}
+            </h2>
+            <Button
+              ref={edgeChoicesCloseRef}
+              size="icon-sm"
+              variant="ghost"
+              aria-label={dictionary.graphView.demo.closeRelationshipChoices}
+              onClick={() => setEdgeChoices([])}
+            >
+              <X aria-hidden="true" data-icon="inline-start" />
+            </Button>
+          </div>
+          <div className="flex min-h-0 flex-col gap-2 overflow-y-auto p-4">
+            {edgeChoices.map((id) => {
+              const edge = graphView.edges.find((edge) => edge.id === id)
+              if (!edge) return null
+              const source = graphView.nodes.find(
+                (node) => node.id === edge.sourceNodeId
+              )
+              const target = graphView.nodes.find(
+                (node) => node.id === edge.targetNodeId
+              )
+              return (
+                <Button
+                  key={id}
+                  variant="outline"
+                  className="h-auto w-full flex-col items-start gap-1 py-3 text-left whitespace-normal"
+                  aria-pressed={selectedEdgeId === id}
+                  onClick={() => selectTargetRef.current?.(null, id)}
+                >
+                  <span className="w-full break-words">
+                    {source?.label ?? edge.sourceNodeId} →{" "}
+                    {target?.label ?? edge.targetNodeId}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    {edgeVisuals[edge.kind].label} ·{" "}
+                    {getGraphViewRelationLabel(edge.relationType, dictionary)}
+                  </span>
+                  {edge.note?.trim() ? (
+                    <span className="w-full text-xs font-normal break-words text-muted-foreground">
+                      {edge.note}
+                    </span>
+                  ) : null}
+                </Button>
+              )
+            })}
+          </div>
+        </aside>
+      ) : selectedNode ? (
         <DemoNodeInspector
-          graphView={graphView}
-          isLive={Boolean(liveGraphView)}
-          onSelectNode={(id) => selectItem(id, null)}
-          onSelectEdge={(id) => selectItem(null, id)}
           node={selectedNode}
           nodeVisuals={nodeVisuals}
-          onClose={() => selectItem(null, null)}
+          onClose={clearSelection}
           onOpenQuickDetail={handleOpenQuickDetail}
-          relatedEdgeCount={selectedNodeRelationCounts.edges}
-          relatedNodeCount={selectedNodeRelationCounts.nodes}
         />
       ) : selectedEdge ? (
         <DemoEdgeInspector
           graphView={graphView}
-          onSelectNode={(id) => selectItem(id, null)}
           edge={selectedEdge}
           edgeVisuals={edgeVisuals}
-          onClose={() => selectItem(null, null)}
+          onClose={clearSelection}
         />
       ) : null}
 

@@ -2135,8 +2135,14 @@ export const en: Dictionary = {
     demo: {
       liveDescription:
         "Explore the knowledge connected to your current workspace watchlist.",
-      selectNode: "Select a node",
-      relationMeaning: "Relationship meaning",
+      relationMeaning: "Relation type",
+      connectionGroup: "Connection",
+      closeRelationship: "Close relationship details",
+      chooseRelationship: "Choose a relationship",
+      closeRelationshipChoices: "Close relationship choices",
+      interactionHint: "Drag to pan · Select a node or connection to inspect",
+      relationshipInterpretation:
+        "A connection describes a recorded association. It does not establish causation.",
       sourceUnavailable: "No original source URL is available.",
       workspaceRequired: "Choose a workspace",
       workspaceRequiredDescription:
@@ -2150,7 +2156,7 @@ export const en: Dictionary = {
       noGraphDescription:
         "No relationships are available for this workspace. This does not mean its assets are unaffected.",
       eyebrow: "Performance trial",
-      title: "Sigma knowledge graph demo",
+      title: "Knowledge graph",
       description:
         "A frontend-only trial with 100 nodes for comparing client-side rendering and layout.",
       fixture: "Fixed fixture",
@@ -2164,16 +2170,11 @@ export const en: Dictionary = {
       layoutCached: "Using cached layout",
       layoutRefining: "Refining layout on the client",
       layoutReady: "Layout ready",
-      layoutUnsupported:
-        "This browser does not support the WebGL required by the trial.",
-      layoutError: "Could not initialize the graph trial.",
+      layoutUnsupported: "This browser does not support displaying the graph.",
+      layoutError: "Could not display the graph. Reload to try again.",
       layoutVersion: "Layout {version}",
       nodeCount: "{count} nodes",
       edgeCount: "{count} edges",
-      baselineEyebrow: "Benchmark baseline",
-      baselineTitle: "G6 fixture baseline",
-      baselineDescription:
-        "An internal surface using the same fixed data for comparison with the Sigma demo.",
       noBackend: "No backend request",
       closeDetails: "Close node details",
       selectedNode: "Selected node",
@@ -2188,7 +2189,7 @@ export const en: Dictionary = {
       quickDetailTitle: "Fixture details",
       quickDetailDescription:
         "Local content used to test the quick-detail flow without a backend request.",
-      unsupportedTitle: "WebGL cannot be displayed",
+      unsupportedTitle: "Graph unavailable",
       readyForBenchmark: "Ready for benchmark",
     },
   },

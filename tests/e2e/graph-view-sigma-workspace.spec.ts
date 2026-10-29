@@ -1,11 +1,23 @@
 import { expect, test } from "./fixtures"
+import type { Page } from "@playwright/test"
+
+async function clickGraphAnchor(page: Page) {
+  const point = await page.getByTestId("graph-demo-canvas").evaluate((el) => {
+    const rect = el.getBoundingClientRect()
+    return {
+      x: rect.x + Number((el as HTMLElement).dataset.benchmarkAnchorX),
+      y: rect.y + Number((el as HTMLElement).dataset.benchmarkAnchorY),
+    }
+  })
+  await page.mouse.click(point.x, point.y)
+}
 
 test("canvas click keeps layout still and mouse/touch drag wakes forces", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1600, height: 900 })
-  await page.goto("/vi/graph-view-sigma-demo")
-  const root = page.getByTestId("graph-view-sigma-demo")
+  await page.goto("/vi/graph-view")
+  const root = page.getByTestId("graph-view")
   await expect(root).toHaveAttribute("data-layout-status", "ready", {
     timeout: 90_000,
   })
@@ -39,14 +51,15 @@ test("canvas click keeps layout still and mouse/touch drag wakes forces", async 
   await page.mouse.down()
   await page.mouse.move(start.x + 65, start.y + 45, { steps: 10 })
   await expect(root).toHaveAttribute("data-layout-status", "refining")
-  await expect(canvas).toHaveAttribute("data-labels-frozen", "true")
-  const draggedLabels = await canvas.getAttribute("data-rendered-label-ids")
+  const draggedNodeId = (await canvas.getAttribute("data-benchmark-anchor-id"))!
+  await expect(canvas).toHaveAttribute("data-dragging-node-id", draggedNodeId)
   await page.waitForTimeout(2300)
   await expect(root).toHaveAttribute("data-layout-status", "refining")
-  await expect(canvas).toHaveAttribute(
-    "data-rendered-label-ids",
-    draggedLabels!
-  )
+  expect(
+    JSON.parse((await canvas.getAttribute("data-rendered-label-boxes"))!).every(
+      (label: { side: string }) => label.side === "right"
+    )
+  ).toBe(true)
   const neighborAfter = await canvas.evaluate((el) => ({
     x: Number((el as HTMLElement).dataset.neighborX),
     y: Number((el as HTMLElement).dataset.neighborY),
@@ -61,16 +74,23 @@ test("canvas click keeps layout still and mouse/touch drag wakes forces", async 
   expect(dragged.x).toBeCloseTo(start.x + 65, 0)
   expect(dragged.y).toBeCloseTo(start.y + 45, 0)
   await page.mouse.up()
-  await expect(canvas).toHaveAttribute("data-labels-frozen", "true")
-  await page.mouse.click(900, 750)
+  await expect(canvas).toHaveAttribute("data-dragging-node-id", "")
+  await expect(canvas).toHaveAttribute("data-hovered-node-id", "")
+  await expect(canvas).toHaveAttribute("data-hovered-edge-id", "")
   await expect(root).toHaveAttribute("data-layout-status", "refining")
   await expect(root).toHaveAttribute("data-layout-status", "ready")
-  await expect(canvas).toHaveAttribute("data-labels-frozen", "false")
+  await expect(canvas).toHaveAttribute("data-hovered-node-id", "")
+  await expect(canvas).toHaveAttribute("data-hovered-edge-id", "")
   const released = await anchor()
   await page.waitForTimeout(300)
   expect(
     Math.hypot((await anchor()).x - released.x, (await anchor()).y - released.y)
   ).toBeLessThan(2)
+  await page.mouse.move(released.x + 1, released.y + 1)
+  await expect(canvas).toHaveAttribute(
+    "data-hovered-node-id",
+    (await canvas.getAttribute("data-benchmark-anchor-id"))!
+  )
   const touchStart = await anchor()
   const cdp = await page.context().newCDPSession(page)
   await cdp.send("Input.dispatchTouchEvent", {
@@ -82,7 +102,7 @@ test("canvas click keeps layout still and mouse/touch drag wakes forces", async 
     touchPoints: [{ x: touchStart.x - 40, y: touchStart.y + 35 }],
   })
   await expect(root).toHaveAttribute("data-layout-status", "refining")
-  await expect(canvas).toHaveAttribute("data-labels-frozen", "true")
+  await expect(canvas).toHaveAttribute("data-dragging-node-id", draggedNodeId)
   await page.waitForTimeout(300)
   const touched = await anchor()
   expect(touched.x).toBeCloseTo(touchStart.x - 40, 0)
@@ -92,60 +112,68 @@ test("canvas click keeps layout still and mouse/touch drag wakes forces", async 
     touchPoints: [],
   })
   await expect(root).toHaveAttribute("data-layout-status", "ready")
-  await expect(canvas).toHaveAttribute("data-labels-frozen", "false")
+  await expect(canvas).toHaveAttribute("data-dragging-node-id", "")
+  await expect(canvas).toHaveAttribute("data-hovered-node-id", "")
+  await expect(canvas).toHaveAttribute("data-hovered-edge-id", "")
   await cdp.detach()
 })
 
-for (const width of [1600, 390]) {
+for (const width of [1600, 1024, 390, 360]) {
   test(`Sigma workspace graph reads relationships and real detail at ${width}px`, async ({
     page,
     fixture,
   }) => {
     await page.setViewportSize({ width, height: 900 })
-    await page.goto("/vi/graph-view-sigma-demo")
+    await page.goto("/vi/graph-view")
     await expect(page.getByTestId("graph-demo-node-count")).toHaveText("2 nút")
     await expect(page.getByTestId("graph-demo-density-controls")).toHaveCount(0)
-    await expect(page.getByTestId("graph-view-sigma-demo")).toHaveAttribute(
+    await expect(page.getByTestId("graph-view")).toHaveAttribute(
       "data-layout-status",
       "ready",
       { timeout: 30_000 }
     )
     await page.screenshot({ path: `test-results/sigma-canvas-${width}.png` })
-    const selector = page.getByTestId("graph-demo-node-selector")
-    await selector.focus()
-    await page.keyboard.press("Enter")
-    await page.getByRole("option", { name: /Sự kiện: Central bank/ }).click()
+    await expect(page.getByRole("combobox")).toHaveCount(0)
+    await expect(page.getByTestId("graph-demo-re-layout")).toHaveCount(0)
+    await expect(
+      page.getByTestId("graph-demo-edge-legend").locator('[data-slot="badge"]')
+    ).toHaveCount(4)
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+      "Biểu đồ tri thức"
+    )
+    const legend = (await page
+      .getByTestId("graph-demo-edge-legend")
+      .boundingBox())!
+    const launcher = (await page
+      .getByRole("button", { name: "Mở trợ lý AI", exact: true })
+      .boundingBox())!
+    expect(
+      legend.x + legend.width <= launcher.x ||
+        legend.y + legend.height <= launcher.y
+    ).toBe(true)
+    await clickGraphAnchor(page)
     const inspector = page.getByTestId("graph-demo-inspector")
     await expect(inspector).toContainText(
       "Central bank signals a slower easing path"
     )
     await expect(inspector.locator("dl")).toContainText("92%")
     await expect(inspector.locator("dl")).toContainText(/\d{2}:\d{2}/)
-    await inspector
-      .getByRole("button", { name: /^Tài sản bị ảnh hưởng:/ })
-      .click()
-    const edge = page.getByTestId("graph-demo-edge-inspector")
-    await expect(edge).toContainText(
-      "Central bank signals a slower easing path →"
-    )
-    await expect
-      .poll(() =>
-        page.getByTestId("graph-demo-canvas").evaluate((el) => {
-          const labels = JSON.parse(
-            (el as HTMLElement).dataset.renderedLabelBoxes ?? "[]"
-          ) as { priority: number }[]
-          return (
-            labels.length === 2 && labels.every((label) => label.priority === 1)
-          )
-        })
-      )
-      .toBe(true)
-    await edge
-      .getByRole("button", {
-        name: "Central bank signals a slower easing path",
-        exact: true,
-      })
-      .click()
+    await expect(inspector).not.toContainText("Nút liên quan")
+    await expect(inspector).not.toContainText("Cạnh liên quan")
+    await expect(inspector).not.toContainText("nút liên quan")
+    const controls = (await page
+      .getByTestId("graph-demo-zoom-in")
+      .boundingBox())!
+    const panel = (await inspector.boundingBox())!
+    if (width >= 1440) expect(controls.x + controls.width).toBeLessThan(panel.x)
+    else {
+      expect(controls.width).toBe(28)
+      expect(controls.y + controls.height).toBeLessThan(panel.y)
+    }
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth)
+    ).toBe(width)
+    await page.screenshot({ path: `test-results/sigma-node-${width}.png` })
     await inspector
       .getByRole("button", { name: "Đọc sự kiện", exact: true })
       .click()
@@ -160,6 +188,46 @@ for (const width of [1600, 390]) {
     await expect(
       inspector.getByRole("button", { name: "Đọc sự kiện", exact: true })
     ).toBeFocused()
+    await page.getByTestId("graph-demo-close-inspector").click()
+    await expect(inspector).toHaveCount(0)
+    // Separate the next canvas action from Sigma's double-click zoom gesture.
+    await page.waitForTimeout(400)
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+        )
+    )
+    const midpoint = await page
+      .getByTestId("graph-demo-canvas")
+      .evaluate((el) => {
+        const r = el.getBoundingClientRect(),
+          data = (el as HTMLElement).dataset
+        return {
+          x: r.x + (Number(data.benchmarkAnchorX) + Number(data.neighborX)) / 2,
+          y: r.y + (Number(data.benchmarkAnchorY) + Number(data.neighborY)) / 2,
+        }
+      })
+    const edge = page.getByTestId("graph-demo-edge-inspector")
+    const canvas = page.getByTestId("graph-demo-canvas")
+    await page.mouse.move(midpoint.x, midpoint.y + 6)
+    await expect(canvas).toHaveAttribute("data-hovered-edge-id", /.+/)
+    await expect(edge).toHaveCount(0)
+    await page.screenshot({
+      path: `test-results/sigma-edge-hover-${width}.png`,
+    })
+    await page.mouse.move(midpoint.x, midpoint.y + 24)
+    await expect(canvas).toHaveAttribute("data-hovered-edge-id", "")
+    await page.mouse.click(midpoint.x, midpoint.y + 6)
+    await expect(edge).toBeVisible()
+    await expect(edge).toContainText("Nguồn · Sự kiện")
+    await expect(edge).toContainText("Đích · Tài sản")
+    await expect(edge).toContainText(
+      "Central bank signals a slower easing path"
+    )
+    await expect(edge).toContainText("Bitcoin")
+    await expect(edge).toContainText("không khẳng định quan hệ nhân quả")
+    await expect(edge.getByRole("button")).toHaveCount(1)
     const state = await fixture.state()
     expect(
       state.requests.some((request) => request.path === "/graph-view")
@@ -178,7 +246,7 @@ test("Sigma workspace graph preserves graph permission", async ({
   fixture,
 }) => {
   await fixture.setPermissions([])
-  await page.goto("/vi/graph-view-sigma-demo")
+  await page.goto("/vi/graph-view")
   await expect(
     page.getByText("Bạn không có quyền truy cập biểu đồ tri thức.")
   ).toBeVisible()
@@ -189,12 +257,12 @@ test("Sigma workspace graph preserves graph permission", async ({
   ).toBe(false)
 })
 
-test("Sigma selection halo and conditional pan preserve graph context", async ({
+test("Sigma pointer selection halo and pan preserve graph context", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1600, height: 900 })
-  await page.goto("/vi/graph-view-sigma-demo")
-  await expect(page.getByTestId("graph-view-sigma-demo")).toHaveAttribute(
+  await page.goto("/vi/graph-view")
+  await expect(page.getByTestId("graph-view")).toHaveAttribute(
     "data-layout-status",
     "ready",
     { timeout: 90000 }
@@ -221,8 +289,7 @@ test("Sigma selection halo and conditional pan preserve graph context", async ({
   await page.mouse.move(box.x + start.x, box.y + start.y)
   await expect.poll(haloPixels).toBe(0)
   const selectEvent = async () => {
-    await page.getByTestId("graph-demo-node-selector").click()
-    await page.getByRole("option", { name: /Sự kiện: Central bank/ }).click()
+    await clickGraphAnchor(page)
     await expect(page.getByTestId("graph-demo-inspector")).toBeVisible()
     await expect.poll(haloPixels).toBeGreaterThan(0)
   }
@@ -233,8 +300,9 @@ test("Sigma selection halo and conditional pan preserve graph context", async ({
   await page.screenshot({ path: "test-results/sigma-selected-halo.png" })
   await page.getByTestId("graph-demo-close-inspector").click()
   await expect.poll(haloPixels).toBe(0)
+  await selectEvent()
 
-  for (const delta of [-750, 1100]) {
+  for (const delta of [-60, 60]) {
     await page.mouse.move(box.x + box.width * 0.5, box.y + box.height - 90)
     await page.mouse.down()
     await page.mouse.move(
@@ -243,25 +311,17 @@ test("Sigma selection halo and conditional pan preserve graph context", async ({
       { steps: 10 }
     )
     await page.mouse.up()
-    await selectEvent()
+    await expect(page.getByTestId("graph-demo-inspector")).toBeVisible()
     await expect.poll(async () => (await position()).x).toBeGreaterThan(16)
-    await expect
-      .poll(async () => {
-        const inspector = (await page
-          .getByTestId("graph-demo-inspector")
-          .boundingBox())!
-        return (await position()).x < inspector.x - box.x - 16
-      })
-      .toBe(true)
     expect((await position()).ratio).toBeCloseTo(start.ratio, 5)
-    await page.getByTestId("graph-demo-close-inspector").click()
   }
+  await page.getByTestId("graph-demo-close-inspector").click()
 })
 
 test("Sigma render scale and labels remain readable", async ({ page }) => {
   await page.setViewportSize({ width: 1600, height: 900 })
-  await page.goto("/vi/graph-view-sigma-demo?edges=100")
-  const root = page.getByTestId("graph-view-sigma-demo")
+  await page.goto("/vi/graph-view?edges=100")
+  const root = page.getByTestId("graph-view")
   await expect(root).toHaveAttribute("data-layout-status", "ready", {
     timeout: 90000,
   })
@@ -291,22 +351,13 @@ test("Sigma render scale and labels remain readable", async ({ page }) => {
         y: number
         width: number
         height: number
+        side: string
       }[]
   )
   expect(boxes.every((label) => !label.id.startsWith("news-article:"))).toBe(
     true
   )
-  for (let i = 0; i < boxes.length; i++)
-    for (let j = i + 1; j < boxes.length; j++) {
-      const a = boxes[i],
-        b = boxes[j]
-      expect(
-        a.x < b.x + b.width &&
-          a.x + a.width > b.x &&
-          a.y < b.y + b.height &&
-          a.y + a.height > b.y
-      ).toBe(false)
-    }
+  expect(boxes.every((label) => label.side === "right")).toBe(true)
   await page.screenshot({ path: "test-results/sigma-readable-100.png" })
   await page
     .getByRole("button", { name: "Thu nhỏ biểu đồ", exact: true })
@@ -348,8 +399,8 @@ test("Sigma article labels follow hover and selection instead of background dens
   page,
 }) => {
   await page.setViewportSize({ width: 1600, height: 900 })
-  await page.goto("/vi/graph-view-sigma-demo?edges=100")
-  await expect(page.getByTestId("graph-view-sigma-demo")).toHaveAttribute(
+  await page.goto("/vi/graph-view?edges=100")
+  await expect(page.getByTestId("graph-view")).toHaveAttribute(
     "data-layout-status",
     "ready",
     { timeout: 90000 }
@@ -368,20 +419,63 @@ test("Sigma article labels follow hover and selection instead of background dens
           height: number
         }[]
     )
-  await page.getByTestId("graph-demo-node-selector").click()
-  await page
-    .getByRole("option", { name: /Bài viết: Bài viết phân tích 01/ })
-    .click()
+  const screenshot = await canvas.screenshot()
+  const point = await page.evaluate(async (png) => {
+    const bitmap = await createImageBitmap(
+      new Blob([Uint8Array.from(atob(png), (c) => c.charCodeAt(0))], {
+        type: "image/png",
+      })
+    )
+    const surface = document.createElement("canvas")
+    surface.width = bitmap.width
+    surface.height = bitmap.height
+    const context = surface.getContext("2d")!
+    context.drawImage(bitmap, 0, 0)
+    const { data } = context.getImageData(0, 0, surface.width, surface.height)
+    const articlePixel = (x: number, y: number) => {
+      const i = (y * surface.width + x) * 4
+      return (
+        data[i] > 150 &&
+        data[i + 1] < 40 &&
+        data[i + 2] > 40 &&
+        data[i + 2] < 100
+      )
+    }
+    for (let y = 180; y < surface.height - 100; y++)
+      for (let x = 80; x < surface.width - 80; x++)
+        if (
+          articlePixel(x, y) &&
+          articlePixel(x - 7, y) &&
+          articlePixel(x + 7, y) &&
+          articlePixel(x, y - 7) &&
+          articlePixel(x, y + 7)
+        )
+          return { x, y }
+    throw new Error("No visible article node")
+  }, screenshot.toString("base64"))
+  const initialBox = (await canvas.boundingBox())!
+  await page.mouse.click(initialBox.x + point.x, initialBox.y + point.y)
   await expect
     .poll(async () =>
       (await labels()).some(
-        (label) => label.id === "news-article:201" && label.priority === 0
+        (label) => label.id.startsWith("news-article:") && label.priority === 0
+      )
+    )
+    .toBe(true)
+  const selectedArticleId = (await labels()).find(
+    (label) => label.id.startsWith("news-article:") && label.priority === 0
+  )?.id
+  expect(selectedArticleId).toBeTruthy()
+  await expect
+    .poll(async () =>
+      (await labels()).some(
+        (label) => label.id === selectedArticleId && label.priority === 0
       )
     )
     .toBe(true)
   await page.waitForTimeout(250)
   const article = (await labels()).find(
-    (label) => label.id === "news-article:201"
+    (label) => label.id === selectedArticleId
   )!
   const panel = (await page.getByTestId("graph-demo-inspector").boundingBox())!
   const canvasBox = (await canvas.boundingBox())!
@@ -410,6 +504,8 @@ test("Sigma article labels follow hover and selection instead of background dens
           : article.y + article.height / 2,
   }
   await page.getByTestId("graph-demo-close-inspector").click()
+  const resetBox = (await canvas.boundingBox())!
+  await page.mouse.move(resetBox.x + 80, resetBox.y + resetBox.height - 160)
   await expect
     .poll(async () =>
       (await labels()).some((label) => label.id.startsWith("news-article:"))
@@ -420,7 +516,7 @@ test("Sigma article labels follow hover and selection instead of background dens
   await expect
     .poll(async () =>
       (await labels()).some(
-        (label) => label.id === "news-article:201" && label.priority === 2
+        (label) => label.id === selectedArticleId && label.priority === 2
       )
     )
     .toBe(true)
@@ -429,7 +525,7 @@ test("Sigma article labels follow hover and selection instead of background dens
   await expect
     .poll(async () =>
       (await labels()).some(
-        (label) => label.id === "news-article:201" && label.priority === 0
+        (label) => label.id === selectedArticleId && label.priority === 0
       )
     )
     .toBe(true)

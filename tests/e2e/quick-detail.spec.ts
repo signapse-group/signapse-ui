@@ -63,7 +63,7 @@ test.describe("P0 quick-detail overlay", () => {
       page.getByRole("heading", { name: "Biểu đồ tri thức", exact: true })
     ).toBeVisible()
 
-    const graphCanvas = page.locator('[data-engine-canvas="g6"]')
+    const graphCanvas = page.locator('[data-engine-canvas="sigma"]')
     await expect(graphCanvas).toHaveAttribute(
       "data-benchmark-anchor-id",
       /\S+/,
@@ -87,7 +87,7 @@ test.describe("P0 quick-detail overlay", () => {
     )
 
     if (!canvasBox || !Number.isFinite(anchorX) || !Number.isFinite(anchorY)) {
-      throw new Error("Missing G6 benchmark anchor")
+      throw new Error("Missing graph benchmark anchor")
     }
 
     await page.mouse.click(canvasBox.x + anchorX, canvasBox.y + anchorY)

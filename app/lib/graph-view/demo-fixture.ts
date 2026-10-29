@@ -357,7 +357,7 @@ export function createGraphViewDemoGraph({
       label: node.label,
       metadata: node.metadata ?? null,
       secondaryLabel: node.secondaryLabel ?? null,
-      // G6 sizes are diameters; Sigma sizes are radii in CSS pixels at zoom 1.
+      // Sigma sizes are radii in CSS pixels at zoom 1.
       size: visual.size / 2,
       x: position.x,
       y: position.y,

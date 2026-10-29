@@ -36,8 +36,6 @@ function getFriendlySegmentNames(
     feedback: dictionary.feedback.pageTitle,
     "feedback-submissions": dictionary.feedback.moderationTitle,
     "graph-view": dictionary.navigation.knowledgeGraph,
-    "graph-view-g6-baseline": dictionary.graphView.demo.baselineTitle,
-    "graph-view-sigma-demo": dictionary.graphView.demo.title,
     "market-charts": dictionary.navigation.marketCharts,
     "news-articles": dictionary.navigation.newsArticles,
     "news-outlets": dictionary.navigation.newsOutlets,

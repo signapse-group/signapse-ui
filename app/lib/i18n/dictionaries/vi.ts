@@ -2118,8 +2118,15 @@ export const vi = {
     demo: {
       liveDescription:
         "Khám phá tri thức liên quan đến watchlist của workspace hiện tại.",
-      selectNode: "Chọn đối tượng trên graph",
-      relationMeaning: "Ý nghĩa quan hệ",
+      relationMeaning: "Loại quan hệ",
+      connectionGroup: "Nhóm kết nối",
+      closeRelationship: "Đóng chi tiết quan hệ",
+      chooseRelationship: "Chọn quan hệ",
+      closeRelationshipChoices: "Đóng danh sách quan hệ",
+      interactionHint:
+        "Kéo để di chuyển · Chọn nút hoặc đường nối để xem chi tiết",
+      relationshipInterpretation:
+        "Kết nối thể hiện mối liên hệ được ghi nhận, không khẳng định quan hệ nhân quả.",
       sourceUnavailable: "Chưa có liên kết đến bài báo gốc.",
       workspaceRequired: "Chọn workspace",
       workspaceRequiredDescription:
@@ -2133,7 +2140,7 @@ export const vi = {
       noGraphDescription:
         "Chưa có quan hệ được cung cấp cho workspace này. Điều đó không có nghĩa các tài sản không chịu ảnh hưởng.",
       eyebrow: "Bản thử nghiệm hiệu năng",
-      title: "Demo Sigma cho biểu đồ tri thức",
+      title: "Biểu đồ tri thức",
       description:
         "Bản thử nghiệm frontend-only với 100 nút để so sánh renderer và bố cục phía client.",
       fixture: "Bộ dữ liệu cố định",
@@ -2147,16 +2154,11 @@ export const vi = {
       layoutCached: "Đang dùng bố cục đã lưu",
       layoutRefining: "Đang tinh chỉnh bố cục phía client",
       layoutReady: "Bố cục sẵn sàng",
-      layoutUnsupported:
-        "Trình duyệt này không hỗ trợ WebGL cần thiết cho bản thử nghiệm.",
-      layoutError: "Không thể khởi tạo bản thử nghiệm biểu đồ.",
+      layoutUnsupported: "Trình duyệt này chưa hỗ trợ hiển thị biểu đồ.",
+      layoutError: "Không thể hiển thị biểu đồ. Hãy tải lại để thử lại.",
       layoutVersion: "Bố cục {version}",
       nodeCount: "{count} nút",
       edgeCount: "{count} cạnh",
-      baselineEyebrow: "Đường chuẩn benchmark",
-      baselineTitle: "Đường chuẩn fixture G6",
-      baselineDescription:
-        "Bề mặt nội bộ dùng cùng dữ liệu cố định để so sánh với demo Sigma.",
       noBackend: "Không gọi backend",
       closeDetails: "Đóng chi tiết nút",
       selectedNode: "Nút đã chọn",
@@ -2171,7 +2173,7 @@ export const vi = {
       quickDetailTitle: "Chi tiết fixture",
       quickDetailDescription:
         "Nội dung cục bộ dùng để kiểm tra luồng quick detail mà không gọi backend.",
-      unsupportedTitle: "Không thể hiển thị WebGL",
+      unsupportedTitle: "Không thể hiển thị biểu đồ",
       readyForBenchmark: "Sẵn sàng benchmark",
     },
   },
