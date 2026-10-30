@@ -30,6 +30,56 @@ async function graphAnchorPoint(page: Page) {
   })
 }
 
+for (const locale of ["vi", "en"] as const) {
+  for (const width of [1520, 390]) {
+    test(`${locale} live graph shows relationship direction and available actions at ${width}px`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({
+        width,
+        height: width === 1520 ? 1024 : 844,
+      })
+      await page.goto(`/${locale}/graph-view`)
+
+      const root = page.getByTestId("graph-view")
+      await expect(root).toHaveAttribute("data-layout-status", "ready", {
+        timeout: 30_000,
+      })
+
+      const hint = page.getByTestId("graph-view-interaction-hint")
+      await expect(hint).toHaveText(
+        locale === "vi"
+          ? "Kéo để di chuyển biểu đồ · Chọn nút để xem thông tin"
+          : "Drag to pan the graph · Select a node to view its information"
+      )
+      await expect(hint).not.toContainText(/đường nối|connection/i)
+
+      const edgeLegend = page.getByTestId("graph-demo-edge-legend")
+      const edgeLabels =
+        locale === "vi"
+          ? [
+              "Sự kiện → tài sản",
+              "Bằng chứng → sự kiện",
+              "Luận điểm → sự kiện",
+              "Luận điểm → tài sản",
+            ]
+          : [
+              "Event → asset",
+              "Evidence → event",
+              "Narrative → event",
+              "Narrative → asset",
+            ]
+      for (const label of edgeLabels) {
+        await expect(edgeLegend).toContainText(label)
+      }
+
+      await page.screenshot({
+        path: `test-results/graph-direction-${locale}-${width}.png`,
+      })
+    })
+  }
+}
+
 test("canvas click keeps layout still and mouse/touch drag wakes forces", async ({
   page,
 }) => {

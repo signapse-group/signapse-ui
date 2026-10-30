@@ -59,7 +59,7 @@ describe("graph view demo fixture", () => {
     }
   })
 
-  it("preserves directed multi-edge graph identity", () => {
+  it("preserves directed edge endpoints and renders arrowheads", () => {
     const graphView = createGraphViewDemoFixture(400, "en")
     const positions = createGraphViewDemoSeedPositions(graphView.nodes)
     const graph = createGraphViewDemoGraph({
@@ -74,9 +74,12 @@ describe("graph view demo fixture", () => {
     expect(graph.size).toBe(400)
     expect(graph.type).toBe("directed")
     expect(graph.multi).toBe(true)
-    expect(graph.hasEdge("demo-edge-1")).toBe(true)
-    expect(graph.source("demo-edge-1")).toBe(graphView.edges[0]?.sourceNodeId)
-    expect(graph.target("demo-edge-1")).toBe(graphView.edges[0]?.targetNodeId)
+    for (const edge of graphView.edges) {
+      expect(graph.hasEdge(edge.id)).toBe(true)
+      expect(graph.source(edge.id)).toBe(edge.sourceNodeId)
+      expect(graph.target(edge.id)).toBe(edge.targetNodeId)
+      expect(graph.getEdgeAttribute(edge.id, "type")).toBe("arrow")
+    }
     for (const node of graphView.nodes) {
       expect(graph.getNodeAttribute(node.id, "size") * 2).toBe(
         getGraphViewNodeVisuals(en)[node.kind].size

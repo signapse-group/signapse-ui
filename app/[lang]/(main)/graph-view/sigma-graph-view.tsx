@@ -1025,7 +1025,7 @@ export function SigmaGraphView({
         autoRescale: true,
         cameraPanBoundaries: null,
         defaultEdgeColor: paletteRef.current.edgeDimStroke,
-        defaultEdgeType: "line",
+        defaultEdgeType: "arrow",
         minEdgeThickness: 1.7,
         zIndex: true,
         itemSizesReference: "positions",
@@ -1595,10 +1595,13 @@ export function SigmaGraphView({
         </ButtonGroup>
       </div>
       <p
+        data-testid="graph-view-interaction-hint"
         data-graph-label-obstacle
         className="pointer-events-none absolute top-24 right-4 left-18 z-10 text-xs leading-5 text-muted-foreground min-[1440px]:top-16"
       >
-        {dictionary.graphView.demo.interactionHint}
+        {liveGraphView
+          ? dictionary.graphView.demo.liveInteractionHint
+          : dictionary.graphView.demo.interactionHint}
       </p>
       <div
         data-graph-label-obstacle

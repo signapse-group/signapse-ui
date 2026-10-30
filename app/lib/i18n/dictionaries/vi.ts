@@ -2132,10 +2132,10 @@ export const vi = {
       narrative: "Luận điểm",
     },
     edgeKinds: {
-      "event-asset": "Sự kiện - tài sản",
-      "news-article-event": "Bằng chứng - sự kiện",
-      "narrative-event": "Luận điểm - sự kiện",
-      "narrative-asset": "Luận điểm - tài sản",
+      "event-asset": "Sự kiện → tài sản",
+      "news-article-event": "Bằng chứng → sự kiện",
+      "narrative-event": "Luận điểm → sự kiện",
+      "narrative-asset": "Luận điểm → tài sản",
     },
     relationTypes: {
       DRIVER: "Sự kiện góp phần hình thành luận điểm",
@@ -2189,6 +2189,8 @@ export const vi = {
       closeRelationshipChoices: "Đóng danh sách quan hệ",
       interactionHint:
         "Kéo để di chuyển · Chọn nút hoặc đường nối để xem chi tiết",
+      liveInteractionHint:
+        "Kéo để di chuyển biểu đồ · Chọn nút để xem thông tin",
       relationshipInterpretation:
         "Kết nối thể hiện mối liên hệ được ghi nhận, không khẳng định quan hệ nhân quả.",
       sourceUnavailable: "Chưa có liên kết đến bài báo gốc.",

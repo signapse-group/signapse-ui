@@ -51,6 +51,7 @@ export type GraphViewDemoEdgeAttributes = {
   note: string | null
   relationType: GraphViewEdgeRelationType
   size: number
+  type: "arrow"
   sourceNodeId: string
   targetNodeId: string
   weight: number | null
@@ -400,6 +401,7 @@ export function createGraphViewDemoGraph({
       note: edge.note,
       relationType: edge.relationType,
       size: visual.size,
+      type: "arrow",
       sourceNodeId: edge.sourceNodeId,
       targetNodeId: edge.targetNodeId,
       weight: edge.weight,

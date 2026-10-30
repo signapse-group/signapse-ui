@@ -2151,10 +2151,10 @@ export const en: Dictionary = {
       narrative: "Narrative",
     },
     edgeKinds: {
-      "event-asset": "Event - asset",
-      "news-article-event": "Evidence - event",
-      "narrative-event": "Narrative - event",
-      "narrative-asset": "Narrative - asset",
+      "event-asset": "Event → asset",
+      "news-article-event": "Evidence → event",
+      "narrative-event": "Narrative → event",
+      "narrative-asset": "Narrative → asset",
     },
     relationTypes: {
       DRIVER: "Contributing event",
@@ -2207,6 +2207,8 @@ export const en: Dictionary = {
       chooseRelationship: "Choose a relationship",
       closeRelationshipChoices: "Close relationship choices",
       interactionHint: "Drag to pan · Select a node or connection to inspect",
+      liveInteractionHint:
+        "Drag to pan the graph · Select a node to view its information",
       relationshipInterpretation:
         "A connection describes a recorded association. It does not establish causation.",
       sourceUnavailable: "No original source URL is available.",
