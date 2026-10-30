@@ -43,9 +43,9 @@ import {
   createAiProviderConfig,
   deleteAiProviderConfig,
   deleteAiProviderCredential,
-  getAiProviderConfigListPage,
   getAiProviderConfigById,
   getAiProviderConfigs,
+  getAiProviderConfigsRaw,
   getAiProviderModelCatalog,
   updateAiProviderConfig,
   updateAiProviderCredential,
@@ -213,7 +213,7 @@ describe("AI connection actions", () => {
   it("keeps option reads on the producer page without fetching each detail", async () => {
     vi.mocked(fetchAuthenticated).mockResolvedValue(pageResponse)
 
-    const result = await getAiProviderConfigs({
+    const result = await getAiProviderConfigsRaw({
       filter: "",
       page: 1,
       size: 10,
@@ -227,12 +227,30 @@ describe("AI connection actions", () => {
     expect(fetchAuthenticated).toHaveBeenCalledTimes(1)
   })
 
-  it("retains the producer page count and loads references for the connection list", async () => {
+  it("loads each row's references from the matching connection detail", async () => {
+    const secondListRow = {
+      ...pageResponse.content[0],
+      id: 43,
+      providerType: "OPENAI" as const,
+    }
+    const secondTaskReferences = [
+      { task: "NEWS_EVENT_EXTRACTION", model: "current-model" },
+    ]
     vi.mocked(fetchAuthenticated)
-      .mockResolvedValueOnce(pageResponse)
-      .mockResolvedValueOnce(detailResponse)
+      .mockResolvedValueOnce({
+        ...pageResponse,
+        content: [pageResponse.content[0], secondListRow],
+        numberOfElements: 2,
+      })
+      .mockResolvedValueOnce({ ...detailResponse, providerType: "GROQ" })
+      .mockResolvedValueOnce({
+        ...connectionResponse,
+        id: 43,
+        providerType: "OPENAI",
+        taskReferences: secondTaskReferences,
+      })
 
-    const result = await getAiProviderConfigListPage({
+    const result = await getAiProviderConfigs({
       filter: "",
       page: 1,
       size: 10,
@@ -242,13 +260,21 @@ describe("AI connection actions", () => {
     expect(result.totalElements).toBe(21)
     expect(result.totalPages).toBe(3)
     expect(result.number).toBe(1)
+    expect(
+      result.content.map(({ id, providerType, taskReferencesStatus }) => ({
+        id,
+        providerType,
+        taskReferencesStatus,
+      }))
+    ).toEqual([
+      { id: 42, providerType: "GROQ", taskReferencesStatus: "loaded" },
+      { id: 43, providerType: "OPENAI", taskReferencesStatus: "loaded" },
+    ])
     expect(result.content[0]).toMatchObject({
-      providerType: "GROQ",
-      defaultProvider: false,
       credentials: [{ keyPreview: "sk-...old" }],
       taskReferences: detailResponse.taskReferences,
-      taskReferencesStatus: "loaded",
     })
+    expect(result.content[1].taskReferences).toEqual(secondTaskReferences)
     expect(fetchAuthenticated).toHaveBeenNthCalledWith(
       1,
       "/ai-provider-configs?page=1&size=10&sort=id%2Cdesc"
@@ -257,18 +283,35 @@ describe("AI connection actions", () => {
       2,
       "/ai-provider-configs/42"
     )
+    expect(fetchAuthenticated).toHaveBeenNthCalledWith(
+      3,
+      "/ai-provider-configs/43"
+    )
   })
 
-  it("uses task references returned with the list row without another read", async () => {
-    const taskReferences = [
-      { task: "NEWS_EVENT_EXTRACTION", model: "current-model" },
+  it("uses detail references even if the list row includes references", async () => {
+    const actualReferences = [
+      { task: "MARKET_REACTION_ANALYSIS", model: "detail-model" },
     ]
-    vi.mocked(fetchAuthenticated).mockResolvedValue({
-      ...pageResponse,
-      content: [{ ...pageResponse.content[0], taskReferences }],
-    })
+    vi.mocked(fetchAuthenticated)
+      .mockResolvedValueOnce({
+        ...pageResponse,
+        content: [
+          {
+            ...pageResponse.content[0],
+            taskReferences: [
+              { task: "NEWS_EVENT_EXTRACTION", model: "stale-list-model" },
+            ],
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        ...detailResponse,
+        providerType: "GROQ",
+        taskReferences: actualReferences,
+      })
 
-    const result = await getAiProviderConfigListPage({
+    const result = await getAiProviderConfigs({
       filter: "",
       page: 1,
       size: 10,
@@ -276,10 +319,10 @@ describe("AI connection actions", () => {
     })
 
     expect(result.content[0]).toMatchObject({
-      taskReferences,
+      taskReferences: actualReferences,
       taskReferencesStatus: "loaded",
     })
-    expect(fetchAuthenticated).toHaveBeenCalledTimes(1)
+    expect(fetchAuthenticated).toHaveBeenCalledTimes(2)
   })
 
   it("keeps a successfully loaded empty task-reference list as zero", async () => {
@@ -287,7 +330,7 @@ describe("AI connection actions", () => {
       .mockResolvedValueOnce(pageResponse)
       .mockResolvedValueOnce({ ...detailResponse, taskReferences: [] })
 
-    const result = await getAiProviderConfigListPage({
+    const result = await getAiProviderConfigs({
       filter: "",
       page: 1,
       size: 10,
@@ -300,20 +343,44 @@ describe("AI connection actions", () => {
     })
   })
 
-  it("marks failed and mismatched detail reads unavailable instead of zero", async () => {
+  it("isolates failed detail reads and treats an identity mismatch as unavailable", async () => {
+    const secondListRow = {
+      ...pageResponse.content[0],
+      id: 43,
+      providerType: "OPENAI" as const,
+    }
     vi.mocked(fetchAuthenticated)
-      .mockResolvedValueOnce(pageResponse)
+      .mockResolvedValueOnce({
+        ...pageResponse,
+        content: [pageResponse.content[0], secondListRow],
+        numberOfElements: 2,
+      })
       .mockRejectedValueOnce(new Error("Forbidden"))
+      .mockResolvedValueOnce({
+        ...detailResponse,
+        id: 43,
+        providerType: "OPENAI",
+        taskReferences: [],
+      })
 
-    const failedResult = await getAiProviderConfigListPage({
+    const failedResult = await getAiProviderConfigs({
       filter: "",
       page: 1,
       size: 10,
       sort: [{ field: "id", direction: "desc" }],
     })
 
-    expect(failedResult.content[0].taskReferencesStatus).toBe("unavailable")
+    expect(
+      failedResult.content.map(({ id, taskReferencesStatus }) => ({
+        id,
+        taskReferencesStatus,
+      }))
+    ).toEqual([
+      { id: 42, taskReferencesStatus: "unavailable" },
+      { id: 43, taskReferencesStatus: "loaded" },
+    ])
     expect(failedResult.content[0].taskReferences).toBeUndefined()
+    expect(failedResult.content[1].taskReferences).toEqual([])
 
     vi.mocked(fetchAuthenticated)
       .mockReset()
@@ -324,7 +391,7 @@ describe("AI connection actions", () => {
         taskReferences: [{ task: "NEWS_EVENT_EXTRACTION" }],
       })
 
-    const mismatchedResult = await getAiProviderConfigListPage({
+    const mismatchedResult = await getAiProviderConfigs({
       filter: "",
       page: 1,
       size: 10,

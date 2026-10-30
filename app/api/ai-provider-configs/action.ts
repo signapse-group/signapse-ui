@@ -152,13 +152,6 @@ async function fetchAiProviderConfigPage(searchParams: SearchParams): Promise<{
 
 export async function getAiProviderConfigs(
   searchParams: SearchParams
-): Promise<Page<AiProviderConfigListResponse>> {
-  const { page } = await fetchAiProviderConfigPage(searchParams)
-  return page
-}
-
-export async function getAiProviderConfigListPage(
-  searchParams: SearchParams
 ): Promise<Page<AiProviderConfigListItem>> {
   const { page, invalidResponseMessage } =
     await fetchAiProviderConfigPage(searchParams)
@@ -167,15 +160,6 @@ export async function getAiProviderConfigListPage(
     ...page,
     content: await Promise.all(
       page.content.map(async (provider): Promise<AiProviderConfigListItem> => {
-        const taskReferences = provider.taskReferences
-        if (taskReferences !== undefined) {
-          return {
-            ...provider,
-            taskReferences,
-            taskReferencesStatus: "loaded",
-          }
-        }
-
         try {
           const detail = await fetchAiProviderConfigDetail(
             provider.id,
@@ -196,6 +180,13 @@ export async function getAiProviderConfigListPage(
       })
     ),
   }
+}
+
+export async function getAiProviderConfigsRaw(
+  searchParams: SearchParams
+): Promise<Page<AiProviderConfigListResponse>> {
+  const { page } = await fetchAiProviderConfigPage(searchParams)
+  return page
 }
 
 export async function getAiProviderConfigById(
