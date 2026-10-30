@@ -189,6 +189,78 @@ test.describe("P0 AI connections", () => {
     ])
   })
 
+  test("normalizes invalid page values on the route and replaces browser history", async ({
+    page,
+    fixture,
+  }, testInfo) => {
+    await fixture.setPermissions([
+      "ai-provider-config:read",
+      "ai-task-configuration:read",
+    ])
+    await page.emulateMedia({ colorScheme: "dark" })
+    await page.setViewportSize({ width: 1520, height: 1024 })
+
+    const previousUrl = "/vi/ai-provider-configs?size=20&sort=id_asc"
+    await page.goto(previousUrl)
+    await expect(page.getByRole("link", { name: "Groq #12" })).toBeVisible()
+
+    for (const invalidPage of ["0", "-1", "1.5", "not-a-number"]) {
+      const requestsBefore = (await fixture.state()).requests.length
+      const invalidUrl = `/vi/ai-provider-configs?page=${encodeURIComponent(invalidPage)}&size=10&sort=id_asc`
+
+      await page.goto(invalidUrl)
+      await expect(page).toHaveURL(
+        (url) =>
+          `${url.pathname}${url.search}` ===
+          "/vi/ai-provider-configs?page=1&size=10&sort=id_asc"
+      )
+      await expect(page.getByRole("link", { name: "Groq #12" })).toBeVisible()
+      await expect(
+        page.getByRole("combobox", { name: vi.pagination.pageSize })
+      ).toContainText("10")
+      await expect(
+        page
+          .getByRole("navigation", {
+            name: vi.pagination.navigationLabel,
+          })
+          .locator('[aria-current="page"]')
+      ).toHaveText("1")
+
+      const requests = (await fixture.state()).requests
+        .slice(requestsBefore)
+        .filter(
+          (request) =>
+            request.method === "GET" && request.path === "/ai-provider-configs"
+        )
+      expect(requests).toContainEqual(
+        expect.objectContaining({
+          method: "GET",
+          path: "/ai-provider-configs",
+          query: "?page=0&size=10&sort=id%2Casc",
+        })
+      )
+
+      if (invalidPage === "0") {
+        await testInfo.attach(
+          "ai-connections-page-zero-normalized-vi-1520x1024.png",
+          {
+            body: await page.screenshot({
+              fullPage: false,
+              style: "nextjs-portal { display: none !important; }",
+            }),
+            contentType: "image/png",
+          }
+        )
+      }
+
+      await page.goBack()
+      await expect(page).toHaveURL(
+        (url) => `${url.pathname}${url.search}` === previousUrl
+      )
+      await expect(page.getByRole("link", { name: "Groq #12" })).toBeVisible()
+    }
+  })
+
   test("matches the approved edit design at 1520x1600 and stays usable on mobile", async ({
     page,
     fixture,
