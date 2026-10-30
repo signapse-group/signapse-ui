@@ -10,7 +10,7 @@ When framework versions, the UI preset, CI, or repository ownership change, refr
 - Before implementing or reviewing `app/api/**`, read `app/api/AGENTS.override.md`.
 - Before implementing or reviewing `app/lib/**`, read `app/lib/AGENTS.override.md`.
 - For UI implementation or review under `app/[lang]/**` or `components/**`, read `components/AGENTS.override.md`. For changes to visual presentation, interaction, accessibility, or user-facing content, read the relevant sections of `docs/design/DESIGN.md`, the UI/UX source of truth.
-- For assigned Jira UI work, read and apply the local [UI design gate](docs/design/DESIGN.md#ui-design-gate). Resolve the approved design from the native parent in every Survey/Implement/Review session, open the actual references and use them with `docs/design/DESIGN.md`; a child attachment is not required. Direct work retains its accepted contract: inspect any supplied approved reference before coding and compare affected rendered UI before handoff. Report inaccessible, ambiguous or conflicting references before coding dependent UI.
+- For assigned Jira UI work, apply the local [UI design gate](docs/design/DESIGN.md#ui-design-gate): read the native parent's accepted direction and view the representative reference/pattern in each phase. FE may complete routine detail under that gate; missing detailed mockups alone do not block implementation. Direct work keeps its accepted contract and supplied references. Verify affected rendered UI before handoff; escalate only consequential gaps outside FE authority.
 - When a task spans multiple domains, read every applicable scoped instruction file.
 - Scoped instructions extend this file; the more specific instruction wins when guidance conflicts.
 - `.agents/skills` holds repository-specific or non-overlapping recipes.
@@ -24,7 +24,7 @@ When framework versions, the UI preset, CI, or repository ownership change, refr
 
 ## Execution inputs
 
-Live Subtask/parent, accepted decisions, dependencies and explicit assignment references supply the requirement. This repository supplies execution authority, standards and phase procedure. Planning policy links are provenance for maintainers, not required reading or a network prerequisite for workers. Do not redo definition/decomposition or block solely because a Planning policy page is unavailable. Approved design/ADR and producer contracts explicitly needed for the assignment still must be accessible; report the affected AC/check and owner when those inputs are missing. Missing mandatory local instructions remains deployment drift; do not substitute legacy/backup policy.
+Live Subtask/parent, accepted decisions, dependencies and explicit assignment references supply the requirement. This repository supplies execution authority, standards and phase procedure. Planning policy links are provenance for maintainers, not required reading or a network prerequisite for workers. Do not redo definition/decomposition or block solely because a Planning policy page is unavailable. Apply the local UI design gate for sufficient direction and alternatives; an inaccessible detail reference alone is not a blocker. ADRs, producer contracts and inputs necessary for consequential decisions must remain accessible; report the affected AC/check and owner when missing. Missing mandatory local instructions remains deployment drift; do not substitute legacy/backup policy.
 
 ## Dev handoff boundary
 
