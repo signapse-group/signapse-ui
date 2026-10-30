@@ -34,7 +34,10 @@ function subscribeToSidebarViewportDefault() {
 }
 
 function getSidebarViewportDefault() {
-  return window.matchMedia("(min-width: 1440px)").matches
+  return (
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(min-width: 1440px)").matches
+  )
 }
 
 function getServerSidebarViewportDefault() {
