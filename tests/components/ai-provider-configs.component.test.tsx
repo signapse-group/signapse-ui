@@ -84,7 +84,9 @@ const legacyProvider = {
 }
 
 const listPage = {
-  content: [legacyProvider],
+  content: [
+    { ...legacyProvider, taskReferencesStatus: "unavailable" as const },
+  ],
   pageable: {
     pageNumber: 0,
     pageSize: 10,
@@ -159,7 +161,7 @@ describe("AI connection UI", () => {
 
   afterEach(() => cleanup())
 
-  it("shows legacy connection metadata and masked keys without implying task references", async () => {
+  it("shows an unavailable state instead of implying zero references", async () => {
     const user = userEvent.setup()
     renderWithProviders(<AiProviderConfigListPage providerPage={listPage} />)
 
@@ -172,7 +174,7 @@ describe("AI connection UI", () => {
     expect(screen.getByText("Endpoint mặc định của Groq")).toBeVisible()
     expect(screen.getByText("Endpoint của nhà cung cấp")).toBeVisible()
     expect(screen.getByText("gsk-...legacy")).toBeVisible()
-    expect(screen.getByText("API chưa cung cấp")).toBeVisible()
+    expect(screen.getByText("Không thể tải tham chiếu")).toBeVisible()
     expect(screen.queryByText("0 tác vụ")).not.toBeInTheDocument()
     expect(screen.queryByText("Mặc định")).not.toBeInTheDocument()
 
@@ -197,6 +199,57 @@ describe("AI connection UI", () => {
         "/vi/ai-provider-configs?page=2&size=10"
       )
     )
+  })
+
+  it("shows the loaded reference count for the same connection and keeps its key masked", () => {
+    renderWithProviders(
+      <AiProviderConfigListPage
+        providerPage={{
+          ...listPage,
+          content: [
+            {
+              ...legacyProvider,
+              taskReferencesStatus: "loaded",
+              taskReferences: [
+                { task: "MARKET_REACTION_ANALYSIS", model: "model-a" },
+                { task: "NEWS_EVENT_EXTRACTION", model: "model-b" },
+              ],
+            },
+          ],
+        }}
+      />
+    )
+
+    expect(screen.getByRole("link", { name: "Groq #12" })).toHaveAttribute(
+      "href",
+      "/ai-provider-configs/12"
+    )
+    expect(screen.getByText("2 tác vụ")).toBeVisible()
+    expect(screen.getByText("gsk-...legacy")).toBeVisible()
+    expect(screen.queryByText("model-a")).not.toBeInTheDocument()
+    expect(screen.queryByText("0 tác vụ")).not.toBeInTheDocument()
+  })
+
+  it("shows a loaded zero-reference count distinctly from an unavailable read", () => {
+    renderWithProviders(
+      <AiProviderConfigListPage
+        providerPage={{
+          ...listPage,
+          content: [
+            {
+              ...legacyProvider,
+              taskReferencesStatus: "loaded",
+              taskReferences: [],
+            },
+          ],
+        }}
+      />
+    )
+
+    expect(screen.getByText("0 tác vụ")).toBeVisible()
+    expect(
+      screen.queryByText("Không thể tải tham chiếu")
+    ).not.toBeInTheDocument()
   })
 
   it("shows the create link only when the separate create permission is present", () => {
@@ -345,7 +398,9 @@ describe("AI connection UI", () => {
   it("warns before discarding unsaved endpoint, description, and key drafts", async () => {
     const user = userEvent.setup()
     renderWithProviders(
-      <AiProviderConfigDetail provider={{ ...legacyProvider, taskReferences: [] }} />,
+      <AiProviderConfigDetail
+        provider={{ ...legacyProvider, taskReferences: [] }}
+      />,
       [
         "ai-provider-config:read",
         "ai-provider-config:update",
@@ -355,9 +410,7 @@ describe("AI connection UI", () => {
     )
 
     const endpoint = screen.getByLabelText(en.aiProviderConfigs.endpoint)
-    const description = screen.getByLabelText(
-      en.aiProviderConfigs.description
-    )
+    const description = screen.getByLabelText(en.aiProviderConfigs.description)
     const replacementKey = screen.getByLabelText(
       en.aiProviderConfigs.replacementKey
     )

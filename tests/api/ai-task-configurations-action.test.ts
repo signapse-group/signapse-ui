@@ -2,12 +2,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 const {
   fetchAuthenticated,
-  getAiProviderConfigs,
+  getAiProviderConfigsRaw,
   getCurrentPermissions,
   testDictionary,
 } = vi.hoisted(() => ({
   fetchAuthenticated: vi.fn(),
-  getAiProviderConfigs: vi.fn(),
+  getAiProviderConfigsRaw: vi.fn(),
   getCurrentPermissions: vi.fn(),
   testDictionary: {
     aiTaskConfigurations: {
@@ -37,7 +37,7 @@ const {
 
 vi.mock("@/app/api/auth/action", () => ({ fetchAuthenticated }))
 vi.mock("@/app/api/ai-provider-configs/action", () => ({
-  getAiProviderConfigs,
+  getAiProviderConfigsRaw,
 }))
 vi.mock("@/app/lib/permissions-server", () => ({ getCurrentPermissions }))
 vi.mock("@/app/lib/i18n/dictionaries", () => ({
@@ -88,7 +88,7 @@ const configurations = AI_TASK_TYPES.map((task, index) => ({
 describe("AI task configuration actions", () => {
   beforeEach(() => {
     vi.mocked(fetchAuthenticated).mockReset()
-    vi.mocked(getAiProviderConfigs).mockReset()
+    vi.mocked(getAiProviderConfigsRaw).mockReset()
     vi.mocked(getCurrentPermissions).mockReset()
     vi.mocked(revalidatePath).mockClear()
   })
@@ -285,7 +285,7 @@ describe("AI task configuration actions", () => {
     vi.mocked(getCurrentPermissions).mockResolvedValue([
       "ai-provider-config:read",
     ])
-    vi.mocked(getAiProviderConfigs).mockResolvedValue({
+    vi.mocked(getAiProviderConfigsRaw).mockResolvedValue({
       content: [
         {
           id: 14,
@@ -309,7 +309,7 @@ describe("AI task configuration actions", () => {
         { id: 16, providerType: "OPENAI" },
       ],
     })
-    expect(getAiProviderConfigs).toHaveBeenCalledWith({
+    expect(getAiProviderConfigsRaw).toHaveBeenCalledWith({
       page: 0,
       size: 2000,
       filter: "",

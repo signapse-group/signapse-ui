@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache"
 
 import { fetchAuthenticated } from "@/app/api/auth/action"
-import { getAiProviderConfigs } from "@/app/api/ai-provider-configs/action"
+import { getAiProviderConfigsRaw } from "@/app/api/ai-provider-configs/action"
 import type { ActionResult } from "@/app/lib/definitions"
 import {
   AI_TASK_CONFIGURATION_READ_PERMISSION,
@@ -86,7 +86,7 @@ export async function getAiTaskConfigurationConnections(): Promise<
   }
 
   try {
-    const providerPage = await getAiProviderConfigs({
+    const providerPage = await getAiProviderConfigsRaw({
       page: 0,
       size: 2000,
       filter: "",

@@ -18,6 +18,7 @@ import {
   type AiProviderConfigCreateRequest,
   type AiProviderConfigDetailResponse,
   type AiProviderConfigListResponse,
+  type AiProviderConfigListItem,
   type AiProviderConfigUpdateRequest,
   type AiProviderCredentialCreateRequest,
   type AiProviderCredentialResponse,
@@ -60,6 +61,30 @@ function parseResponse<T>(
   return parsed.data
 }
 
+async function fetchAiProviderConfigDetail(
+  id: number,
+  invalidMessage: string
+): Promise<AiProviderConfigDetailResponse> {
+  const parsedId = idSchema.safeParse(id)
+  if (!parsedId.success) {
+    throw new Error(invalidMessage)
+  }
+
+  const value = await fetchAuthenticated<unknown>(
+    `/ai-provider-configs/${parsedId.data}`
+  )
+  const detail = parseResponse(
+    aiProviderConfigDetailResponseSchema,
+    value,
+    invalidMessage
+  )
+  if (detail.id !== parsedId.data) {
+    throw new Error(invalidMessage)
+  }
+
+  return detail
+}
+
 function getSafeBackendError(
   error: unknown,
   fallback: string,
@@ -99,9 +124,10 @@ function revalidateAiProviderConfig(id?: number) {
   }
 }
 
-export async function getAiProviderConfigs(
-  searchParams: SearchParams
-): Promise<Page<AiProviderConfigListResponse>> {
+async function fetchAiProviderConfigPage(searchParams: SearchParams): Promise<{
+  page: Page<AiProviderConfigListResponse>
+  invalidResponseMessage: string
+}> {
   const dictionary = await getServerDictionary()
   const parsedSearchParams =
     aiProviderConfigListQuerySchema.safeParse(searchParams)
@@ -114,11 +140,53 @@ export async function getAiProviderConfigs(
     `/ai-provider-configs?${queryParamsToString(parsedSearchParams.data)}`
   )
 
-  return parseResponse(
-    aiProviderConfigPageResponseSchema,
-    value,
-    dictionary.aiProviderConfigs.responseInvalid
-  )
+  return {
+    page: parseResponse(
+      aiProviderConfigPageResponseSchema,
+      value,
+      dictionary.aiProviderConfigs.responseInvalid
+    ),
+    invalidResponseMessage: dictionary.aiProviderConfigs.responseInvalid,
+  }
+}
+
+export async function getAiProviderConfigs(
+  searchParams: SearchParams
+): Promise<Page<AiProviderConfigListItem>> {
+  const { page, invalidResponseMessage } =
+    await fetchAiProviderConfigPage(searchParams)
+
+  return {
+    ...page,
+    content: await Promise.all(
+      page.content.map(async (provider): Promise<AiProviderConfigListItem> => {
+        try {
+          const detail = await fetchAiProviderConfigDetail(
+            provider.id,
+            invalidResponseMessage
+          )
+          return {
+            ...provider,
+            taskReferences: detail.taskReferences,
+            taskReferencesStatus: "loaded",
+          }
+        } catch {
+          return {
+            ...provider,
+            taskReferences: undefined,
+            taskReferencesStatus: "unavailable",
+          }
+        }
+      })
+    ),
+  }
+}
+
+export async function getAiProviderConfigsRaw(
+  searchParams: SearchParams
+): Promise<Page<AiProviderConfigListResponse>> {
+  const { page } = await fetchAiProviderConfigPage(searchParams)
+  return page
 }
 
 export async function getAiProviderConfigById(
@@ -130,12 +198,8 @@ export async function getAiProviderConfigById(
     throw new Error(dictionary.aiProviderConfigs.detailErrorDescription)
   }
 
-  const value = await fetchAuthenticated<unknown>(
-    `/ai-provider-configs/${parsedId.data}`
-  )
-  return parseResponse(
-    aiProviderConfigDetailResponseSchema,
-    value,
+  return fetchAiProviderConfigDetail(
+    parsedId.data,
     dictionary.aiProviderConfigs.responseInvalid
   )
 }

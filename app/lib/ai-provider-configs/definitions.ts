@@ -124,6 +124,20 @@ export type AiProviderConfigResponse = z.infer<
   typeof aiProviderConfigResponseSchema
 >
 export type AiProviderConfigListResponse = AiProviderConfigResponse
+export type AiProviderConfigListItem = Omit<
+  AiProviderConfigListResponse,
+  "taskReferences"
+> &
+  (
+    | {
+        taskReferencesStatus: "loaded"
+        taskReferences: AiTaskConfigurationReference[]
+      }
+    | {
+        taskReferencesStatus: "unavailable"
+        taskReferences?: undefined
+      }
+  )
 export type AiProviderConfigDetailResponse = z.infer<
   typeof aiProviderConfigDetailResponseSchema
 >
