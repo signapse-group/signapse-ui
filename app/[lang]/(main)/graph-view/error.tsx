@@ -37,7 +37,7 @@ export default function Error({
         </EmptyMedia>
         <EmptyTitle>{dictionary.graphView.errorTitle}</EmptyTitle>
         <EmptyDescription>
-          {error.message || dictionary.graphView.errorDescription}
+          {dictionary.graphView.errorDescription}
         </EmptyDescription>
       </EmptyHeader>
 

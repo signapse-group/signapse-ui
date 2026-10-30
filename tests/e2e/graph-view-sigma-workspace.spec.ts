@@ -2,14 +2,32 @@ import { expect, test } from "./fixtures"
 import type { Page } from "@playwright/test"
 
 async function clickGraphAnchor(page: Page) {
-  const point = await page.getByTestId("graph-demo-canvas").evaluate((el) => {
+  const point = await graphAnchorPoint(page)
+  await page.mouse.click(point.x, point.y)
+}
+
+async function tapGraphAnchor(page: Page) {
+  const point = await graphAnchorPoint(page)
+  const cdp = await page.context().newCDPSession(page)
+  await cdp.send("Input.dispatchTouchEvent", {
+    type: "touchStart",
+    touchPoints: [point],
+  })
+  await cdp.send("Input.dispatchTouchEvent", {
+    type: "touchEnd",
+    touchPoints: [],
+  })
+  await cdp.detach()
+}
+
+async function graphAnchorPoint(page: Page) {
+  return page.getByTestId("graph-demo-canvas").evaluate((el) => {
     const rect = el.getBoundingClientRect()
     return {
       x: rect.x + Number((el as HTMLElement).dataset.benchmarkAnchorX),
       y: rect.y + Number((el as HTMLElement).dataset.benchmarkAnchorY),
     }
   })
-  await page.mouse.click(point.x, point.y)
 }
 
 test("canvas click keeps layout still and mouse/touch drag wakes forces", async ({
@@ -118,12 +136,13 @@ test("canvas click keeps layout still and mouse/touch drag wakes forces", async 
   await cdp.detach()
 })
 
-for (const width of [1600, 1024, 390, 360]) {
+for (const width of [1520, 1024, 390, 360]) {
   test(`Sigma workspace graph reads relationships and real detail at ${width}px`, async ({
     page,
     fixture,
   }) => {
-    await page.setViewportSize({ width, height: 900 })
+    const height = width === 1520 ? 1024 : width === 1024 ? 768 : 844
+    await page.setViewportSize({ width, height })
     await page.goto("/vi/graph-view")
     await expect(page.getByTestId("graph-demo-node-count")).toHaveText("2 nút")
     await expect(page.getByTestId("graph-demo-density-controls")).toHaveCount(0)
@@ -151,7 +170,8 @@ for (const width of [1600, 1024, 390, 360]) {
       legend.x + legend.width <= launcher.x ||
         legend.y + legend.height <= launcher.y
     ).toBe(true)
-    await clickGraphAnchor(page)
+    if (width <= 390) await tapGraphAnchor(page)
+    else await clickGraphAnchor(page)
     const inspector = page.getByTestId("graph-demo-inspector")
     await expect(inspector).toContainText(
       "Central bank signals a slower easing path"
@@ -255,6 +275,202 @@ test("Sigma workspace graph preserves graph permission", async ({
       (request) => request.path === "/graph-view"
     )
   ).toBe(false)
+})
+
+test("live Graph View distinguishes empty watchlist from empty graph", async ({
+  page,
+  fixture,
+}) => {
+  await page.setViewportSize({ width: 1520, height: 1024 })
+  await fixture.setScenario("/graph-view", "empty", "GET")
+  await fixture.setScenario("/watchlists", "empty", "GET")
+  await page.goto("/vi/graph-view")
+  await expect(
+    page.getByRole("heading", { name: "Watchlist chưa có tài sản" })
+  ).toBeVisible()
+  await expect(
+    page.getByText("Thêm tài sản vào watchlist của workspace này", {
+      exact: false,
+    })
+  ).toBeVisible()
+  await page.screenshot({
+    path: "test-results/graph-state-empty-watchlist.png",
+  })
+  await page
+    .getByRole("button", { name: "Quản lý tài sản theo dõi", exact: true })
+    .click()
+  await expect(page.getByRole("dialog")).toContainText("Workspace Alpha")
+
+  await page.getByRole("button", { name: "Hủy", exact: true }).click()
+  await fixture.setScenario("/watchlists", "success", "GET")
+  await page.goto("/vi/graph-view")
+  await expect(
+    page.getByRole("heading", { name: "Chưa có dữ liệu graph liên quan" })
+  ).toBeVisible()
+  await expect(
+    page.getByText("Điều đó không có nghĩa các tài sản không chịu ảnh hưởng.")
+  ).toBeVisible()
+  await page.screenshot({
+    path: "test-results/graph-state-no-related-data.png",
+  })
+})
+
+test("live Graph View keeps permission, transport and schema failures distinct", async ({
+  page,
+  fixture,
+}) => {
+  await fixture.setScenario("/graph-view", "permission-denied", "GET")
+  await page.goto("/vi/graph-view")
+  await expect(
+    page.getByText("Bạn không có quyền truy cập biểu đồ tri thức.")
+  ).toBeVisible()
+
+  await fixture.setScenario("/graph-view", "outage", "GET")
+  await page.goto("/vi/graph-view")
+  await expect(
+    page.getByText("Không thể tải biểu đồ tri thức", { exact: true })
+  ).toBeVisible()
+  await expect(page.getByText("Fixture backend is unavailable")).toHaveCount(0)
+  await page.screenshot({ path: "test-results/graph-state-load-error.png" })
+
+  await fixture.setScenario("/graph-view", "invalid-schema", "GET")
+  await page.goto("/vi/graph-view")
+  await expect(
+    page.getByText("Không thể tải biểu đồ tri thức", { exact: true })
+  ).toBeVisible()
+  await expect(
+    page.getByText(
+      "Backend trả về dữ liệu biểu đồ tri thức không đúng định dạng mong đợi."
+    )
+  ).toHaveCount(0)
+  await expect(
+    page.getByRole("button", { name: "Thử lại", exact: true })
+  ).toBeVisible()
+  await page.screenshot({ path: "test-results/graph-state-schema-error.png" })
+
+  await fixture.setScenario("/graph-view", "empty", "GET")
+  await fixture.setScenario("/watchlists", "permission-denied", "GET")
+  await page.goto("/vi/graph-view")
+  await expect(
+    page.getByText(
+      "Bạn cần quyền watchlist để xác định workspace này có tài sản đang theo dõi hay không."
+    )
+  ).toBeVisible()
+  await expect(
+    page.getByRole("heading", { name: "Watchlist chưa có tài sản" })
+  ).toHaveCount(0)
+
+  await fixture.reset()
+  await fixture.setPermissions(["graph-view:read"])
+  await fixture.setScenario("/graph-view", "empty", "GET")
+  await page.goto("/vi/graph-view")
+  await expect(
+    page.getByText(
+      "Bạn cần quyền watchlist để xác định workspace này có tài sản đang theo dõi hay không."
+    )
+  ).toBeVisible()
+  expect(
+    (await fixture.state()).requests.some(
+      (request) => request.path === "/watchlists"
+    )
+  ).toBe(false)
+})
+
+test("Graph View asks for a workspace when none is selected", async ({
+  page,
+  fixture,
+}) => {
+  await fixture.setScenario("/me", "workspace-not-selected", "GET")
+  await page.goto("/vi/graph-view")
+  await expect(
+    page.getByRole("heading", { name: "Chọn workspace" })
+  ).toBeVisible()
+  await expect(page.locator("#workspace-switcher-trigger")).toContainText(
+    "Chưa chọn"
+  )
+  await page.screenshot({ path: "test-results/graph-state-no-workspace.png" })
+  await page
+    .getByRole("button", { name: "Chọn hoặc tạo workspace", exact: true })
+    .click()
+  await expect(
+    page.getByRole("menuitem").filter({ hasText: "Workspace Alpha" })
+  ).toContainText("Có thể chuyển sang")
+  await expect(
+    page.getByRole("menuitem").filter({ hasText: "Workspace Beta" })
+  ).toContainText("Có thể chuyển sang")
+})
+
+test("Graph View drops a delayed response from the previous workspace", async ({
+  page,
+  fixture,
+}) => {
+  await page.setViewportSize({ width: 1520, height: 1024 })
+  await fixture.setScenario("/graph-view", "delayed-old-workspace", "GET")
+  await page.goto("/vi/graph-view", { waitUntil: "commit" })
+  await expect
+    .poll(async () => (await fixture.state()).pendingRequests)
+    .toBeGreaterThan(0)
+
+  const workspaceSwitcher = page.locator("#workspace-switcher-trigger")
+  await expect(workspaceSwitcher).toBeVisible()
+  await workspaceSwitcher.click()
+  await page.getByRole("menuitem").filter({ hasText: "Workspace Beta" }).click()
+  await expect(workspaceSwitcher).toContainText("Workspace Beta")
+  await expect
+    .poll(
+      async () =>
+        (await fixture.state()).requests.filter(
+          (request) => request.path === "/graph-view"
+        ).length
+    )
+    .toBeGreaterThanOrEqual(2)
+
+  await fixture.setScenario("/graph-view", "success", "GET")
+  await expect(page.getByTestId("graph-view")).toHaveAttribute(
+    "data-layout-status",
+    "ready",
+    { timeout: 30_000 }
+  )
+  await clickGraphAnchor(page)
+  const inspector = page.getByTestId("graph-demo-inspector")
+  await expect(inspector).toContainText("Workspace Beta event")
+  await expect(inspector).not.toContainText(
+    "Central bank signals a slower easing path"
+  )
+  await page.screenshot({ path: "test-results/graph-state-workspace-beta.png" })
+})
+
+test("Graph View clears the prior selection after switching workspaces", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1520, height: 1024 })
+  await page.goto("/vi/graph-view")
+  await expect(page.getByTestId("graph-view")).toHaveAttribute(
+    "data-layout-status",
+    "ready",
+    { timeout: 30_000 }
+  )
+  await clickGraphAnchor(page)
+  const inspector = page.getByTestId("graph-demo-inspector")
+  await expect(inspector).toContainText(
+    "Central bank signals a slower easing path"
+  )
+
+  const workspaceSwitcher = page.locator("#workspace-switcher-trigger")
+  await workspaceSwitcher.click()
+  await page.getByRole("menuitem").filter({ hasText: "Workspace Beta" }).click()
+  await expect(workspaceSwitcher).toContainText("Workspace Beta")
+  await expect(page.getByTestId("graph-view")).toHaveAttribute(
+    "data-layout-status",
+    "ready",
+    { timeout: 30_000 }
+  )
+  await expect(inspector).toHaveCount(0)
+
+  await clickGraphAnchor(page)
+  await expect(page.getByTestId("graph-demo-inspector")).toContainText(
+    "Workspace Beta event"
+  )
 })
 
 test("Sigma pointer selection halo and pan preserve graph context", async ({

@@ -2213,6 +2213,13 @@ export const en: Dictionary = {
       workspaceRequired: "Choose a workspace",
       workspaceRequiredDescription:
         "Create or select a workspace using the workspace menu to explore its graph.",
+      chooseWorkspace: "Choose or create a workspace",
+      workspaceReadDenied:
+        "You need workspace access to choose the workspace for this graph.",
+      watchlistReadDenied:
+        "You need watchlist access to determine whether this workspace has tracked assets.",
+      watchlistResponseInvalid:
+        "The backend returned workspace watchlist data in an unexpected format.",
       workspaceChanged:
         "The workspace changed while loading. Reload the graph to continue.",
       emptyWatchlist: "Your watchlist is empty",

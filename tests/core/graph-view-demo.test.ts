@@ -85,6 +85,21 @@ describe("graph view demo fixture", () => {
   })
 
   it("seeds real IDs independently of database numbering and accepts nullable labels", () => {
+    const metadata = {
+      slug: null,
+      canonicalKey: null,
+      symbol: null,
+      assetType: null,
+      sourceName: null,
+      url: null,
+      occurredAt: null,
+      publishedAt: null,
+      status: null,
+      narrativeStatus: null,
+      confidence: null,
+      thesis: null,
+      themes: null,
+    }
     const graphView = graphViewResponseSchema.parse({
       nodes: [
         {
@@ -92,12 +107,14 @@ describe("graph view demo fixture", () => {
           kind: "event",
           label: "First",
           secondaryLabel: null,
+          metadata,
         },
         {
           id: "event:10026",
           kind: "event",
           label: "Second",
-          metadata: { confidence: null, themes: null },
+          secondaryLabel: null,
+          metadata: { ...metadata, confidence: null, themes: null },
         },
       ],
       edges: [],

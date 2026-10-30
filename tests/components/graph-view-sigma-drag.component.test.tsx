@@ -18,6 +18,10 @@ import type {
   GraphViewDemoEdgeAttributes,
 } from "@/app/lib/graph-view/demo-fixture"
 import type {
+  GraphViewNode,
+  GraphViewNodeMetadata,
+} from "@/app/lib/graph-view/definitions"
+import type {
   ForceCommand,
   ForceFrame,
   ForceNode,
@@ -168,14 +172,41 @@ function move(
 }
 
 async function mountGraph(parallel = false) {
+  const metadata: GraphViewNodeMetadata = {
+    slug: null,
+    canonicalKey: null,
+    symbol: null,
+    assetType: null,
+    sourceName: null,
+    url: null,
+    occurredAt: null,
+    publishedAt: null,
+    status: null,
+    narrativeStatus: null,
+    confidence: null,
+    thesis: null,
+    themes: null,
+  }
+  const node = (
+    id: string,
+    kind: GraphViewNode["kind"],
+    label: string
+  ): GraphViewNode => ({
+    id,
+    kind,
+    label,
+    secondaryLabel: null,
+    metadata,
+  })
+
   render(
     <LocalizationProvider locale="en" dictionary={en}>
       <SigmaGraphView
         graphView={{
           nodes: [
-            { id: "event:1", kind: "event", label: "Rates" },
-            { id: "asset:2", kind: "asset", label: "Bitcoin" },
-            { id: "asset:3", kind: "asset", label: "Gold" },
+            node("event:1", "event", "Rates"),
+            node("asset:2", "asset", "Bitcoin"),
+            node("asset:3", "asset", "Gold"),
           ],
           edges: [
             {
@@ -184,6 +215,9 @@ async function mountGraph(parallel = false) {
               sourceNodeId: "event:1",
               targetNodeId: "asset:2",
               relationType: "AFFECTED_ASSET",
+              weight: null,
+              confidence: null,
+              note: null,
             },
             ...(parallel
               ? [
@@ -192,7 +226,10 @@ async function mountGraph(parallel = false) {
                     kind: "event-asset" as const,
                     sourceNodeId: "event:1",
                     targetNodeId: "asset:2",
-                    relationType: "SECONDARY",
+                    relationType: "REFERENCE_ASSET" as const,
+                    weight: null,
+                    confidence: null,
+                    note: null,
                   },
                 ]
               : []),
@@ -485,7 +522,7 @@ describe("Sigma drag release", () => {
     expect(buttons).toHaveLength(2)
     fireEvent.click(buttons[1])
     expect(screen.getByTestId("graph-demo-edge-inspector")).toHaveTextContent(
-      "SECONDARY"
+      "Reference asset"
     )
     expect(
       screen.queryByTestId("graph-demo-edge-choices")

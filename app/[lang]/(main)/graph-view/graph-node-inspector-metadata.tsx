@@ -307,7 +307,7 @@ function getGraphNodeInspectorFields({
 
 export function GraphNodeInspectorMetadata({ node }: { node: GraphViewNode }) {
   const localization = useLocalization()
-  const metadata = node.metadata ?? {}
+  const metadata = node.metadata
   const inspectorFields = getGraphNodeInspectorFields({
     node,
     metadata,

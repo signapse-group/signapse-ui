@@ -55,7 +55,7 @@ type DialogOpenChangeDetails = Parameters<
 interface WorkspaceWatchlistEditorProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  workspace: WorkspaceResponse | null
+  workspace: Pick<WorkspaceResponse, "id" | "name"> | null
   canReadAsset: boolean
   canReadWatchlist: boolean
   canCreateWatchlist: boolean
@@ -378,7 +378,9 @@ export function WorkspaceWatchlistEditor({
                   <EmptyMedia variant="icon">
                     <FolderOpenIcon />
                   </EmptyMedia>
-                  <EmptyTitle>{dictionary.watchlist.noWorkspaceTitle}</EmptyTitle>
+                  <EmptyTitle>
+                    {dictionary.watchlist.noWorkspaceTitle}
+                  </EmptyTitle>
                   <EmptyDescription>
                     {dictionary.watchlist.noWorkspaceDescription}
                   </EmptyDescription>
@@ -392,7 +394,9 @@ export function WorkspaceWatchlistEditor({
                   <EmptyMedia variant="icon">
                     <ShieldAlertIcon />
                   </EmptyMedia>
-                  <EmptyTitle>{dictionary.watchlist.permissionTitle}</EmptyTitle>
+                  <EmptyTitle>
+                    {dictionary.watchlist.permissionTitle}
+                  </EmptyTitle>
                   <EmptyDescription>
                     {dictionary.watchlist.permissionDescription}
                   </EmptyDescription>
