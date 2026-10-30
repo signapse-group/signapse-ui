@@ -634,6 +634,7 @@ function trackResponse(state, response) {
 function isPending(state, method, pathname) {
   return (
     getScenario(state, method, pathname) === "delayed" ||
+    getScenario(state, method, pathname) === "delayed-old-workspace" ||
     feedbackScenarioFor(state, method, pathname) === "pending"
   )
 }
@@ -873,21 +874,44 @@ function dashboardSummary(workspaceId) {
 }
 
 function graphView(state) {
+  const scenario = getScenario(state, "GET", "/graph-view")
+  if (scenario === "empty") return { nodes: [], edges: [] }
+
+  if (scenario === "invalid-schema") {
+    return {
+      nodes: [{ id: "event:61", kind: "event", label: "Invalid fixture" }],
+      edges: [],
+    }
+  }
+
   const event = state.events[0]
   const asset = state.assets[0]
+  const currentWorkspace = state.workspaces.find(
+    (item) => item.currentWorkspace
+  )
 
   return {
     nodes: [
       {
         id: `event:${event.id}`,
         kind: "event",
-        label: event.title,
+        label:
+          currentWorkspace?.id === 2 ? "Workspace Beta event" : event.title,
         secondaryLabel: event.canonicalKey,
         metadata: {
+          slug: null,
           canonicalKey: event.canonicalKey,
+          symbol: null,
+          assetType: null,
+          sourceName: null,
+          url: null,
           occurredAt: event.occurredAt,
-          status: event.status,
+          publishedAt: null,
+          status: "ENRICHED",
+          narrativeStatus: null,
           confidence: event.confidence,
+          thesis: null,
+          themes: null,
         },
       },
       {
@@ -896,8 +920,19 @@ function graphView(state) {
         label: asset.assetName,
         secondaryLabel: asset.assetSymbol,
         metadata: {
+          slug: null,
+          canonicalKey: null,
           symbol: asset.assetSymbol,
           assetType: asset.assetType,
+          sourceName: null,
+          url: null,
+          occurredAt: null,
+          publishedAt: null,
+          status: null,
+          narrativeStatus: null,
+          confidence: null,
+          thesis: null,
+          themes: null,
         },
       },
     ],
@@ -908,7 +943,9 @@ function graphView(state) {
         sourceNodeId: `event:${event.id}`,
         targetNodeId: `asset:${asset.assetId}`,
         relationType: "AFFECTED_ASSET",
+        weight: null,
         confidence: event.confidence,
+        note: null,
       },
     ],
   }
@@ -1990,6 +2027,9 @@ function responseForRoute(state, method, pathname, url, body) {
   if (smtpResult) return smtpResult
 
   if (method === "GET" && pathname === "/me") {
+    const currentWorkspace = state.workspaces.find(
+      (item) => item.currentWorkspace
+    )
     return {
       id: FEEDBACK_OWNER_ID,
       email: FEEDBACK_OWNER.email,
@@ -1999,13 +2039,18 @@ function responseForRoute(state, method, pathname, url, body) {
       phone: state.profile.phone,
       preferredLanguage: state.preferredLanguage,
       role_name: "Fixture",
-      currentWorkspace: { id: 1, name: "Workspace Alpha" },
+      currentWorkspace: currentWorkspace
+        ? { id: currentWorkspace.id, name: currentWorkspace.name }
+        : null,
       mainImage: null,
       permissions: state.permissions,
     }
   }
 
   if (method === "PATCH" && pathname === "/me") {
+    const currentWorkspace = state.workspaces.find(
+      (item) => item.currentWorkspace
+    )
     state.profile = { birthday: body.birthday, phone: body.phone }
     return {
       id: FEEDBACK_OWNER_ID,
@@ -2016,7 +2061,9 @@ function responseForRoute(state, method, pathname, url, body) {
       phone: state.profile.phone,
       preferredLanguage: state.preferredLanguage,
       role_name: "Fixture",
-      currentWorkspace: { id: 1, name: "Workspace Alpha" },
+      currentWorkspace: currentWorkspace
+        ? { id: currentWorkspace.id, name: currentWorkspace.name }
+        : null,
       mainImage: null,
       permissions: state.permissions,
     }
@@ -2033,6 +2080,9 @@ function responseForRoute(state, method, pathname, url, body) {
       }
     }
     state.preferredLanguage = language
+    const currentWorkspace = state.workspaces.find(
+      (item) => item.currentWorkspace
+    )
     return {
       id: FEEDBACK_OWNER_ID,
       email: FEEDBACK_OWNER.email,
@@ -2042,7 +2092,9 @@ function responseForRoute(state, method, pathname, url, body) {
       phone: state.profile.phone,
       preferredLanguage: state.preferredLanguage,
       role_name: "Fixture",
-      currentWorkspace: { id: 1, name: "Workspace Alpha" },
+      currentWorkspace: currentWorkspace
+        ? { id: currentWorkspace.id, name: currentWorkspace.name }
+        : null,
       mainImage: null,
       permissions: state.permissions,
     }
@@ -2762,6 +2814,12 @@ async function handleControl(request, response, url, body) {
     const state = getState(String(testRunId))
     const key = body.route ?? "*"
     state.scenarios[body.method ? `${body.method} ${key}` : key] = body.scenario
+    if (key === "/me" && body.scenario === "workspace-not-selected") {
+      state.workspaces = state.workspaces.map((item) => ({
+        ...item,
+        currentWorkspace: false,
+      }))
+    }
     releasePending(state)
     sendJson(response, 200, { testRunId, route: key, scenario: body.scenario })
     return true
@@ -2955,6 +3013,13 @@ const server = createServer(async (request, response) => {
     return
   }
 
+  const delayedGraphResult =
+    method === "GET" &&
+    url.pathname === "/graph-view" &&
+    getScenario(state, method, url.pathname) === "delayed-old-workspace"
+      ? responseForRoute(state, method, url.pathname, url, body)
+      : undefined
+
   if (isPending(state, method, url.pathname)) {
     const released = await holdResponse(state, response, method, url.pathname)
     if (!released || response.destroyed) return
@@ -3067,7 +3132,9 @@ const server = createServer(async (request, response) => {
     return
   }
 
-  const result = responseForRoute(state, method, url.pathname, url, body)
+  const result =
+    delayedGraphResult ??
+    responseForRoute(state, method, url.pathname, url, body)
   const status = result?.__status ?? 200
   if (status === 204) {
     sendEmpty(response, 204)

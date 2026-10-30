@@ -7,37 +7,59 @@ export type GraphViewNodeKind = "event" | "asset" | "news-article" | "narrative"
 export type GraphViewEdgeKind =
   "event-asset" | "news-article-event" | "narrative-event" | "narrative-asset"
 
+export type GraphViewAssetType =
+  "COMMODITY" | "CRYPTO" | "EQUITY" | "ETF" | "FX" | "INDEX"
+
+export type GraphViewEventStatus =
+  | "ENRICHMENT_PENDING"
+  | "ENRICHED"
+  | "ENRICHMENT_NO_MATCH"
+  | "ENRICHMENT_FAILED"
+  | "ARCHIVED"
+
+export type GraphViewNarrativeStatus =
+  "EMERGING" | "ACTIVE" | "WEAKENING" | "INVALIDATED" | "ARCHIVED"
+
+export type GraphViewEdgeRelationType =
+  | "PRIMARY_SUBJECT"
+  | "AFFECTED_ASSET"
+  | "REFERENCE_ASSET"
+  | "PRIMARY"
+  | "SUPPORTING"
+  | "UPDATE"
+  | "CONTRADICTING"
+  | "DRIVER"
+  | "AFFECTED"
+
+export type GraphViewThemeRelationType = "PRIMARY_THEME" | "SECONDARY_THEME"
+
 export interface GraphViewNodeThemeMetadata {
-  title?: string | null
-  relationType?: string | null
+  title: string
+  relationType: GraphViewThemeRelationType | null
 }
 
 export interface GraphViewNodeMetadata {
-  slug?: string | null
-  canonicalKey?: string | null
-  symbol?: string | null
-  assetType?: string | null
-  sourceName?: string | null
-  url?: string | null
-  occurredAt?: string | null
-  publishedAt?: string | null
-  periodStart?: string | null
-  periodEnd?: string | null
-  status?: string | null
-  knowledgeLayer?: string | null
-  narrativeStatus?: string | null
-  active?: boolean | null
-  confidence?: number | null
-  thesis?: string | null
-  themes?: GraphViewNodeThemeMetadata[] | null
+  slug: string | null
+  canonicalKey: string | null
+  symbol: string | null
+  assetType: GraphViewAssetType | null
+  sourceName: string | null
+  url: string | null
+  occurredAt: string | null
+  publishedAt: string | null
+  status: GraphViewEventStatus | null
+  narrativeStatus: GraphViewNarrativeStatus | null
+  confidence: number | null
+  thesis: string | null
+  themes: GraphViewNodeThemeMetadata[] | null
 }
 
 export interface GraphViewNode {
   id: string
   kind: GraphViewNodeKind
   label: string
-  secondaryLabel?: string | null
-  metadata?: GraphViewNodeMetadata
+  secondaryLabel: string | null
+  metadata: GraphViewNodeMetadata
 }
 
 export interface GraphViewEdge {
@@ -45,10 +67,10 @@ export interface GraphViewEdge {
   kind: GraphViewEdgeKind
   sourceNodeId: string
   targetNodeId: string
-  relationType: string
-  weight?: number | null
-  confidence?: number | null
-  note?: string | null
+  relationType: GraphViewEdgeRelationType
+  weight: number | null
+  confidence: number | null
+  note: string | null
 }
 
 export interface GraphViewResponse {
@@ -76,36 +98,44 @@ const graphViewEdgeKindSchema = z.enum([
 ])
 
 export const graphViewNodeThemeMetadataSchema = z.object({
-  title: z.string().nullish(),
-  relationType: z.string().nullish(),
+  title: z.string(),
+  relationType: z.enum(["PRIMARY_THEME", "SECONDARY_THEME"]).nullable(),
 }) satisfies z.ZodType<GraphViewNodeThemeMetadata>
 
 export const graphViewNodeMetadataSchema = z.object({
-  slug: z.string().nullish(),
-  canonicalKey: z.string().nullish(),
-  symbol: z.string().nullish(),
-  assetType: z.string().nullish(),
-  sourceName: z.string().nullish(),
-  url: z.string().nullish(),
-  occurredAt: z.string().nullish(),
-  publishedAt: z.string().nullish(),
-  periodStart: z.string().nullish(),
-  periodEnd: z.string().nullish(),
-  status: z.string().nullish(),
-  knowledgeLayer: z.string().nullish(),
-  narrativeStatus: z.string().nullish(),
-  active: z.boolean().nullish(),
-  confidence: z.number().nullish(),
-  thesis: z.string().nullish(),
-  themes: z.array(graphViewNodeThemeMetadataSchema).nullish(),
+  slug: z.string().nullable(),
+  canonicalKey: z.string().nullable(),
+  symbol: z.string().nullable(),
+  assetType: z
+    .enum(["COMMODITY", "CRYPTO", "EQUITY", "ETF", "FX", "INDEX"])
+    .nullable(),
+  sourceName: z.string().nullable(),
+  url: z.string().nullable(),
+  occurredAt: z.iso.datetime({ offset: true }).nullable(),
+  publishedAt: z.iso.datetime({ offset: true }).nullable(),
+  status: z
+    .enum([
+      "ENRICHMENT_PENDING",
+      "ENRICHED",
+      "ENRICHMENT_NO_MATCH",
+      "ENRICHMENT_FAILED",
+      "ARCHIVED",
+    ])
+    .nullable(),
+  narrativeStatus: z
+    .enum(["EMERGING", "ACTIVE", "WEAKENING", "INVALIDATED", "ARCHIVED"])
+    .nullable(),
+  confidence: z.number().nullable(),
+  thesis: z.string().nullable(),
+  themes: z.array(graphViewNodeThemeMetadataSchema).nullable(),
 }) satisfies z.ZodType<GraphViewNodeMetadata>
 
 export const graphViewNodeSchema = z.object({
   id: z.string().min(1),
   kind: graphViewNodeKindSchema,
   label: z.string().min(1),
-  secondaryLabel: z.string().nullish(),
-  metadata: graphViewNodeMetadataSchema.optional(),
+  secondaryLabel: z.string().nullable(),
+  metadata: graphViewNodeMetadataSchema,
 }) satisfies z.ZodType<GraphViewNode>
 
 export const graphViewEdgeSchema = z.object({
@@ -113,10 +143,20 @@ export const graphViewEdgeSchema = z.object({
   kind: graphViewEdgeKindSchema,
   sourceNodeId: z.string().min(1),
   targetNodeId: z.string().min(1),
-  relationType: z.string().min(1),
-  weight: z.number().nullish(),
-  confidence: z.number().nullish(),
-  note: z.string().nullish(),
+  relationType: z.enum([
+    "PRIMARY_SUBJECT",
+    "AFFECTED_ASSET",
+    "REFERENCE_ASSET",
+    "PRIMARY",
+    "SUPPORTING",
+    "UPDATE",
+    "CONTRADICTING",
+    "DRIVER",
+    "AFFECTED",
+  ]),
+  weight: z.number().nullable(),
+  confidence: z.number().nullable(),
+  note: z.string().nullable(),
 }) satisfies z.ZodType<GraphViewEdge>
 
 export const graphViewResponseSchema = z.object({
@@ -166,7 +206,7 @@ export function getGraphViewNodeEntityId(
 }
 
 export function getGraphViewRelationLabel(
-  relationType: string,
+  relationType: GraphViewEdgeRelationType | GraphViewThemeRelationType,
   dictionary: Dictionary
 ): string {
   const relationLabels = dictionary.graphView.relationTypes as Record<

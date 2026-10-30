@@ -2151,10 +2151,10 @@ export const en: Dictionary = {
       narrative: "Narrative",
     },
     edgeKinds: {
-      "event-asset": "Event - asset",
-      "news-article-event": "Evidence - event",
-      "narrative-event": "Narrative - event",
-      "narrative-asset": "Narrative - asset",
+      "event-asset": "Event → asset",
+      "news-article-event": "Evidence → event",
+      "narrative-event": "Narrative → event",
+      "narrative-asset": "Narrative → asset",
     },
     relationTypes: {
       DRIVER: "Contributing event",
@@ -2207,12 +2207,21 @@ export const en: Dictionary = {
       chooseRelationship: "Choose a relationship",
       closeRelationshipChoices: "Close relationship choices",
       interactionHint: "Drag to pan · Select a node or connection to inspect",
+      liveInteractionHint:
+        "Drag to pan the graph · Select a node to view its information",
       relationshipInterpretation:
         "A connection describes a recorded association. It does not establish causation.",
       sourceUnavailable: "No original source URL is available.",
       workspaceRequired: "Choose a workspace",
       workspaceRequiredDescription:
         "Create or select a workspace using the workspace menu to explore its graph.",
+      chooseWorkspace: "Choose or create a workspace",
+      workspaceReadDenied:
+        "You need workspace access to choose the workspace for this graph.",
+      watchlistReadDenied:
+        "You need watchlist access to determine whether this workspace has tracked assets.",
+      watchlistResponseInvalid:
+        "The backend returned workspace watchlist data in an unexpected format.",
       workspaceChanged:
         "The workspace changed while loading. Reload the graph to continue.",
       emptyWatchlist: "Your watchlist is empty",

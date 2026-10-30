@@ -1305,7 +1305,8 @@ export const vi = {
       "Sẽ kiểm tra mọi key và model đang dùng trước khi lưu.",
     saveConnection: "Lưu kết nối",
     saveConnectionPending: "Đang lưu kết nối...",
-    connectionSettingsPersisted: "Cài đặt kết nối được lưu sau khi khởi động lại.",
+    connectionSettingsPersisted:
+      "Cài đặt kết nối được lưu sau khi khởi động lại.",
     updateSuccess: "Đã cập nhật kết nối AI.",
     updateError:
       "Không thể lưu kết nối. Hãy kiểm tra endpoint và mô tả rồi thử lại.",
@@ -1338,8 +1339,7 @@ export const vi = {
     addKeyError: "Không thể thêm API key. Hãy kiểm tra key rồi thử lại.",
     removeKey: "Xóa API key {index}",
     removeKeyAction: "Xóa key",
-    lastKeyRemovalBlocked:
-      "Đây là key cuối. Hãy thêm key khác trước khi xóa.",
+    lastKeyRemovalBlocked: "Đây là key cuối. Hãy thêm key khác trước khi xóa.",
     lastKeyRemovalBlockedMobile: "Key cuối. Hãy thêm key khác trước khi xóa.",
     deleteKeyTitle: "Xóa API key này?",
     deleteKeyDescription:
@@ -2132,10 +2132,10 @@ export const vi = {
       narrative: "Luận điểm",
     },
     edgeKinds: {
-      "event-asset": "Sự kiện - tài sản",
-      "news-article-event": "Bằng chứng - sự kiện",
-      "narrative-event": "Luận điểm - sự kiện",
-      "narrative-asset": "Luận điểm - tài sản",
+      "event-asset": "Sự kiện → tài sản",
+      "news-article-event": "Bằng chứng → sự kiện",
+      "narrative-event": "Luận điểm → sự kiện",
+      "narrative-asset": "Luận điểm → tài sản",
     },
     relationTypes: {
       DRIVER: "Sự kiện góp phần hình thành luận điểm",
@@ -2189,12 +2189,21 @@ export const vi = {
       closeRelationshipChoices: "Đóng danh sách quan hệ",
       interactionHint:
         "Kéo để di chuyển · Chọn nút hoặc đường nối để xem chi tiết",
+      liveInteractionHint:
+        "Kéo để di chuyển biểu đồ · Chọn nút để xem thông tin",
       relationshipInterpretation:
         "Kết nối thể hiện mối liên hệ được ghi nhận, không khẳng định quan hệ nhân quả.",
       sourceUnavailable: "Chưa có liên kết đến bài báo gốc.",
       workspaceRequired: "Chọn workspace",
       workspaceRequiredDescription:
         "Tạo hoặc chọn workspace trong menu workspace để khám phá graph.",
+      chooseWorkspace: "Chọn hoặc tạo workspace",
+      workspaceReadDenied:
+        "Bạn cần quyền workspace để chọn workspace cho graph này.",
+      watchlistReadDenied:
+        "Bạn cần quyền watchlist để xác định workspace này có tài sản đang theo dõi hay không.",
+      watchlistResponseInvalid:
+        "Backend trả về dữ liệu watchlist của workspace không đúng định dạng mong đợi.",
       workspaceChanged:
         "Workspace đã đổi trong lúc tải. Hãy tải lại graph để tiếp tục.",
       emptyWatchlist: "Watchlist chưa có tài sản",
