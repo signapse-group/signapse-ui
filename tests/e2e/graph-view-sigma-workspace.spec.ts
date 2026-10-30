@@ -137,13 +137,18 @@ test("canvas click keeps layout still and mouse/touch drag wakes forces", async 
 })
 
 for (const width of [1520, 1024, 390, 360]) {
-  test(`Sigma workspace graph reads relationships and real detail at ${width}px`, async ({
+  test(`Sigma workspace graph keeps its watchlist context at ${width}px`, async ({
     page,
     fixture,
   }) => {
     const height = width === 1520 ? 1024 : width === 1024 ? 768 : 844
     await page.setViewportSize({ width, height })
     await page.goto("/vi/graph-view")
+    if (width >= 768) {
+      await expect(
+        page.locator('[data-slot="sidebar"][data-side="left"]')
+      ).toHaveAttribute("data-state", width >= 1440 ? "expanded" : "collapsed")
+    }
     await expect(page.getByTestId("graph-demo-node-count")).toHaveText("2 nút")
     await expect(page.getByTestId("graph-demo-density-controls")).toHaveCount(0)
     await expect(page.getByTestId("graph-view")).toHaveAttribute(
@@ -178,6 +183,8 @@ for (const width of [1520, 1024, 390, 360]) {
     )
     await expect(inspector.locator("dl")).toContainText("92%")
     await expect(inspector.locator("dl")).toContainText(/\d{2}:\d{2}/)
+    await expect(inspector.getByTestId("graph-demo-open-quick-detail")).toHaveCount(0)
+    await expect(inspector.getByRole("link")).toHaveCount(0)
     await expect(inspector).not.toContainText("Nút liên quan")
     await expect(inspector).not.toContainText("Cạnh liên quan")
     await expect(inspector).not.toContainText("nút liên quan")
@@ -194,20 +201,6 @@ for (const width of [1520, 1024, 390, 360]) {
       await page.evaluate(() => document.documentElement.scrollWidth)
     ).toBe(width)
     await page.screenshot({ path: `test-results/sigma-node-${width}.png` })
-    await inspector
-      .getByRole("button", { name: "Đọc sự kiện", exact: true })
-      .click()
-    const dialog = page.getByRole("dialog")
-    await expect(
-      dialog.getByRole("heading", {
-        name: "Central bank signals a slower easing path",
-        exact: true,
-      })
-    ).toBeVisible({ timeout: 30_000 })
-    await dialog.getByRole("button", { name: "Đóng", exact: true }).click()
-    await expect(
-      inspector.getByRole("button", { name: "Đọc sự kiện", exact: true })
-    ).toBeFocused()
     await page.getByTestId("graph-demo-close-inspector").click()
     await expect(inspector).toHaveCount(0)
     // Separate the next canvas action from Sigma's double-click zoom gesture.
@@ -239,15 +232,7 @@ for (const width of [1520, 1024, 390, 360]) {
     await page.mouse.move(midpoint.x, midpoint.y + 24)
     await expect(canvas).toHaveAttribute("data-hovered-edge-id", "")
     await page.mouse.click(midpoint.x, midpoint.y + 6)
-    await expect(edge).toBeVisible()
-    await expect(edge).toContainText("Nguồn · Sự kiện")
-    await expect(edge).toContainText("Đích · Tài sản")
-    await expect(edge).toContainText(
-      "Central bank signals a slower easing path"
-    )
-    await expect(edge).toContainText("Bitcoin")
-    await expect(edge).toContainText("không khẳng định quan hệ nhân quả")
-    await expect(edge.getByRole("button")).toHaveCount(1)
+    await expect(edge).toHaveCount(0)
     const state = await fixture.state()
     expect(
       state.requests.some((request) => request.path === "/graph-view")
@@ -256,10 +241,85 @@ for (const width of [1520, 1024, 390, 360]) {
       state.requests.some((request) =>
         String(request.path).startsWith("/events/")
       )
-    ).toBe(true)
+    ).toBe(false)
     await page.screenshot({ path: `test-results/sigma-workspace-${width}.png` })
   })
 }
+
+test("compact Graph View keeps an explicitly saved sidebar preference", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1024, height: 768 })
+  await page.context().clearCookies()
+  await page.goto("/vi/graph-view")
+  const sidebar = page.locator('[data-slot="sidebar"][data-side="left"]')
+  await expect(sidebar).toHaveAttribute("data-state", "collapsed")
+
+  await page.context().addCookies([
+    {
+      name: "sidebar_state",
+      value: "true",
+      url: new URL(page.url()).origin,
+    },
+  ])
+  await page.reload()
+  await expect(sidebar).toHaveAttribute("data-state", "expanded")
+})
+
+for (const width of [760, 767, 768, 1439, 1440]) {
+  test(`sidebar default follows the effective ${width}px viewport`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: width === 760 ? 512 : 800 })
+    await page.goto("/vi/graph-view")
+    const sidebar = page.locator('[data-slot="sidebar"][data-side="left"]')
+
+    if (width >= 768) {
+      await expect(sidebar).toHaveAttribute(
+        "data-state",
+        width >= 1440 ? "expanded" : "collapsed"
+      )
+    }
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth)
+    ).toBe(width)
+    await expect(page.getByTestId("graph-view")).toBeVisible()
+  })
+}
+
+test("live Graph View controls work from the keyboard with visible focus", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1520, height: 1024 })
+  await page.goto("/vi/graph-view")
+  const root = page.getByTestId("graph-view")
+  await expect(root).toHaveAttribute("data-layout-status", "ready", {
+    timeout: 30_000,
+  })
+
+  const zoomIn = page.getByTestId("graph-demo-zoom-in")
+  let zoomInHasKeyboardFocus = false
+  for (let tab = 0; tab < 80; tab += 1) {
+    await page.keyboard.press("Tab")
+    if (
+      await zoomIn.evaluate((element) => document.activeElement === element)
+    ) {
+      zoomInHasKeyboardFocus = true
+      break
+    }
+  }
+  expect(zoomInHasKeyboardFocus).toBe(true)
+  expect(await zoomIn.evaluate((element) => element.matches(":focus-visible"))).toBe(
+    true
+  )
+
+  const canvas = page.getByTestId("graph-demo-canvas")
+  const ratioBefore = await canvas.getAttribute("data-camera-ratio")
+  await page.keyboard.press("Enter")
+  await expect
+    .poll(() => canvas.getAttribute("data-camera-ratio"))
+    .not.toBe(ratioBefore)
+})
 
 test("Sigma workspace graph preserves graph permission", async ({
   page,

@@ -360,11 +360,13 @@ function DemoControlButton({
 }
 
 function DemoNodeInspector({
+  canOpenDetails,
   node,
   nodeVisuals,
   onClose,
   onOpenQuickDetail,
 }: {
+  canOpenDetails: boolean
   node: GraphViewNode
   nodeVisuals: Record<GraphViewNodeKind, GraphDemoNodeVisual>
   onClose: () => void
@@ -378,11 +380,15 @@ function DemoNodeInspector({
   const metadata = node.metadata ?? {}
   const entityId = getGraphViewNodeEntityId(node.id, node.kind)
   const quickDetailEntity =
-    entityId !== null && (node.kind === "event" || node.kind === "news-article")
+    canOpenDetails &&
+    entityId !== null &&
+    (node.kind === "event" || node.kind === "news-article")
       ? { id: entityId, kind: node.kind }
       : null
   const sourceUrl =
-    node.kind === "news-article" && /^https?:\/\//i.test(metadata.url ?? "")
+    canOpenDetails &&
+    node.kind === "news-article" &&
+    /^https?:\/\//i.test(metadata.url ?? "")
       ? metadata.url
       : null
 
@@ -390,6 +396,7 @@ function DemoNodeInspector({
     <aside
       aria-label={dictionary.graphView.demo.selectedNode}
       data-graph-label-obstacle
+      data-graph-inspector
       className={GRAPH_DEMO_INSPECTOR_CLASS_NAME}
       data-testid="graph-demo-inspector"
     >
@@ -458,7 +465,7 @@ function DemoNodeInspector({
             ) : null}
           </div>
         ) : null}
-        {node.kind === "news-article" && !sourceUrl ? (
+        {canOpenDetails && node.kind === "news-article" && !sourceUrl ? (
           <p className="text-xs text-muted-foreground">
             {dictionary.graphView.demo.sourceUnavailable}
           </p>
@@ -500,6 +507,7 @@ function DemoEdgeInspector({
     <aside
       aria-label={dictionary.graphView.demo.selectedEdge}
       data-graph-label-obstacle
+      data-graph-inspector
       className={GRAPH_DEMO_INSPECTOR_CLASS_NAME}
       data-testid="graph-demo-edge-inspector"
     >
@@ -941,7 +949,25 @@ export function SigmaGraphView({
           },
         ]
       })
-      const labels = placeNodeLabels(candidates, { width, height, scale })
+      const canvasBox = container.getBoundingClientRect()
+      const obstacles = Array.from(
+        container.parentElement?.querySelectorAll<HTMLElement>(
+          "[data-graph-inspector]"
+        ) ?? []
+      ).map((element) => {
+        const box = element.getBoundingClientRect()
+        return {
+          x: box.left - canvasBox.left,
+          y: box.top - canvasBox.top,
+          width: box.width,
+          height: box.height,
+        }
+      })
+      const labels = placeNodeLabels(
+        candidates,
+        { width, height, scale },
+        obstacles
+      )
       context.font = `600 ${11 * scale}px Geist, sans-serif`
       context.textBaseline = "middle"
       // Focus labels draw last, without moving or hiding baseline labels.
@@ -1622,6 +1648,7 @@ export function SigmaGraphView({
         <aside
           aria-label={dictionary.graphView.demo.chooseRelationship}
           data-graph-label-obstacle
+          data-graph-inspector
           className={GRAPH_DEMO_INSPECTOR_CLASS_NAME}
           data-testid="graph-demo-edge-choices"
           onKeyDown={(event) => {
@@ -1671,7 +1698,7 @@ export function SigmaGraphView({
                     {edgeVisuals[edge.kind].label} ·{" "}
                     {getGraphViewRelationLabel(edge.relationType, dictionary)}
                   </span>
-                  {edge.note?.trim() ? (
+                  {edge.note?.trim() && !liveGraphView ? (
                     <span className="w-full text-xs font-normal break-words text-muted-foreground">
                       {edge.note}
                     </span>
@@ -1683,12 +1710,13 @@ export function SigmaGraphView({
         </aside>
       ) : selectedNode ? (
         <DemoNodeInspector
+          canOpenDetails={!liveGraphView}
           node={selectedNode}
           nodeVisuals={nodeVisuals}
           onClose={clearSelection}
           onOpenQuickDetail={handleOpenQuickDetail}
         />
-      ) : selectedEdge ? (
+      ) : selectedEdge && !liveGraphView ? (
         <DemoEdgeInspector
           graphView={graphView}
           edge={selectedEdge}

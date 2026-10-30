@@ -171,7 +171,7 @@ function move(
   })
 }
 
-async function mountGraph(parallel = false) {
+async function mountGraph(parallel = false, includeArticle = false) {
   const metadata: GraphViewNodeMetadata = {
     slug: null,
     canonicalKey: null,
@@ -190,13 +190,14 @@ async function mountGraph(parallel = false) {
   const node = (
     id: string,
     kind: GraphViewNode["kind"],
-    label: string
+    label: string,
+    nodeMetadata: GraphViewNodeMetadata = metadata
   ): GraphViewNode => ({
     id,
     kind,
     label,
     secondaryLabel: null,
-    metadata,
+    metadata: nodeMetadata,
   })
 
   render(
@@ -207,6 +208,15 @@ async function mountGraph(parallel = false) {
             node("event:1", "event", "Rates"),
             node("asset:2", "asset", "Bitcoin"),
             node("asset:3", "asset", "Gold"),
+            ...(includeArticle
+              ? [
+                  node("news-article:4", "news-article", "Article", {
+                    ...metadata,
+                    sourceName: "Fixture Wire",
+                    url: "https://example.test/article",
+                  }),
+                ]
+              : []),
           ],
           edges: [
             {
@@ -227,6 +237,20 @@ async function mountGraph(parallel = false) {
                     sourceNodeId: "event:1",
                     targetNodeId: "asset:2",
                     relationType: "REFERENCE_ASSET" as const,
+                    weight: null,
+                    confidence: null,
+                    note: null,
+                  },
+                ]
+              : []),
+            ...(includeArticle
+              ? [
+                  {
+                    id: "news-article-event:4",
+                    kind: "news-article-event" as const,
+                    sourceNodeId: "news-article:4",
+                    targetNodeId: "event:1",
+                    relationType: "PRIMARY" as const,
                     weight: null,
                     confidence: null,
                     note: null,
@@ -297,6 +321,23 @@ afterEach(() => {
 })
 
 describe("Sigma drag release", () => {
+  it("keeps live article source actions outside the graph inspector", async () => {
+    const { sigma } = await mountGraph(false, true)
+    act(() => {
+      sigma.emit("clickNode", {
+        node: "news-article:4",
+        preventSigmaDefault() {},
+      })
+    })
+
+    const inspector = screen.getByTestId("graph-demo-inspector")
+    expect(
+      within(inspector).queryByTestId("graph-demo-open-quick-detail")
+    ).not.toBeInTheDocument()
+    expect(within(inspector).queryByRole("link")).not.toBeInTheDocument()
+    expect(inspector).not.toHaveTextContent(en.graphView.demo.sourceUnavailable)
+  })
+
   it.each(["upNode", "touchend", "touchcancel", "pointercancel", "blur"])(
     "clears hover immediately on %s and keeps it clear when forces settle",
     async (endEvent) => {
@@ -502,7 +543,7 @@ describe("Sigma drag release", () => {
     expect(sigma.getNodeDisplayData("asset:3").color).toBe("#e4e7eb")
   })
 
-  it("offers every overlapping relation and selects the chosen one", async () => {
+  it("offers overlapping relations without exposing live edge details", async () => {
     const { sigma } = await mountGraph(true)
     const a = sigma.framedGraphToViewport(sigma.getNodeDisplayData("event:1"))
     const b = sigma.framedGraphToViewport(sigma.getNodeDisplayData("asset:2"))
@@ -521,12 +562,19 @@ describe("Sigma drag release", () => {
     })
     expect(buttons).toHaveLength(2)
     fireEvent.click(buttons[1])
-    expect(screen.getByTestId("graph-demo-edge-inspector")).toHaveTextContent(
-      "Reference asset"
-    )
+    expect(screen.queryByTestId("graph-demo-edge-inspector")).not.toBeInTheDocument()
     expect(
       screen.queryByTestId("graph-demo-edge-choices")
     ).not.toBeInTheDocument()
+
+    act(() => {
+      sigma.emit("clickStage", { event, preventSigmaDefault() {} })
+    })
+    const selectedChoices = screen.getByTestId("graph-demo-edge-choices")
+    const selectedButtons = within(selectedChoices).getAllByRole("button", {
+      name: /Rates.*Bitcoin/,
+    })
+    expect(selectedButtons[1]).toHaveAttribute("aria-pressed", "true")
   })
 
   it("keeps selection when cancelling ambiguous edge choices with Escape", async () => {

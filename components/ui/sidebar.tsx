@@ -28,6 +28,19 @@ const SIDEBAR_WIDTH_MOBILE = "18rem"
 const SIDEBAR_WIDTH_ICON = "3rem"
 const SIDEBAR_KEYBOARD_SHORTCUT = "b"
 
+function subscribeToSidebarViewportDefault() {
+  // Resolve only the first-load default; later resizes must not override user choice.
+  return () => {}
+}
+
+function getSidebarViewportDefault() {
+  return window.matchMedia("(min-width: 1440px)").matches
+}
+
+function getServerSidebarViewportDefault() {
+  return false
+}
+
 type SidebarContextProps = {
   state: "expanded" | "collapsed"
   open: boolean
@@ -50,7 +63,7 @@ function useSidebar() {
 }
 
 function SidebarProvider({
-  defaultOpen = true,
+  defaultOpen,
   open: openProp,
   onOpenChange: setOpenProp,
   className,
@@ -64,11 +77,17 @@ function SidebarProvider({
 }) {
   const isMobile = useIsMobile()
   const [openMobile, setOpenMobile] = React.useState(false)
+  const viewportDefaultOpen = React.useSyncExternalStore(
+    subscribeToSidebarViewportDefault,
+    getSidebarViewportDefault,
+    getServerSidebarViewportDefault
+  )
 
   // This is the internal state of the sidebar.
   // We use openProp and setOpenProp for control from outside the component.
-  const [_open, _setOpen] = React.useState(defaultOpen)
-  const open = openProp ?? _open
+  const [_open, _setOpen] = React.useState<boolean | undefined>()
+  const open = openProp ?? _open ?? defaultOpen ?? viewportDefaultOpen
+
   const setOpen = React.useCallback(
     (value: boolean | ((value: boolean) => boolean)) => {
       const openState = typeof value === "function" ? value(open) : value
