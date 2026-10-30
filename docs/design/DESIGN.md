@@ -356,12 +356,13 @@ Signapse entity quick detail là local, modal reading overlay cho một entity �
 
 ## UI Design Gate
 
-This section owns FE execution of the accepted design gate. Planning/coordinator owns design approval and handoff; no Planning policy fetch is required to implement or review.
+Effective 2026-10-30, this section owns FE execution of the accepted design gate: sufficient direction permits implementation without a complete mockup set. Planning/coordinator owns accepted direction and fixed constraints; FE owns routine detail within that direction. No Planning policy fetch is required to implement or review.
 
-- Every Survey, Implement and Review session, including resume, reads the live native parent and opens its designated approved images/frames. Verify approval basis, current version, assigned screen/state/viewport coverage and accepted exceptions. Attachment metadata, filenames or newest upload alone do not prove approval. A child attachment is unnecessary when the parent source is accessible.
-- Use approved references with this design system and the Responsive Contract below. Common states may reuse an identified approved component baseline; do not require separate mockups for every state. Images do not override behavioral AC, permissions, real data or localization.
-- Survey cannot enter Progress with an inaccessible, ambiguous or conflicting required design. Implement cannot enter In Review, and Review cannot merge/complete, with missing comparison evidence or an unaccepted deviation. Report the affected input/AC and owner; continue meaningful independent work, applying the phase's Blocked rules only when exhausted.
-- Compare affected rendered UI against the same approved version/frame and record candidate, viewport/zoom, state and sidebar mode in PR/artifact evidence. Review assesses this independently. A design change invalidates affected comparison/checks and requires renewed review; do not change expected/design to match code.
+- Every Survey, Implement and Review session, including resume, reads the live native parent and views the representative reference or established pattern needed to understand the main flow, information and actions. Identify its revision/date, acceptance basis, applicable scope and explicit fixed constraints. A shared read-only view is sufficient; do not require exports, a child attachment or inspection of every frame/state/viewport. Newest upload alone does not prove acceptance.
+- FE may complete spacing, responsive/reflow and loading/empty/error presentation using this design system and shared patterns without separate approval for each detail. Preserve accepted behavior, permissions, data, localization/copy, accessibility and explicitly fixed visual/interaction choices. An undrawn state still needs its required behavior.
+- Missing detailed mockups, frame IDs or one inaccessible reference do not prevent Progress when the remaining accepted direction/patterns are sufficient. Record access limits and use a suitable accepted alternative. Escalate only missing/conflicting decisions that materially change behavior, permissions, the main journey or fixed constraints; hold the dependent part and continue meaningful work. Use Blocked only when no meaningful independent work remains under the phase rules.
+- Before In Review/merge/Done, assess affected rendered UI against AC, accepted direction, fixed constraints, usability, responsive and accessibility standards. Preserve screenshots/evidence tied to the candidate, representative source/pattern and affected viewport/state/sidebar mode; reviewers assess independently. Behavioral/quality defects, fixed-constraint violations and missing necessary evidence remain blocking. Routine choices within FE authority and unspecified pixel differences do not require mockup changes or separate approval.
+- Changed accepted direction/constraints invalidate affected evidence and require reassessment. Do not change requirements or expected results to fit code; routine detail completion does not require a design revision first.
 - Direct work keeps its accepted scope and supplied approved references, without requiring a Jira ticket or adding lifecycle actions.
 
 ## Responsive Contract
@@ -391,10 +392,10 @@ This is the complete FE execution contract for dashboard layout and verification
 
 ### Design And Verification Coverage
 
-- Feature mới hoặc layout đổi đáng kể dùng approved Wide/Mobile references của assignment; Compact cần reference khi cấu trúc khác đáng kể. Thay đổi nhỏ dùng shared responsive rules và kiểm tra vùng bị ảnh hưởng. Worker không tự tạo/duyệt design còn thiếu.
+- Feature mới hoặc layout đổi đáng kể dùng nguồn đại diện hoặc pattern hiện có đủ định hướng theo UI Design Gate. FE tự hoàn thiện responsive theo shared rules; chỉ yêu cầu thêm reference khi còn quyết định quan trọng ngoài quyền FE. Không bắt có mockup Wide/Mobile/Compact riêng trước implementation.
 - Khi implement/review thay đổi layout, kiểm tra surface bị ảnh hưởng tại ba frame đại diện và chiều rộng `360px`; kiểm điểm chuyển `767/768px` và `1439/1440px` khi hành vi tại mốc đó bị ảnh hưởng, cùng browser zoom `200%`. Giữ các kiểm tra desktop rộng/sidebar hiện có khi thay đổi shell/content width; không coi frame 1520px là giới hạn trên.
 - Bằng chứng bàn giao ghi viewport/zoom, state, sidebar mode đã kiểm, kết quả và giới hạn chưa kiểm. Không báo responsive đạt chỉ từ một screenshot desktop hoặc việc tồn tại responsive classes.
-- Handoff dùng rule execution tại đây và ngoại lệ feature đã được chấp nhận. Thiếu required mobile reference hoặc xung đột ảnh/design phải được nêu rõ trước khi chốt layout phụ thuộc.
+- Handoff dùng rule execution tại đây và ngoại lệ feature đã được chấp nhận. Thiếu mobile reference không tự chặn implementation; nêu và giữ phần phụ thuộc khi có mâu thuẫn hoặc quyết định quan trọng ngoài quyền FE.
 
 ## Accessibility And Responsive Behavior
 
