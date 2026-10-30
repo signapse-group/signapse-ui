@@ -270,6 +270,9 @@ test("Sigma workspace graph preserves graph permission", async ({
   await expect(
     page.getByText("Bạn không có quyền truy cập biểu đồ tri thức.")
   ).toBeVisible()
+  await page.screenshot({
+    path: "test-results/graph-state-graph-permission-denied.png",
+  })
   expect(
     (await fixture.state()).requests.some(
       (request) => request.path === "/graph-view"
@@ -356,6 +359,9 @@ test("live Graph View keeps permission, transport and schema failures distinct",
       "Bạn cần quyền watchlist để xác định workspace này có tài sản đang theo dõi hay không."
     )
   ).toBeVisible()
+  await page.screenshot({
+    path: "test-results/graph-state-watchlist-permission-denied.png",
+  })
   await expect(
     page.getByRole("heading", { name: "Watchlist chưa có tài sản" })
   ).toHaveCount(0)
@@ -389,9 +395,29 @@ test("Graph View asks for a workspace when none is selected", async ({
     "Chưa chọn"
   )
   await page.screenshot({ path: "test-results/graph-state-no-workspace.png" })
-  await page
-    .getByRole("button", { name: "Chọn hoặc tạo workspace", exact: true })
-    .click()
+  const chooseWorkspace = page.getByRole("button", {
+    name: "Chọn hoặc tạo workspace",
+    exact: true,
+  })
+  let hasKeyboardFocus = false
+  for (let tab = 0; tab < 80; tab += 1) {
+    await page.keyboard.press("Tab")
+    if (
+      await chooseWorkspace.evaluate(
+        (element) => document.activeElement === element
+      )
+    ) {
+      hasKeyboardFocus = true
+      break
+    }
+  }
+  expect(hasKeyboardFocus).toBe(true)
+  expect(
+    await chooseWorkspace.evaluate((element) =>
+      element.matches(":focus-visible")
+    )
+  ).toBe(true)
+  await page.keyboard.press("Enter")
   await expect(
     page.getByRole("menuitem").filter({ hasText: "Workspace Alpha" })
   ).toContainText("Có thể chuyển sang")
