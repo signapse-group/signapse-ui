@@ -11,13 +11,19 @@ import userEvent from "@testing-library/user-event"
 import { Suspense, useState } from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-const { routerPush, routerRefresh, routerReplace, getCurrentPermissions } =
-  vi.hoisted(() => ({
-    routerPush: vi.fn(),
-    routerRefresh: vi.fn(),
-    routerReplace: vi.fn(),
-    getCurrentPermissions: vi.fn(async () => ["ai-provider-config:read"]),
-  }))
+const {
+  routerPush,
+  routerRefresh,
+  routerReplace,
+  getCurrentPermissions,
+  searchParams,
+} = vi.hoisted(() => ({
+  routerPush: vi.fn(),
+  routerRefresh: vi.fn(),
+  routerReplace: vi.fn(),
+  getCurrentPermissions: vi.fn(async () => ["ai-provider-config:read"]),
+  searchParams: new URLSearchParams("page=1&size=10"),
+}))
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/vi/ai-provider-configs",
@@ -26,7 +32,7 @@ vi.mock("next/navigation", () => ({
     refresh: routerRefresh,
     replace: routerReplace,
   }),
-  useSearchParams: () => new URLSearchParams("page=1&size=10"),
+  useSearchParams: () => searchParams,
 }))
 
 vi.mock("@/components/localized-link", () => ({
@@ -147,6 +153,9 @@ describe("AI connection UI", () => {
     routerPush.mockReset()
     routerRefresh.mockReset()
     routerReplace.mockReset()
+    for (const key of [...searchParams.keys()]) searchParams.delete(key)
+    searchParams.set("page", "1")
+    searchParams.set("size", "10")
     vi.mocked(createAiProviderCredential).mockReset()
     vi.mocked(createAiProviderConfig).mockReset()
     vi.mocked(deleteAiProviderConfig).mockReset()
@@ -200,6 +209,38 @@ describe("AI connection UI", () => {
       )
     )
   })
+
+  it.each(["2", "0"])(
+    "normalizes page=%s with an unsupported size in the rendered AI connections list",
+    async (requestedPage) => {
+      searchParams.set("page", requestedPage)
+      searchParams.set("size", "25")
+      searchParams.set("sort", "id_asc")
+
+      renderWithProviders(<AiProviderConfigListPage providerPage={listPage} />)
+
+      expect(screen.getByText("Hiển thị 1-1 trên 21 kết quả")).toBeVisible()
+      expect(
+        screen.getByRole("combobox", {
+          name: viDictionary.pagination.pageSize,
+        })
+      ).toHaveTextContent("10")
+      expect(
+        within(
+          screen.getByRole("navigation", {
+            name: viDictionary.pagination.navigationLabel,
+          })
+        ).getByRole("button", { name: "Đi tới trang 1" })
+      ).toHaveAttribute("aria-current", "page")
+
+      await vi.waitFor(() =>
+        expect(routerReplace).toHaveBeenCalledWith(
+          "/vi/ai-provider-configs?page=1&size=10&sort=id_asc"
+        )
+      )
+      expect(routerPush).not.toHaveBeenCalled()
+    }
+  )
 
   it("shows the loaded reference count for the same connection and keeps its key masked", () => {
     renderWithProviders(

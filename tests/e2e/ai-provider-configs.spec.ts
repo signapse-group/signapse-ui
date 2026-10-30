@@ -261,6 +261,73 @@ test.describe("P0 AI connections", () => {
     }
   })
 
+  test("normalizes unsupported page sizes and replaces browser history", async ({
+    page,
+    fixture,
+  }, testInfo) => {
+    await fixture.setPermissions([
+      "ai-provider-config:read",
+      "ai-task-configuration:read",
+    ])
+    await page.emulateMedia({ colorScheme: "dark" })
+    await page.setViewportSize({ width: 1520, height: 1024 })
+
+    const previousUrl = "/vi/ai-provider-configs?size=20&sort=id_asc"
+    await page.goto(previousUrl)
+    await expect(page.getByRole("link", { name: "Groq #12" })).toBeVisible()
+
+    let normalizedRequests = 0
+    for (const pageValue of ["2", "0"]) {
+      await page.goto(
+        `/vi/ai-provider-configs?page=${pageValue}&size=25&sort=id_asc`
+      )
+      await expect(page).toHaveURL(
+        (url) =>
+          `${url.pathname}${url.search}` ===
+          "/vi/ai-provider-configs?page=1&size=10&sort=id_asc"
+      )
+      await expect(page.getByRole("link", { name: "Groq #12" })).toBeVisible()
+      await expect(
+        page.getByRole("combobox", { name: vi.pagination.pageSize })
+      ).toContainText("10")
+      await expect(
+        page
+          .getByRole("navigation", {
+            name: vi.pagination.navigationLabel,
+          })
+          .locator('[aria-current="page"]')
+      ).toHaveText("1")
+
+      const requests = (await fixture.state()).requests.filter(
+        (request) =>
+          request.method === "GET" &&
+          request.path === "/ai-provider-configs" &&
+          request.query === "?page=0&size=10&sort=id%2Casc"
+      )
+      expect(requests.length).toBeGreaterThan(normalizedRequests)
+      normalizedRequests = requests.length
+
+      if (pageValue === "0") {
+        await testInfo.attach(
+          "ai-connections-page-zero-unsupported-size-normalized-vi-1520x1024.png",
+          {
+            body: await page.screenshot({
+              fullPage: false,
+              style: "nextjs-portal { display: none !important; }",
+            }),
+            contentType: "image/png",
+          }
+        )
+      }
+
+      await page.goBack()
+      await expect(page).toHaveURL(
+        (url) => `${url.pathname}${url.search}` === previousUrl
+      )
+      await expect(page.getByRole("link", { name: "Groq #12" })).toBeVisible()
+    }
+  })
+
   test("matches the approved edit design at 1520x1600 and stays usable on mobile", async ({
     page,
     fixture,
