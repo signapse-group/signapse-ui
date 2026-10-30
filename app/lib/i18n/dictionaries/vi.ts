@@ -1280,6 +1280,7 @@ export const vi = {
       "Quản lý kết nối và key tại đây. Chọn kết nối, model và giới hạn token đầu ra riêng trong phần cấu hình tác vụ AI.",
     openTaskConfiguration: "Mở cấu hình tác vụ AI",
     referencesNotProvided: "API chưa cung cấp",
+    referencesLoadError: "Không thể tải tham chiếu",
     noKeys: "Chưa có API key",
     emptyTitle: "Chưa có kết nối AI",
     emptyDescription: "Thêm kết nối để cung cấp nhà cung cấp AI được hỗ trợ.",

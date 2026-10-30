@@ -61,11 +61,7 @@ test.describe("P0 AI connections", () => {
     await expect(
       page.getByText("Default endpoint for Groq", { exact: true })
     ).toBeVisible()
-    await expect(
-      page.getByText(en.aiProviderConfigs.referencesNotProvided, {
-        exact: true,
-      })
-    ).toBeVisible()
+    await expect(page.getByText("3 tasks", { exact: true })).toBeVisible()
     await expect(
       page.getByText(en.pagination.pageSize, { exact: true })
     ).toBeVisible()
@@ -90,6 +86,35 @@ test.describe("P0 AI connections", () => {
       body: listScreenshot,
       contentType: "image/png",
     })
+
+    for (const viewport of responsiveViewports) {
+      await page.setViewportSize(viewport)
+      await expect(page.getByText("3 tasks", { exact: true })).toBeVisible()
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= window.innerWidth
+        )
+      ).toBe(true)
+
+      if (viewport.width === 390) {
+        const usageCount = page.getByText("3 tasks", { exact: true })
+        await usageCount.scrollIntoViewIfNeeded()
+        expect(
+          await page
+            .locator('[data-slot="table-container"]')
+            .evaluate((table) => table.scrollLeft)
+        ).toBeGreaterThan(0)
+        await expect(usageCount).toBeVisible()
+        await testInfo.attach("ai-connections-list-en-390x844.png", {
+          body: await page.screenshot({ fullPage: false }),
+          contentType: "image/png",
+        })
+        await page
+          .locator('[data-slot="table-container"]')
+          .evaluate((table) => (table.scrollLeft = 0))
+      }
+    }
+    await page.setViewportSize({ width: 1520, height: 1024 })
 
     const axe = await new AxeBuilder({ page })
       .withTags(["wcag2a", "wcag2aa"])
@@ -125,10 +150,9 @@ test.describe("P0 AI connections", () => {
     await expect(page.getByText(/3 tác vụ/)).toBeVisible()
     await expect(page.getByText("gsk-...legacy", { exact: true })).toBeVisible()
     await expect(
-      page.getByText(
-        vi.aiTaskConfigurations.taskNames.NEWS_EVENT_EXTRACTION,
-        { exact: true }
-      )
+      page.getByText(vi.aiTaskConfigurations.taskNames.NEWS_EVENT_EXTRACTION, {
+        exact: true,
+      })
     ).toBeVisible()
     await expect(
       page.getByText("deepseek-v4-flash", { exact: true })
@@ -154,11 +178,13 @@ test.describe("P0 AI connections", () => {
         path: "/ai-provider-configs",
         query: "?page=0&size=10&sort=id%2Cdesc",
       },
+      { method: "GET", path: "/ai-provider-configs/12" },
       {
         method: "GET",
         path: "/ai-provider-configs",
         query: "?page=0&size=10&sort=id%2Cdesc",
       },
+      { method: "GET", path: "/ai-provider-configs/12" },
       { method: "GET", path: "/ai-provider-configs/12" },
     ])
   })

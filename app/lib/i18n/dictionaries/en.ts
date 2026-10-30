@@ -1287,6 +1287,7 @@ export const en: Dictionary = {
       "Manage connections and keys here. Select each task's connection, model and output token limit in AI task configuration.",
     openTaskConfiguration: "Open AI task configuration",
     referencesNotProvided: "Not provided",
+    referencesLoadError: "Could not load references",
     noKeys: "No API keys",
     emptyTitle: "No AI connections yet",
     emptyDescription:

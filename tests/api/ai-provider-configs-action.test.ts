@@ -43,6 +43,7 @@ import {
   createAiProviderConfig,
   deleteAiProviderConfig,
   deleteAiProviderCredential,
+  getAiProviderConfigListPage,
   getAiProviderConfigById,
   getAiProviderConfigs,
   getAiProviderModelCatalog,
@@ -209,10 +210,29 @@ describe("AI connection actions", () => {
     )
   })
 
-  it("retains the producer page count and legacy connection data", async () => {
+  it("keeps option reads on the producer page without fetching each detail", async () => {
     vi.mocked(fetchAuthenticated).mockResolvedValue(pageResponse)
 
     const result = await getAiProviderConfigs({
+      filter: "",
+      page: 1,
+      size: 10,
+      sort: [{ field: "id", direction: "desc" }],
+    })
+
+    expect(result.totalElements).toBe(21)
+    expect(result.totalPages).toBe(3)
+    expect(result.number).toBe(1)
+    expect(result.content[0].taskReferences).toBeUndefined()
+    expect(fetchAuthenticated).toHaveBeenCalledTimes(1)
+  })
+
+  it("retains the producer page count and loads references for the connection list", async () => {
+    vi.mocked(fetchAuthenticated)
+      .mockResolvedValueOnce(pageResponse)
+      .mockResolvedValueOnce(detailResponse)
+
+    const result = await getAiProviderConfigListPage({
       filter: "",
       page: 1,
       size: 10,
@@ -226,11 +246,93 @@ describe("AI connection actions", () => {
       providerType: "GROQ",
       defaultProvider: false,
       credentials: [{ keyPreview: "sk-...old" }],
+      taskReferences: detailResponse.taskReferences,
+      taskReferencesStatus: "loaded",
     })
-    expect(result.content[0].taskReferences).toBeUndefined()
-    expect(fetchAuthenticated).toHaveBeenCalledWith(
+    expect(fetchAuthenticated).toHaveBeenNthCalledWith(
+      1,
       "/ai-provider-configs?page=1&size=10&sort=id%2Cdesc"
     )
+    expect(fetchAuthenticated).toHaveBeenNthCalledWith(
+      2,
+      "/ai-provider-configs/42"
+    )
+  })
+
+  it("uses task references returned with the list row without another read", async () => {
+    const taskReferences = [
+      { task: "NEWS_EVENT_EXTRACTION", model: "current-model" },
+    ]
+    vi.mocked(fetchAuthenticated).mockResolvedValue({
+      ...pageResponse,
+      content: [{ ...pageResponse.content[0], taskReferences }],
+    })
+
+    const result = await getAiProviderConfigListPage({
+      filter: "",
+      page: 1,
+      size: 10,
+      sort: [{ field: "id", direction: "desc" }],
+    })
+
+    expect(result.content[0]).toMatchObject({
+      taskReferences,
+      taskReferencesStatus: "loaded",
+    })
+    expect(fetchAuthenticated).toHaveBeenCalledTimes(1)
+  })
+
+  it("keeps a successfully loaded empty task-reference list as zero", async () => {
+    vi.mocked(fetchAuthenticated)
+      .mockResolvedValueOnce(pageResponse)
+      .mockResolvedValueOnce({ ...detailResponse, taskReferences: [] })
+
+    const result = await getAiProviderConfigListPage({
+      filter: "",
+      page: 1,
+      size: 10,
+      sort: [{ field: "id", direction: "desc" }],
+    })
+
+    expect(result.content[0]).toMatchObject({
+      taskReferences: [],
+      taskReferencesStatus: "loaded",
+    })
+  })
+
+  it("marks failed and mismatched detail reads unavailable instead of zero", async () => {
+    vi.mocked(fetchAuthenticated)
+      .mockResolvedValueOnce(pageResponse)
+      .mockRejectedValueOnce(new Error("Forbidden"))
+
+    const failedResult = await getAiProviderConfigListPage({
+      filter: "",
+      page: 1,
+      size: 10,
+      sort: [{ field: "id", direction: "desc" }],
+    })
+
+    expect(failedResult.content[0].taskReferencesStatus).toBe("unavailable")
+    expect(failedResult.content[0].taskReferences).toBeUndefined()
+
+    vi.mocked(fetchAuthenticated)
+      .mockReset()
+      .mockResolvedValueOnce(pageResponse)
+      .mockResolvedValueOnce({
+        ...detailResponse,
+        id: 43,
+        taskReferences: [{ task: "NEWS_EVENT_EXTRACTION" }],
+      })
+
+    const mismatchedResult = await getAiProviderConfigListPage({
+      filter: "",
+      page: 1,
+      size: 10,
+      sort: [{ field: "id", direction: "desc" }],
+    })
+
+    expect(mismatchedResult.content[0].taskReferencesStatus).toBe("unavailable")
+    expect(mismatchedResult.content[0].taskReferences).toBeUndefined()
   })
 
   it("loads read-only detail with actual task references", async () => {

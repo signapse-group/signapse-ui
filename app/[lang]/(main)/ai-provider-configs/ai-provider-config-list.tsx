@@ -3,7 +3,10 @@
 import { ArrowRight, Bot, Plus } from "lucide-react"
 import { LocalizedLink as Link } from "@/components/localized-link"
 
-import type { AiProviderConfigListResponse } from "@/app/lib/ai-provider-configs/definitions"
+import type {
+  AiProviderConfigListItem,
+  AiProviderConfigListResponse,
+} from "@/app/lib/ai-provider-configs/definitions"
 import { AI_PROVIDER_CONFIG_PERMISSIONS } from "@/app/lib/ai-provider-configs/permissions"
 import { AI_TASK_CONFIGURATION_READ_PERMISSION } from "@/app/lib/ai-task-configurations/definitions"
 import type { Page } from "@/app/lib/definitions"
@@ -38,7 +41,7 @@ import {
 import { getProviderOptionLabel } from "./ai-provider-config-shared"
 
 interface AiProviderConfigListProps {
-  providerPage: Page<AiProviderConfigListResponse>
+  providerPage: Page<AiProviderConfigListItem>
 }
 
 export function AiProviderConfigListPage({
@@ -159,9 +162,9 @@ export function AiProviderConfigListPage({
                       <CredentialPreviews provider={provider} />
                     </TableCell>
                     <TableCell className="align-top whitespace-normal">
-                      {provider.taskReferences === undefined ? (
+                      {provider.taskReferencesStatus === "unavailable" ? (
                         <span className="text-sm text-muted-foreground">
-                          {t.referencesNotProvided}
+                          {t.referencesLoadError}
                         </span>
                       ) : (
                         <div className="flex flex-col gap-1">

@@ -1,6 +1,6 @@
 import { Suspense } from "react"
 
-import { getAiProviderConfigs } from "@/app/api/ai-provider-configs/action"
+import { getAiProviderConfigListPage } from "@/app/api/ai-provider-configs/action"
 import { AI_PROVIDER_CONFIG_PERMISSIONS } from "@/app/lib/ai-provider-configs/permissions"
 import type { Dictionary } from "@/app/lib/i18n/dictionary-types"
 import { getServerDictionary } from "@/app/lib/i18n/server"
@@ -72,7 +72,7 @@ async function AiProviderConfigsContent({
   const sort = sortValue === "id_asc" ? "id_asc" : "id_desc"
   const { page, size } = parsePaginationQuery(resolvedParams)
 
-  const providerPage = await getAiProviderConfigs({
+  const providerPage = await getAiProviderConfigListPage({
     page: page - 1,
     size,
     sort: buildSortQuery(sort),
