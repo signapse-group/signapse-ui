@@ -143,6 +143,16 @@ function aiProviderConfigurations() {
   ]
 }
 
+function positiveOutOfRangeAiProviderConfigs() {
+  return Array.from({ length: 11 }, (_, index) => ({
+    id: index + 1,
+    providerType: "OPENAI",
+    description: `Fixture connection ${index + 1}`,
+    defaultProvider: false,
+    credentials: [],
+  }))
+}
+
 function workspace(id, name, currentWorkspace = false) {
   return {
     id,
@@ -1451,8 +1461,9 @@ function aiTaskConfigurationRouteResult(state, method, pathname, body, url) {
         ),
       }
     }
+    const scenario = getScenario(state, method, pathname)
     const connections =
-      getScenario(state, method, pathname) === "legacy-provider-options"
+      scenario === "legacy-provider-options"
         ? [
             ...state.aiProviderConfigurations,
             {
@@ -1468,7 +1479,9 @@ function aiTaskConfigurationRouteResult(state, method, pathname, body, url) {
               credentials: [],
             },
           ]
-        : state.aiProviderConfigs
+        : scenario === "positive-out-of-range"
+          ? positiveOutOfRangeAiProviderConfigs()
+          : state.aiProviderConfigs
     const result = slicePage(connections, url)
     const sort = { sorted: false, unsorted: true, empty: true }
     return {
@@ -2274,7 +2287,12 @@ function responseForRoute(state, method, pathname, url, body) {
         ),
       }
     }
-    const connection = state.aiProviderConfigs.find(
+    const connectionSource =
+      getScenario(state, "GET", "/ai-provider-configs") ===
+      "positive-out-of-range"
+        ? positiveOutOfRangeAiProviderConfigs()
+        : state.aiProviderConfigs
+    const connection = connectionSource.find(
       (item) => item.id === Number(aiProviderConfigId[1])
     )
     return connection
@@ -3163,7 +3181,16 @@ const server = createServer(async (request, response) => {
     if (Array.isArray(result)) {
       sendJson(response, 200, [])
     } else if (result && Array.isArray(result.content)) {
-      sendJson(response, 200, page([], result.number, result.size))
+      sendJson(response, 200, {
+        ...result,
+        content: [],
+        first: result.number === 0,
+        last: true,
+        totalElements: 0,
+        totalPages: 0,
+        numberOfElements: 0,
+        empty: true,
+      })
     } else if (result && Array.isArray(result.candles)) {
       const anchor = url.searchParams.get("to") ?? result.to
       sendJson(response, 200, {

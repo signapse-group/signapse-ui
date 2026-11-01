@@ -189,6 +189,143 @@ test.describe("P0 AI connections", () => {
     ])
   })
 
+  test("recovers a confirmed positive out-of-range page to the last page", async ({
+    page,
+    fixture,
+  }, testInfo) => {
+    await fixture.setPermissions(["ai-provider-config:read"])
+    await page.emulateMedia({ colorScheme: "dark" })
+    await page.setViewportSize({ width: 1520, height: 1024 })
+
+    const previousUrl = "/vi/ai-provider-configs?page=1&size=10&sort=id_asc"
+    await page.goto(previousUrl)
+    await expect(
+      page.getByRole("link", { name: "Groq #12", exact: true })
+    ).toBeVisible()
+
+    await fixture.setScenario(
+      "/ai-provider-configs",
+      "positive-out-of-range",
+      "GET"
+    )
+    const requestsBefore = (await fixture.state()).requests.length
+    await page.goto("/vi/ai-provider-configs?page=134&size=10&sort=id_asc")
+
+    await expect(page).toHaveURL(
+      (url) =>
+        `${url.pathname}${url.search}` ===
+        "/vi/ai-provider-configs?page=2&size=10&sort=id_asc"
+    )
+    await expect(
+      page.getByRole("link", { name: "OpenAI #11", exact: true })
+    ).toBeVisible()
+    await expect(page.getByText("Hiển thị 11-11 trên 11 kết quả")).toBeVisible()
+    await expect(
+      page.getByRole("combobox", { name: vi.pagination.pageSize })
+    ).toContainText("10")
+    await expect(
+      page
+        .getByRole("navigation", { name: vi.pagination.navigationLabel })
+        .getByRole("button", { name: "Đi tới trang 2" })
+    ).toHaveAttribute("aria-current", "page")
+
+    const listRequests = (await fixture.state()).requests
+      .slice(requestsBefore)
+      .filter(
+        (request) =>
+          request.method === "GET" && request.path === "/ai-provider-configs"
+      )
+    expect(listRequests).toContainEqual(
+      expect.objectContaining({
+        query: "?page=133&size=10&sort=id%2Casc",
+      })
+    )
+    expect(listRequests).toContainEqual(
+      expect.objectContaining({
+        query: "?page=1&size=10&sort=id%2Casc",
+      })
+    )
+
+    await testInfo.attach("ai-connections-recovered-page-2-vi-1520x1024.png", {
+      body: await page.screenshot({
+        fullPage: false,
+        style: "nextjs-portal { display: none !important; }",
+      }),
+      contentType: "image/png",
+    })
+
+    await page.setViewportSize({ width: 375, height: 844 })
+    await expect(
+      page.getByRole("link", { name: "OpenAI #11", exact: true })
+    ).toBeVisible()
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth
+      )
+    ).toBe(true)
+    await testInfo.attach("ai-connections-recovered-page-2-vi-375x844.png", {
+      body: await page.screenshot({ fullPage: false }),
+      contentType: "image/png",
+    })
+
+    await page.goBack()
+    await expect(page).toHaveURL(
+      (url) => `${url.pathname}${url.search}` === previousUrl
+    )
+    await expect(
+      page.getByRole("link", { name: "OpenAI #1", exact: true })
+    ).toBeVisible()
+  })
+
+  test("keeps confirmed empty and failed list requests as separate states", async ({
+    page,
+    fixture,
+  }) => {
+    await fixture.setPermissions(["ai-provider-config:read"])
+    await page.setViewportSize({ width: 1520, height: 1024 })
+
+    await fixture.setScenario("/ai-provider-configs", "empty", "GET")
+    await page.goto("/vi/ai-provider-configs?page=134&size=10&sort=id_asc")
+    await expect(page).toHaveURL(
+      (url) =>
+        `${url.pathname}${url.search}` ===
+        "/vi/ai-provider-configs?page=1&size=10&sort=id_asc"
+    )
+    await expect(
+      page.getByText(vi.aiProviderConfigs.emptyTitle, { exact: true })
+    ).toBeVisible()
+    await expect(
+      page.getByRole("combobox", { name: vi.pagination.pageSize })
+    ).toBeVisible()
+    await expect(
+      page.getByRole("navigation", { name: vi.pagination.navigationLabel })
+    ).toHaveCount(0)
+
+    await fixture.setScenario("/ai-provider-configs", "outage", "GET")
+    await page.goto("/vi/ai-provider-configs?page=134&size=10&sort=id_asc")
+    await expect(page).toHaveURL(
+      (url) =>
+        `${url.pathname}${url.search}` ===
+        "/vi/ai-provider-configs?page=134&size=10&sort=id_asc"
+    )
+    await expect(
+      page
+        .locator('[data-slot="empty-title"]')
+        .filter({ hasText: vi.aiProviderConfigs.errorTitle })
+    ).toBeVisible()
+    await expect(
+      page.getByText(vi.aiProviderConfigs.emptyTitle, { exact: true })
+    ).toHaveCount(0)
+
+    const failedListRequest = (await fixture.state()).requests.find(
+      (request) =>
+        request.method === "GET" &&
+        request.path === "/ai-provider-configs" &&
+        request.query === "?page=133&size=10&sort=id%2Casc"
+    )
+    expect(failedListRequest).toBeDefined()
+  })
+
   test("normalizes invalid page values on the route and replaces browser history", async ({
     page,
     fixture,
