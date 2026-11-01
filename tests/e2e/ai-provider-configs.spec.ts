@@ -368,6 +368,39 @@ test.describe("P0 AI connections", () => {
     ).toHaveCount(0)
   })
 
+  test.describe("server-rendered pagination recovery", () => {
+    test.use({ javaScriptEnabled: false })
+
+    test("recovers a confirmed positive out-of-range page without hydration", async ({
+      page,
+      fixture,
+    }) => {
+      await fixture.setPermissions(["ai-provider-config:read"])
+      await fixture.setScenario(
+        "/ai-provider-configs",
+        "positive-out-of-range",
+        "GET"
+      )
+
+      await page.goto("/vi/ai-provider-configs?page=134&size=10&sort=id_asc")
+
+      await expect(page).toHaveURL(
+        (url) =>
+          `${url.pathname}${url.search}` ===
+          "/vi/ai-provider-configs?page=2&size=10&sort=id_asc"
+      )
+
+      const listRequests = (await fixture.state()).requests.filter(
+        (request) =>
+          request.method === "GET" && request.path === "/ai-provider-configs"
+      )
+      expect(listRequests.map((request) => request.query)).toEqual([
+        "?page=133&size=10&sort=id%2Casc",
+        "?page=1&size=10&sort=id%2Casc",
+      ])
+    })
+  })
+
   test("normalizes invalid page values on the route and replaces browser history", async ({
     page,
     fixture,
