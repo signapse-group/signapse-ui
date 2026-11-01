@@ -271,7 +271,7 @@ test.describe("P0 AI connections", () => {
     ).toBeVisible()
   })
 
-  test("keeps confirmed empty and failed list requests as separate states", async ({
+  test("normalizes a successful zero-result page without showing navigation", async ({
     page,
     fixture,
   }) => {
@@ -294,8 +294,33 @@ test.describe("P0 AI connections", () => {
     await expect(
       page.getByRole("navigation", { name: vi.pagination.navigationLabel })
     ).toHaveCount(0)
+  })
+
+  test("keeps failed list reads distinct and recovers after retry", async ({
+    page,
+    fixture,
+  }) => {
+    await fixture.setPermissions(["ai-provider-config:read"])
+    await page.setViewportSize({ width: 1520, height: 1024 })
+
+    await fixture.setScenario(
+      "/ai-provider-configs",
+      "positive-out-of-range",
+      "GET"
+    )
+    await page.goto("/vi/ai-provider-configs?page=1&size=10&sort=id_asc")
+    await expect(
+      page.getByRole("link", { name: "OpenAI #1", exact: true })
+    ).toBeVisible()
+    await expect(page.getByText("Hiển thị 1-10 trên 11 kết quả")).toBeVisible()
+    await expect(
+      page
+        .getByRole("navigation", { name: vi.pagination.navigationLabel })
+        .getByRole("button", { name: "Đi tới trang 1" })
+    ).toHaveAttribute("aria-current", "page")
 
     await fixture.setScenario("/ai-provider-configs", "outage", "GET")
+    const requestsBeforeFailure = (await fixture.state()).requests.length
     await page.goto("/vi/ai-provider-configs?page=134&size=10&sort=id_asc")
     await expect(page).toHaveURL(
       (url) =>
@@ -311,13 +336,36 @@ test.describe("P0 AI connections", () => {
       page.getByText(vi.aiProviderConfigs.emptyTitle, { exact: true })
     ).toHaveCount(0)
 
-    const failedListRequest = (await fixture.state()).requests.find(
-      (request) =>
-        request.method === "GET" &&
-        request.path === "/ai-provider-configs" &&
-        request.query === "?page=133&size=10&sort=id%2Casc"
+    const failedListRequests = (await fixture.state()).requests
+      .slice(requestsBeforeFailure)
+      .filter(
+        (request) =>
+          request.method === "GET" &&
+          request.path === "/ai-provider-configs" &&
+          request.query === "?page=133&size=10&sort=id%2Casc"
+      )
+    expect(failedListRequests).toHaveLength(1)
+
+    await fixture.setScenario(
+      "/ai-provider-configs",
+      "positive-out-of-range",
+      "GET"
     )
-    expect(failedListRequest).toBeDefined()
+    await page.reload()
+    await expect(page).toHaveURL(
+      (url) =>
+        `${url.pathname}${url.search}` ===
+        "/vi/ai-provider-configs?page=2&size=10&sort=id_asc"
+    )
+    await expect(
+      page.getByRole("link", { name: "OpenAI #11", exact: true })
+    ).toBeVisible()
+    await expect(page.getByText("Hiển thị 11-11 trên 11 kết quả")).toBeVisible()
+    await expect(
+      page
+        .locator('[data-slot="empty-title"]')
+        .filter({ hasText: vi.aiProviderConfigs.errorTitle })
+    ).toHaveCount(0)
   })
 
   test("normalizes invalid page values on the route and replaces browser history", async ({
