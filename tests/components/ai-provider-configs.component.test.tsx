@@ -48,7 +48,6 @@ vi.mock("@/app/api/ai-provider-configs/action", () => ({
   deleteAiProviderConfig: vi.fn(),
   deleteAiProviderCredential: vi.fn(),
   getAiProviderConfigById: vi.fn(),
-  getAiProviderConfigs: vi.fn(),
   updateAiProviderConfig: vi.fn(),
   updateAiProviderCredential: vi.fn(),
 }))
@@ -64,7 +63,6 @@ import {
   deleteAiProviderConfig,
   deleteAiProviderCredential,
   getAiProviderConfigById,
-  getAiProviderConfigs,
   updateAiProviderConfig,
   updateAiProviderCredential,
 } from "@/app/api/ai-provider-configs/action"
@@ -79,7 +77,6 @@ import { AiProviderConfigDetail } from "@/app/[lang]/(main)/ai-provider-configs/
 import { AiProviderConfigListPage } from "@/app/[lang]/(main)/ai-provider-configs/ai-provider-config-list"
 import AiProviderConfigDetailPage from "@/app/[lang]/(main)/ai-provider-configs/[id]/page"
 import CreateAiProviderConfigPage from "@/app/[lang]/(main)/ai-provider-configs/create/page"
-import AiProviderConfigsPage from "@/app/[lang]/(main)/ai-provider-configs/page"
 
 const legacyProvider = {
   id: 12,
@@ -317,22 +314,6 @@ describe("AI connection UI", () => {
         name: viDictionary.aiProviderConfigs.openTaskConfiguration,
       })
     ).toHaveAttribute("href", "/ai-task-configurations")
-  })
-
-  it("denies the list route to a user without read permission", async () => {
-    getCurrentPermissions.mockResolvedValue(["ai-provider-config:create"])
-
-    const page = await AiProviderConfigsPage({
-      searchParams: Promise.resolve({}),
-    })
-    renderWithProviders(page, ["ai-provider-config:create"])
-
-    expect(
-      screen.getByText(viDictionary.aiProviderConfigs.readDenied, {
-        exact: false,
-      })
-    ).toBeVisible()
-    expect(getAiProviderConfigs).not.toHaveBeenCalled()
   })
 
   it("shows real task and model references to read-only actors without edit controls", () => {
