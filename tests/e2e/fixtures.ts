@@ -70,6 +70,7 @@ type FixtureController = {
       | "calendar-awaiting"
       | "calendar-available"
       | "annotations-many"
+      | "positive-out-of-range"
       | "annotations-warm-episode"
       | "annotations-unsafe-evidence-url"
       | "annotations-delayed-old-scope"

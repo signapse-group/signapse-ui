@@ -1,4 +1,5 @@
 import { Suspense } from "react"
+import { redirect } from "next/navigation"
 
 import { getAiProviderConfigs } from "@/app/api/ai-provider-configs/action"
 import { AI_PROVIDER_CONFIG_PERMISSIONS } from "@/app/lib/ai-provider-configs/permissions"
@@ -78,6 +79,24 @@ async function AiProviderConfigsContent({
     sort: buildSortQuery(sort),
     filter: "",
   })
+
+  const lastPage = Math.max(
+    providerPage.totalElements > 0 ? providerPage.totalPages : 1,
+    1
+  )
+  if (page > lastPage) {
+    const normalizedParams = new URLSearchParams()
+    for (const [key, value] of Object.entries(resolvedParams)) {
+      const values = Array.isArray(value)
+        ? value
+        : value === undefined
+          ? []
+          : [value]
+      values.forEach((entry) => normalizedParams.append(key, entry))
+    }
+    normalizedParams.set("page", lastPage.toString())
+    redirect(`?${normalizedParams.toString()}`)
+  }
 
   return <AiProviderConfigListPage providerPage={providerPage} />
 }
