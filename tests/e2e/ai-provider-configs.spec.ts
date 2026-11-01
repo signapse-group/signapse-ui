@@ -271,7 +271,7 @@ test.describe("P0 AI connections", () => {
     ).toBeVisible()
   })
 
-  test("normalizes a successful zero-result page without showing navigation", async ({
+  test("TC-06a normalizes a successful zero-result page without showing navigation", async ({
     page,
     fixture,
   }) => {
@@ -296,7 +296,7 @@ test.describe("P0 AI connections", () => {
     ).toHaveCount(0)
   })
 
-  test("keeps failed list reads distinct and recovers after retry", async ({
+  test("TC-12a keeps failed list reads distinct and recovers after retry", async ({
     page,
     fixture,
   }) => {

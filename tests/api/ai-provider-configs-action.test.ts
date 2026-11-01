@@ -227,6 +227,45 @@ describe("AI connection actions", () => {
     expect(fetchAuthenticated).toHaveBeenCalledTimes(1)
   })
 
+  it("preserves confirmed out-of-range metadata for route recovery", async () => {
+    vi.mocked(fetchAuthenticated).mockResolvedValue({
+      ...pageResponse,
+      content: [],
+      pageable: {
+        ...pageResponse.pageable,
+        pageNumber: 133,
+        offset: 1330,
+      },
+      last: true,
+      totalElements: 11,
+      totalPages: 2,
+      number: 133,
+      first: false,
+      numberOfElements: 0,
+      empty: true,
+    })
+
+    const result = await getAiProviderConfigs({
+      filter: "",
+      page: 133,
+      size: 10,
+      sort: [{ field: "id", direction: "asc" }],
+    })
+
+    expect(result).toMatchObject({
+      content: [],
+      number: 133,
+      size: 10,
+      totalElements: 11,
+      totalPages: 2,
+      numberOfElements: 0,
+      empty: true,
+    })
+    expect(fetchAuthenticated).toHaveBeenCalledWith(
+      "/ai-provider-configs?page=133&size=10&sort=id%2Casc"
+    )
+  })
+
   it("loads each row's references from the matching connection detail", async () => {
     const secondListRow = {
       ...pageResponse.content[0],
