@@ -71,6 +71,7 @@ type FixtureController = {
       | "calendar-available"
       | "annotations-many"
       | "positive-out-of-range"
+      | "authorized-page-two-size-twenty-101"
       | "annotations-warm-episode"
       | "annotations-unsafe-evidence-url"
       | "annotations-delayed-old-scope"

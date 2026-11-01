@@ -227,6 +227,54 @@ describe("AI connection actions", () => {
     expect(fetchAuthenticated).toHaveBeenCalledTimes(1)
   })
 
+  it("requests page 2 at size 20 and preserves the producer row order and total", async () => {
+    const ids = Array.from({ length: 20 }, (_, index) => 81 - index)
+    const pageAtSize20 = {
+      ...pageResponse,
+      content: ids.map((id) => ({ ...connectionResponse, id })),
+      pageable: {
+        ...pageResponse.pageable,
+        pageNumber: 1,
+        pageSize: 20,
+        offset: 20,
+      },
+      size: 20,
+      number: 1,
+      totalElements: 101,
+      totalPages: 6,
+      numberOfElements: 20,
+      first: false,
+    }
+    vi.mocked(fetchAuthenticated).mockResolvedValue(pageAtSize20)
+
+    const result = await getAiProviderConfigsRaw({
+      filter: "",
+      page: 1,
+      size: 20,
+      sort: [{ field: "id", direction: "desc" }],
+    })
+
+    expect(fetchAuthenticated).toHaveBeenCalledWith(
+      "/ai-provider-configs?page=1&size=20&sort=id%2Cdesc"
+    )
+    expect(result.content.map(({ id }) => id)).toEqual(ids)
+    expect(result.totalElements).toBe(101)
+  })
+
+  it("propagates a denied list read instead of converting it to an empty page", async () => {
+    const forbidden = Object.assign(new Error("Forbidden"), { status: 403 })
+    vi.mocked(fetchAuthenticated).mockRejectedValue(forbidden)
+
+    await expect(
+      getAiProviderConfigsRaw({
+        filter: "",
+        page: 1,
+        size: 20,
+        sort: [{ field: "id", direction: "desc" }],
+      })
+    ).rejects.toBe(forbidden)
+  })
+
   it("preserves confirmed out-of-range metadata for route recovery", async () => {
     vi.mocked(fetchAuthenticated).mockResolvedValue({
       ...pageResponse,

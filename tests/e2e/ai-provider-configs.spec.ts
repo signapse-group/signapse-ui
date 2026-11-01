@@ -18,6 +18,147 @@ const responsiveViewports = [
 ]
 
 test.describe("P0 AI connections", () => {
+  test("renders page 2 when the API permits a 101-record response", async ({
+    page,
+    fixture,
+  }, testInfo) => {
+    // Preserve the actor's read grant while reproducing a missing /me permission snapshot.
+    await fixture.setPermissions(["ai-provider-config:read"])
+    await fixture.setScenario("/me", "permission-denied", "GET")
+    await fixture.setScenario(
+      "/ai-provider-configs",
+      "authorized-page-two-size-twenty-101",
+      "GET"
+    )
+    await page.emulateMedia({ colorScheme: "dark" })
+    await page.setViewportSize({ width: 1520, height: 1024 })
+
+    const requestsBefore = (await fixture.state()).requests.length
+    await page.goto("/vi/ai-provider-configs?page=2&size=20&sort=id_desc")
+
+    const listRequests = (await fixture.state()).requests
+      .slice(requestsBefore)
+      .filter(
+        (request) =>
+          request.method === "GET" && request.path === "/ai-provider-configs"
+      )
+    expect(listRequests.map((request) => request.query)).toEqual([
+      "?page=1&size=20&sort=id%2Cdesc",
+    ])
+
+    await expect(page.getByText("Hiển thị 21-40 trên 101 kết quả")).toBeVisible()
+    await expect(page.getByRole("row")).toHaveCount(21)
+    await expect(
+      page.getByRole("combobox", { name: vi.pagination.pageSize })
+    ).toContainText("20")
+
+    const rowIds = await page
+      .getByRole("table")
+      .locator("tbody")
+      .getByRole("link")
+      .evaluateAll((links) =>
+        links.map((link) =>
+          Number(
+            new URL(
+              (link as HTMLAnchorElement).href
+            ).pathname.split("/").at(-1)
+          )
+        )
+      )
+    expect(rowIds).toEqual(
+      Array.from({ length: 20 }, (_, index) => 81 - index)
+    )
+
+    await testInfo.attach("ai-connections-page-2-size-20-vi-1520x1024.png", {
+      body: await page.screenshot({
+        fullPage: false,
+        style: "nextjs-portal { display: none !important; }",
+      }),
+      contentType: "image/png",
+    })
+
+    await page.setViewportSize({ width: 375, height: 844 })
+    const paginationFooter = page.locator(
+      '[data-slot="app-pagination-footer"]'
+    )
+    await expect(
+      paginationFooter.getByText("Hiển thị 21-40 trên 101 kết quả")
+    ).toBeVisible()
+    await expect(
+      paginationFooter.getByRole("combobox", {
+        name: vi.pagination.pageSize,
+      })
+    ).toBeVisible()
+    await expect(
+      paginationFooter.getByRole("navigation", {
+        name: vi.pagination.navigationLabel,
+      })
+    ).toBeVisible()
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth
+      )
+    ).toBe(true)
+    await testInfo.attach("ai-connections-page-2-size-20-vi-375x844.png", {
+      body: await paginationFooter.screenshot(),
+      contentType: "image/png",
+    })
+
+    await page.setViewportSize({ width: 1520, height: 1024 })
+    const requestsBeforeSizeChange = (await fixture.state()).requests.length
+    await page
+      .getByRole("combobox", { name: vi.pagination.pageSize })
+      .click()
+    await page.getByRole("option", { name: "50 / trang", exact: true }).click()
+
+    await expect(page).toHaveURL(
+      (url) =>
+        `${url.pathname}${url.search}` ===
+        "/vi/ai-provider-configs?page=1&size=50&sort=id_desc"
+    )
+    await expect(page.getByText("Hiển thị 1-50 trên 101 kết quả")).toBeVisible()
+    await expect(page.getByRole("row")).toHaveCount(51)
+
+    const sizeChangeRequests = (await fixture.state()).requests
+      .slice(requestsBeforeSizeChange)
+      .filter(
+        (request) =>
+          request.method === "GET" && request.path === "/ai-provider-configs"
+      )
+    expect(sizeChangeRequests.map((request) => request.query)).toEqual([
+      "?page=0&size=50&sort=id%2Cdesc",
+    ])
+  })
+
+  test("keeps a genuine list API denial on the access-denied path", async ({
+    page,
+    fixture,
+  }) => {
+    await fixture.setPermissions(["ai-provider-config:read"])
+    await fixture.setScenario("/ai-provider-configs", "permission-denied", "GET")
+    await page.setViewportSize({ width: 1520, height: 1024 })
+
+    const requestsBefore = (await fixture.state()).requests.length
+    await page.goto("/vi/ai-provider-configs?page=2&size=20&sort=id_desc")
+
+    await expect(
+      page
+        .getByRole("main")
+        .getByText(vi.aiProviderConfigs.readDenied, { exact: false })
+    ).toBeVisible()
+    await expect(page.getByRole("table")).toHaveCount(0)
+
+    const deniedListRequests = (await fixture.state()).requests
+      .slice(requestsBefore)
+      .filter(
+        (request) =>
+          request.method === "GET" && request.path === "/ai-provider-configs"
+      )
+    expect(deniedListRequests.map((request) => request.query)).toEqual([
+      "?page=1&size=20&sort=id%2Cdesc",
+    ])
+  })
+
   test("renders the approved list and opens read-only legacy detail", async ({
     page,
     fixture,

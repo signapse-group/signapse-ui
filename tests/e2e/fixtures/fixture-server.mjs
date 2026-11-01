@@ -153,6 +153,19 @@ function positiveOutOfRangeAiProviderConfigs() {
   }))
 }
 
+function pageTwoSizeTwentyAiProviderConfigs() {
+  return Array.from({ length: 101 }, (_, index) => {
+    const id = 101 - index
+    return {
+      id,
+      providerType: "OPENAI",
+      description: `Fixture connection ${id}`,
+      defaultProvider: false,
+      credentials: [{ id: id + 1000, keyPreview: `key-...${id}` }],
+    }
+  })
+}
+
 function workspace(id, name, currentWorkspace = false) {
   return {
     id,
@@ -1452,6 +1465,7 @@ function aiTaskConfigurationRouteResult(state, method, pathname, body, url) {
   }
 
   if (method === "GET" && pathname === "/ai-provider-configs") {
+    const scenario = getScenario(state, method, pathname)
     if (!hasFixturePermission(state, "ai-provider-config:read")) {
       return {
         __status: 403,
@@ -1461,7 +1475,6 @@ function aiTaskConfigurationRouteResult(state, method, pathname, body, url) {
         ),
       }
     }
-    const scenario = getScenario(state, method, pathname)
     const connections =
       scenario === "legacy-provider-options"
         ? [
@@ -1481,7 +1494,9 @@ function aiTaskConfigurationRouteResult(state, method, pathname, body, url) {
           ]
         : scenario === "positive-out-of-range"
           ? positiveOutOfRangeAiProviderConfigs()
-          : state.aiProviderConfigs
+          : scenario === "authorized-page-two-size-twenty-101"
+            ? pageTwoSizeTwentyAiProviderConfigs()
+            : state.aiProviderConfigs
     const result = slicePage(connections, url)
     const sort = { sorted: false, unsorted: true, empty: true }
     return {
@@ -2278,6 +2293,7 @@ function responseForRoute(state, method, pathname, url, body) {
 
   const aiProviderConfigId = pathname.match(/^\/ai-provider-configs\/(\d+)$/)
   if (method === "GET" && aiProviderConfigId) {
+    const scenario = getScenario(state, "GET", "/ai-provider-configs")
     if (!hasFixturePermission(state, "ai-provider-config:read")) {
       return {
         __status: 403,
@@ -2288,10 +2304,11 @@ function responseForRoute(state, method, pathname, url, body) {
       }
     }
     const connectionSource =
-      getScenario(state, "GET", "/ai-provider-configs") ===
-      "positive-out-of-range"
+      scenario === "positive-out-of-range"
         ? positiveOutOfRangeAiProviderConfigs()
-        : state.aiProviderConfigs
+        : scenario === "authorized-page-two-size-twenty-101"
+          ? pageTwoSizeTwentyAiProviderConfigs()
+          : state.aiProviderConfigs
     const connection = connectionSource.find(
       (item) => item.id === Number(aiProviderConfigId[1])
     )
