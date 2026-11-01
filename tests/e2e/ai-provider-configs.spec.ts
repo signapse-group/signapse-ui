@@ -235,16 +235,10 @@ test.describe("P0 AI connections", () => {
         (request) =>
           request.method === "GET" && request.path === "/ai-provider-configs"
       )
-    expect(listRequests).toContainEqual(
-      expect.objectContaining({
-        query: "?page=133&size=10&sort=id%2Casc",
-      })
-    )
-    expect(listRequests).toContainEqual(
-      expect.objectContaining({
-        query: "?page=1&size=10&sort=id%2Casc",
-      })
-    )
+    expect(listRequests.map((request) => request.query)).toEqual([
+      "?page=133&size=10&sort=id%2Casc",
+      "?page=1&size=10&sort=id%2Casc",
+    ])
 
     await testInfo.attach("ai-connections-recovered-page-2-vi-1520x1024.png", {
       body: await page.screenshot({
