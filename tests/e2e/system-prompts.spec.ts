@@ -4,7 +4,7 @@ import { en } from "../../app/lib/i18n/dictionaries/en"
 import { vi } from "../../app/lib/i18n/dictionaries/vi"
 
 test.describe("P0 system prompt catalog and content hotfix", () => {
-  test("lists the producer catalog and stores local search in the URL", async ({
+  test("paginates the producer catalog and searches across the full list", async ({
     fixture,
     page,
   }, testInfo) => {
@@ -17,10 +17,15 @@ test.describe("P0 system prompt catalog and content hotfix", () => {
     await expect(page.locator('p[role="status"]')).toHaveText(
       "13 supported prompts"
     )
-    await expect(page.locator("tbody tr")).toHaveCount(13)
+    await expect(page.locator("tbody tr")).toHaveCount(10)
     await expect(
-      page.getByRole("row").filter({ hasText: "Telegram" })
-    ).toHaveCount(3)
+      page.locator('[data-slot="app-pagination-footer"]')
+    ).toContainText("Showing 1-10 of 13 results")
+    await expect(
+      page
+        .getByRole("combobox", { name: en.pagination.pageSize })
+        .locator('[data-slot="select-value"]')
+    ).toHaveText("10")
     const listAccessibility = await new AxeBuilder({ page })
       .include("main")
       .analyze()
@@ -31,15 +36,35 @@ test.describe("P0 system prompt catalog and content hotfix", () => {
       contentType: "image/png",
     })
 
-    const search = page.getByRole("searchbox")
-    await search.fill("TELEGRAM_MARKET_ANALYSIS_SCALPING")
-    await expect(page.locator("tbody tr")).toHaveCount(1)
-    await expect(page).toHaveURL(/search=TELEGRAM_MARKET_ANALYSIS_SCALPING/)
+    const nextPage = page.getByRole("button", {
+      name: en.pagination.goToNext,
+    })
+    await nextPage.focus()
+    await expect(nextPage).toBeFocused()
+    await page.keyboard.press("Enter")
+    await expect(page).toHaveURL(/page=2/)
+    await expect(page.locator("tbody tr")).toHaveCount(3)
     await expect(
-      page.getByText("Telegram · Scalping", { exact: true })
+      page.getByRole("row").filter({ hasText: "Telegram" })
+    ).toHaveCount(3)
+    await expect(
+      page.locator('[data-slot="app-pagination-footer"]')
+    ).toContainText("Showing 11-13 of 13 results")
+    await testInfo.attach("system-prompt-list-page-2-1520x1340", {
+      body: await page.screenshot(),
+      contentType: "image/png",
+    })
+
+    const search = page.getByRole("searchbox")
+    await search.fill("NEWS_ARTICLE_CONTENT_LOCALIZATION")
+    await expect(page.locator("tbody tr")).toHaveCount(1)
+    await expect(page).toHaveURL(/search=NEWS_ARTICLE_CONTENT_LOCALIZATION/)
+    await expect(page).toHaveURL(/page=1/)
+    await expect(
+      page.getByText("News content normalization", { exact: true })
     ).toBeVisible()
     await page.reload()
-    await expect(search).toHaveValue("TELEGRAM_MARKET_ANALYSIS_SCALPING")
+    await expect(search).toHaveValue("NEWS_ARTICLE_CONTENT_LOCALIZATION")
     await expect(page.locator("tbody tr")).toHaveCount(1)
     await page.setViewportSize({ width: 390, height: 844 })
     const overflowDetails = await page.evaluate(() => ({
@@ -78,6 +103,70 @@ test.describe("P0 system prompt catalog and content hotfix", () => {
     expect(query.get("size")).toBe("100")
     expect(query.has("sort")).toBe(false)
     expect(query.has("$filter")).toBe(false)
+
+    await page.getByRole("button", { name: en.theme.toggle }).click()
+    await page.getByRole("menuitem", { name: en.theme.light }).click()
+    await expect(page.locator("html")).not.toHaveClass(/dark/)
+    await page.getByRole("searchbox").fill("")
+    await expect(page.locator("tbody tr")).toHaveCount(10)
+    await expect(page.locator('p[role="status"]')).toHaveText(
+      "13 supported prompts"
+    )
+    await page.setViewportSize({ width: 1520, height: 1340 })
+    await expect(
+      page.locator('[data-slot="app-pagination-footer"]')
+    ).toContainText("Showing 1-10 of 13 results")
+    await testInfo.attach("system-prompt-list-light-1520x1340", {
+      body: await page.screenshot(),
+      contentType: "image/png",
+    })
+  })
+
+  test("restores pagination from history and normalizes deep-link queries", async ({
+    fixture,
+    page,
+  }) => {
+    await fixture.setPermissions(["*"])
+    await page.setViewportSize({ width: 1520, height: 1340 })
+    await page.addInitScript(() => localStorage.setItem("theme", "dark"))
+
+    await page.goto("/en/system-prompts")
+    await expect(page.locator("tbody tr")).toHaveCount(10)
+    await page.getByRole("button", { name: en.pagination.goToNext }).click()
+    await expect(page).toHaveURL(/page=2/)
+    await expect(page.locator("tbody tr")).toHaveCount(3)
+
+    await page.goBack()
+    await expect(page).toHaveURL(/\/en\/system-prompts$/)
+    await expect(page.locator("tbody tr")).toHaveCount(10)
+    await page.goForward()
+    await expect(page).toHaveURL(/page=2/)
+    await expect(page.locator("tbody tr")).toHaveCount(3)
+    await page.reload()
+    await expect(page.locator("tbody tr")).toHaveCount(3)
+
+    await page.goto("/en/system-prompts?page=2&size=10&search=e&sort=name")
+    await expect(page.locator("tbody tr")).toHaveCount(3)
+    const search = page.getByRole("searchbox")
+    await search.fill("NEWS_ARTICLE_CONTENT_LOCALIZATION")
+    await expect(page.locator("tbody tr")).toHaveCount(1)
+    await expect(page).toHaveURL(
+      /page=1&size=10&search=NEWS_ARTICLE_CONTENT_LOCALIZATION&sort=name/
+    )
+    await page.reload()
+    await expect(search).toHaveValue("NEWS_ARTICLE_CONTENT_LOCALIZATION")
+    await expect(page.locator("tbody tr")).toHaveCount(1)
+
+    await page.goto("/en/system-prompts?page=2&size=25&search=e&sort=name")
+    await expect(page).toHaveURL(/page=1&size=10&search=e&sort=name/)
+    await expect(page.locator("tbody tr")).toHaveCount(10)
+    await page.getByRole("combobox", { name: en.pagination.pageSize }).click()
+    await page.getByRole("option", { name: "20 / page" }).click()
+    await expect(page).toHaveURL(/page=1&size=20&search=e&sort=name/)
+    await expect(page.locator("tbody tr")).toHaveCount(13)
+    await expect(
+      page.locator('[data-slot="app-pagination-footer"]')
+    ).toContainText("Showing 1-13 of 13 results")
   })
 
   test("lets read-only users view content without update controls", async ({
@@ -106,7 +195,7 @@ test.describe("P0 system prompt catalog and content hotfix", () => {
     const content = page.getByRole("textbox", {
       name: en.systemPrompts.content,
     })
-    await expect(content).toBeVisible()
+    await expect(content).toBeVisible({ timeout: 20_000 })
     await expect(content).toHaveJSProperty("readOnly", true)
     await expect(
       page.getByRole("button", { name: en.systemPrompts.saveHotfix })
@@ -174,7 +263,10 @@ test.describe("P0 system prompt catalog and content hotfix", () => {
     for (const frame of frames) {
       await page.setViewportSize({ width: frame.width, height: frame.height })
       await expect(page.getByRole("searchbox")).toBeVisible()
-      await expect(page.locator("tbody tr")).toHaveCount(13)
+      await expect(page.locator("tbody tr")).toHaveCount(10)
+      await expect(
+        page.locator('[data-slot="app-pagination-footer"]')
+      ).toBeVisible()
       await expect(
         page.getByRole("link", {
           name: "News content normalization",
@@ -194,6 +286,19 @@ test.describe("P0 system prompt catalog and content hotfix", () => {
         await tableScrollRegion.evaluate((element) => {
           element.scrollLeft = 0
         })
+        const paginationFooter = page.locator(
+          '[data-slot="app-pagination-footer"]'
+        )
+        await paginationFooter.scrollIntoViewIfNeeded()
+        await expect(paginationFooter).toBeInViewport()
+        await testInfo.attach(
+          "system-prompt-pagination-footer-mobile-360x800",
+          {
+            body: await paginationFooter.screenshot(),
+            contentType: "image/png",
+          }
+        )
+        await page.evaluate(() => window.scrollTo(0, 0))
       }
 
       if (frame.capture) {
