@@ -148,7 +148,7 @@ test.describe("P0 Dashboard Overview", () => {
     await page.locator("#workspace-switcher-trigger").click()
     await page.getByRole("menuitem", { name: /Workspace Beta/ }).click()
     await expect(
-      page.getByRole("heading", { name: "Workspace Beta" })
+      page.getByRole("heading", { name: "Workspace Beta", exact: true })
     ).toBeVisible()
     await expect(
       page.getByText("Beta only fixture asset", { exact: true })
@@ -165,7 +165,7 @@ test.describe("P0 Dashboard Overview", () => {
     await page.reload()
 
     await expect(
-      page.getByRole("heading", { name: "Workspace Beta" })
+      page.getByRole("heading", { name: "Workspace Beta", exact: true })
     ).toBeVisible()
     await expect(
       page.getByText("Beta only fixture asset", { exact: true })
