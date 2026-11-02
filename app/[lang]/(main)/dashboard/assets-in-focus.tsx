@@ -151,9 +151,9 @@ export function AssetsInFocusSkeleton() {
                     <ItemTitle>
                       <Skeleton className="h-4 w-48 max-w-full motion-reduce:animate-none" />
                     </ItemTitle>
-                    <ItemDescription>
+                    <div className="flex min-h-4 items-center">
                       <Skeleton className="h-4 w-full max-w-2xl motion-reduce:animate-none" />
-                    </ItemDescription>
+                    </div>
                     <Skeleton className="h-3 w-2/3 max-w-xl motion-reduce:animate-none" />
                   </ItemContent>
                   <ItemActions>

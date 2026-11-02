@@ -445,6 +445,9 @@ export const vi = {
       "Tài khoản hiện tại cần quyền đọc không gian làm việc để xem tổng quan và các dữ liệu theo phạm vi không gian làm việc.",
     workspaceLoadError: "Không thể tải không gian làm việc.",
     overviewLoadErrorTitle: "Không thể tải tổng quan không gian làm việc",
+    scopeChangedTitle: "Không gian làm việc đã thay đổi khi tải",
+    scopeChangedDescription:
+      "Không gian làm việc đã thay đổi trong lúc tải tổng quan. Hãy tải lại để xem dữ liệu của không gian đang hoạt động.",
     noActiveTitle: "Chưa có không gian làm việc đang hoạt động",
     noActiveDescription:
       "Hãy tạo hoặc chọn một không gian làm việc để bắt đầu theo dõi tài sản, truy vấn thị trường và khám phá dữ liệu theo đúng phạm vi.",
@@ -485,7 +488,9 @@ export const vi = {
     eventTimeline: {
       title: "Dòng sự kiện",
       description:
-        "Các sự kiện thị trường gần đây trong phạm vi theo dõi hiện tại.",
+        "Năm sự kiện đủ điều kiện đầu tiên theo thứ tự từ hệ thống, thuộc watchlist của không gian làm việc hiện tại.",
+      workspaceRequiredDescription:
+        "Hãy chọn không gian làm việc đang hoạt động để tải sự kiện theo tài sản được theo dõi.",
       viewAll: "Xem tất cả sự kiện",
       openEvent: "Mở sự kiện",
       themes: "Chủ đề",
@@ -553,13 +558,17 @@ export const vi = {
     },
     latestNews: {
       title: "Tin tức mới nhất",
-      description: "Các bài viết tin tức mới nhất trên Signapse.",
+      description:
+        "Năm bài viết mới nhất trên toàn Signapse, độc lập với không gian làm việc hiện tại.",
       viewAll: "Xem tất cả tin tức",
       openArticle: "Mở bài viết",
       emptyTitle: "Chưa có tin tức mới",
       emptyDescription: "Tin tức mới nhất sẽ hiển thị tại đây khi có bài viết.",
       errorTitle: "Không thể tải tin tức mới nhất",
       errorDescription: "Tin tức mới nhất hiện không khả dụng.",
+      deniedTitle: "Chưa có quyền xem tin tức mới nhất",
+      deniedDescription:
+        "Tài khoản cần quyền đọc bài viết tin tức để xem module này.",
       invalidDate: "Thời gian không hợp lệ",
     },
     tradingSnapshot: {

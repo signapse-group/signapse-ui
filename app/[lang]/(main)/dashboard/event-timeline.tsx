@@ -29,7 +29,6 @@ import {
 } from "@/components/ui/card"
 import {
   Empty,
-  EmptyContent,
   EmptyDescription,
   EmptyHeader,
   EmptyMedia,
@@ -50,19 +49,22 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { DashboardQuickDetailButton } from "./dashboard-quick-detail"
 
 export function EventTimeline({
+  denied = false,
   dictionary,
   error,
   locale,
   metric,
 }: {
+  denied?: boolean
   dictionary: Dictionary
   error: string | null
   locale: AppLocale
   metric: DashboardRecentEventsMetricResponse | null
 }) {
   const t = dictionary.workspaceOverview.eventTimeline
-  const hasItems = metric?.state === "AVAILABLE" && metric.items.length > 0
-  const showViewAll = hasItems
+  const visibleItems =
+    metric?.state === "AVAILABLE" ? metric.items.slice(0, 5) : []
+  const hasItems = visibleItems.length > 0
 
   return (
     <section aria-labelledby="dashboard-event-timeline-title">
@@ -72,7 +74,7 @@ export function EventTimeline({
             <h2 id="dashboard-event-timeline-title">{t.title}</h2>
           </CardTitle>
           <CardDescription>{t.description}</CardDescription>
-          {showViewAll ? (
+          {!denied && metric?.state !== "DENIED" ? (
             <CardAction>
               <LocalizedLink
                 href="/events"
@@ -86,7 +88,13 @@ export function EventTimeline({
           ) : null}
         </CardHeader>
         <CardContent>
-          {error || !metric ? (
+          {denied ? (
+            <TimelineState
+              description={t.deniedDescription}
+              icon={ShieldAlertIcon}
+              title={t.deniedTitle}
+            />
+          ) : error || !metric ? (
             <TimelineState
               description={error ?? t.errorDescription}
               icon={CircleSlashIcon}
@@ -107,7 +115,7 @@ export function EventTimeline({
           ) : hasItems ? (
             <EventTimelineItems
               dictionary={dictionary}
-              items={metric.items}
+              items={visibleItems}
               locale={locale}
             />
           ) : (
@@ -284,15 +292,6 @@ function EmptyEventTimeline({ dictionary }: { dictionary: Dictionary }) {
         <EmptyTitle>{t.emptyTitle}</EmptyTitle>
         <EmptyDescription>{t.emptyDescription}</EmptyDescription>
       </EmptyHeader>
-      <EmptyContent>
-        <LocalizedLink
-          href="/events"
-          className={buttonVariants({ variant: "outline", size: "sm" })}
-        >
-          {t.viewAll}
-          <ArrowRightIcon data-icon="inline-end" />
-        </LocalizedLink>
-      </EmptyContent>
     </Empty>
   )
 }

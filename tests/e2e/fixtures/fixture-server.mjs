@@ -798,8 +798,8 @@ function slicePage(items, url) {
   )
 }
 
-function dashboardSummary(workspaceId) {
-  return {
+function dashboardSummary(workspaceId, scenario = "success") {
+  const summary = {
     asOf: NOW,
     timezone: "Asia/Ho_Chi_Minh",
     scope: { workspaceId, watchlistAssetCount: 2 },
@@ -894,6 +894,86 @@ function dashboardSummary(workspaceId) {
       errorCode: null,
     },
   }
+
+  if (workspaceId === 2) {
+    summary.scope.watchlistAssetCount = 1
+    summary.recentEvents.items[0] = {
+      ...summary.recentEvents.items[0],
+      id: 62,
+      title: "Energy demand outlook revised higher",
+      description: "Workspace Beta synthetic event.",
+      occurredAt: "2026-01-14T08:00:00.000Z",
+    }
+    summary.assetsInFocus.items[0] = {
+      assetId: 201,
+      assetName: "Beta only fixture asset",
+      assetSymbol: "BETA",
+      assetType: "CRYPTO",
+      context: {
+        title: "Workspace Beta synthetic asset context",
+        summary: "Scoped to Workspace Beta.",
+        observedAt: NOW,
+      },
+    }
+    summary.marketNarratives.items[0] = {
+      ...summary.marketNarratives.items[0],
+      id: 82,
+      title: "Workspace Beta narrative",
+      thesis: "A narrative scoped to Workspace Beta.",
+    }
+  }
+
+  if (scenario === "overview-expanded") {
+    summary.scope.watchlistAssetCount = 9
+    summary.recentEvents.items = Array.from({ length: 7 }, (_, index) => {
+      const event = summary.recentEvents.items[0]
+      return {
+        ...event,
+        id: 61 + index,
+        title:
+          index === 0
+            ? "Central bank signals a slower easing path"
+            : `Fixture overview event ${index + 1}`,
+        description: `Synthetic event ${index + 1} for the Overview fixture.`,
+        occurredAt:
+          index === 3
+            ? "2026-01-13T08:00:00.000Z"
+            : `2026-01-15T0${8 - index}:00:00.000Z`,
+      }
+    })
+    summary.marketEvents24h.count = 29
+    summary.latestNews6h.count = 17
+  }
+
+  if (scenario === "scope-mismatch") {
+    summary.scope.workspaceId = workspaceId === 1 ? 2 : 1
+  }
+
+  return summary
+}
+
+function overviewAssets() {
+  return Array.from({ length: 9 }, (_, index) => ({
+    id: index === 0 ? 101 : 300 + index,
+    assetId: index === 0 ? 101 : 300 + index,
+    assetName: `Overview tracked asset ${index + 1}`,
+    assetSymbol: `OVR${index + 1}`,
+    assetType: "CRYPTO",
+    createdDate: NOW,
+  }))
+}
+
+function overviewNews() {
+  return Array.from({ length: 7 }, (_, index) => ({
+    id: 71 + index,
+    title: `Global fixture news ${index + 1}`,
+    description: `System-wide news item ${index + 1}, not linked to a workspace asset or event.`,
+    url: `https://fixture.invalid/news/${71 + index}`,
+    sourceName: "Fixture Wire",
+    publishedAt: new Date(Date.parse(NOW) - index * 60_000).toISOString(),
+    status: "INGESTED",
+    createdDate: NOW,
+  }))
 }
 
 function graphView(state) {
@@ -2438,7 +2518,10 @@ function responseForRoute(state, method, pathname, url, body) {
     const current =
       state.workspaces.find((item) => item.currentWorkspace) ??
       state.workspaces[0]
-    return dashboardSummary(current?.id ?? 1)
+    return dashboardSummary(
+      current?.id ?? 1,
+      getScenario(state, method, pathname)
+    )
   }
 
   if (method === "GET" && pathname === "/graph-view") return graphView(state)
@@ -2447,10 +2530,33 @@ function responseForRoute(state, method, pathname, url, body) {
     method === "GET" &&
     (pathname === "/watchlists" || pathname === "/watchlists/assets")
   ) {
-    const assets = state.assets.map((item) => ({
+    const currentWorkspace = state.workspaces.find(
+      (item) => item.currentWorkspace
+    )
+    const baseAssets =
+      currentWorkspace?.id === 2
+        ? [
+            {
+              id: 201,
+              assetId: 201,
+              assetName: "Beta only fixture asset",
+              assetSymbol: "BETA",
+              assetType: "CRYPTO",
+              createdDate: NOW,
+            },
+          ]
+        : state.assets
+    const assets = baseAssets.map((item) => ({
       ...item,
       lastModifiedDate: undefined,
     }))
+
+    if (
+      pathname === "/watchlists" &&
+      getScenario(state, method, pathname) === "overview-expanded"
+    ) {
+      assets.splice(0, assets.length, ...overviewAssets())
+    }
 
     if (
       pathname === "/watchlists" &&
@@ -2494,13 +2600,21 @@ function responseForRoute(state, method, pathname, url, body) {
   }
 
   if (method === "GET" && pathname === "/news-articles") {
-    return slicePage(state.newsArticles, url)
+    const articles =
+      getScenario(state, method, pathname) === "overview-expanded"
+        ? overviewNews()
+        : state.newsArticles
+    return slicePage(articles, url)
   }
 
   const newsArticleDetailMatch = pathname.match(/^\/news-articles\/(\d+)$/)
   if (method === "GET" && newsArticleDetailMatch) {
     const id = Number(newsArticleDetailMatch[1])
-    const article = state.newsArticles.find((item) => item.id === id)
+    const articles =
+      getScenario(state, method, "/news-articles") === "overview-expanded"
+        ? overviewNews()
+        : state.newsArticles
+    const article = articles.find((item) => item.id === id)
 
     if (!article) {
       return {

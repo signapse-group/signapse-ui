@@ -76,6 +76,8 @@ type FixtureController = {
       | "annotations-unsafe-evidence-url"
       | "annotations-delayed-old-scope"
       | "chart-later-page"
+      | "overview-expanded"
+      | "scope-mismatch"
       | "calendar-historical",
     method?: string
   ): Promise<void>
