@@ -447,8 +447,15 @@ function AiTaskConfigurationRow({
         }
       }
 
+      const focusTargetId =
+        firstInvalidControlId ??
+        (tokenWasSaved
+          ? tokenControlId
+          : selectionWasSaved
+            ? modelControlId
+            : undefined)
       setFocusAfterSubmit(
-        firstInvalidControlId ? { controlId: firstInvalidControlId } : null
+        focusTargetId ? { controlId: focusTargetId } : null
       )
 
       if (selectionWasSaved || tokenWasSaved) {
