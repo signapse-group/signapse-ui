@@ -147,9 +147,9 @@ export function MarketNarrativesSkeleton() {
                     <ItemTitle>
                       <Skeleton className="h-4 w-48 max-w-full motion-reduce:animate-none" />
                     </ItemTitle>
-                    <ItemDescription>
+                    <div className="flex min-h-4 items-center">
                       <Skeleton className="h-4 w-full max-w-2xl motion-reduce:animate-none" />
-                    </ItemDescription>
+                    </div>
                     <div className="flex flex-wrap gap-2">
                       <Skeleton className="h-5 w-20 rounded-full motion-reduce:animate-none" />
                       <Skeleton className="h-5 w-24 rounded-full motion-reduce:animate-none" />

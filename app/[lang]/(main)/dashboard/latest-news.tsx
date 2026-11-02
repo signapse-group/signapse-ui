@@ -17,7 +17,6 @@ import {
 } from "@/components/ui/card"
 import {
   Empty,
-  EmptyContent,
   EmptyDescription,
   EmptyHeader,
   EmptyMedia,
@@ -38,11 +37,13 @@ import { DashboardQuickDetailButton } from "./dashboard-quick-detail"
 
 export function LatestNews({
   articles,
+  denied = false,
   dictionary,
   error,
   locale,
 }: {
   articles: NewsArticleListResponse[]
+  denied?: boolean
   dictionary: Dictionary
   error: string | null
   locale: AppLocale
@@ -58,7 +59,7 @@ export function LatestNews({
             <h2 id="dashboard-latest-news-title">{t.title}</h2>
           </CardTitle>
           <CardDescription>{t.description}</CardDescription>
-          {hasArticles || error ? (
+          {!denied ? (
             <CardAction>
               <LocalizedLink
                 href="/news-articles"
@@ -72,7 +73,17 @@ export function LatestNews({
           ) : null}
         </CardHeader>
         <CardContent>
-          {error ? (
+          {denied ? (
+            <Empty className="min-h-48 border" role="status">
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <CircleSlashIcon />
+                </EmptyMedia>
+                <EmptyTitle>{t.deniedTitle}</EmptyTitle>
+                <EmptyDescription>{t.deniedDescription}</EmptyDescription>
+              </EmptyHeader>
+            </Empty>
+          ) : error ? (
             <Empty className="min-h-48">
               <EmptyHeader>
                 <EmptyMedia variant="icon">
@@ -97,14 +108,6 @@ export function LatestNews({
                 <EmptyTitle>{t.emptyTitle}</EmptyTitle>
                 <EmptyDescription>{t.emptyDescription}</EmptyDescription>
               </EmptyHeader>
-              <EmptyContent>
-                <LocalizedLink
-                  href="/news-articles"
-                  className={buttonVariants({ variant: "outline" })}
-                >
-                  {t.viewAll}
-                </LocalizedLink>
-              </EmptyContent>
             </Empty>
           )}
         </CardContent>

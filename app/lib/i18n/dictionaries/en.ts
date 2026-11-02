@@ -447,6 +447,9 @@ export const en: Dictionary = {
       "The current account needs workspace read permission to view the overview and scoped workspace data.",
     workspaceLoadError: "Could not load workspaces.",
     overviewLoadErrorTitle: "Could not load workspace overview",
+    scopeChangedTitle: "Workspace changed while loading",
+    scopeChangedDescription:
+      "The workspace changed while this overview was loading. Refresh to see data for the active workspace.",
     noActiveTitle: "No active workspace yet",
     noActiveDescription:
       "Create or choose a workspace to start tracking assets, querying markets, and exploring data in the right scope.",
@@ -484,7 +487,10 @@ export const en: Dictionary = {
     },
     eventTimeline: {
       title: "Event timeline",
-      description: "Recent market events in the current tracking scope.",
+      description:
+        "The first five eligible events for the current workspace watchlist, in producer order.",
+      workspaceRequiredDescription:
+        "Choose an active workspace to load events for its tracked assets.",
       viewAll: "View all events",
       openEvent: "Open event",
       themes: "Themes",
@@ -551,7 +557,8 @@ export const en: Dictionary = {
     },
     latestNews: {
       title: "Latest news",
-      description: "The most recent news articles across Signapse.",
+      description:
+        "The five latest news articles across Signapse, independent of the current workspace.",
       viewAll: "View all news",
       openArticle: "Open article",
       emptyTitle: "No recent news yet",
@@ -559,6 +566,9 @@ export const en: Dictionary = {
         "Latest news will appear here when articles are available.",
       errorTitle: "Could not load latest news",
       errorDescription: "Latest news is currently unavailable.",
+      deniedTitle: "No permission to view latest news",
+      deniedDescription:
+        "The account needs news article read permission to view this module.",
       invalidDate: "Invalid time",
     },
     tradingSnapshot: {
