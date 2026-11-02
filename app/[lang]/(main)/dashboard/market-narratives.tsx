@@ -62,7 +62,7 @@ export function MarketNarratives({
 }) {
   const t = dictionary.workspaceOverview.marketNarratives
   const hasItems = metric?.state === "AVAILABLE" && metric.items.length > 0
-  const showGraphView = hasItems && canReadGraphView
+  const showGraphView = canReadGraphView
 
   return (
     <section aria-labelledby="dashboard-market-narratives-title">

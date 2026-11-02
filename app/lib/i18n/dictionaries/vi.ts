@@ -509,7 +509,7 @@ export const vi = {
     assetsInFocus: {
       title: "Tài sản cần chú ý",
       description:
-        "Các tài sản được xếp hạng cùng bối cảnh thị trường mới nhất trong phạm vi này.",
+        "Tài sản được ưu tiên theo bối cảnh sự kiện hoặc luận điểm phù hợp trong phạm vi này.",
       graphView: "Mở Graph View",
       marketCharts: "Mở biểu đồ thị trường",
       emptyTitle: "Chưa có tài sản cần chú ý",
@@ -533,7 +533,7 @@ export const vi = {
     marketNarratives: {
       title: "Luận điểm thị trường",
       description:
-        "Các luận điểm được xếp hạng trong phạm vi theo dõi của không gian làm việc.",
+        "Tối đa ba luận điểm được xếp hạng trong bảy ngày qua theo phạm vi hiện tại.",
       graphView: "Mở Graph View",
       theme: "Chủ đề",
       affectedAssets: "Tài sản liên quan",
@@ -577,7 +577,8 @@ export const vi = {
       events: "Sự kiện thị trường",
       eventsWindow: "mới trong 24 giờ",
       narratives: "Luận điểm thị trường",
-      narrativesWindow: "đang hoạt động hoặc mới hình thành",
+      narrativesScope:
+        "Tổng số luận điểm đang hoạt động hoặc mới hình thành; không giới hạn 7 ngày.",
       news: "Tin tức mới",
       newsWindow: "xuất bản trong 6 giờ gần nhất",
       noData: "Chưa có dữ liệu",

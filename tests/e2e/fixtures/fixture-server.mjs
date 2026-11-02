@@ -798,7 +798,8 @@ function slicePage(items, url) {
   )
 }
 
-function dashboardSummary(workspaceId, scenario = "success") {
+function dashboardSummary(workspaceId, scenario = "success", locale = "en") {
+  const isVietnamese = locale.toLowerCase().startsWith("vi")
   const summary = {
     asOf: NOW,
     timezone: "Asia/Ho_Chi_Minh",
@@ -855,14 +856,16 @@ function dashboardSummary(workspaceId, scenario = "success") {
       items: [
         {
           id: 81,
-          title: "Risk appetite returns",
-          thesis: "Synthetic narrative.",
+          title: isVietnamese
+            ? "Khẩu vị rủi ro trở lại"
+            : "Risk appetite returns",
+          thesis: isVietnamese ? "Luận điểm tổng hợp." : "Synthetic narrative.",
           status: "ACTIVE",
           confidence: 0.8,
           lastUpdatedAt: NOW,
           primaryTheme: {
             themeId: 91,
-            themeTitle: "Macro",
+            themeTitle: isVietnamese ? "Kinh tế vĩ mô" : "Macro",
             themeSlug: "macro",
           },
           assets: [],
@@ -885,8 +888,12 @@ function dashboardSummary(workspaceId, scenario = "success") {
           assetSymbol: "BTCUSD",
           assetType: "CRYPTO",
           context: {
-            title: "Synthetic price momentum",
-            summary: "Fixture context for the dashboard.",
+            title: isVietnamese
+              ? "Động lượng giá tổng hợp"
+              : "Synthetic price momentum",
+            summary: isVietnamese
+              ? "Bối cảnh mẫu cho bảng tổng quan."
+              : "Fixture context for the dashboard.",
             observedAt: NOW,
           },
         },
@@ -918,13 +925,117 @@ function dashboardSummary(workspaceId, scenario = "success") {
     summary.marketNarratives.items[0] = {
       ...summary.marketNarratives.items[0],
       id: 82,
-      title: "Workspace Beta narrative",
-      thesis: "A narrative scoped to Workspace Beta.",
+      title: isVietnamese
+        ? "Luận điểm riêng của Workspace Beta"
+        : "Workspace Beta narrative",
+      thesis: isVietnamese
+        ? "Luận điểm thuộc Workspace Beta."
+        : "A narrative scoped to Workspace Beta.",
     }
   }
 
   if (scenario === "overview-expanded") {
     summary.scope.watchlistAssetCount = 9
+    summary.activeNarratives.count = 14
+    summary.assetsInFocus.items = [
+      {
+        assetId: 101,
+        assetName: "Bitcoin",
+        assetSymbol: "BTCUSD",
+        assetType: "CRYPTO",
+        context: {
+          title: isVietnamese
+            ? "Động lượng giá tổng hợp"
+            : "Synthetic price momentum",
+          summary: isVietnamese
+            ? "Bối cảnh mẫu cho bảng tổng quan."
+            : "Fixture context for the dashboard.",
+          observedAt: NOW,
+        },
+      },
+      ...["EQUITY", "ETF", "COMMODITY", "FX", "INDEX"].map(
+        (assetType, index) => ({
+          assetId: 301 + index,
+          assetName: isVietnamese
+            ? "Tài sản chú ý mẫu " + (index + 2)
+            : "Overview focus asset " + (index + 2),
+          assetSymbol: "FOCUS" + (index + 2),
+          assetType,
+          context: {
+            title: isVietnamese
+              ? "Bối cảnh chú ý " + (index + 2)
+              : "Focus context " + (index + 2),
+            summary:
+              index % 2 === 0
+                ? null
+                : isVietnamese
+                  ? "Tóm tắt bối cảnh bổ sung."
+                  : "Additional context summary.",
+            observedAt: index === 2 ? "2026-01-14T08:00:00.000Z" : NOW,
+          },
+        })
+      ),
+    ]
+    const activeNarrative = summary.marketNarratives.items[0]
+    summary.marketNarratives.items = [
+      {
+        ...activeNarrative,
+        id: 83,
+        title: isVietnamese ? "Thanh khoản lan rộng" : "Liquidity broadens",
+        thesis: isVietnamese
+          ? "Dòng tiền đang mở rộng sang nhiều nhóm tài sản."
+          : "Flows are broadening across asset groups.",
+        status: "EMERGING",
+        confidence: 0.91,
+        primaryTheme: {
+          themeId: 93,
+          themeTitle: isVietnamese ? "Kinh tế vĩ mô" : "Macro",
+          themeSlug: "macro",
+        },
+        assets: [
+          {
+            assetId: 101,
+            assetName: "Bitcoin",
+            assetSymbol: "BTCUSD",
+            assetType: "CRYPTO",
+            relationType: "PRIMARY",
+            weight: null,
+          },
+          {
+            assetId: 999,
+            assetName: "Gold",
+            assetSymbol: "GOLD",
+            assetType: "COMMODITY",
+            relationType: "AFFECTED",
+            weight: 0.5,
+          },
+        ],
+      },
+      {
+        ...activeNarrative,
+        id: 82,
+        title: null,
+        thesis: null,
+        status: "WEAKENING",
+        confidence: null,
+        primaryTheme: {
+          themeId: 92,
+          themeTitle: null,
+          themeSlug: "must-not-be-rendered",
+        },
+        assets: [
+          {
+            assetId: 999,
+            assetName: "Oil",
+            assetSymbol: "OIL",
+            assetType: "COMMODITY",
+            relationType: "AFFECTED",
+            weight: null,
+          },
+        ],
+      },
+      activeNarrative,
+    ]
     summary.recentEvents.items = Array.from({ length: 7 }, (_, index) => {
       const event = summary.recentEvents.items[0]
       return {
@@ -2121,7 +2232,7 @@ function feedbackRouteResult(state, method, pathname, url, body) {
   return null
 }
 
-function responseForRoute(state, method, pathname, url, body) {
+function responseForRoute(state, method, pathname, url, body, locale = "en") {
   const aiTaskResult = aiTaskConfigurationRouteResult(
     state,
     method,
@@ -2520,7 +2631,8 @@ function responseForRoute(state, method, pathname, url, body) {
       state.workspaces[0]
     return dashboardSummary(
       current?.id ?? 1,
-      getScenario(state, method, pathname)
+      getScenario(state, method, pathname),
+      locale
     )
   }
 
@@ -3283,7 +3395,14 @@ const server = createServer(async (request, response) => {
 
   const result =
     delayedGraphResult ??
-    responseForRoute(state, method, url.pathname, url, body)
+    responseForRoute(
+      state,
+      method,
+      url.pathname,
+      url,
+      body,
+      String(request.headers["accept-language"] ?? "en")
+    )
   const status = result?.__status ?? 200
   if (status === 204) {
     sendEmpty(response, 204)

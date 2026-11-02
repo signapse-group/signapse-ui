@@ -44,6 +44,77 @@ test.describe("P0 Dashboard Overview", () => {
     await expect(page.getByText("29", { exact: true })).toBeVisible()
     await expect(page.getByText("17", { exact: true })).toBeVisible()
 
+    const snapshot = page.locator(
+      'section[aria-labelledby="dashboard-trading-snapshot-title"]'
+    )
+    await expect(snapshot.getByText("14", { exact: true })).toBeVisible()
+    await expect(
+      snapshot.getByText(
+        "Tổng số luận điểm đang hoạt động hoặc mới hình thành; không giới hạn 7 ngày."
+      )
+    ).toBeVisible()
+
+    const assetsInFocus = page.locator(
+      'section[aria-labelledby="dashboard-assets-in-focus-title"]'
+    )
+    await expect(assetsInFocus.getByRole("listitem")).toHaveCount(6)
+    expect(
+      await assetsInFocus.getByRole("heading", { level: 3 }).allTextContents()
+    ).toEqual([
+      "BTCUSD · Bitcoin",
+      "FOCUS2 · Tài sản chú ý mẫu 2",
+      "FOCUS3 · Tài sản chú ý mẫu 3",
+      "FOCUS4 · Tài sản chú ý mẫu 4",
+      "FOCUS5 · Tài sản chú ý mẫu 5",
+      "FOCUS6 · Tài sản chú ý mẫu 6",
+    ])
+    await expect(
+      assetsInFocus.getByText("Động lượng giá tổng hợp")
+    ).toBeVisible()
+    const marketCharts = assetsInFocus.getByRole("link", {
+      name: "Mở biểu đồ thị trường: BTCUSD",
+    })
+    await expect(marketCharts).toHaveAttribute(
+      "href",
+      "/vi/market-charts?assetId=101&timeframe=1h"
+    )
+    await expect(
+      assetsInFocus.getByRole("link", { name: "Mở Graph View" })
+    ).toHaveAttribute("href", "/vi/graph-view")
+
+    const marketNarratives = page.locator(
+      'section[aria-labelledby="dashboard-market-narratives-title"]'
+    )
+    await expect(marketNarratives.getByRole("listitem")).toHaveCount(3)
+    expect(
+      await marketNarratives
+        .getByRole("heading", { level: 3 })
+        .allTextContents()
+    ).toEqual([
+      "Thanh khoản lan rộng",
+      "Luận điểm chưa có tiêu đề",
+      "Khẩu vị rủi ro trở lại",
+    ])
+    await expect(
+      marketNarratives.getByText(
+        "Dòng tiền đang mở rộng sang nhiều nhóm tài sản."
+      )
+    ).toBeVisible()
+    await expect(marketNarratives.getByText("BTCUSD")).toBeVisible()
+    await expect(marketNarratives.getByText("GOLD")).toBeVisible()
+    await expect(marketNarratives.getByText("OIL")).toBeVisible()
+    await expect(
+      marketNarratives.getByText("Luận điểm chưa có tiêu đề")
+    ).toBeVisible()
+    await expect(
+      marketNarratives.getByText(
+        "Tối đa ba luận điểm được xếp hạng trong bảy ngày qua theo phạm vi hiện tại."
+      )
+    ).toBeVisible()
+    await expect(
+      marketNarratives.getByRole("link", { name: "Mở Graph View" })
+    ).toHaveAttribute("href", "/vi/graph-view")
+
     const timelineBox = await timeline.boundingBox()
     const newsBox = await news.boundingBox()
     expect(timelineBox).not.toBeNull()
@@ -55,6 +126,27 @@ test.describe("P0 Dashboard Overview", () => {
       body: await page.screenshot({ fullPage: true }),
       contentType: "image/png",
     })
+
+    const summaryRequests = (await fixture.state()).requests.filter(
+      (request) =>
+        request.method === "GET" && request.path === "/dashboard/summary"
+    )
+    expect(summaryRequests.length).toBeGreaterThan(0)
+    expect(summaryRequests.every((request) => request.locale === "vi")).toBe(
+      true
+    )
+
+    await marketCharts.focus()
+    await expect(marketCharts).toBeFocused()
+    await marketCharts.press("Enter")
+    await expect(page).toHaveURL(
+      /\/vi\/market-charts\?assetId=101&timeframe=1h$/,
+      { timeout: 60_000 }
+    )
+    await page.goBack()
+    await expect(
+      assetsInFocus.getByRole("heading", { name: "BTCUSD · Bitcoin" })
+    ).toBeVisible()
 
     const articleTrigger = news.getByRole("button", {
       name: "Mở bài viết: Global fixture news 1",
@@ -132,6 +224,57 @@ test.describe("P0 Dashboard Overview", () => {
         contentType: "image/png",
       })
     }
+
+    await page.setViewportSize({ width: 1024, height: 900 })
+    await page.goto("/en/dashboard")
+    const englishSnapshot = page.locator(
+      'section[aria-labelledby="dashboard-trading-snapshot-title"]'
+    )
+    await expect(
+      englishSnapshot.getByText("Total active or emerging; no 7-day limit.")
+    ).toBeVisible()
+    const englishAssetsInFocus = page.locator(
+      'section[aria-labelledby="dashboard-assets-in-focus-title"]'
+    )
+    await expect(
+      englishAssetsInFocus.getByText(
+        "Prioritized using relevant event or narrative context in this scope."
+      )
+    ).toBeVisible()
+    await expect(
+      englishAssetsInFocus.getByRole("heading", {
+        name: "FOCUS2 · Overview focus asset 2",
+      })
+    ).toBeVisible()
+    await expect(
+      englishAssetsInFocus.getByRole("link", {
+        name: "Open Market Charts: BTCUSD",
+      })
+    ).toHaveAttribute("href", "/en/market-charts?assetId=101&timeframe=1h")
+    const englishNarratives = page.locator(
+      'section[aria-labelledby="dashboard-market-narratives-title"]'
+    )
+    await expect(
+      englishNarratives.getByText(
+        "Up to three ranked narratives from the last seven days in this workspace."
+      )
+    ).toBeVisible()
+    await expect(
+      englishNarratives.getByRole("heading", { name: "Liquidity broadens" })
+    ).toBeVisible()
+    await expect(
+      englishNarratives.getByRole("heading", { name: "Untitled narrative" })
+    ).toBeVisible()
+    await expect(
+      englishNarratives.getByRole("link", { name: "Open Graph View" })
+    ).toHaveAttribute("href", "/en/graph-view")
+    const englishSummaryRequests = (await fixture.state()).requests.filter(
+      (request) =>
+        request.method === "GET" && request.path === "/dashboard/summary"
+    )
+    expect(
+      englishSummaryRequests.some((request) => request.locale === "en")
+    ).toBe(true)
   })
 
   test("reloads after workspace changes without carrying old scoped data", async ({
@@ -144,6 +287,9 @@ test.describe("P0 Dashboard Overview", () => {
       page.getByRole("heading", { name: "Workspace Alpha" })
     ).toBeVisible()
     await expect(page.getByText("Bitcoin", { exact: true })).toBeVisible()
+    await expect(
+      page.getByRole("heading", { name: "Khẩu vị rủi ro trở lại" })
+    ).toBeVisible()
 
     await page.locator("#workspace-switcher-trigger").click()
     await page.getByRole("menuitem", { name: /Workspace Beta/ }).click()
@@ -156,6 +302,24 @@ test.describe("P0 Dashboard Overview", () => {
     await expect(
       page.getByRole("heading", { name: "BETA · Beta only fixture asset" })
     ).toBeVisible()
+    const betaChart = page.getByRole("link", {
+      name: "Mở biểu đồ thị trường: BETA",
+    })
+    await expect(betaChart).toHaveAttribute(
+      "href",
+      "/vi/market-charts?assetId=201&timeframe=1h"
+    )
+    await expect(
+      page.getByRole("heading", {
+        name: "Luận điểm riêng của Workspace Beta",
+      })
+    ).toBeVisible()
+    await expect(
+      page.getByRole("heading", { name: "Khẩu vị rủi ro trở lại" })
+    ).toHaveCount(0)
+    await expect(
+      page.getByRole("link", { name: "Mở Graph View" }).first()
+    ).toHaveAttribute("href", "/vi/graph-view")
     await expect(
       page.getByRole("button", {
         name: "Mở sự kiện: Energy demand outlook revised higher",
@@ -171,6 +335,11 @@ test.describe("P0 Dashboard Overview", () => {
       page.getByText("Beta only fixture asset", { exact: true })
     ).toBeVisible()
     await expect(page.getByText("Bitcoin", { exact: true })).toHaveCount(0)
+    await expect(
+      page.getByRole("heading", {
+        name: "Luận điểm riêng của Workspace Beta",
+      })
+    ).toBeVisible()
     await expect(
       page.getByRole("heading", { name: "BETA · Beta only fixture asset" })
     ).toBeVisible()

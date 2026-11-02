@@ -97,7 +97,7 @@ export function TradingSnapshot({
             className="min-[1440px]:col-span-3"
             description={getMetricDescription(
               summary.activeNarratives.state,
-              t.narrativesWindow,
+              t.narrativesScope,
               t
             )}
             icon={RadarIcon}

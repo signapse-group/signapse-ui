@@ -65,7 +65,7 @@ export function AssetsInFocus({
 }) {
   const t = dictionary.workspaceOverview.assetsInFocus
   const hasItems = metric?.state === "AVAILABLE" && metric.items.length > 0
-  const showGraphView = hasItems && canReadGraphView
+  const showGraphView = canReadGraphView
 
   return (
     <section aria-labelledby="dashboard-assets-in-focus-title">
@@ -185,10 +185,18 @@ function AssetsInFocusItems({
   locale: AppLocale
 }) {
   const t = dictionary.workspaceOverview.assetsInFocus
+  const seenAssetIds = new Set<number>()
+  const uniqueItems = items
+    .filter(({ assetId }) => {
+      if (seenAssetIds.has(assetId)) return false
+      seenAssetIds.add(assetId)
+      return true
+    })
+    .slice(0, 6)
 
   return (
     <ItemGroup className="gap-0">
-      {items.map((item, index) => {
+      {uniqueItems.map((item, index) => {
         const summary = item.context.summary?.trim()
 
         return (
