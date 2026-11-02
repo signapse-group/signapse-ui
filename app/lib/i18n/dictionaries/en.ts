@@ -509,7 +509,7 @@ export const en: Dictionary = {
     assetsInFocus: {
       title: "Assets in focus",
       description:
-        "Ranked assets with the latest market context in this scope.",
+        "Prioritized using relevant event or narrative context in this scope.",
       graphView: "Open Graph View",
       marketCharts: "Open Market Charts",
       emptyTitle: "No assets in focus yet",
@@ -532,7 +532,8 @@ export const en: Dictionary = {
     },
     marketNarratives: {
       title: "Market narratives",
-      description: "Ranked narratives in the current workspace tracking scope.",
+      description:
+        "Up to three ranked narratives from the last seven days in this workspace.",
       graphView: "Open Graph View",
       theme: "Theme",
       affectedAssets: "Related assets",
@@ -577,7 +578,7 @@ export const en: Dictionary = {
       events: "Market events",
       eventsWindow: "new in the last 24 hours",
       narratives: "Market narratives",
-      narrativesWindow: "active or emerging",
+      narrativesScope: "Total active or emerging; no 7-day limit.",
       news: "Latest news",
       newsWindow: "published in the last 6 hours",
       noData: "No data",
