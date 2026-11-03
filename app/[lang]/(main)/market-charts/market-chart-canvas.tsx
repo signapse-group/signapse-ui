@@ -39,6 +39,7 @@ import type {
   MarketChartCandleItemResponse,
   MarketChartCandleRequest,
   MarketChartEconomicCalendarEventResponse,
+  MarketChartLiveQuoteResponse,
   MarketChartTimeframe,
 } from "@/app/lib/market-charts/definitions"
 import { AppTimeMetadata } from "@/components/app-time-metadata"
@@ -60,6 +61,7 @@ import {
   type MarketChartEconomicCalendarEventGroup,
 } from "./market-chart-annotations"
 import { getMarketChartCalendarEventTimestamp } from "./market-chart-calendar-helpers"
+import { syncMarketChartLiveQuoteOverlay } from "./market-chart-live-quote-overlay"
 import {
   createMarketChartDrawingGroupId,
   createMarketChartDrawingMode,
@@ -165,6 +167,8 @@ interface MarketChartCanvasProps {
   assetId: number
   candles: MarketChartCandleItemResponse[]
   dataVersion: number
+  liveQuote: MarketChartLiveQuoteResponse | null
+  liveQuoteIsLive: boolean
   timeframe: MarketChartTimeframe
   symbol?: string
   pricePrecision?: number | null
@@ -761,6 +765,8 @@ export const MarketChartCanvas = forwardRef<
     activeIndicators = [],
     candles,
     dataVersion = 0,
+    liveQuote,
+    liveQuoteIsLive,
     className,
     drawingToolActive = false,
     onAnnotationClose,
@@ -936,6 +942,8 @@ export const MarketChartCanvas = forwardRef<
   const { resolvedTheme } = useTheme()
   const chartThemeMode = resolveChartThemeMode(resolvedTheme)
   const chartThemePalette = getMarketChartThemePalette(chartThemeMode)
+  const liveQuoteAssetId = liveQuote?.assetId
+  const liveQuotePrice = liveQuote?.price
   const historyState =
     historyFeedback.loadId === chartLoadId ? historyFeedback.state : "idle"
   const historyError =
@@ -1755,6 +1763,46 @@ export const MarketChartCanvas = forwardRef<
     }
   }, [])
 
+  // ── Sync: current quote — independent from REST candle data ──
+  useEffect(() => {
+    const chart = chartRef.current
+
+    if (!chart) {
+      return
+    }
+
+    if (
+      liveQuoteAssetId !== assetId ||
+      typeof liveQuotePrice !== "number" ||
+      !Number.isFinite(liveQuotePrice)
+    ) {
+      syncMarketChartLiveQuoteOverlay(chart, null)
+      return
+    }
+
+    syncMarketChartLiveQuoteOverlay(chart, {
+      color: liveQuoteIsLive
+        ? chartThemePalette.drawing
+        : chartThemePalette.axis,
+      label: formatMarketChartPrice(
+        liveQuotePrice,
+        pricePrecision,
+        formatNumber
+      ),
+      price: liveQuotePrice,
+    })
+  }, [
+    assetId,
+    chartThemePalette.axis,
+    chartThemePalette.drawing,
+    formatNumber,
+    liveQuoteAssetId,
+    liveQuotePrice,
+    liveQuoteIsLive,
+    pricePrecision,
+    timeframe,
+  ])
+
   // ── Sync: theme styles — klinecharts native ──
   useEffect(() => {
     const chart = chartRef.current
@@ -2062,6 +2110,16 @@ export const MarketChartCanvas = forwardRef<
 
   const showCalendarLane =
     calendarLayerEnabled && calendarEventGroups.length > 0
+  const liveQuoteAccessibleDescription =
+    liveQuote?.assetId === assetId && Number.isFinite(liveQuote.price)
+      ? formatMessage(dictionary.marketCharts.live.accessibleQuote, {
+          price: formatMarketChartPrice(
+            liveQuote.price,
+            pricePrecision,
+            formatNumber
+          ),
+        })
+      : null
 
   return (
     <div
@@ -2069,7 +2127,11 @@ export const MarketChartCanvas = forwardRef<
       role="application"
       tabIndex={0}
       aria-label={dictionary.marketCharts.inspection.chartLabel}
-      aria-describedby={`${chartRegionId}-instructions`}
+      aria-describedby={
+        liveQuoteAccessibleDescription
+          ? `${chartRegionId}-instructions ${chartRegionId}-live-quote`
+          : `${chartRegionId}-instructions`
+      }
       className={cn(
         "relative h-full min-h-0 w-full rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
         className
@@ -2120,6 +2182,11 @@ export const MarketChartCanvas = forwardRef<
       <span id={`${chartRegionId}-instructions`} className="sr-only">
         {dictionary.marketCharts.inspection.keyboardInstructions}
       </span>
+      {liveQuoteAccessibleDescription ? (
+        <span id={`${chartRegionId}-live-quote`} className="sr-only">
+          {liveQuoteAccessibleDescription}
+        </span>
+      ) : null}
       <span
         role="status"
         aria-live="polite"

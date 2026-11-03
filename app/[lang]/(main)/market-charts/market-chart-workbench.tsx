@@ -109,8 +109,6 @@ import {
 import { PopoverContentInOverlay } from "@/components/ui/popover-content-in-overlay"
 import { cn } from "@/lib/utils"
 
-import { formatMarketChartPrice } from "./market-chart-theme"
-
 const MARKET_CHART_CALENDAR_VISIBILITY_STORAGE_KEY =
   "signapse:market-charts:calendar-layer:v1"
 const MARKET_CHART_COMPACT_WIDTH_PX = 768
@@ -585,29 +583,6 @@ function getFreshnessLabel(
   )
 }
 
-function getCurrentPriceLabel(
-  liveState: MarketChartLiveRuntimeState,
-  pricePrecision: number | null | undefined,
-  localization: LocalizationContext
-) {
-  const quote = liveState.quote
-
-  if (!quote) {
-    return null
-  }
-
-  const price = formatMarketChartPrice(
-    quote.price,
-    pricePrecision,
-    localization.formatNumber
-  )
-
-  return localization.formatMessage(
-    localization.dictionary.marketCharts.live.currentPrice,
-    { price }
-  )
-}
-
 function getLiveStatusState(
   liveState: MarketChartLiveRuntimeState
 ): MarketChartLiveStreamState | null {
@@ -623,6 +598,13 @@ function getLiveStatusState(
         ? "STALE"
         : "SUBSCRIBED"
       : null
+  }
+
+  if (
+    status.state === "SUBSCRIBED" &&
+    (status.stale || liveState.quote?.stale)
+  ) {
+    return "STALE"
   }
 
   return status.state
@@ -1385,8 +1367,9 @@ function ChartSurface({
   data,
   error,
   errors,
-  currentPriceLabel,
   freshnessLabel,
+  liveQuote,
+  liveQuoteIsLive,
   isBusy,
   liveStatusLabel,
   liveStatusTone,
@@ -1434,8 +1417,9 @@ function ChartSurface({
   data: MarketChartDisplayData | null
   error: string | null
   errors: FormErrors
-  currentPriceLabel: string | null
   freshnessLabel: string | null
+  liveQuote: MarketChartLiveQuoteResponse | null
+  liveQuoteIsLive: boolean
   isBusy: boolean
   liveStatusLabel: string | null
   liveStatusTone: "error" | "live" | "pending" | "stale"
@@ -1805,6 +1789,8 @@ function ChartSurface({
                     assetId={selectedAsset.assetId}
                     candles={data?.candles ?? []}
                     dataVersion={dataVersion}
+                    liveQuote={liveQuote}
+                    liveQuoteIsLive={liveQuoteIsLive}
                     className="h-full min-h-0"
                     drawingToolActive={!!drawingState.activeTool}
                     annotationLayerEnabled={annotationLayerEnabled}
@@ -1994,7 +1980,6 @@ function ChartSurface({
           calendarEvents={calendarMarkerEvents}
           calendarLayerEnabled={calendarLayerEnabled}
           calendarLoadError={calendarLoadError}
-          currentPriceLabel={currentPriceLabel}
           freshnessLabel={freshnessLabel}
           groups={annotationGroups}
           isLoading={phase === "loading" || calendarLoading}
@@ -3202,7 +3187,6 @@ function MarketChartAnnotationControls({
   calendarEvents,
   calendarLayerEnabled,
   calendarLoadError,
-  currentPriceLabel,
   freshnessLabel,
   groups,
   isLoading,
@@ -3214,7 +3198,6 @@ function MarketChartAnnotationControls({
   calendarEvents: MarketChartEconomicCalendarEventResponse[]
   calendarLayerEnabled: boolean
   calendarLoadError: string | null
-  currentPriceLabel: string | null
   freshnessLabel: string | null
   groups: MarketChartAnnotationGroup[]
   isLoading: boolean
@@ -3309,8 +3292,8 @@ function MarketChartAnnotationControls({
           calendarLayerEnabled={calendarLayerEnabled}
           groups={groups}
         />
-        {currentPriceLabel || freshnessLabel || liveStatusLabel ? (
-          <div className="ml-auto flex w-full min-w-0 flex-wrap items-center justify-end gap-x-3 gap-y-1 text-right sm:w-auto sm:shrink-0">
+        {freshnessLabel || liveStatusLabel ? (
+          <div className="ml-auto flex w-full min-w-0 flex-wrap items-center justify-end gap-x-3 gap-y-1 pr-12 text-right sm:w-auto sm:shrink-0">
             {liveStatusLabel ? (
               <span aria-live="polite" className="flex items-center gap-2">
                 <span
@@ -3328,7 +3311,6 @@ function MarketChartAnnotationControls({
                 {liveStatusLabel}
               </span>
             ) : null}
-            {currentPriceLabel ? <span>{currentPriceLabel}</span> : null}
             {freshnessLabel ? (
               <AppTimeMetadata icon={RefreshCw}>
                 {freshnessLabel}
@@ -3423,14 +3405,11 @@ export function MarketChartWorkbench({
   useEffect(() => {
     chartDataRef.current = chartData
   }, [chartData])
-  const currentPriceLabel = getCurrentPriceLabel(
-    liveState,
-    chartData?.asset.pricePrecision,
-    localization
-  )
   const freshnessLabel = getFreshnessLabel(liveState, localization)
   const liveStatusLabel = getLiveStatusLabel(liveState, localization)
   const liveStatusTone = getLiveStatusTone(liveState)
+  const liveQuote =
+    liveState.quote?.assetId === selectedAssetId ? liveState.quote : null
   const annotationGroups = useMemo(() => {
     if (!annotationLayerEnabled || !chartData) {
       return []
@@ -4484,8 +4463,9 @@ export function MarketChartWorkbench({
         data={chartData}
         error={loadError}
         errors={errors}
-        currentPriceLabel={currentPriceLabel}
         freshnessLabel={freshnessLabel}
+        liveQuote={liveQuote}
+        liveQuoteIsLive={liveStatusTone === "live"}
         isBusy={isBusy}
         liveStatusLabel={liveStatusLabel}
         liveStatusTone={liveStatusTone}

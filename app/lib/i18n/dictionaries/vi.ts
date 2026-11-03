@@ -2091,8 +2091,8 @@ export const vi = {
       errorFallback: "Chưa tải được lịch sử. Kéo lại để thử.",
     },
     live: {
+      accessibleQuote: "Quote gần nhất: {price}",
       connecting: "Đang kết nối giá trực tiếp",
-      currentPrice: "Giá hiện tại: {price}",
       live: "Giá trực tiếp",
       marketClosed: "Thị trường đã đóng",
       reconnecting: "Đang kết nối lại",
