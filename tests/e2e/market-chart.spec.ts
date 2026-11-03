@@ -255,6 +255,8 @@ test.describe("P0 market chart workbench", () => {
       timeout: 30_000,
     })
     await expectMarketChartCanvasText(page, "110,50")
+    const chart = page.getByRole("application", { name: "Biểu đồ giá" })
+    await expect(chart).toHaveAccessibleDescription(/Quote gần nhất: 110,50/)
     const freshness = page.getByText(/^Cập nhật /).locator("..")
     await expect(freshness).toBeVisible()
 
@@ -266,6 +268,7 @@ test.describe("P0 market chart workbench", () => {
       await page.setViewportSize(viewport)
       await expectNoHorizontalOverflow(page)
       await expectMarketChartCanvasText(page, "110,50")
+      await expect(chart).toHaveAccessibleDescription(/Quote gần nhất: 110,50/)
       await expect(
         page.getByText("Giá trực tiếp", { exact: true })
       ).toBeVisible()
@@ -308,6 +311,7 @@ test.describe("P0 market chart workbench", () => {
     const status = chart.locator('span[role="status"]')
     await expect(page.locator("#market-chart-asset")).toBeVisible()
     await expect(chart).toBeVisible()
+    await expect(chart).not.toHaveAccessibleDescription(/Quote gần nhất/)
     await expect(
       page.getByRole("combobox", { name: "Khung thời gian" })
     ).toBeHidden()
@@ -1633,9 +1637,9 @@ test.describe("P0 market chart history selection", () => {
     await page.goto("/vi/market-charts?assetId=101&timeframe=1h")
     await expect(page.locator("canvas").first()).toBeVisible()
     await expectMarketChartCanvasText(page, "110,50")
-    const readout = page
-      .getByRole("application", { name: "Biểu đồ giá" })
-      .locator('span[role="status"]')
+    const chart = page.getByRole("application", { name: "Biểu đồ giá" })
+    const readout = chart.locator('span[role="status"]')
+    await expect(chart).toHaveAccessibleDescription(/Quote gần nhất: 110,50/)
     await expect(readout).not.toHaveText("")
 
     await fixture.setScenario("/market-charts/candles", "delayed-outage", "GET")
@@ -1678,6 +1682,9 @@ test.describe("P0 market chart history selection", () => {
     await page.getByRole("option", { name: "XAUUSD - Gold" }).click()
     await expect(page).toHaveURL(/assetId=102/)
     await expect(assetSelector).toContainText("XAUUSD - Gold")
+    await expect(
+      page.getByText("Quote gần nhất: 110,50", { exact: true })
+    ).toHaveCount(0)
     await clearChartCanvasTextDraws(page)
     await expect
       .poll(async () =>
@@ -1714,6 +1721,7 @@ test.describe("P0 market chart history selection", () => {
     await fixture.setScenario("/market-charts/candles", "success", "GET")
     await expect(readout).toContainText("105,00")
     await expectMarketChartCanvasText(page, "2.500,25")
+    await expect(chart).toHaveAccessibleDescription(/Quote gần nhất: 2.500,25/)
     await expectNoMarketChartCanvasText(page, "110,50")
     await expect(page.getByText("Giá trực tiếp", { exact: true })).toBeVisible()
     expect((await fixture.state()).streamConnections).toBe(2)

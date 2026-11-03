@@ -2110,6 +2110,7 @@ export const en: Dictionary = {
       errorFallback: "Could not load history. Pull again to retry.",
     },
     live: {
+      accessibleQuote: "Latest quote: {price}",
       connecting: "Connecting live price",
       live: "Live price",
       marketClosed: "Market closed",
