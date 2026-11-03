@@ -1,8 +1,14 @@
-import type { Page } from "@playwright/test"
+import type { Locator, Page } from "@playwright/test"
 
 import { expect, test } from "./fixtures"
 
 const MARKET_CHART_FIXTURE_NOW = "2026-01-15T08:00:00.000Z"
+
+type ChartCanvasTextDraw = {
+  canvas: HTMLCanvasElement
+  text: string
+  y: number
+}
 
 async function setAnnotationsVisible(page: Page, visible: boolean) {
   const annotationSwitch = page.getByRole("switch", {
@@ -44,6 +50,54 @@ async function expectNoHorizontalOverflow(page: Page) {
           document.documentElement.scrollWidth <=
           document.documentElement.clientWidth
       )
+    )
+    .toBe(true)
+}
+
+async function clearChartCanvasTextDraws(page: Page) {
+  await page.evaluate(() => {
+    const trackedWindow = window as Window & {
+      __sign474ChartCanvasTextDraws?: ChartCanvasTextDraw[]
+    }
+    trackedWindow.__sign474ChartCanvasTextDraws = []
+  })
+}
+
+async function expectNativeLegendShowsReadoutTime(page: Page, status: Locator) {
+  const readout = await status.innerText()
+  const time = readout.match(/\b\d{2}:\d{2}\b/)?.[0]
+
+  if (!time) throw new Error(`Could not read a candle time from: ${readout}`)
+
+  await expect
+    .poll(
+      () =>
+        page.evaluate((expectedTime) => {
+          const chart = document.querySelector(
+            '[role="application"][aria-label="Biểu đồ giá"]'
+          )
+          const chartCanvases = new Set(
+            Array.from(chart?.querySelectorAll("canvas") ?? [])
+          )
+          const trackedWindow = window as Window & {
+            __sign474ChartCanvasTextDraws?: ChartCanvasTextDraw[]
+          }
+
+          return (
+            trackedWindow.__sign474ChartCanvasTextDraws?.some(
+              ({ canvas, text, y }) => {
+                if (!canvas.isConnected || !chartCanvases.has(canvas)) {
+                  return false
+                }
+
+                const width = canvas.getBoundingClientRect().width
+                const scale = canvas.width / Math.max(width, 1)
+                return text.includes(expectedTime) && y / scale <= 80
+              }
+            ) ?? false
+          )
+        }, time),
+      { timeout: 5_000 }
     )
     .toBe(true)
 }
@@ -168,6 +222,37 @@ test.describe("P0 market chart workbench", () => {
     fixture,
   }, testInfo) => {
     await page.clock.install({ time: new Date(MARKET_CHART_FIXTURE_NOW) })
+    // KLineCharts paints the native legend on canvas, separately from the status node.
+    await page.addInitScript(() => {
+      const trackedWindow = window as Window & {
+        __sign474ChartCanvasTextDraws?: ChartCanvasTextDraw[]
+      }
+      trackedWindow.__sign474ChartCanvasTextDraws = []
+
+      const nativeFillText = CanvasRenderingContext2D.prototype.fillText
+      CanvasRenderingContext2D.prototype.fillText = function (
+        text,
+        x,
+        y,
+        maxWidth
+      ) {
+        if (
+          this.canvas.closest('[role="application"][aria-label="Biểu đồ giá"]')
+        ) {
+          trackedWindow.__sign474ChartCanvasTextDraws?.push({
+            canvas: this.canvas,
+            text: String(text),
+            y,
+          })
+        }
+
+        if (maxWidth === undefined) {
+          return nativeFillText.call(this, text, x, y)
+        }
+
+        return nativeFillText.call(this, text, x, y, maxWidth)
+      }
+    })
     await fixture.setScenario(
       "/market-charts/candles",
       "full-then-empty",
@@ -361,6 +446,7 @@ test.describe("P0 market chart workbench", () => {
     const panCanvasBounds = await page.locator("canvas").first().boundingBox()
     if (!panCanvasBounds)
       throw new Error("Market chart canvas was not laid out")
+    await clearChartCanvasTextDraws(page)
     const panStart = {
       x: panCanvasBounds.x + panCanvasBounds.width * 0.4,
       y: panCanvasBounds.y + panCanvasBounds.height * 0.5,
@@ -374,6 +460,7 @@ test.describe("P0 market chart workbench", () => {
     )
     await page.mouse.up()
     await expect(status).toHaveText(latestReadout)
+    await expectNativeLegendShowsReadoutTime(page, status)
     await testInfo.attach("sign-474-pan-keeps-latest-readout", {
       body: await page.screenshot({ fullPage: true }),
       contentType: "image/png",
@@ -381,14 +468,18 @@ test.describe("P0 market chart workbench", () => {
 
     await chart.focus()
     await expect(status).toHaveText(latestReadout)
+    await clearChartCanvasTextDraws(page)
     await chart.press("ArrowLeft")
     await expect(status).not.toHaveText(latestReadout)
+    await expectNativeLegendShowsReadoutTime(page, status)
     await testInfo.attach("sign-474-keyboard-inspection", {
       body: await page.screenshot({ fullPage: true }),
       contentType: "image/png",
     })
+    await clearChartCanvasTextDraws(page)
     await chart.press("Escape")
     await expect(status).toHaveText(latestReadout)
+    await expectNativeLegendShowsReadoutTime(page, status)
     await chart.evaluate((element) => (element as HTMLElement).blur())
     await expect(status).toHaveText(latestReadout)
 
