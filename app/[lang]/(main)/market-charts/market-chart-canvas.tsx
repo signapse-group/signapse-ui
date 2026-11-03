@@ -80,6 +80,7 @@ import {
 import {
   createChartStyles,
   createDrawingOverlayStyles,
+  formatMarketChartPrice,
   formatMarketChartVolume,
   getMarketChartThemePalette,
   resolveChartThemeMode,
@@ -836,10 +837,6 @@ export const MarketChartCanvas = forwardRef<
                 hour: "2-digit",
                 minute: "2-digit",
               }
-      const priceOptions: Intl.NumberFormatOptions = {
-        minimumFractionDigits: pricePrecision ?? 4,
-        maximumFractionDigits: pricePrecision ?? 4,
-      }
       const volume =
         typeof candle.volume === "number" && Number.isFinite(candle.volume)
           ? formatMarketChartVolume(candle.volume, formatNumber)
@@ -851,10 +848,14 @@ export const MarketChartCanvas = forwardRef<
           timeOptions,
           dictionary.marketCharts.format.notAvailable
         ),
-        open: formatNumber(candle.open, priceOptions),
-        high: formatNumber(candle.high, priceOptions),
-        low: formatNumber(candle.low, priceOptions),
-        close: formatNumber(candle.close, priceOptions),
+        open: formatMarketChartPrice(candle.open, pricePrecision, formatNumber),
+        high: formatMarketChartPrice(candle.high, pricePrecision, formatNumber),
+        low: formatMarketChartPrice(candle.low, pricePrecision, formatNumber),
+        close: formatMarketChartPrice(
+          candle.close,
+          pricePrecision,
+          formatNumber
+        ),
         volume,
       })
     },

@@ -109,6 +109,8 @@ import {
 import { PopoverContentInOverlay } from "@/components/ui/popover-content-in-overlay"
 import { cn } from "@/lib/utils"
 
+import { formatMarketChartPrice } from "./market-chart-theme"
+
 const MARKET_CHART_CALENDAR_VISIBILITY_STORAGE_KEY =
   "signapse:market-charts:calendar-layer:v1"
 const MARKET_CHART_COMPACT_WIDTH_PX = 768
@@ -594,14 +596,10 @@ function getCurrentPriceLabel(
     return null
   }
 
-  const price = localization.formatNumber(
+  const price = formatMarketChartPrice(
     quote.price,
-    pricePrecision == null
-      ? undefined
-      : {
-          minimumFractionDigits: pricePrecision,
-          maximumFractionDigits: pricePrecision,
-        }
+    pricePrecision,
+    localization.formatNumber
   )
 
   return localization.formatMessage(

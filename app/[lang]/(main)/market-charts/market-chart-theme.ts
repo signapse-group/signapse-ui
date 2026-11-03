@@ -159,6 +159,19 @@ export interface MarketChartLegendFormatters {
   timeframe: MarketChartTimeframe
 }
 
+export function formatMarketChartPrice(
+  value: number,
+  pricePrecision: number | null | undefined,
+  formatNumber: MarketChartLegendFormatters["formatNumber"]
+) {
+  const precision = pricePrecision ?? 4
+
+  return formatNumber(value, {
+    minimumFractionDigits: precision,
+    maximumFractionDigits: precision,
+  })
+}
+
 function getCandleTimeFormatOptions(
   timeframe: MarketChartTimeframe
 ): Intl.DateTimeFormatOptions {
@@ -210,10 +223,6 @@ export function createChartStyles(
   legendFormatters: MarketChartLegendFormatters
 ): CreateChartStylesResult {
   const fontFamily = getCssTextVariable("--font-sans", "Geist, sans-serif")
-  const priceOptions: Intl.NumberFormatOptions = {
-    minimumFractionDigits: legendFormatters.pricePrecision,
-    maximumFractionDigits: legendFormatters.pricePrecision,
-  }
   const timeOptions = getCandleTimeFormatOptions(legendFormatters.timeframe)
 
   const candleLegendTemplate: CandleTooltipLegendsCustomCallback = ({
@@ -232,19 +241,35 @@ export function createChartStyles(
       },
       {
         title: "open",
-        value: legendFormatters.formatNumber(current.open, priceOptions),
+        value: formatMarketChartPrice(
+          current.open,
+          legendFormatters.pricePrecision,
+          legendFormatters.formatNumber
+        ),
       },
       {
         title: "high",
-        value: legendFormatters.formatNumber(current.high, priceOptions),
+        value: formatMarketChartPrice(
+          current.high,
+          legendFormatters.pricePrecision,
+          legendFormatters.formatNumber
+        ),
       },
       {
         title: "low",
-        value: legendFormatters.formatNumber(current.low, priceOptions),
+        value: formatMarketChartPrice(
+          current.low,
+          legendFormatters.pricePrecision,
+          legendFormatters.formatNumber
+        ),
       },
       {
         title: "close",
-        value: legendFormatters.formatNumber(current.close, priceOptions),
+        value: formatMarketChartPrice(
+          current.close,
+          legendFormatters.pricePrecision,
+          legendFormatters.formatNumber
+        ),
       },
       {
         title: "volume",

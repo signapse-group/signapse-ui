@@ -258,6 +258,30 @@ test.describe("P0 market chart workbench", () => {
       contentType: "image/png",
     })
 
+    await page.setViewportSize({ width: 768, height: 768 })
+    await expect(
+      page.getByRole("combobox", { name: "Khung thời gian" })
+    ).toBeVisible()
+    await expect(
+      page.getByRole("button", { name: "Thao tác khác" })
+    ).toBeHidden()
+    await expect(
+      page.getByRole("button", { name: "Mở tùy chỉnh sự kiện" })
+    ).toBeVisible()
+    await expectNoHorizontalOverflow(page)
+
+    await page.setViewportSize({ width: 767, height: 768 })
+    await expect(
+      page.getByRole("combobox", { name: "Khung thời gian" })
+    ).toBeVisible()
+    await expect(
+      page.getByRole("button", { name: "Thao tác khác" })
+    ).toBeVisible()
+    await expect(
+      page.getByRole("button", { name: "Mở tùy chỉnh sự kiện" })
+    ).toBeHidden()
+    await expectNoHorizontalOverflow(page)
+
     await page.setViewportSize({ width: 390, height: 844 })
     const moreActions = page.getByRole("button", { name: "Thao tác khác" })
     await expect(
@@ -309,6 +333,28 @@ test.describe("P0 market chart workbench", () => {
     expect(
       Math.abs(narrowToolbarBoxes[1]!.y - narrowToolbarBoxes[2]!.y)
     ).toBeLessThan(2)
+    await testInfo.attach("sign-474-mobile-360x800", {
+      body: await page.screenshot({ fullPage: true }),
+      contentType: "image/png",
+    })
+
+    await page.setViewportSize({ width: 1439, height: 900 })
+    await expect(
+      page.getByRole("combobox", { name: "Khung thời gian" })
+    ).toBeVisible()
+    await expect(
+      page.getByRole("button", { name: "1 giờ", exact: true })
+    ).toBeHidden()
+    await expectNoHorizontalOverflow(page)
+
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await expect(
+      page.getByRole("combobox", { name: "Khung thời gian" })
+    ).toBeHidden()
+    await expect(
+      page.getByRole("button", { name: "1 giờ", exact: true })
+    ).toBeVisible()
+    await expectNoHorizontalOverflow(page)
 
     await page.setViewportSize({ width: 1520, height: 1024 })
     const panCanvasBounds = await page.locator("canvas").first().boundingBox()
@@ -344,6 +390,15 @@ test.describe("P0 market chart workbench", () => {
     await expect(status).toHaveText(latestReadout)
     await chart.evaluate((element) => (element as HTMLElement).blur())
     await expect(status).toHaveText(latestReadout)
+
+    await page.setViewportSize({ width: 760, height: 512 })
+    await expect.poll(() => page.evaluate(() => window.innerWidth)).toBe(760)
+    await expect(status).toHaveText(latestReadout)
+    await expectNoHorizontalOverflow(page)
+    await testInfo.attach("sign-474-effective-viewport-760x512", {
+      body: await page.screenshot({ fullPage: true }),
+      contentType: "image/png",
+    })
   })
 
   test("keeps live quote details inside a narrow viewport", async ({
@@ -1439,8 +1494,13 @@ test.describe("P0 market chart history selection", () => {
     page,
     fixture,
   }) => {
+    await page.setViewportSize({ width: 1520, height: 1024 })
     await page.goto("/vi/market-charts?assetId=101&timeframe=1h")
     await expect(page.locator("canvas").first()).toBeVisible()
+    const readout = page
+      .getByRole("application", { name: "Biểu đồ giá" })
+      .locator('span[role="status"]')
+    await expect(readout).not.toHaveText("")
 
     await fixture.setScenario("/market-charts/candles", "delayed-outage", "GET")
     const staleResponse = page.waitForResponse((response) => {
@@ -1454,6 +1514,11 @@ test.describe("P0 market chart history selection", () => {
     })
     await page.getByRole("button", { name: "4 giờ" }).click()
     await expect(page).toHaveURL(/timeframe=4h/)
+    await expect
+      .poll(async () =>
+        (await readout.allTextContents()).every((text) => !text.trim())
+      )
+      .toBe(true)
     await expect
       .poll(async () => {
         const state = await fixture.state()
@@ -1477,6 +1542,11 @@ test.describe("P0 market chart history selection", () => {
     await page.getByRole("option", { name: "XAUUSD - Gold" }).click()
     await expect(page).toHaveURL(/assetId=102/)
     await expect(assetSelector).toContainText("XAUUSD - Gold")
+    await expect
+      .poll(async () =>
+        (await readout.allTextContents()).every((text) => !text.trim())
+      )
+      .toBe(true)
 
     await expect
       .poll(async () => {
@@ -1503,6 +1573,9 @@ test.describe("P0 market chart history selection", () => {
     await expect(
       page.getByText("Đang tải dữ liệu biểu đồ giá.", { exact: true })
     ).toBeVisible()
+
+    await fixture.setScenario("/market-charts/candles", "success", "GET")
+    await expect(readout).toContainText("105,00")
   })
 
   test("shows candle errors separately from empty history and retries", async ({
