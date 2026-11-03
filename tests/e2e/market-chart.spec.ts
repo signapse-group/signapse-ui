@@ -756,29 +756,76 @@ test.describe("P0 market chart workbench", () => {
     await expectMarketChartCanvasText(page, "110,50")
   })
 
-  test("shows the upcoming calendar list through the next-event summary", async ({
-    page,
-    fixture,
-  }) => {
+  test("shows the upcoming calendar list through the next-event summary", async (
+    { page, fixture },
+    testInfo
+  ) => {
+    await page.setViewportSize({ width: 1520, height: 1024 })
+    await page.emulateMedia({ colorScheme: "dark" })
     await page.clock.install({ time: new Date(MARKET_CHART_FIXTURE_NOW) })
     await fixture.setScenario(
       "/market-charts/economic-calendar-events",
       "calendar-upcoming",
       "GET"
     )
+    await page.addInitScript(() => {
+      window.localStorage.setItem(
+        "signapse:market-charts:calendar-layer:v1",
+        "false"
+      )
+    })
     await page.goto("/vi/market-charts?assetId=101&timeframe=1h")
 
+    await expect(page.locator("#market-chart-asset")).toBeVisible()
     const upcomingTrigger = page.getByRole("button", {
       name: /Mở lịch sắp diễn ra/,
     })
     await expect(upcomingTrigger).toBeVisible()
+    await expect(upcomingTrigger).toHaveAccessibleName(
+      /Fixture inflation release/
+    )
     await upcomingTrigger.focus()
     await expect(upcomingTrigger).toBeFocused()
     await page.keyboard.press("Enter")
+    const inflation = page.getByRole("heading", {
+      name: "Fixture inflation release",
+    })
+    const eventDetail = inflation.locator("..")
+    const fullDescription =
+      "This long synthetic calendar description continues across several lines and remains fully readable in the chart event detail. It includes the source explanation and additional context without requiring a second detail page."
+    await expect(inflation).toBeVisible()
+    await expect(eventDetail.getByText("USD", { exact: true })).toBeVisible()
+    await expect(eventDetail.getByText("Đang chờ", { exact: true })).toBeVisible()
+    await expect(eventDetail.getByText("Dự báo", { exact: true })).toBeVisible()
+    await expect(eventDetail.getByText("3.0", { exact: true })).toBeVisible()
+    await expect(eventDetail.getByText("Trước đó", { exact: true })).toBeVisible()
+    await expect(eventDetail.getByText("3.1", { exact: true })).toBeVisible()
+    await expect(eventDetail.getByText("Không có", { exact: true })).toBeVisible()
     await expect(
-      page.getByRole("heading", { name: "Fixture inflation release" })
+      eventDetail.getByText(fullDescription, { exact: true })
     ).toBeVisible()
-    await expect(page.getByRole("link", { name: "Chi tiết" })).toBeVisible()
+    await expect(eventDetail.getByText(fullDescription)).not.toHaveClass(
+      /line-clamp/
+    )
+    await expect(eventDetail.getByRole("link", { name: "Chi tiết" })).toHaveCount(0)
+
+    await testInfo.attach("SIGN-477-event-detail-wide-dark", {
+      body: await page.screenshot({ animations: "disabled" }),
+      contentType: "image/png",
+    })
+
+    await page.setViewportSize({ width: 360, height: 800 })
+    await page.emulateMedia({ colorScheme: "light" })
+    await expect(inflation).toBeVisible()
+    const detailBounds = await eventDetail.boundingBox()
+    expect(detailBounds?.x).toBeGreaterThanOrEqual(0)
+    expect((detailBounds?.x ?? 0) + (detailBounds?.width ?? 0)).toBeLessThanOrEqual(
+      360
+    )
+    await testInfo.attach("SIGN-477-event-detail-mobile-light", {
+      body: await page.screenshot({ animations: "disabled" }),
+      contentType: "image/png",
+    })
 
     const state = await fixture.state()
     const calendarRequest = state.requests.find(
@@ -1121,11 +1168,11 @@ test.describe("P0 market chart workbench", () => {
     ).toHaveCount(0)
   })
 
-  test("filters upcoming events by impact and range and gates detail permission", async ({
+  test("filters upcoming events by impact and range with chart permission only", async ({
     page,
     fixture,
   }) => {
-    await page.clock.setFixedTime(new Date(MARKET_CHART_FIXTURE_NOW))
+    await page.clock.install({ time: new Date(MARKET_CHART_FIXTURE_NOW) })
     await fixture.setPermissions(["market-chart:read", "watchlist:read"])
     await fixture.setScenario(
       "/market-charts/candles",
@@ -1138,33 +1185,13 @@ test.describe("P0 market chart workbench", () => {
       "GET"
     )
     await page.goto("/vi/market-charts?assetId=101&timeframe=1h")
+    await expect(page.locator("#market-chart-asset")).toBeVisible()
 
     await page.getByRole("button", { name: "Mở tùy chỉnh sự kiện" }).click()
-    await page.getByRole("checkbox", { name: "Trung bình" }).click()
-    await page.keyboard.press("Escape")
-
-    const upcomingTrigger = page.getByRole("button", {
-      name: /Mở lịch sắp diễn ra/,
-    })
-    await upcomingTrigger.click()
-    const inflation = page.getByRole("heading", {
-      name: "Fixture inflation release",
-    })
-    const employment = page.getByRole("heading", {
-      name: "Fixture employment release",
-    })
-    await expect(inflation).toBeVisible()
-    await expect(employment).toBeVisible()
-    await page.getByRole("button", { name: "24 giờ tới" }).click()
-    await expect(employment).toBeHidden()
-    await expect(inflation).toBeVisible()
-
-    await page.keyboard.press("Escape")
-    await page.getByRole("button", { name: "Mở tùy chỉnh sự kiện" }).click()
-    const highImpact = page.getByRole("checkbox", { name: "Cao" })
-    await expect(highImpact).toBeChecked()
-    await highImpact.click()
-    await page.keyboard.press("Escape")
+    const mediumImpact = page.getByRole("checkbox", { name: "Trung bình" })
+    await mediumImpact.click()
+    await expect(mediumImpact).toBeChecked()
+    await expect(page.getByRole("checkbox", { name: "Cao" })).toBeChecked()
     await expect
       .poll(async () => {
         const requests = (await fixture.state()).requests.filter(
@@ -1177,29 +1204,39 @@ test.describe("P0 market chart workbench", () => {
         )
       })
       .toBe(true)
+    await page.keyboard.press("Escape")
+    await expect(mediumImpact).toBeHidden()
 
-    await upcomingTrigger.click()
-    await expect(inflation).toBeHidden()
-    await expect(
-      page.getByText("Chưa có sự kiện lịch kinh tế trong khoảng hiện tại.", {
-        exact: true,
-      })
-    ).toBeVisible()
-    await expect(
-      page.getByRole("link", { name: "Mở Lịch kinh tế đầy đủ" })
-    ).toBeVisible()
+    const upcomingTrigger = page.getByRole("button", {
+      name: /Mở lịch sắp diễn ra/,
+    })
+    await upcomingTrigger.focus()
+    await page.keyboard.press("Enter")
+    await expect(upcomingTrigger).toHaveAttribute("aria-expanded", "true")
+    const inflation = page.getByRole("heading", {
+      name: "Fixture inflation release",
+    })
+    const employment = page.getByRole("heading", {
+      name: "Fixture employment release",
+    })
+    await expect(inflation).toBeVisible()
+    await expect(employment).toBeVisible()
+    await page.getByRole("button", { name: "24 giờ tới" }).click()
+    await expect(employment).toBeHidden()
+    await expect(inflation).toBeVisible()
     await page.getByRole("button", { name: "7 ngày tới" }).click()
     await expect(employment).toBeVisible()
-    const detailLink = page.getByRole("link", { name: "Chi tiết" })
-    await expect(detailLink).toHaveAttribute(
-      "href",
-      "/vi/economic-calendar/902"
-    )
-    await detailLink.click()
-    await expect(page).toHaveURL(/\/vi\/economic-calendar\/902/)
+    const employmentDetail = employment.locator("..")
+    await expect(employmentDetail.getByText("USD", { exact: true })).toBeVisible()
+    await expect(employmentDetail.getByText("Dự báo", { exact: true })).toBeVisible()
+    await expect(employmentDetail.getByText("3.0", { exact: true })).toBeVisible()
     await expect(
-      page.getByText(/Bạn không có quyền xem chi tiết lịch kinh tế\./)
+      employmentDetail.getByText("Synthetic calendar event.", { exact: true })
     ).toBeVisible()
+    await expect(
+      employmentDetail.getByRole("link", { name: "Chi tiết" })
+    ).toHaveCount(0)
+    await expect(page).toHaveURL(/\/vi\/market-charts\?assetId=101&timeframe=1h/)
   })
 
   test("keeps the full calendar link available when upcoming is empty", async ({
@@ -1377,6 +1414,8 @@ test.describe("P0 market chart workbench", () => {
     await expect(
       page.getByRole("heading", { name: "Fixture inflation release" })
     ).toBeVisible()
+    await expect(page.getByText("Synthetic calendar event.", { exact: true })).toBeVisible()
+    await expect(page.getByRole("link", { name: "Chi tiết" })).toHaveCount(0)
     const localTime = await page.evaluate((scheduledAt) => {
       return new Intl.DateTimeFormat("vi-VN", {
         year: "numeric",

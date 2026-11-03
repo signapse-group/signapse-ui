@@ -11,7 +11,7 @@ import {
   useRef,
   useState,
 } from "react"
-import { CalendarClock } from "lucide-react"
+import { ArrowDown, ArrowUp, CalendarClock } from "lucide-react"
 import {
   dispose,
   init,
@@ -43,7 +43,6 @@ import type {
   MarketChartTimeframe,
 } from "@/app/lib/market-charts/definitions"
 import { AppTimeMetadata } from "@/components/app-time-metadata"
-import { LocalizedLink } from "@/components/localized-link"
 import { Badge } from "@/components/ui/badge"
 import { Popover, PopoverTrigger } from "@/components/ui/popover"
 import { PopoverContentInOverlay } from "@/components/ui/popover-content-in-overlay"
@@ -60,7 +59,10 @@ import {
   type MarketChartAnnotationMarkerPoint,
   type MarketChartEconomicCalendarEventGroup,
 } from "./market-chart-annotations"
-import { getMarketChartCalendarEventTimestamp } from "./market-chart-calendar-helpers"
+import {
+  getMarketChartCalendarActualDirection,
+  getMarketChartCalendarEventTimestamp,
+} from "./market-chart-calendar-helpers"
 import { syncMarketChartLiveQuoteOverlay } from "./market-chart-live-quote-overlay"
 import {
   createMarketChartDrawingGroupId,
@@ -216,7 +218,11 @@ export function MarketChartCalendarEventList({
   const { dictionary, formatDateTime } = useLocalization()
 
   function getEventTitle(event: MarketChartEconomicCalendarEventResponse) {
-    return event.title?.trim() || dictionary.marketCharts.calendar.eventFallback
+    return (
+      event.title?.trim() ||
+      event.type?.trim() ||
+      dictionary.marketCharts.calendar.eventFallback
+    )
   }
 
   return (
@@ -228,21 +234,25 @@ export function MarketChartCalendarEventList({
             {
               key: "actualValue",
               label: dictionary.marketCharts.calendar.actual,
-              value: event.actualValue?.trim(),
+              value:
+                event.actualValue?.trim() || dictionary.common.notAvailable,
             },
             {
               key: "forecastValue",
               label: dictionary.marketCharts.calendar.forecast,
-              value: event.forecastValue?.trim(),
+              value:
+                event.forecastValue?.trim() || dictionary.common.notAvailable,
             },
             {
               key: "previousValue",
               label: dictionary.marketCharts.calendar.previous,
-              value: event.previousValue?.trim(),
+              value:
+                event.previousValue?.trim() || dictionary.common.notAvailable,
             },
-          ].filter(
-            (item): item is { key: string; label: string; value: string } =>
-              !!item.value
+          ]
+          const actualDirection = getMarketChartCalendarActualDirection(
+            event.actualValue,
+            event.forecastValue
           )
 
           return (
@@ -266,7 +276,7 @@ export function MarketChartCalendarEventList({
                     </Badge>
                   ) : null}
                 </div>
-                <h3 className="line-clamp-2 text-sm font-semibold text-foreground">
+                <h3 className="break-words text-sm font-semibold text-foreground">
                   {getEventTitle(event)}
                 </h3>
                 <div className="flex flex-wrap items-center gap-1.5">
@@ -294,13 +304,33 @@ export function MarketChartCalendarEventList({
                         </dt>
                         <dd
                           className={cn(
-                            "truncate text-sm tabular-nums",
+                            "flex min-w-0 items-start gap-1 break-words tabular-nums",
                             item.key === "actualValue"
-                              ? "font-semibold text-foreground"
-                              : "font-medium text-muted-foreground"
+                              ? cn(
+                                  "text-base font-semibold",
+                                  actualDirection === "higher"
+                                    ? "text-green-600 dark:text-green-400"
+                                    : actualDirection === "lower"
+                                      ? "text-red-600 dark:text-red-400"
+                                      : "text-foreground"
+                                )
+                              : "text-sm font-medium text-muted-foreground"
                           )}
                         >
-                          {item.value}
+                          {item.key === "actualValue" &&
+                          actualDirection === "higher" ? (
+                            <ArrowUp
+                              aria-hidden="true"
+                              className="mt-0.5 size-3.5 shrink-0"
+                            />
+                          ) : item.key === "actualValue" &&
+                            actualDirection === "lower" ? (
+                            <ArrowDown
+                              aria-hidden="true"
+                              className="mt-0.5 size-3.5 shrink-0"
+                            />
+                          ) : null}
+                          <span className="break-words">{item.value}</span>
                         </dd>
                       </div>
                     ))}
@@ -314,19 +344,10 @@ export function MarketChartCalendarEventList({
                     </span>
                   </p>
                 ) : null}
-                {event.description ? (
-                  <p className="line-clamp-3 text-xs leading-relaxed text-muted-foreground">
+                {event.description?.trim() ? (
+                  <p className="break-words whitespace-pre-wrap text-xs leading-relaxed text-muted-foreground">
                     {event.description}
                   </p>
-                ) : null}
-                {event.id !== undefined ? (
-                  <LocalizedLink
-                    href={`/economic-calendar/${event.id}`}
-                    prefetch={false}
-                    className="w-fit rounded-sm text-xs font-medium text-primary underline-offset-4 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring/50"
-                  >
-                    {dictionary.common.detail}
-                  </LocalizedLink>
                 ) : null}
               </article>
               {index < events.length - 1 ? (

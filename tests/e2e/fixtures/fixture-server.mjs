@@ -1334,7 +1334,10 @@ function marketChartEconomicCalendarEvents(url, scenario) {
       revision: null,
       actualBetterWorse: null,
       revisionBetterWorse: null,
-      description: "Synthetic calendar event.",
+      description:
+        scenario === "calendar-upcoming"
+          ? "This long synthetic calendar description continues across several lines and remains fully readable in the chart event detail. It includes the source explanation and additional context without requiring a second detail page."
+          : "Synthetic calendar event.",
     }))
 }
 

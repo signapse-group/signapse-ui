@@ -45,6 +45,7 @@ import {
 import {
   MARKET_CHART_CALENDAR_WAITING_WINDOW_MS,
   createMarketChartFutureCalendarRequest,
+  getMarketChartCalendarActualDirection,
   getAwaitingMarketChartCalendarEvents,
   getMarketChartCalendarEventState,
   getMarketChartCalendarEventTimestamp,
@@ -660,5 +661,22 @@ describe("market-chart calendar lookahead helpers", () => {
         events,
       }).map(({ id }) => id)
     ).toEqual([2])
+  })
+})
+
+describe("market-chart calendar actual comparison", () => {
+  it.each([
+    ["compares negative values numerically", "-1.2M", "-1.8M", "higher"],
+    ["compares values below forecast", "54.6", "55.2", "lower"],
+    ["treats zero as a value", "0", "-0.1", "higher"],
+    ["keeps equal values neutral", "3.0", "3.0", null],
+    ["keeps missing values neutral", null, "3.0", null],
+    ["keeps unparseable values neutral", "—", "3.0", null],
+    ["keeps different units neutral", "0.8M", "-1.5K", null],
+    ["keeps unit casing differences neutral", "1M", "2m", null],
+  ] as const)("%s", (_name, actual, forecast, expected) => {
+    expect(getMarketChartCalendarActualDirection(actual, forecast)).toBe(
+      expected
+    )
   })
 })
