@@ -1851,7 +1851,7 @@ export const vi = {
       assetLabel: "Tài sản watchlist",
       assetPlaceholder: "Chọn tài sản",
       timeframeLabel: "Khung thời gian",
-      timezoneLabel: "Múi giờ trình duyệt",
+      moreActions: "Thao tác khác",
       annotationsLabel: "Sự kiện",
       annotationsAria: "Hiển thị sự kiện trên biểu đồ",
       calendarLabel: "Lịch kinh tế",
@@ -1883,6 +1883,13 @@ export const vi = {
       exitFullscreenAria: "Thoát toàn màn hình",
       fullscreenUnavailable: "Trình duyệt chưa hỗ trợ toàn màn hình.",
       fullscreenFailed: "Chưa thể chuyển chế độ toàn màn hình.",
+    },
+    inspection: {
+      chartLabel: "Biểu đồ giá",
+      keyboardInstructions:
+        "Dùng phím mũi tên trái và phải để xem nến. Nhấn Escape để trở về nến mới nhất.",
+      candleReadout:
+        "Thời gian {time}; mở cửa {open}; cao nhất {high}; thấp nhất {low}; đóng cửa {close}; khối lượng {volume}.",
     },
     indicators: {
       title: "Tùy chỉnh chỉ báo",

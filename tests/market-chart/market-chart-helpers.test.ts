@@ -131,6 +131,18 @@ describe("market-chart candle and history helpers", () => {
     })
   })
 
+  it("preserves missing Volume separately from an explicit zero", () => {
+    const missingVolume = createKLineData([
+      candle("2026-07-29T00:00:00.000Z", 100),
+    ])[0]
+    const zeroVolume = createKLineData([
+      candle("2026-07-29T00:00:00.000Z", 100, 0),
+    ])[0]
+
+    expect(missingVolume).not.toHaveProperty("volume")
+    expect(zeroVolume).toHaveProperty("volume", 0)
+  })
+
   it("creates bounded older-history requests and filters already loaded candles", () => {
     const oldestTimestamp = Date.parse("2026-07-29T12:00:00.000Z")
     const request = createOlderHistoryRequest({

@@ -1870,7 +1870,7 @@ export const en: Dictionary = {
       assetLabel: "Watchlist asset",
       assetPlaceholder: "Choose asset",
       timeframeLabel: "Timeframe",
-      timezoneLabel: "Browser timezone",
+      moreActions: "More actions",
       annotationsLabel: "Events",
       annotationsAria: "Show events on the chart",
       calendarLabel: "Calendar",
@@ -1902,6 +1902,13 @@ export const en: Dictionary = {
       exitFullscreenAria: "Exit full screen",
       fullscreenUnavailable: "This browser does not support full screen.",
       fullscreenFailed: "Could not switch full screen mode.",
+    },
+    inspection: {
+      chartLabel: "Price chart",
+      keyboardInstructions:
+        "Use the left and right arrow keys to inspect candles. Press Escape to return to the latest candle.",
+      candleReadout:
+        "Time {time}; open {open}; high {high}; low {low}; close {close}; volume {volume}.",
     },
     indicators: {
       title: "Indicator settings",

@@ -6,7 +6,6 @@ import {
   useMemo,
   useRef,
   useState,
-  useSyncExternalStore,
   useTransition,
 } from "react"
 import {
@@ -17,6 +16,7 @@ import {
   Camera,
   ChartCandlestick,
   DatabaseZap,
+  Ellipsis,
   Maximize,
   Minimize,
   RefreshCw,
@@ -741,7 +741,6 @@ function MarketChartTopToolbar({
   calendarLayerEnabled,
   selectedCalendarImpacts,
   errors,
-  browserTimeZone,
   hasCandles,
   hasWatchlistAssets,
   isBusy,
@@ -775,7 +774,6 @@ function MarketChartTopToolbar({
   calendarLayerEnabled: boolean
   selectedCalendarImpacts: EconomicCalendarImpactLevel[]
   errors: FormErrors
-  browserTimeZone: string | null
   hasCandles: boolean
   hasWatchlistAssets: boolean
   isBusy: boolean
@@ -810,6 +808,15 @@ function MarketChartTopToolbar({
   onTimeframeChange: (value: MarketChartTimeframe) => void
 }) {
   const { dictionary } = useLocalization()
+  const [mobileActionsOpen, setMobileActionsOpen] = useState(false)
+  const [eventSettingsOpen, setEventSettingsOpen] = useState(false)
+  const [upcomingCalendarOpen, setUpcomingCalendarOpen] = useState(false)
+  const [indicatorSettingsOpen, setIndicatorSettingsOpen] = useState(false)
+  const [mobileSubmenu, setMobileSubmenu] = useState<
+    "events" | "calendar" | "indicators" | null
+  >(null)
+  const [mobileActionsAnchor, setMobileActionsAnchor] =
+    useState<HTMLButtonElement | null>(null)
   const hasChartData = phase === "success" && hasCandles
   const controlsDisabled = !!watchlistError || !hasWatchlistAssets
   const chartCommandsDisabled = isBusy || !!watchlistError || !hasChartData
@@ -825,11 +832,20 @@ function MarketChartTopToolbar({
     )
   }
 
+  function openMobileSubmenu(submenu: "events" | "calendar" | "indicators") {
+    setMobileActionsOpen(false)
+    setMobileSubmenu(submenu)
+
+    if (submenu === "events") setEventSettingsOpen(true)
+    if (submenu === "calendar") setUpcomingCalendarOpen(true)
+    if (submenu === "indicators") setIndicatorSettingsOpen(true)
+  }
+
   return (
     <div className="border-b bg-card p-2">
-      <div className="flex flex-col gap-1 lg:flex-row lg:items-center">
+      <div className="flex flex-wrap items-center gap-1">
         <Field
-          className="w-full shrink-0 gap-1 sm:w-72 lg:w-80"
+          className="min-w-0 flex-none basis-[calc(100%-11rem)] gap-1 min-[768px]:w-72 min-[768px]:basis-auto min-[1440px]:w-80"
           data-invalid={!!errors.assetId}
         >
           <FieldLabel htmlFor="market-chart-asset" className="sr-only">
@@ -871,16 +887,54 @@ function MarketChartTopToolbar({
           <FieldError>{errors.assetId}</FieldError>
         </Field>
 
-        <Separator orientation="vertical" className="hidden lg:block" />
+        <Separator
+          orientation="vertical"
+          className="hidden min-[1440px]:block"
+        />
 
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
           <Field
-            className="w-fit min-w-0 gap-1"
+            className="w-[7.5rem] min-w-0 gap-1 min-[1440px]:w-fit"
             data-invalid={!!errors.timeframe}
           >
             <FieldLabel id="market-chart-timeframe-label" className="sr-only">
               {dictionary.marketCharts.controls.timeframeLabel}
             </FieldLabel>
+            <Select
+              items={MARKET_CHART_TIMEFRAMES.map((timeframe) => ({
+                value: timeframe,
+                label: MARKET_CHART_TIMEFRAME_SHORT_LABELS[timeframe],
+              }))}
+              value={selection.timeframe}
+              onValueChange={(value) => {
+                if (value !== null && isMarketChartTimeframe(value)) {
+                  onTimeframeChange(value)
+                }
+              }}
+              disabled={controlsDisabled}
+            >
+              <SelectTrigger
+                id="market-chart-timeframe-selector"
+                aria-labelledby="market-chart-timeframe-label"
+                className="w-full min-[1440px]:hidden"
+                size="sm"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContentInOverlay>
+                <SelectGroup>
+                  {MARKET_CHART_TIMEFRAMES.map((timeframe) => (
+                    <SelectItem
+                      key={timeframe}
+                      value={timeframe}
+                      aria-label={timeframeLabels[timeframe]}
+                    >
+                      {MARKET_CHART_TIMEFRAME_SHORT_LABELS[timeframe]}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContentInOverlay>
+            </Select>
             <ToggleGroup
               multiple={false}
               variant="outline"
@@ -888,6 +942,7 @@ function MarketChartTopToolbar({
               spacing={1}
               value={[selection.timeframe]}
               aria-labelledby="market-chart-timeframe-label"
+              className="hidden min-[1440px]:flex"
               onValueChange={(values) => {
                 const value = values[0]
 
@@ -910,15 +965,19 @@ function MarketChartTopToolbar({
             <FieldError>{errors.timeframe}</FieldError>
           </Field>
 
-          <p className="px-1 text-xs leading-5 text-muted-foreground">
-            {dictionary.marketCharts.controls.timezoneLabel}:{" "}
-            <span className="font-mono">{browserTimeZone}</span>
-          </p>
+          <Separator
+            orientation="vertical"
+            className="hidden min-[1440px]:block"
+          />
 
-          <Separator orientation="vertical" className="hidden lg:block" />
-
-          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
-            <Popover>
+          <div className="hidden min-w-0 flex-1 flex-wrap items-center gap-1 min-[768px]:flex">
+            <Popover
+              open={eventSettingsOpen}
+              onOpenChange={(open) => {
+                setEventSettingsOpen(open)
+                if (!open) setMobileSubmenu(null)
+              }}
+            >
               <PopoverTrigger
                 render={
                   <Button
@@ -937,6 +996,9 @@ function MarketChartTopToolbar({
               </PopoverTrigger>
               <PopoverContentInOverlay
                 align="start"
+                anchor={
+                  mobileSubmenu === "events" ? mobileActionsAnchor : undefined
+                }
                 className="w-[min(18rem,calc(100vw_-_1.5rem))]"
               >
                 <PopoverHeader>
@@ -1041,9 +1103,23 @@ function MarketChartTopToolbar({
               onLookaheadDaysChange={onCalendarLookaheadDaysChange}
               onRetry={onCalendarRetry}
               selectedImpactCount={selectedCalendarImpacts.length}
+              open={upcomingCalendarOpen}
+              onOpenChange={(open) => {
+                setUpcomingCalendarOpen(open)
+                if (!open) setMobileSubmenu(null)
+              }}
+              popoverAnchor={
+                mobileSubmenu === "calendar" ? mobileActionsAnchor : null
+              }
             />
 
-            <Popover>
+            <Popover
+              open={indicatorSettingsOpen}
+              onOpenChange={(open) => {
+                setIndicatorSettingsOpen(open)
+                if (!open) setMobileSubmenu(null)
+              }}
+            >
               <PopoverTrigger
                 render={
                   <Button
@@ -1071,6 +1147,11 @@ function MarketChartTopToolbar({
 
               <PopoverContentInOverlay
                 align="end"
+                anchor={
+                  mobileSubmenu === "indicators"
+                    ? mobileActionsAnchor
+                    : undefined
+                }
                 className="max-h-[var(--available-height)] w-[min(18rem,calc(100vw_-_1.5rem))] overflow-y-auto"
               >
                 <PopoverHeader>
@@ -1164,16 +1245,117 @@ function MarketChartTopToolbar({
               </TooltipContentInOverlay>
             </Tooltip>
           </div>
+
+          <Popover open={mobileActionsOpen} onOpenChange={setMobileActionsOpen}>
+            <PopoverTrigger
+              render={
+                <Button
+                  ref={setMobileActionsAnchor}
+                  type="button"
+                  variant="outline"
+                  size="icon-sm"
+                  aria-label={dictionary.marketCharts.controls.moreActions}
+                  className="min-[768px]:hidden"
+                />
+              }
+            >
+              <Ellipsis />
+            </PopoverTrigger>
+            <PopoverContentInOverlay
+              align="end"
+              className="w-[min(18rem,calc(100vw_-_1.5rem))]"
+            >
+              <PopoverHeader>
+                <PopoverTitle>
+                  {dictionary.marketCharts.controls.moreActions}
+                </PopoverTitle>
+              </PopoverHeader>
+              <div className="flex flex-col gap-1">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="justify-start"
+                  disabled={isBusy || !!watchlistError || !selectedAsset}
+                  aria-label={
+                    dictionary.marketCharts.controls.eventSettingsAria
+                  }
+                  onClick={() => openMobileSubmenu("events")}
+                >
+                  <CalendarCog data-icon="inline-start" />
+                  {dictionary.marketCharts.controls.annotationsLabel}
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="justify-start"
+                  aria-label={dictionary.marketCharts.calendar.openUpcoming}
+                  onClick={() => openMobileSubmenu("calendar")}
+                >
+                  <CalendarClock data-icon="inline-start" />
+                  {dictionary.marketCharts.calendar.openUpcoming}
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="justify-start"
+                  disabled={chartCommandsDisabled}
+                  aria-label={dictionary.marketCharts.controls.indicatorAria}
+                  onClick={() => openMobileSubmenu("indicators")}
+                >
+                  <SlidersHorizontal data-icon="inline-start" />
+                  {dictionary.marketCharts.controls.indicatorLabel}
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="justify-start"
+                  disabled={chartCommandsDisabled}
+                  aria-label={dictionary.marketCharts.controls.screenshotAria}
+                  onClick={() => {
+                    setMobileActionsOpen(false)
+                    onScreenshot()
+                  }}
+                >
+                  <Camera data-icon="inline-start" />
+                  {dictionary.marketCharts.controls.screenshotLabel}
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="justify-start"
+                  disabled={!!watchlistError}
+                  aria-label={
+                    isFullscreen
+                      ? dictionary.marketCharts.controls.exitFullscreenAria
+                      : dictionary.marketCharts.controls.fullscreenAria
+                  }
+                  onClick={() => {
+                    setMobileActionsOpen(false)
+                    onFullscreenToggle()
+                  }}
+                >
+                  {isFullscreen ? (
+                    <Minimize data-icon="inline-start" />
+                  ) : (
+                    <Maximize data-icon="inline-start" />
+                  )}
+                  {isFullscreen
+                    ? dictionary.marketCharts.controls.exitFullscreenLabel
+                    : dictionary.marketCharts.controls.fullscreenLabel}
+                </Button>
+              </div>
+            </PopoverContentInOverlay>
+          </Popover>
         </div>
       </div>
     </div>
   )
 }
-
-const subscribeToBrowserTimeZone = () => () => {}
-const getBrowserTimeZone = () =>
-  Intl.DateTimeFormat().resolvedOptions().timeZone
-const getServerBrowserTimeZone = () => null
 
 function ChartSurface({
   annotationLayerEnabled,
@@ -1281,11 +1463,6 @@ function ChartSurface({
 }) {
   const localization = useLocalization()
   const { dictionary, formatMessage } = localization
-  const browserTimeZone = useSyncExternalStore(
-    subscribeToBrowserTimeZone,
-    getBrowserTimeZone,
-    getServerBrowserTimeZone
-  )
   const chartCanvasRef = useRef<MarketChartCanvasHandle | null>(null)
   const [activeOutcomeHoverRange, setActiveOutcomeHoverRange] =
     useState<MarketChartOutcomeHoverRange | null>(null)
@@ -1551,7 +1728,6 @@ function ChartSurface({
           calendarLayerEnabled={calendarLayerEnabled}
           selectedCalendarImpacts={selectedCalendarImpacts}
           errors={errors}
-          browserTimeZone={browserTimeZone}
           hasCandles={hasCandles}
           hasWatchlistAssets={hasWatchlistAssets}
           isBusy={isBusy}
@@ -2734,6 +2910,9 @@ function MarketChartUpcomingCalendar({
   onLookaheadDaysChange,
   onRetry,
   selectedImpactCount,
+  open,
+  onOpenChange,
+  popoverAnchor,
 }: {
   calendarEvents: MarketChartEconomicCalendarEventResponse[]
   calendarLoadError: string | null
@@ -2744,6 +2923,9 @@ function MarketChartUpcomingCalendar({
   onLookaheadDaysChange: (days: MarketChartCalendarLookaheadDays) => void
   onRetry: () => void
   selectedImpactCount: number
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  popoverAnchor: HTMLElement | null
 }) {
   const localization = useLocalization()
   const { dictionary, formatDateTime } = localization
@@ -2843,7 +3025,7 @@ function MarketChartUpcomingCalendar({
       ref={summaryContainerRef}
       className="order-none min-w-0 flex-1 basis-full lg:order-last lg:ml-auto lg:max-w-[min(32rem,100%)] lg:basis-auto"
     >
-      <Popover>
+      <Popover open={open} onOpenChange={onOpenChange}>
         <PopoverTrigger
           render={
             <Button
@@ -2902,6 +3084,7 @@ function MarketChartUpcomingCalendar({
         </PopoverTrigger>
         <PopoverContentInOverlay
           align="start"
+          anchor={popoverAnchor ?? undefined}
           className="w-[min(32rem,calc(100vw_-_1.5rem))]"
         >
           <PopoverHeader>

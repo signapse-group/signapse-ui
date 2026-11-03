@@ -1,10 +1,13 @@
 "use client"
 
 import {
+  useCallback,
   Fragment,
   forwardRef,
   useEffect,
+  useId,
   useImperativeHandle,
+  useMemo,
   useRef,
   useState,
 } from "react"
@@ -77,6 +80,7 @@ import {
 import {
   createChartStyles,
   createDrawingOverlayStyles,
+  formatMarketChartVolume,
   getMarketChartThemePalette,
   resolveChartThemeMode,
   type ChartThemeMode,
@@ -779,8 +783,107 @@ export const MarketChartCanvas = forwardRef<
     formatNumber,
     intlLocale,
   } = useLocalization()
+  const chartRegionId = useId()
   const containerRef = useRef<HTMLDivElement | null>(null)
   const chartRef = useRef<Chart | null>(null)
+  const keyboardInspectionIndexRef = useRef<number | null>(null)
+  const keyboardInspectingRef = useRef(false)
+  const keyboardMovePendingRef = useRef(false)
+  const touchInspectionActiveRef = useRef(false)
+  const touchSelectionPointRef = useRef<{ x: number; y: number } | null>(null)
+  const touchMouseGuardUntilRef = useRef(0)
+  const touchGestureRef = useRef<{
+    start: { x: number; y: number }
+    last: { x: number; y: number }
+    inspectingAtStart: boolean
+    exitsInspection: boolean
+    sawCrosshair: boolean
+  } | null>(null)
+  const mousePanRef = useRef<{
+    start: { x: number; y: number }
+    moved: boolean
+  } | null>(null)
+  const chartContextReadyRef = useRef(false)
+  const panResetRequestRef = useRef<number | null>(null)
+  const readoutContextKey = `${assetId}:${timeframe}:${dataVersion}`
+  const readoutContextKeyRef = useRef(readoutContextKey)
+  const [chartReadoutState, setChartReadoutState] = useState({
+    contextKey: "",
+    text: "",
+  })
+  const chartReadout =
+    chartReadoutState.contextKey === readoutContextKey
+      ? chartReadoutState.text
+      : ""
+  useEffect(() => {
+    readoutContextKeyRef.current = readoutContextKey
+  }, [readoutContextKey])
+  const setChartReadout = useCallback((text: string) => {
+    setChartReadoutState({ contextKey: readoutContextKeyRef.current, text })
+  }, [])
+  const readoutFormatterRef = useRef<(candle: KLineData) => string>(() => "")
+  const formatCandleReadout = useCallback(
+    (candle: KLineData) => {
+      const timeOptions: Intl.DateTimeFormatOptions =
+        timeframe === "1mo"
+          ? { year: "numeric", month: "long" }
+          : timeframe === "1d" || timeframe === "1w"
+            ? { year: "numeric", month: "long", day: "numeric" }
+            : {
+                year: "numeric",
+                month: "short",
+                day: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+              }
+      const priceOptions: Intl.NumberFormatOptions = {
+        minimumFractionDigits: pricePrecision ?? 4,
+        maximumFractionDigits: pricePrecision ?? 4,
+      }
+      const volume =
+        typeof candle.volume === "number" && Number.isFinite(candle.volume)
+          ? formatMarketChartVolume(candle.volume, formatNumber)
+          : dictionary.marketCharts.format.notAvailable
+
+      return formatMessage(dictionary.marketCharts.inspection.candleReadout, {
+        time: formatDateTime(
+          candle.timestamp,
+          timeOptions,
+          dictionary.marketCharts.format.notAvailable
+        ),
+        open: formatNumber(candle.open, priceOptions),
+        high: formatNumber(candle.high, priceOptions),
+        low: formatNumber(candle.low, priceOptions),
+        close: formatNumber(candle.close, priceOptions),
+        volume,
+      })
+    },
+    [
+      dictionary.marketCharts.format.notAvailable,
+      dictionary.marketCharts.inspection.candleReadout,
+      formatDateTime,
+      formatMessage,
+      formatNumber,
+      pricePrecision,
+      timeframe,
+    ]
+  )
+  const chartLegendFormatters = useMemo(
+    () => ({
+      formatDateTime,
+      formatNumber,
+      notAvailable: dictionary.marketCharts.format.notAvailable,
+      pricePrecision: pricePrecision ?? 4,
+      timeframe,
+    }),
+    [
+      dictionary.marketCharts.format.notAvailable,
+      formatDateTime,
+      formatNumber,
+      pricePrecision,
+      timeframe,
+    ]
+  )
   const [chartLoadId, setChartLoadId] = useState(0)
   const chartLoadIdRef = useRef(0)
   const activeDrawingDraftIdRef = useRef<string | null>(null)
@@ -838,6 +941,114 @@ export const MarketChartCanvas = forwardRef<
   const historyError =
     historyFeedback.loadId === chartLoadId ? historyFeedback.error : null
 
+  const setLatestChartReadout = useCallback(
+    (chart: Chart | null = chartRef.current) => {
+      if (!chartContextReadyRef.current || !chart) {
+        setChartReadout("")
+        return
+      }
+
+      const candles = chart.getDataList()
+      const latest = candles[candles.length - 1]
+      setChartReadout(latest ? readoutFormatterRef.current(latest) : "")
+    },
+    [setChartReadout]
+  )
+
+  useEffect(() => {
+    readoutFormatterRef.current = formatCandleReadout
+  }, [formatCandleReadout])
+
+  function dispatchChartMouseMove(
+    chart: Chart,
+    target: HTMLElement,
+    clientX: number,
+    clientY: number
+  ) {
+    const root = chart.getDom()
+
+    if (!root) return
+
+    root.dispatchEvent(
+      new MouseEvent("mouseenter", { clientX, clientY, bubbles: false })
+    )
+    target.dispatchEvent(
+      new MouseEvent("mousemove", { clientX, clientY, bubbles: true })
+    )
+  }
+
+  function resetChartInspection() {
+    const chart = chartRef.current
+    keyboardInspectionIndexRef.current = null
+    keyboardInspectingRef.current = false
+    touchInspectionActiveRef.current = false
+    touchSelectionPointRef.current = null
+    touchMouseGuardUntilRef.current = 0
+    touchGestureRef.current = null
+    setLatestChartReadout(chart)
+
+    const yAxis = chart?.getDom(CANDLE_PANE_ID, "yAxis")
+
+    if (chart && yAxis) {
+      const bounds = yAxis.getBoundingClientRect()
+      dispatchChartMouseMove(
+        chart,
+        yAxis,
+        bounds.left + bounds.width / 2,
+        bounds.top + bounds.height / 2
+      )
+    }
+  }
+
+  function inspectChartCandle(dataIndex: number) {
+    const chart = chartRef.current
+    const candles = chart?.getDataList()
+    const candle = candles?.[dataIndex]
+
+    if (!chart || !candle) return
+
+    keyboardInspectionIndexRef.current = dataIndex
+    keyboardInspectingRef.current = true
+    setChartReadout(readoutFormatterRef.current(candle))
+    chart.scrollToDataIndex(dataIndex, 0)
+
+    window.requestAnimationFrame(() => {
+      if (chartRef.current !== chart) return
+
+      const main = chart.getDom(CANDLE_PANE_ID, "main")
+      const currentCandle = chart.getDataList()[dataIndex]
+
+      if (!main || !currentCandle) return
+
+      const point = chart.convertToPixel(
+        {
+          dataIndex,
+          timestamp: currentCandle.timestamp,
+          value: currentCandle.close,
+        },
+        { paneId: CANDLE_PANE_ID }
+      )
+
+      if (
+        Array.isArray(point) ||
+        typeof point.x !== "number" ||
+        typeof point.y !== "number"
+      ) {
+        return
+      }
+
+      const bounds = main.getBoundingClientRect()
+      keyboardMovePendingRef.current = true
+      dispatchChartMouseMove(
+        chart,
+        main,
+        bounds.left + point.x,
+        bounds.top + point.y
+      )
+      keyboardMovePendingRef.current = false
+    })
+  }
+
   useEffect(() => {
     annotationLayerEnabledRef.current = annotationLayerEnabled
     annotationsRef.current = annotations
@@ -854,6 +1065,13 @@ export const MarketChartCanvas = forwardRef<
   }, [candles])
 
   useEffect(() => {
+    chartContextReadyRef.current = false
+    keyboardInspectionIndexRef.current = null
+    keyboardInspectingRef.current = false
+    touchInspectionActiveRef.current = false
+    touchSelectionPointRef.current = null
+    touchMouseGuardUntilRef.current = 0
+    touchGestureRef.current = null
     loadedCandlesRef.current = normalizeCandleItems(candlesRef.current)
 
     const chart = chartRef.current
@@ -1190,7 +1408,7 @@ export const MarketChartCanvas = forwardRef<
         },
       },
       locale: resolveKLineChartLocale(intlLocale),
-      styles: createChartStyles(chartThemePalette),
+      styles: createChartStyles(chartThemePalette, chartLegendFormatters),
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       zoomAnchor: "cursor",
     })
@@ -1203,6 +1421,238 @@ export const MarketChartCanvas = forwardRef<
     chart.setOffsetRightDistance(DEFAULT_MARKET_CHART_RIGHT_OFFSET)
     chart.setLeftMinVisibleBarCount(8)
     chart.setRightMinVisibleBarCount(8)
+
+    const chartRoot = chart.getDom()
+    const handleCrosshairChange = (value?: unknown) => {
+      if (
+        !chartContextReadyRef.current ||
+        !value ||
+        typeof value !== "object"
+      ) {
+        return
+      }
+
+      const crosshair = value as { dataIndex?: unknown; x?: unknown }
+      const candles = chart.getDataList()
+      const converted =
+        typeof crosshair.x === "number"
+          ? chart.convertFromPixel([{ x: crosshair.x }], {
+              paneId: CANDLE_PANE_ID,
+            })
+          : null
+      const point = Array.isArray(converted) ? converted[0] : converted
+      const rawIndex =
+        typeof crosshair.dataIndex === "number"
+          ? crosshair.dataIndex
+          : point?.dataIndex
+
+      if (typeof rawIndex !== "number" || candles.length === 0) return
+
+      const dataIndex = Math.max(
+        0,
+        Math.min(candles.length - 1, Math.round(rawIndex))
+      )
+      const candle = candles[dataIndex]
+
+      if (!candle) return
+      if (mousePanRef.current?.moved) return
+
+      const touchGesture = touchGestureRef.current
+      if (touchGesture) {
+        touchGesture.sawCrosshair = true
+        touchInspectionActiveRef.current = true
+        touchSelectionPointRef.current = touchGesture.last
+      } else {
+        touchInspectionActiveRef.current = false
+        touchSelectionPointRef.current = null
+      }
+
+      keyboardInspectionIndexRef.current = dataIndex
+      if (!keyboardMovePendingRef.current) {
+        keyboardInspectingRef.current = false
+      }
+      setChartReadout(readoutFormatterRef.current(candle))
+    }
+    const isPlotTarget = (target: EventTarget | null) => {
+      if (!(target instanceof Node)) return false
+
+      const paneIds = new Set([
+        CANDLE_PANE_ID,
+        ...chart.getIndicators().map((indicator) => indicator.paneId),
+      ])
+
+      return [...paneIds].some((paneId) =>
+        chart.getDom(paneId, "main")?.contains(target)
+      )
+    }
+    const handleChartMouseDown = (event: MouseEvent) => {
+      const sourceCapabilities = (
+        event as MouseEvent & {
+          sourceCapabilities?: { firesTouchEvents?: boolean } | null
+        }
+      ).sourceCapabilities
+      if (
+        event.button !== 0 ||
+        sourceCapabilities?.firesTouchEvents ||
+        performance.now() < touchMouseGuardUntilRef.current ||
+        activeDrawingToolRef.current !== null ||
+        selectedDrawingIdRef.current !== null ||
+        !isPlotTarget(event.target)
+      ) {
+        return
+      }
+
+      mousePanRef.current = {
+        start: { x: event.clientX, y: event.clientY },
+        moved: false,
+      }
+    }
+    const handleChartMouseMove = (event: MouseEvent) => {
+      const sourceCapabilities = (
+        event as MouseEvent & {
+          sourceCapabilities?: { firesTouchEvents?: boolean } | null
+        }
+      ).sourceCapabilities
+      const mousePan = mousePanRef.current
+      if (mousePan && event.buttons === 1) {
+        mousePan.moved ||=
+          Math.hypot(
+            event.clientX - mousePan.start.x,
+            event.clientY - mousePan.start.y
+          ) >= 10
+      }
+      if (mousePan?.moved) return
+
+      if (
+        keyboardMovePendingRef.current ||
+        !chartContextReadyRef.current ||
+        sourceCapabilities?.firesTouchEvents ||
+        performance.now() < touchMouseGuardUntilRef.current ||
+        isPlotTarget(event.target)
+      ) {
+        return
+      }
+
+      keyboardInspectionIndexRef.current = null
+      keyboardInspectingRef.current = false
+      touchInspectionActiveRef.current = false
+      touchSelectionPointRef.current = null
+      setLatestChartReadout(chart)
+    }
+    const handleChartMouseUp = () => {
+      const mousePan = mousePanRef.current
+      mousePanRef.current = null
+      if (mousePan?.moved) resetChartInspection()
+    }
+    const handleChartMouseLeave = () => {
+      if (
+        keyboardInspectingRef.current ||
+        touchInspectionActiveRef.current ||
+        performance.now() < touchMouseGuardUntilRef.current
+      ) {
+        return
+      }
+
+      resetChartInspection()
+    }
+    const handleChartTouchStart = (event: TouchEvent) => {
+      const touch = event.changedTouches[0]
+      if (!touch || !isPlotTarget(event.target)) return
+      touchMouseGuardUntilRef.current = performance.now() + 500
+
+      const start = { x: touch.clientX, y: touch.clientY }
+      const selectedPoint = touchSelectionPointRef.current
+      const exitsInspection =
+        touchInspectionActiveRef.current &&
+        selectedPoint !== null &&
+        Math.hypot(start.x - selectedPoint.x, start.y - selectedPoint.y) >= 10
+
+      touchGestureRef.current = {
+        start,
+        last: start,
+        inspectingAtStart: touchInspectionActiveRef.current,
+        exitsInspection,
+        sawCrosshair: false,
+      }
+
+      if (exitsInspection) {
+        keyboardInspectionIndexRef.current = null
+        keyboardInspectingRef.current = false
+        touchInspectionActiveRef.current = false
+        touchSelectionPointRef.current = null
+        setLatestChartReadout(chart)
+      }
+    }
+    const handleChartTouchMove = (event: TouchEvent) => {
+      const touch = event.changedTouches[0]
+      const gesture = touchGestureRef.current
+      if (!touch || !gesture) return
+      touchMouseGuardUntilRef.current = performance.now() + 500
+
+      gesture.last = { x: touch.clientX, y: touch.clientY }
+      if (touchInspectionActiveRef.current) {
+        touchSelectionPointRef.current = gesture.last
+      }
+    }
+    const handleChartTouchEnd = (event: TouchEvent) => {
+      const gesture = touchGestureRef.current
+      if (!gesture) return
+      touchMouseGuardUntilRef.current = performance.now() + 500
+
+      const touch = event.changedTouches[0]
+      const end = touch ? { x: touch.clientX, y: touch.clientY } : gesture.last
+      const movedDistance =
+        Math.abs(end.x - gesture.start.x) + Math.abs(end.y - gesture.start.y)
+
+      if (gesture.exitsInspection) {
+        keyboardInspectionIndexRef.current = null
+        keyboardInspectingRef.current = false
+        touchInspectionActiveRef.current = false
+        touchSelectionPointRef.current = null
+        setLatestChartReadout(chart)
+      } else if (
+        gesture.inspectingAtStart ||
+        gesture.sawCrosshair ||
+        movedDistance < 10
+      ) {
+        touchInspectionActiveRef.current = true
+        touchSelectionPointRef.current = end
+      } else {
+        keyboardInspectionIndexRef.current = null
+        keyboardInspectingRef.current = false
+        touchInspectionActiveRef.current = false
+        touchSelectionPointRef.current = null
+        setLatestChartReadout(chart)
+      }
+
+      touchGestureRef.current = null
+    }
+    const handlePan = () => {
+      if (keyboardInspectingRef.current || touchInspectionActiveRef.current)
+        return
+
+      if (panResetRequestRef.current !== null) {
+        window.cancelAnimationFrame(panResetRequestRef.current)
+      }
+
+      panResetRequestRef.current = window.requestAnimationFrame(() => {
+        panResetRequestRef.current = null
+        if (keyboardInspectingRef.current || touchInspectionActiveRef.current)
+          return
+        resetChartInspection()
+      })
+    }
+
+    chart.subscribeAction("onCrosshairChange", handleCrosshairChange)
+    chart.subscribeAction("onScroll", handlePan)
+    chart.subscribeAction("onVisibleRangeChange", handlePan)
+    chartRoot?.addEventListener("mousemove", handleChartMouseMove)
+    chartRoot?.addEventListener("mouseleave", handleChartMouseLeave)
+    chartRoot?.addEventListener("mousedown", handleChartMouseDown)
+    chartRoot?.addEventListener("touchstart", handleChartTouchStart, true)
+    chartRoot?.addEventListener("touchmove", handleChartTouchMove, true)
+    window.addEventListener("mouseup", handleChartMouseUp)
+    window.addEventListener("touchend", handleChartTouchEnd)
 
     const updateMarkerPositions = () => {
       const currentChart = chartRef.current
@@ -1311,6 +1761,20 @@ export const MarketChartCanvas = forwardRef<
       )
       chart.unsubscribeAction("onScroll", scheduleMarkerPositionUpdate)
       chart.unsubscribeAction("onZoom", scheduleMarkerPositionUpdate)
+      chart.unsubscribeAction("onCrosshairChange", handleCrosshairChange)
+      chart.unsubscribeAction("onScroll", handlePan)
+      chart.unsubscribeAction("onVisibleRangeChange", handlePan)
+      chartRoot?.removeEventListener("mousemove", handleChartMouseMove)
+      chartRoot?.removeEventListener("mouseleave", handleChartMouseLeave)
+      chartRoot?.removeEventListener("mousedown", handleChartMouseDown)
+      chartRoot?.removeEventListener("touchstart", handleChartTouchStart, true)
+      chartRoot?.removeEventListener("touchmove", handleChartTouchMove, true)
+      window.removeEventListener("mouseup", handleChartMouseUp)
+      window.removeEventListener("touchend", handleChartTouchEnd)
+      if (panResetRequestRef.current !== null) {
+        window.cancelAnimationFrame(panResetRequestRef.current)
+        panResetRequestRef.current = null
+      }
       resizeObserver.disconnect()
       scheduleMarkerPositionUpdateRef.current = () => {}
       activeDrawingDraftIdRef.current = null
@@ -1335,7 +1799,7 @@ export const MarketChartCanvas = forwardRef<
       return
     }
 
-    chart.setStyles(createChartStyles(chartThemePalette))
+    chart.setStyles(createChartStyles(chartThemePalette, chartLegendFormatters))
 
     chart
       .getOverlays({ groupId: drawingGroupIdRef.current })
@@ -1362,7 +1826,7 @@ export const MarketChartCanvas = forwardRef<
       })
 
     scheduleMarkerPositionUpdateRef.current()
-  }, [chartThemePalette])
+  }, [chartLegendFormatters, chartThemePalette])
 
   // ── Sync: locale ──
   useEffect(() => {
@@ -1385,6 +1849,13 @@ export const MarketChartCanvas = forwardRef<
 
   // ── Sync effect 2: data source change — reset DataLoader ──
   useEffect(() => {
+    chartContextReadyRef.current = false
+    keyboardInspectionIndexRef.current = null
+    keyboardInspectingRef.current = false
+    touchInspectionActiveRef.current = false
+    touchSelectionPointRef.current = null
+    touchMouseGuardUntilRef.current = 0
+    touchGestureRef.current = null
     const chart = chartRef.current
 
     if (!chart) {
@@ -1473,10 +1944,16 @@ export const MarketChartCanvas = forwardRef<
       type,
     }: DataLoaderGetBarsParams) {
       if (type === "init") {
-        callback(createKLineData(loadedCandlesRef.current), {
+        const initialData = createKLineData(loadedCandlesRef.current)
+        callback(initialData, {
           backward: false,
-          forward: loadedCandlesRef.current.length > 0,
+          forward: initialData.length > 0,
         })
+        const latest = initialData[initialData.length - 1]
+        chartContextReadyRef.current = !!latest
+        setChartReadout(
+          latest ? readoutFormatterRef.current(latest as KLineData) : ""
+        )
         scheduleMarkerPositionUpdateRef.current()
         return
       }
@@ -1623,7 +2100,70 @@ export const MarketChartCanvas = forwardRef<
     calendarLayerEnabled && calendarEventGroups.length > 0
 
   return (
-    <div className={cn("relative h-full min-h-0 w-full", className)}>
+    <div
+      id={chartRegionId}
+      role="application"
+      tabIndex={0}
+      aria-label={dictionary.marketCharts.inspection.chartLabel}
+      aria-describedby={`${chartRegionId}-instructions`}
+      className={cn(
+        "relative h-full min-h-0 w-full rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
+        className
+      )}
+      onFocus={(event) => {
+        if (event.target !== event.currentTarget) return
+        resetChartInspection()
+      }}
+      onBlur={(event) => {
+        if (
+          event.relatedTarget instanceof Node &&
+          event.currentTarget.contains(event.relatedTarget)
+        ) {
+          return
+        }
+
+        resetChartInspection()
+      }}
+      onKeyDown={(event) => {
+        if (event.target !== event.currentTarget || drawingToolActive) return
+
+        if (event.key === "Escape") {
+          event.preventDefault()
+          resetChartInspection()
+          return
+        }
+
+        if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return
+
+        const chart = chartRef.current
+        const candles = chart?.getDataList() ?? []
+
+        if (!chart || candles.length === 0) return
+
+        event.preventDefault()
+        const currentIndex =
+          keyboardInspectionIndexRef.current ?? candles.length - 1
+        const nextIndex = Math.max(
+          0,
+          Math.min(
+            candles.length - 1,
+            currentIndex + (event.key === "ArrowLeft" ? -1 : 1)
+          )
+        )
+        inspectChartCandle(nextIndex)
+      }}
+    >
+      <span id={`${chartRegionId}-instructions`} className="sr-only">
+        {dictionary.marketCharts.inspection.keyboardInstructions}
+      </span>
+      <span
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+      >
+        {chartReadout}
+      </span>
       <div
         ref={containerRef}
         className={cn(
