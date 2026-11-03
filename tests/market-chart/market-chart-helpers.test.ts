@@ -26,6 +26,7 @@ import {
   mergeCandleItems,
   normalizeCandleItems,
 } from "@/app/[lang]/(main)/market-charts/market-chart-candle-helpers"
+import { formatMarketChartPrice } from "@/app/[lang]/(main)/market-charts/market-chart-theme"
 import {
   INITIAL_COUNT_BACK,
   OLDER_COUNT_BACK,
@@ -129,6 +130,18 @@ describe("market-chart candle and history helpers", () => {
       timestamp: Date.parse(replacement.time),
       volume: 20,
     })
+  })
+
+  it("preserves missing Volume separately from an explicit zero", () => {
+    const missingVolume = createKLineData([
+      candle("2026-07-29T00:00:00.000Z", 100),
+    ])[0]
+    const zeroVolume = createKLineData([
+      candle("2026-07-29T00:00:00.000Z", 100, 0),
+    ])[0]
+
+    expect(missingVolume).not.toHaveProperty("volume")
+    expect(zeroVolume).toHaveProperty("volume", 0)
   })
 
   it("creates bounded older-history requests and filters already loaded candles", () => {
@@ -307,6 +320,24 @@ describe("market-chart candle and history helpers", () => {
         response: null,
       })
     ).toBe("retryable")
+  })
+})
+
+describe("market-chart price formatting", () => {
+  it("uses configured asset precision or four digits when it is missing", () => {
+    const formatNumber = vi.fn(
+      (value: number, options?: Intl.NumberFormatOptions) =>
+        new Intl.NumberFormat("en-US", options).format(value)
+    )
+
+    expect(formatMarketChartPrice(110.5, undefined, formatNumber)).toBe(
+      "110.5000"
+    )
+    expect(formatNumber).toHaveBeenCalledWith(110.5, {
+      minimumFractionDigits: 4,
+      maximumFractionDigits: 4,
+    })
+    expect(formatMarketChartPrice(110.5, 2, formatNumber)).toBe("110.50")
   })
 })
 

@@ -1,8 +1,14 @@
-import type { Page } from "@playwright/test"
+import type { Locator, Page } from "@playwright/test"
 
 import { expect, test } from "./fixtures"
 
 const MARKET_CHART_FIXTURE_NOW = "2026-01-15T08:00:00.000Z"
+
+type ChartCanvasTextDraw = {
+  canvas: HTMLCanvasElement
+  text: string
+  y: number
+}
 
 async function setAnnotationsVisible(page: Page, visible: boolean) {
   const annotationSwitch = page.getByRole("switch", {
@@ -33,6 +39,91 @@ async function setAnnotationsVisible(page: Page, visible: boolean) {
   if (openedSettings) {
     await settingsButton.click()
     await expect(annotationSwitch).toBeHidden()
+  }
+}
+
+async function expectNoHorizontalOverflow(page: Page) {
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          document.documentElement.scrollWidth <=
+          document.documentElement.clientWidth
+      )
+    )
+    .toBe(true)
+}
+
+async function clearChartCanvasTextDraws(page: Page) {
+  await page.evaluate(() => {
+    const trackedWindow = window as Window & {
+      __sign474ChartCanvasTextDraws?: ChartCanvasTextDraw[]
+    }
+    trackedWindow.__sign474ChartCanvasTextDraws = []
+  })
+}
+
+async function expectNativeLegendShowsReadoutTime(page: Page, status: Locator) {
+  const readout = await status.innerText()
+  const time = readout.match(/\b\d{2}:\d{2}\b/)?.[0]
+
+  if (!time) throw new Error(`Could not read a candle time from: ${readout}`)
+
+  await expect
+    .poll(
+      () =>
+        page.evaluate((expectedTime) => {
+          const chart = document.querySelector(
+            '[role="application"][aria-label="Biểu đồ giá"]'
+          )
+          const chartCanvases = new Set(
+            Array.from(chart?.querySelectorAll("canvas") ?? [])
+          )
+          const trackedWindow = window as Window & {
+            __sign474ChartCanvasTextDraws?: ChartCanvasTextDraw[]
+          }
+
+          return (
+            trackedWindow.__sign474ChartCanvasTextDraws?.some(
+              ({ canvas, text, y }) => {
+                if (!canvas.isConnected || !chartCanvases.has(canvas)) {
+                  return false
+                }
+
+                const width = canvas.getBoundingClientRect().width
+                const scale = canvas.width / Math.max(width, 1)
+                return text.includes(expectedTime) && y / scale <= 80
+              }
+            ) ?? false
+          )
+        }, time),
+      { timeout: 5_000 }
+    )
+    .toBe(true)
+}
+
+async function dragChartTouch(
+  page: Page,
+  start: { x: number; y: number },
+  end: { x: number; y: number }
+) {
+  const session = await page.context().newCDPSession(page)
+
+  try {
+    await session.send("Input.dispatchTouchEvent", {
+      type: "touchStart",
+      touchPoints: [{ ...start, id: 1, force: 1, radiusX: 1, radiusY: 1 }],
+    })
+    await session.send("Input.dispatchTouchEvent", {
+      type: "touchMove",
+      touchPoints: [{ ...end, id: 1, force: 1, radiusX: 1, radiusY: 1 }],
+    })
+    await session.send("Input.dispatchTouchEvent", {
+      type: "touchEnd",
+      touchPoints: [],
+    })
+  } finally {
+    await session.detach()
   }
 }
 
@@ -124,6 +215,282 @@ test.describe("P0 market chart workbench", () => {
           String(request.query).includes("assetId=102")
       )
     ).toBe(true)
+  })
+
+  test("shows the responsive toolbar and supports keyboard candle inspection", async ({
+    page,
+    fixture,
+  }, testInfo) => {
+    await page.clock.install({ time: new Date(MARKET_CHART_FIXTURE_NOW) })
+    // KLineCharts paints the native legend on canvas, separately from the status node.
+    await page.addInitScript(() => {
+      const trackedWindow = window as Window & {
+        __sign474ChartCanvasTextDraws?: ChartCanvasTextDraw[]
+      }
+      trackedWindow.__sign474ChartCanvasTextDraws = []
+
+      const nativeFillText = CanvasRenderingContext2D.prototype.fillText
+      CanvasRenderingContext2D.prototype.fillText = function (
+        text,
+        x,
+        y,
+        maxWidth
+      ) {
+        if (
+          this.canvas.closest('[role="application"][aria-label="Biểu đồ giá"]')
+        ) {
+          trackedWindow.__sign474ChartCanvasTextDraws?.push({
+            canvas: this.canvas,
+            text: String(text),
+            y,
+          })
+        }
+
+        if (maxWidth === undefined) {
+          return nativeFillText.call(this, text, x, y)
+        }
+
+        return nativeFillText.call(this, text, x, y, maxWidth)
+      }
+    })
+    await fixture.setScenario(
+      "/market-charts/candles",
+      "full-then-empty",
+      "GET"
+    )
+    await fixture.setScenario("/market-charts/live", "no-quote", "GET")
+    await page.addInitScript(() => localStorage.setItem("theme", "dark"))
+    await page.setViewportSize({ width: 1520, height: 1024 })
+    await page.goto("/vi/market-charts?assetId=101&timeframe=1h")
+
+    const chart = page.getByRole("application", { name: "Biểu đồ giá" })
+    const status = chart.locator('span[role="status"]')
+    await expect(page.locator("#market-chart-asset")).toBeVisible()
+    await expect(chart).toBeVisible()
+    await expect(
+      page.getByRole("combobox", { name: "Khung thời gian" })
+    ).toBeHidden()
+
+    for (const timeframe of [
+      "1 phút",
+      "5 phút",
+      "15 phút",
+      "30 phút",
+      "1 giờ",
+      "4 giờ",
+      "1 ngày",
+      "1 tuần",
+      "1 tháng",
+    ]) {
+      await expect(
+        page.getByRole("button", { name: timeframe, exact: true })
+      ).toBeVisible()
+    }
+
+    await expect(
+      page.getByRole("button", { name: "1 giờ", exact: true })
+    ).toHaveAttribute("aria-pressed", "true")
+    await expect(
+      page.getByText("Asia/Ho_Chi_Minh", { exact: true })
+    ).toHaveCount(0)
+    await expectNoHorizontalOverflow(page)
+    await expect(status).not.toHaveText("")
+    await expect(status).toContainText("15:00")
+    await expect(status).toContainText("105,00")
+    await expect(status).toContainText("1,003K")
+    const latestReadout = await status.innerText()
+    await page.mouse.move(5, 5)
+    await expect(status).toHaveText(latestReadout)
+    await testInfo.attach("sign-474-wide-1520x1024", {
+      body: await page.screenshot({ fullPage: true }),
+      contentType: "image/png",
+    })
+    const wideCanvasBounds = await page.locator("canvas").first().boundingBox()
+    if (!wideCanvasBounds)
+      throw new Error("Market chart canvas was not laid out")
+    const hoverPoint = {
+      x: wideCanvasBounds.x + wideCanvasBounds.width * 0.8,
+      y: wideCanvasBounds.y + wideCanvasBounds.height * 0.45,
+    }
+    await page.mouse.move(5, 5)
+    await page.mouse.move(hoverPoint.x, hoverPoint.y, { steps: 5 })
+    await expect(status).not.toHaveText(latestReadout)
+    await page.mouse.move(5, 5)
+    await expect(status).toHaveText(latestReadout)
+
+    await page.setViewportSize({ width: 1024, height: 768 })
+    await expect(
+      page.getByRole("combobox", { name: "Khung thời gian" })
+    ).toBeVisible()
+    await expect(
+      page.getByRole("button", { name: "1 giờ", exact: true })
+    ).toBeHidden()
+    await expect(
+      page.getByRole("button", { name: "Mở tùy chỉnh sự kiện" })
+    ).toBeVisible()
+    await expect(
+      page.getByRole("button", { name: "Chỉ báo", exact: true })
+    ).toBeVisible()
+    await expect(
+      page.getByRole("button", { name: "Chụp ảnh biểu đồ hiện tại" })
+    ).toBeVisible()
+    await expect(
+      page.getByRole("button", { name: "Mở biểu đồ toàn màn hình" })
+    ).toBeVisible()
+    await expectNoHorizontalOverflow(page)
+    await testInfo.attach("sign-474-compact-1024x768", {
+      body: await page.screenshot({ fullPage: true }),
+      contentType: "image/png",
+    })
+
+    await page.setViewportSize({ width: 768, height: 768 })
+    await expect(
+      page.getByRole("combobox", { name: "Khung thời gian" })
+    ).toBeVisible()
+    await expect(
+      page.getByRole("button", { name: "Thao tác khác" })
+    ).toBeHidden()
+    await expect(
+      page.getByRole("button", { name: "Mở tùy chỉnh sự kiện" })
+    ).toBeVisible()
+    await expectNoHorizontalOverflow(page)
+
+    await page.setViewportSize({ width: 767, height: 768 })
+    await expect(
+      page.getByRole("combobox", { name: "Khung thời gian" })
+    ).toBeVisible()
+    await expect(
+      page.getByRole("button", { name: "Thao tác khác" })
+    ).toBeVisible()
+    await expect(
+      page.getByRole("button", { name: "Mở tùy chỉnh sự kiện" })
+    ).toBeHidden()
+    await expectNoHorizontalOverflow(page)
+
+    await page.setViewportSize({ width: 390, height: 844 })
+    const moreActions = page.getByRole("button", { name: "Thao tác khác" })
+    await expect(
+      page.getByRole("combobox", { name: "Khung thời gian" })
+    ).toBeVisible()
+    await expect(moreActions).toBeVisible()
+    const mobileToolbarBoxes = await Promise.all([
+      page.locator("#market-chart-asset").boundingBox(),
+      page.getByRole("combobox", { name: "Khung thời gian" }).boundingBox(),
+      moreActions.boundingBox(),
+    ])
+    expect(mobileToolbarBoxes.every(Boolean)).toBe(true)
+    expect(
+      Math.abs(mobileToolbarBoxes[0]!.y - mobileToolbarBoxes[1]!.y)
+    ).toBeLessThan(2)
+    expect(
+      Math.abs(mobileToolbarBoxes[1]!.y - mobileToolbarBoxes[2]!.y)
+    ).toBeLessThan(2)
+    await expect(
+      page.getByRole("button", { name: "Mở tùy chỉnh sự kiện" })
+    ).toBeHidden()
+    await expectNoHorizontalOverflow(page)
+    await testInfo.attach("sign-474-mobile-390x844", {
+      body: await page.screenshot({ fullPage: true }),
+      contentType: "image/png",
+    })
+
+    await moreActions.click()
+    await expect(
+      page.getByRole("heading", { name: "Thao tác khác" })
+    ).toBeVisible()
+    await page.getByRole("button", { name: "Mở tùy chỉnh sự kiện" }).click()
+    await expect(
+      page.getByRole("heading", { name: "Tùy chỉnh sự kiện" })
+    ).toBeVisible()
+    await page.keyboard.press("Escape")
+    await expect(moreActions).toBeFocused()
+
+    await page.setViewportSize({ width: 360, height: 800 })
+    await expectNoHorizontalOverflow(page)
+    const narrowToolbarBoxes = await Promise.all([
+      page.locator("#market-chart-asset").boundingBox(),
+      page.getByRole("combobox", { name: "Khung thời gian" }).boundingBox(),
+      moreActions.boundingBox(),
+    ])
+    expect(narrowToolbarBoxes.every(Boolean)).toBe(true)
+    expect(
+      Math.abs(narrowToolbarBoxes[0]!.y - narrowToolbarBoxes[1]!.y)
+    ).toBeLessThan(2)
+    expect(
+      Math.abs(narrowToolbarBoxes[1]!.y - narrowToolbarBoxes[2]!.y)
+    ).toBeLessThan(2)
+    await testInfo.attach("sign-474-mobile-360x800", {
+      body: await page.screenshot({ fullPage: true }),
+      contentType: "image/png",
+    })
+
+    await page.setViewportSize({ width: 1439, height: 900 })
+    await expect(
+      page.getByRole("combobox", { name: "Khung thời gian" })
+    ).toBeVisible()
+    await expect(
+      page.getByRole("button", { name: "1 giờ", exact: true })
+    ).toBeHidden()
+    await expectNoHorizontalOverflow(page)
+
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await expect(
+      page.getByRole("combobox", { name: "Khung thời gian" })
+    ).toBeHidden()
+    await expect(
+      page.getByRole("button", { name: "1 giờ", exact: true })
+    ).toBeVisible()
+    await expectNoHorizontalOverflow(page)
+
+    await page.setViewportSize({ width: 1520, height: 1024 })
+    const panCanvasBounds = await page.locator("canvas").first().boundingBox()
+    if (!panCanvasBounds)
+      throw new Error("Market chart canvas was not laid out")
+    await clearChartCanvasTextDraws(page)
+    const panStart = {
+      x: panCanvasBounds.x + panCanvasBounds.width * 0.4,
+      y: panCanvasBounds.y + panCanvasBounds.height * 0.5,
+    }
+    await page.mouse.move(panStart.x, panStart.y)
+    await page.mouse.down()
+    await page.mouse.move(
+      panCanvasBounds.x + panCanvasBounds.width * 0.9,
+      panStart.y,
+      { steps: 10 }
+    )
+    await page.mouse.up()
+    await expect(status).toHaveText(latestReadout)
+    await expectNativeLegendShowsReadoutTime(page, status)
+    await testInfo.attach("sign-474-pan-keeps-latest-readout", {
+      body: await page.screenshot({ fullPage: true }),
+      contentType: "image/png",
+    })
+
+    await chart.focus()
+    await expect(status).toHaveText(latestReadout)
+    await clearChartCanvasTextDraws(page)
+    await chart.press("ArrowLeft")
+    await expect(status).not.toHaveText(latestReadout)
+    await expectNativeLegendShowsReadoutTime(page, status)
+    await testInfo.attach("sign-474-keyboard-inspection", {
+      body: await page.screenshot({ fullPage: true }),
+      contentType: "image/png",
+    })
+    await clearChartCanvasTextDraws(page)
+    await chart.press("Escape")
+    await expect(status).toHaveText(latestReadout)
+    await expectNativeLegendShowsReadoutTime(page, status)
+    await chart.evaluate((element) => (element as HTMLElement).blur())
+    await expect(status).toHaveText(latestReadout)
+
+    await page.setViewportSize({ width: 760, height: 512 })
+    await expect.poll(() => page.evaluate(() => window.innerWidth)).toBe(760)
+    await expect(status).toHaveText(latestReadout)
+    await expectNoHorizontalOverflow(page)
+    await testInfo.attach("sign-474-effective-viewport-760x512", {
+      body: await page.screenshot({ fullPage: true }),
+      contentType: "image/png",
+    })
   })
 
   test("keeps live quote details inside a narrow viewport", async ({
@@ -1083,10 +1450,73 @@ test.describe("P0 market chart workbench", () => {
   })
 })
 
+test.describe("P0 market chart touch inspection", () => {
+  test.use({
+    hasTouch: true,
+    isMobile: true,
+    viewport: { width: 390, height: 844 },
+  })
+
+  test("keeps native touch selection through lift, drag, and tap-to-exit", async ({
+    page,
+    fixture,
+  }) => {
+    await page.clock.install({ time: new Date(MARKET_CHART_FIXTURE_NOW) })
+    await fixture.setScenario("/market-charts/candles", "success", "GET")
+    await fixture.setScenario("/market-charts/live", "no-quote", "GET")
+    await page.addInitScript(() => localStorage.setItem("theme", "dark"))
+    await page.goto("/vi/market-charts?assetId=101&timeframe=1h")
+
+    const chart = page.getByRole("application", { name: "Biểu đồ giá" })
+    const status = chart.locator('span[role="status"]')
+    const canvas = page.locator("canvas").first()
+    await expect(status).not.toHaveText("")
+    const latestReadout = await status.innerText()
+    const bounds = await canvas.boundingBox()
+    if (!bounds) throw new Error("Market chart canvas was not laid out")
+
+    const firstTap = {
+      x: bounds.x + bounds.width * 0.82,
+      y: bounds.y + bounds.height * 0.45,
+    }
+    const dragEnd = {
+      x: bounds.x + bounds.width * 0.58,
+      y: firstTap.y,
+    }
+    const exitTap = {
+      x: bounds.x + bounds.width * 0.95,
+      y: bounds.y + bounds.height * 0.35,
+    }
+    const reselectTap = {
+      x: bounds.x + bounds.width * 0.18,
+      y: bounds.y + bounds.height * 0.45,
+    }
+
+    await page.touchscreen.tap(firstTap.x, firstTap.y)
+    await expect(status).not.toHaveText(latestReadout)
+    const firstInspection = await status.innerText()
+    await page.clock.runFor(550)
+    await expect(status).toHaveText(firstInspection)
+
+    await dragChartTouch(page, firstTap, dragEnd)
+    await expect(status).not.toHaveText(firstInspection)
+    const draggedInspection = await status.innerText()
+    await page.clock.runFor(550)
+    await expect(status).toHaveText(draggedInspection)
+
+    await page.touchscreen.tap(exitTap.x, exitTap.y)
+    await expect(status).toHaveText(latestReadout)
+
+    await page.clock.runFor(550)
+    await page.touchscreen.tap(reselectTap.x, reselectTap.y)
+    await expect(status).not.toHaveText(latestReadout)
+  })
+})
+
 test.describe("P0 market chart history selection", () => {
   test.use({ timezoneId: "Asia/Bangkok" })
 
-  test("resolves a URL asset from a later watchlist page and labels timezone", async ({
+  test("resolves a URL asset from a later watchlist page using browser time", async ({
     page,
     fixture,
   }) => {
@@ -1098,7 +1528,7 @@ test.describe("P0 market chart history selection", () => {
     )
     await expect(
       page.getByText("Múi giờ trình duyệt: Asia/Bangkok", { exact: true })
-    ).toBeVisible()
+    ).toHaveCount(0)
     await expect
       .poll(async () => {
         const state = await fixture.state()
@@ -1156,8 +1586,13 @@ test.describe("P0 market chart history selection", () => {
     page,
     fixture,
   }) => {
+    await page.setViewportSize({ width: 1520, height: 1024 })
     await page.goto("/vi/market-charts?assetId=101&timeframe=1h")
     await expect(page.locator("canvas").first()).toBeVisible()
+    const readout = page
+      .getByRole("application", { name: "Biểu đồ giá" })
+      .locator('span[role="status"]')
+    await expect(readout).not.toHaveText("")
 
     await fixture.setScenario("/market-charts/candles", "delayed-outage", "GET")
     const staleResponse = page.waitForResponse((response) => {
@@ -1171,6 +1606,11 @@ test.describe("P0 market chart history selection", () => {
     })
     await page.getByRole("button", { name: "4 giờ" }).click()
     await expect(page).toHaveURL(/timeframe=4h/)
+    await expect
+      .poll(async () =>
+        (await readout.allTextContents()).every((text) => !text.trim())
+      )
+      .toBe(true)
     await expect
       .poll(async () => {
         const state = await fixture.state()
@@ -1194,6 +1634,11 @@ test.describe("P0 market chart history selection", () => {
     await page.getByRole("option", { name: "XAUUSD - Gold" }).click()
     await expect(page).toHaveURL(/assetId=102/)
     await expect(assetSelector).toContainText("XAUUSD - Gold")
+    await expect
+      .poll(async () =>
+        (await readout.allTextContents()).every((text) => !text.trim())
+      )
+      .toBe(true)
 
     await expect
       .poll(async () => {
@@ -1220,6 +1665,9 @@ test.describe("P0 market chart history selection", () => {
     await expect(
       page.getByText("Đang tải dữ liệu biểu đồ giá.", { exact: true })
     ).toBeVisible()
+
+    await fixture.setScenario("/market-charts/candles", "success", "GET")
+    await expect(readout).toContainText("105,00")
   })
 
   test("shows candle errors separately from empty history and retries", async ({

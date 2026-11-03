@@ -1,4 +1,10 @@
-import type { LineType, PolygonType } from "klinecharts"
+import type {
+  CandleTooltipLegendsCustomCallback,
+  LineType,
+  PolygonType,
+} from "klinecharts"
+
+import type { MarketChartTimeframe } from "@/app/lib/market-charts/definitions"
 
 import {
   resolveMarketChartDrawingColor,
@@ -107,7 +113,11 @@ export interface CreateChartStylesResult {
       last: { line: { size: number }; text: { family: string; size: number } }
     }
     tooltip: {
-      legend: { family: string }
+      legend: {
+        defaultValue: string
+        family: string
+        template: CandleTooltipLegendsCustomCallback
+      }
       title: { family: string; show: boolean }
     }
   }
@@ -137,10 +147,142 @@ export interface CreateChartStylesResult {
   overlay: { text: { family: string; size: number } }
 }
 
+export interface MarketChartLegendFormatters {
+  formatDateTime: (
+    value: number,
+    options?: Intl.DateTimeFormatOptions,
+    fallback?: string
+  ) => string
+  formatNumber: (value: number, options?: Intl.NumberFormatOptions) => string
+  notAvailable: string
+  pricePrecision: number
+  timeframe: MarketChartTimeframe
+}
+
+export function formatMarketChartPrice(
+  value: number,
+  pricePrecision: number | null | undefined,
+  formatNumber: MarketChartLegendFormatters["formatNumber"]
+) {
+  const precision = pricePrecision ?? 4
+
+  return formatNumber(value, {
+    minimumFractionDigits: precision,
+    maximumFractionDigits: precision,
+  })
+}
+
+function getCandleTimeFormatOptions(
+  timeframe: MarketChartTimeframe
+): Intl.DateTimeFormatOptions {
+  if (timeframe === "1mo") {
+    return { year: "numeric", month: "long" }
+  }
+
+  if (timeframe === "1d" || timeframe === "1w") {
+    return { year: "numeric", month: "long", day: "numeric" }
+  }
+
+  return {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }
+}
+
+export function formatMarketChartVolume(
+  value: number,
+  formatNumber: MarketChartLegendFormatters["formatNumber"]
+) {
+  let divisor = 1
+  let suffix = ""
+
+  if (value > 1_000_000_000) {
+    divisor = 1_000_000_000
+    suffix = "B"
+  } else if (value > 1_000_000) {
+    divisor = 1_000_000
+    suffix = "M"
+  } else if (value > 1_000) {
+    divisor = 1_000
+    suffix = "K"
+  }
+
+  const formatted = formatNumber(value / divisor, {
+    minimumFractionDigits: suffix ? 0 : 2,
+    maximumFractionDigits: suffix ? 3 : 2,
+  })
+
+  return `${formatted}${suffix}`
+}
+
 export function createChartStyles(
-  palette: MarketChartThemePalette
+  palette: MarketChartThemePalette,
+  legendFormatters: MarketChartLegendFormatters
 ): CreateChartStylesResult {
   const fontFamily = getCssTextVariable("--font-sans", "Geist, sans-serif")
+  const timeOptions = getCandleTimeFormatOptions(legendFormatters.timeframe)
+
+  const candleLegendTemplate: CandleTooltipLegendsCustomCallback = ({
+    current,
+  }) => {
+    if (!current) return []
+
+    return [
+      {
+        title: "time",
+        value: legendFormatters.formatDateTime(
+          current.timestamp,
+          timeOptions,
+          legendFormatters.notAvailable
+        ),
+      },
+      {
+        title: "open",
+        value: formatMarketChartPrice(
+          current.open,
+          legendFormatters.pricePrecision,
+          legendFormatters.formatNumber
+        ),
+      },
+      {
+        title: "high",
+        value: formatMarketChartPrice(
+          current.high,
+          legendFormatters.pricePrecision,
+          legendFormatters.formatNumber
+        ),
+      },
+      {
+        title: "low",
+        value: formatMarketChartPrice(
+          current.low,
+          legendFormatters.pricePrecision,
+          legendFormatters.formatNumber
+        ),
+      },
+      {
+        title: "close",
+        value: formatMarketChartPrice(
+          current.close,
+          legendFormatters.pricePrecision,
+          legendFormatters.formatNumber
+        ),
+      },
+      {
+        title: "volume",
+        value:
+          typeof current.volume === "number" && Number.isFinite(current.volume)
+            ? formatMarketChartVolume(
+                current.volume,
+                legendFormatters.formatNumber
+              )
+            : legendFormatters.notAvailable,
+      },
+    ]
+  }
 
   return {
     grid: {
@@ -181,7 +323,11 @@ export function createChartStyles(
         },
       },
       tooltip: {
-        legend: { family: fontFamily },
+        legend: {
+          defaultValue: legendFormatters.notAvailable,
+          family: fontFamily,
+          template: candleLegendTemplate,
+        },
         title: { family: fontFamily, show: false },
       },
     },
