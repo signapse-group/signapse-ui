@@ -789,7 +789,6 @@ export const MarketChartCanvas = forwardRef<
   const chartRef = useRef<Chart | null>(null)
   const keyboardInspectionIndexRef = useRef<number | null>(null)
   const keyboardInspectingRef = useRef(false)
-  const keyboardMovePendingRef = useRef(false)
   const touchInspectionActiveRef = useRef(false)
   const touchSelectionPointRef = useRef<{ x: number; y: number } | null>(null)
   const touchMouseGuardUntilRef = useRef(0)
@@ -951,6 +950,7 @@ export const MarketChartCanvas = forwardRef<
 
       const candles = chart.getDataList()
       const latest = candles[candles.length - 1]
+      chart.executeAction("onCrosshairChange", {})
       setChartReadout(latest ? readoutFormatterRef.current(latest) : "")
     },
     [setChartReadout]
@@ -959,24 +959,6 @@ export const MarketChartCanvas = forwardRef<
   useEffect(() => {
     readoutFormatterRef.current = formatCandleReadout
   }, [formatCandleReadout])
-
-  function dispatchChartMouseMove(
-    chart: Chart,
-    target: HTMLElement,
-    clientX: number,
-    clientY: number
-  ) {
-    const root = chart.getDom()
-
-    if (!root) return
-
-    root.dispatchEvent(
-      new MouseEvent("mouseenter", { clientX, clientY, bubbles: false })
-    )
-    target.dispatchEvent(
-      new MouseEvent("mousemove", { clientX, clientY, bubbles: true })
-    )
-  }
 
   function resetChartInspection() {
     const chart = chartRef.current
@@ -987,18 +969,6 @@ export const MarketChartCanvas = forwardRef<
     touchMouseGuardUntilRef.current = 0
     touchGestureRef.current = null
     setLatestChartReadout(chart)
-
-    const yAxis = chart?.getDom(CANDLE_PANE_ID, "yAxis")
-
-    if (chart && yAxis) {
-      const bounds = yAxis.getBoundingClientRect()
-      dispatchChartMouseMove(
-        chart,
-        yAxis,
-        bounds.left + bounds.width / 2,
-        bounds.top + bounds.height / 2
-      )
-    }
   }
 
   function inspectChartCandle(dataIndex: number) {
@@ -1038,15 +1008,11 @@ export const MarketChartCanvas = forwardRef<
         return
       }
 
-      const bounds = main.getBoundingClientRect()
-      keyboardMovePendingRef.current = true
-      dispatchChartMouseMove(
-        chart,
-        main,
-        bounds.left + point.x,
-        bounds.top + point.y
-      )
-      keyboardMovePendingRef.current = false
+      chart.executeAction("onCrosshairChange", {
+        paneId: CANDLE_PANE_ID,
+        x: point.x,
+        y: point.y,
+      })
     })
   }
 
@@ -1469,9 +1435,7 @@ export const MarketChartCanvas = forwardRef<
       }
 
       keyboardInspectionIndexRef.current = dataIndex
-      if (!keyboardMovePendingRef.current) {
-        keyboardInspectingRef.current = false
-      }
+      keyboardInspectingRef.current = false
       setChartReadout(readoutFormatterRef.current(candle))
     }
     const isPlotTarget = (target: EventTarget | null) => {
@@ -1525,7 +1489,6 @@ export const MarketChartCanvas = forwardRef<
       if (mousePan?.moved) return
 
       if (
-        keyboardMovePendingRef.current ||
         !chartContextReadyRef.current ||
         sourceCapabilities?.firesTouchEvents ||
         performance.now() < touchMouseGuardUntilRef.current ||

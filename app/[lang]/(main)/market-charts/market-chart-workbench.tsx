@@ -815,6 +815,7 @@ function MarketChartTopToolbar({
   >(null)
   const [mobileActionsAnchor, setMobileActionsAnchor] =
     useState<HTMLButtonElement | null>(null)
+  const mobileSubmenuFocusReturnRef = useRef(false)
   const hasChartData = phase === "success" && hasCandles
   const controlsDisabled = !!watchlistError || !hasWatchlistAssets
   const chartCommandsDisabled = isBusy || !!watchlistError || !hasChartData
@@ -831,12 +832,20 @@ function MarketChartTopToolbar({
   }
 
   function openMobileSubmenu(submenu: "events" | "calendar" | "indicators") {
+    mobileSubmenuFocusReturnRef.current = true
     setMobileActionsOpen(false)
     setMobileSubmenu(submenu)
 
     if (submenu === "events") setEventSettingsOpen(true)
     if (submenu === "calendar") setUpcomingCalendarOpen(true)
     if (submenu === "indicators") setIndicatorSettingsOpen(true)
+  }
+
+  function getMobileSubmenuFinalFocus() {
+    if (!mobileSubmenuFocusReturnRef.current) return true
+
+    mobileSubmenuFocusReturnRef.current = false
+    return mobileActionsAnchor ?? true
   }
 
   return (
@@ -998,6 +1007,7 @@ function MarketChartTopToolbar({
                   mobileSubmenu === "events" ? mobileActionsAnchor : undefined
                 }
                 className="w-[min(18rem,calc(100vw_-_1.5rem))]"
+                finalFocus={getMobileSubmenuFinalFocus}
               >
                 <PopoverHeader>
                   <PopoverTitle>
@@ -1109,6 +1119,7 @@ function MarketChartTopToolbar({
               popoverAnchor={
                 mobileSubmenu === "calendar" ? mobileActionsAnchor : null
               }
+              popoverFinalFocus={getMobileSubmenuFinalFocus}
             />
 
             <Popover
@@ -1151,6 +1162,7 @@ function MarketChartTopToolbar({
                     : undefined
                 }
                 className="max-h-[var(--available-height)] w-[min(18rem,calc(100vw_-_1.5rem))] overflow-y-auto"
+                finalFocus={getMobileSubmenuFinalFocus}
               >
                 <PopoverHeader>
                   <PopoverTitle>
@@ -2911,6 +2923,7 @@ function MarketChartUpcomingCalendar({
   open,
   onOpenChange,
   popoverAnchor,
+  popoverFinalFocus,
 }: {
   calendarEvents: MarketChartEconomicCalendarEventResponse[]
   calendarLoadError: string | null
@@ -2924,6 +2937,7 @@ function MarketChartUpcomingCalendar({
   open: boolean
   onOpenChange: (open: boolean) => void
   popoverAnchor: HTMLElement | null
+  popoverFinalFocus: () => HTMLElement | true
 }) {
   const localization = useLocalization()
   const { dictionary, formatDateTime } = localization
@@ -3084,6 +3098,7 @@ function MarketChartUpcomingCalendar({
           align="start"
           anchor={popoverAnchor ?? undefined}
           className="w-[min(32rem,calc(100vw_-_1.5rem))]"
+          finalFocus={popoverFinalFocus}
         >
           <PopoverHeader>
             <PopoverTitle>

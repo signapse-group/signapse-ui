@@ -318,6 +318,7 @@ test.describe("P0 market chart workbench", () => {
       page.getByRole("heading", { name: "Tùy chỉnh sự kiện" })
     ).toBeVisible()
     await page.keyboard.press("Escape")
+    await expect(moreActions).toBeFocused()
 
     await page.setViewportSize({ width: 360, height: 800 })
     await expectNoHorizontalOverflow(page)
