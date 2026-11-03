@@ -2111,7 +2111,6 @@ export const en: Dictionary = {
     },
     live: {
       connecting: "Connecting live price",
-      currentPrice: "Current price: {price}",
       live: "Live price",
       marketClosed: "Market closed",
       reconnecting: "Reconnecting",

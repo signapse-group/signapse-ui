@@ -16,10 +16,11 @@ const {
   getAnnotations: vi.fn(),
   getCalendarEvents: vi.fn(),
 }))
+const router = { replace: routerReplace }
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/vi/market-charts",
-  useRouter: () => ({ replace: routerReplace }),
+  useRouter: () => router,
   useSearchParams: () => routeSearchParams,
 }))
 
@@ -46,12 +47,34 @@ vi.mock(
     return {
       ...original,
       MarketChartCalendarEventList: () => null,
-      MarketChartCanvas: ({ candles }: { candles: unknown[] }) =>
-        React.createElement(
-          "output",
-          { "data-testid": "chart-rest-candles" },
-          JSON.stringify(candles)
-        ),
+      MarketChartCanvas: ({
+        candles,
+        liveQuote,
+        liveQuoteIsLive,
+      }: {
+        candles: unknown[]
+        liveQuote: { assetId: number; price: number } | null
+        liveQuoteIsLive: boolean
+      }) => {
+        return React.createElement(
+          React.Fragment,
+          null,
+          React.createElement(
+            "output",
+            { "data-testid": "chart-rest-candles" },
+            JSON.stringify(candles)
+          ),
+          React.createElement("output", {
+            "data-testid": "chart-live-quote",
+            "data-price": liveQuote ? String(liveQuote.price) : "none",
+            "data-tone": liveQuote
+              ? liveQuoteIsLive
+                ? "live"
+                : "neutral"
+              : "none",
+          })
+        )
+      },
     }
   }
 )
@@ -68,12 +91,16 @@ class FakeEventSource {
   static readonly CONNECTING = 0
   static readonly CLOSED = 2
   static current: FakeEventSource | null = null
+  static instances: FakeEventSource[] = []
   readonly listeners = new Map<string, EventListener[]>()
+  readonly url: string
   close = vi.fn()
   readyState = 1
 
-  constructor() {
+  constructor(url: string | URL) {
     FakeEventSource.current = this
+    FakeEventSource.instances.push(this)
+    this.url = String(url)
   }
 
   addEventListener(type: string, listener: EventListenerOrEventListenerObject) {
@@ -84,8 +111,11 @@ class FakeEventSource {
     this.listeners.set(type, [...(this.listeners.get(type) ?? []), callback])
   }
 
-  emit(type: string, value: unknown) {
-    const event = new MessageEvent("message", { data: JSON.stringify(value) })
+  emit(type: string, value?: unknown) {
+    const event =
+      value === undefined
+        ? new Event(type)
+        : new MessageEvent(type, { data: JSON.stringify(value) })
     this.listeners.get(type)?.forEach((listener) => listener(event))
   }
 }
@@ -115,10 +145,10 @@ const candlesForBoundary = {
 function createRestCandles(times: readonly [string, string]) {
   return times.map((time, index) => ({
     time,
-    open: 100 + index * 10,
-    high: 105 + index * 10,
-    low: 98 + index * 10,
-    close: 102 + index * 10,
+    open: 4230 + index * 10,
+    high: 4250 + index * 10,
+    low: 4225 + index * 10,
+    close: 4235 + index * 10,
     volume: 1000 + index,
     partial: index === 1,
   })) satisfies MarketChartCandleItemResponse[]
@@ -129,6 +159,7 @@ describe("Market chart quote-only candle flow", () => {
     cleanup()
     vi.unstubAllGlobals()
     FakeEventSource.current = null
+    FakeEventSource.instances = []
   })
 
   beforeEach(() => {
@@ -177,8 +208,22 @@ describe("Market chart quote-only candle flow", () => {
       await waitFor(() =>
         expect(candlesOnChart).toHaveTextContent(JSON.stringify(restCandles))
       )
-      expect(FakeEventSource.current).not.toBeNull()
+      const liveQuoteOnChart = () => screen.getByTestId("chart-live-quote")
+      expect(liveQuoteOnChart()).toHaveAttribute("data-price", "none")
+      expect(liveQuoteOnChart()).toHaveAttribute("data-tone", "none")
+      await waitFor(() => {
+        expect(FakeEventSource.current).not.toBeNull()
+        expect(
+          new URL(FakeEventSource.current!.url).searchParams.get("timeframe")
+        ).toBe(timeframe)
+      })
       const source = FakeEventSource.current!
+      const sourceCount = FakeEventSource.instances.length
+      expect(
+        FakeEventSource.instances
+          .slice(0, -1)
+          .every((instance) => instance.close.mock.calls.length === 1)
+      ).toBe(true)
 
       await act(async () => {
         source.emit("snapshot", {
@@ -188,7 +233,7 @@ describe("Market chart quote-only candle flow", () => {
           quote: {
             assetId: 101,
             symbol: "BTCUSD",
-            price: 120.25,
+            price: 4245.5,
             receivedAt,
             stale: false,
           },
@@ -203,28 +248,88 @@ describe("Market chart quote-only candle flow", () => {
         })
       })
       await waitFor(() =>
-        expect(
-          screen.getByText("Giá hiện tại: 120,25", { exact: true })
-        ).toBeVisible()
+        expect(liveQuoteOnChart()).toHaveAttribute("data-price", "4245.5")
       )
+      expect(liveQuoteOnChart()).toHaveAttribute("data-tone", "live")
+      expect(
+        screen.getByText(viDictionary.marketCharts.live.live)
+      ).toBeVisible()
+      expect(screen.queryByText(/Giá hiện tại:/)).not.toBeInTheDocument()
       expect(candlesOnChart).toHaveTextContent(JSON.stringify(restCandles))
+      expect(restCandles[1].close).toBe(4245)
 
       await act(async () => {
         source.emit("price", {
           assetId: 101,
           symbol: "BTCUSD",
-          price: 123.45,
+          price: 4246.25,
           receivedAt,
           stale: false,
         })
       })
 
       await waitFor(() =>
-        expect(
-          screen.getByText("Giá hiện tại: 123,45", { exact: true })
-        ).toBeVisible()
+        expect(liveQuoteOnChart()).toHaveAttribute("data-price", "4246.25")
       )
+      expect(liveQuoteOnChart()).toHaveAttribute("data-tone", "live")
       expect(candlesOnChart).toHaveTextContent(JSON.stringify(restCandles))
+
+      await act(async () => {
+        source.emit("status", {
+          assetId: 101,
+          symbol: "BTCUSD",
+          state: "STALE",
+          message: null,
+          stale: true,
+          observedAt: receivedAt,
+        })
+      })
+      expect(liveQuoteOnChart()).toHaveAttribute("data-price", "4246.25")
+      expect(liveQuoteOnChart()).toHaveAttribute("data-tone", "neutral")
+      expect(
+        screen.getByText(viDictionary.marketCharts.live.stale)
+      ).toBeVisible()
+
+      await act(async () => {
+        source.readyState = FakeEventSource.CONNECTING
+        source.emit("error")
+      })
+      expect(liveQuoteOnChart()).toHaveAttribute("data-price", "4246.25")
+      expect(liveQuoteOnChart()).toHaveAttribute("data-tone", "neutral")
+      expect(
+        screen.getByText(viDictionary.marketCharts.live.reconnecting)
+      ).toBeVisible()
+
+      await act(async () => {
+        source.emit("error", {
+          assetId: 101,
+          symbol: "BTCUSD",
+          message: "Dịch vụ dữ liệu tạm thời không khả dụng.",
+          observedAt: receivedAt,
+        })
+      })
+      expect(liveQuoteOnChart()).toHaveAttribute("data-price", "4246.25")
+      expect(liveQuoteOnChart()).toHaveAttribute("data-tone", "neutral")
+      expect(
+        screen.getByText(viDictionary.marketCharts.live.error)
+      ).toBeVisible()
+
+      await act(async () => {
+        source.emit("status", {
+          assetId: 101,
+          symbol: "BTCUSD",
+          state: "MARKET_CLOSED",
+          message: null,
+          stale: false,
+          observedAt: receivedAt,
+        })
+      })
+      expect(liveQuoteOnChart()).toHaveAttribute("data-price", "4246.25")
+      expect(liveQuoteOnChart()).toHaveAttribute("data-tone", "neutral")
+      expect(
+        screen.getByText(viDictionary.marketCharts.live.marketClosed)
+      ).toBeVisible()
+      expect(FakeEventSource.instances).toHaveLength(sourceCount)
     }
   )
 })

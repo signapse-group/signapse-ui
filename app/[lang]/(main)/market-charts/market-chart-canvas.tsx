@@ -39,6 +39,7 @@ import type {
   MarketChartCandleItemResponse,
   MarketChartCandleRequest,
   MarketChartEconomicCalendarEventResponse,
+  MarketChartLiveQuoteResponse,
   MarketChartTimeframe,
 } from "@/app/lib/market-charts/definitions"
 import { AppTimeMetadata } from "@/components/app-time-metadata"
@@ -60,6 +61,7 @@ import {
   type MarketChartEconomicCalendarEventGroup,
 } from "./market-chart-annotations"
 import { getMarketChartCalendarEventTimestamp } from "./market-chart-calendar-helpers"
+import { syncMarketChartLiveQuoteOverlay } from "./market-chart-live-quote-overlay"
 import {
   createMarketChartDrawingGroupId,
   createMarketChartDrawingMode,
@@ -165,6 +167,8 @@ interface MarketChartCanvasProps {
   assetId: number
   candles: MarketChartCandleItemResponse[]
   dataVersion: number
+  liveQuote: MarketChartLiveQuoteResponse | null
+  liveQuoteIsLive: boolean
   timeframe: MarketChartTimeframe
   symbol?: string
   pricePrecision?: number | null
@@ -761,6 +765,8 @@ export const MarketChartCanvas = forwardRef<
     activeIndicators = [],
     candles,
     dataVersion = 0,
+    liveQuote,
+    liveQuoteIsLive,
     className,
     drawingToolActive = false,
     onAnnotationClose,
@@ -936,6 +942,8 @@ export const MarketChartCanvas = forwardRef<
   const { resolvedTheme } = useTheme()
   const chartThemeMode = resolveChartThemeMode(resolvedTheme)
   const chartThemePalette = getMarketChartThemePalette(chartThemeMode)
+  const liveQuoteAssetId = liveQuote?.assetId
+  const liveQuotePrice = liveQuote?.price
   const historyState =
     historyFeedback.loadId === chartLoadId ? historyFeedback.state : "idle"
   const historyError =
@@ -1754,6 +1762,46 @@ export const MarketChartCanvas = forwardRef<
       dispose(chart)
     }
   }, [])
+
+  // ── Sync: current quote — independent from REST candle data ──
+  useEffect(() => {
+    const chart = chartRef.current
+
+    if (!chart) {
+      return
+    }
+
+    if (
+      liveQuoteAssetId !== assetId ||
+      typeof liveQuotePrice !== "number" ||
+      !Number.isFinite(liveQuotePrice)
+    ) {
+      syncMarketChartLiveQuoteOverlay(chart, null)
+      return
+    }
+
+    syncMarketChartLiveQuoteOverlay(chart, {
+      color: liveQuoteIsLive
+        ? chartThemePalette.drawing
+        : chartThemePalette.axis,
+      label: formatMarketChartPrice(
+        liveQuotePrice,
+        pricePrecision,
+        formatNumber
+      ),
+      price: liveQuotePrice,
+    })
+  }, [
+    assetId,
+    chartThemePalette.axis,
+    chartThemePalette.drawing,
+    formatNumber,
+    liveQuoteAssetId,
+    liveQuotePrice,
+    liveQuoteIsLive,
+    pricePrecision,
+    timeframe,
+  ])
 
   // ── Sync: theme styles — klinecharts native ──
   useEffect(() => {

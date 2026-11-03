@@ -2092,7 +2092,6 @@ export const vi = {
     },
     live: {
       connecting: "Đang kết nối giá trực tiếp",
-      currentPrice: "Giá hiện tại: {price}",
       live: "Giá trực tiếp",
       marketClosed: "Thị trường đã đóng",
       reconnecting: "Đang kết nối lại",
