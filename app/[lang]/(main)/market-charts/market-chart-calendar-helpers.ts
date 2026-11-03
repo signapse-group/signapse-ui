@@ -13,6 +13,54 @@ const MARKET_CHART_CALENDAR_DAY_MS = 24 * 60 * 60 * 1000
 export type MarketChartCalendarEventState =
   "UPCOMING" | "AWAITING_PUBLICATION" | "PUBLISHED" | "EXPIRED" | "INVALID"
 
+type ComparableCalendarValue = {
+  unit: string
+  value: number
+}
+
+function parseComparableCalendarValue(
+  value: string | null | undefined
+): ComparableCalendarValue | null {
+  const match = value?.trim().match(
+    /^([+-]?)\s*(?:([$€£¥]|[A-Z]{3})\s*)?((?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?|\.\d+)\s*([A-Z][A-Z0-9]*(?:\s+[A-Z][A-Z0-9]*)*|%)?$/i
+  )
+
+  if (!match) {
+    return null
+  }
+
+  const numericValue = Number(`${match[1]}${match[3].replace(/,/g, "")}`)
+
+  if (!Number.isFinite(numericValue)) {
+    return null
+  }
+
+  return {
+    value: numericValue,
+    unit: [match[2], match[4]?.trim().replace(/\s+/g, " ")]
+      .filter(Boolean)
+      .join(" "),
+  }
+}
+
+export function getMarketChartCalendarActualDirection(
+  actualValue: string | null | undefined,
+  forecastValue: string | null | undefined
+): "higher" | "lower" | null {
+  const actual = parseComparableCalendarValue(actualValue)
+  const forecast = parseComparableCalendarValue(forecastValue)
+
+  if (!actual || !forecast || actual.unit !== forecast.unit) {
+    return null
+  }
+
+  if (actual.value > forecast.value) {
+    return "higher"
+  }
+
+  return actual.value < forecast.value ? "lower" : null
+}
+
 export function getMarketChartCalendarEventTimestamp(
   event: MarketChartEconomicCalendarEventResponse
 ): number | null {
