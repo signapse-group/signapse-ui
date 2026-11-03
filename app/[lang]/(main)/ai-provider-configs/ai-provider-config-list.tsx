@@ -206,7 +206,10 @@ export function AiProviderConfigListPage({
         </div>
       </AppListTable>
 
-      <AppPaginationControls page={providerPage} className="mt-4" />
+      <AppPaginationControls
+        page={providerPage}
+        className="mt-4 gap-4 [&_[data-slot=pagination-content]]:gap-1 [&_[data-slot=select-trigger]]:px-2"
+      />
 
       {providers.length > 0 ? (
         <>
