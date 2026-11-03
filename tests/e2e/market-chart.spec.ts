@@ -53,6 +53,29 @@ async function expectMarketChartCanvasText(page: Page, expectedText: string) {
     .toBe(true)
 }
 
+async function expectNoMarketChartCanvasText(page: Page, expectedText: string) {
+  await expect
+    .poll(() => hasMarketChartCanvasText(page, expectedText), {
+      timeout: 10_000,
+    })
+    .toBe(false)
+}
+
+async function expectMarketChartFreshnessClearOfAssistant(page: Page) {
+  const freshnessBounds = await page
+    .getByText(/^Cập nhật /)
+    .locator("..")
+    .boundingBox()
+  const viewportWidth = await page.evaluate(
+    () => document.documentElement.clientWidth
+  )
+
+  expect(freshnessBounds).not.toBeNull()
+  expect(freshnessBounds!.x + freshnessBounds!.width).toBeLessThanOrEqual(
+    viewportWidth - 48
+  )
+}
+
 async function hasMarketChartCanvasText(page: Page, expectedText: string) {
   return page.evaluate((text) => {
     const chart = document.querySelector(
@@ -194,7 +217,7 @@ async function dragChartTouch(
 }
 
 test.describe("P0 market chart workbench", () => {
-  test("loads controls and renders the live quote across responsive viewports", async ({
+  test("renders the live quote across responsive viewports", async ({
     page,
     fixture,
   }, testInfo) => {
@@ -227,12 +250,13 @@ test.describe("P0 market chart workbench", () => {
       .poll(async () => (await fixture.state()).streamConnections, {
         timeout: 10_000,
       })
-      .toBeGreaterThanOrEqual(2)
+      .toBe(2)
     await expect(page.getByText("Giá trực tiếp", { exact: true })).toBeVisible({
       timeout: 30_000,
     })
     await expectMarketChartCanvasText(page, "110,50")
-    await expect(page.getByText(/^Cập nhật /)).toBeVisible()
+    const freshness = page.getByText(/^Cập nhật /).locator("..")
+    await expect(freshness).toBeVisible()
 
     for (const [viewport, label] of [
       [{ width: 1520, height: 1024 }, "wide"],
@@ -246,11 +270,21 @@ test.describe("P0 market chart workbench", () => {
         page.getByText("Giá trực tiếp", { exact: true })
       ).toBeVisible()
       await expect(page.getByText(/^Cập nhật /)).toBeVisible()
+      await expectMarketChartFreshnessClearOfAssistant(page)
       await testInfo.attach(`sign-475-quote-${label}`, {
         body: await page.screenshot({ fullPage: true }),
         contentType: "image/png",
       })
     }
+
+    await page.setViewportSize({ width: 360, height: 800 })
+    await expectNoHorizontalOverflow(page)
+    await expectMarketChartCanvasText(page, "110,50")
+    await expectMarketChartFreshnessClearOfAssistant(page)
+    await testInfo.attach("sign-475-quote-mobile-360", {
+      body: await page.screenshot({ fullPage: true }),
+      contentType: "image/png",
+    })
   })
 
   test("shows the responsive toolbar and supports keyboard candle inspection", async ({
@@ -511,7 +545,8 @@ test.describe("P0 market chart workbench", () => {
       timeout: 30_000,
     })
     await expectMarketChartCanvasText(page, "110,50")
-    await expect(page.getByText(/^Cập nhật /)).toBeVisible()
+    const freshness = page.getByText(/^Cập nhật /).locator("..")
+    await expect(freshness).toBeVisible()
 
     const bounds = await page
       .locator('span[aria-live="polite"]')
@@ -531,6 +566,8 @@ test.describe("P0 market chart workbench", () => {
     expect(bounds.left).toBeGreaterThanOrEqual(0)
     expect(bounds.right).toBeLessThanOrEqual(bounds.viewportWidth)
     expect(bounds.scrollWidth).toBeLessThanOrEqual(bounds.clientWidth)
+
+    await expectMarketChartFreshnessClearOfAssistant(page)
   })
 
   test("retries exact empty history and loads sparse count-back candles", async ({
@@ -1677,7 +1714,7 @@ test.describe("P0 market chart history selection", () => {
     await fixture.setScenario("/market-charts/candles", "success", "GET")
     await expect(readout).toContainText("105,00")
     await expectMarketChartCanvasText(page, "2.500,25")
-    expect(await hasMarketChartCanvasText(page, "110,50")).toBe(false)
+    await expectNoMarketChartCanvasText(page, "110,50")
     await expect(page.getByText("Giá trực tiếp", { exact: true })).toBeVisible()
     expect((await fixture.state()).streamConnections).toBe(2)
   })

@@ -3293,7 +3293,7 @@ function MarketChartAnnotationControls({
           groups={groups}
         />
         {freshnessLabel || liveStatusLabel ? (
-          <div className="ml-auto flex w-full min-w-0 flex-wrap items-center justify-end gap-x-3 gap-y-1 text-right sm:w-auto sm:shrink-0">
+          <div className="ml-auto flex w-full min-w-0 flex-wrap items-center justify-end gap-x-3 gap-y-1 pr-12 text-right sm:w-auto sm:shrink-0">
             {liveStatusLabel ? (
               <span aria-live="polite" className="flex items-center gap-2">
                 <span
