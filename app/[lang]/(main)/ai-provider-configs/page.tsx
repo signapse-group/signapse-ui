@@ -170,7 +170,7 @@ function ListSkeleton({ dictionary }: { dictionary: Dictionary }) {
         </Table>
       </AppListTable>
 
-      <AppPaginationSkeleton className="mt-4" />
+      <AppPaginationSkeleton className="mt-4 gap-4" />
     </div>
   )
 }

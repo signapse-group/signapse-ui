@@ -228,6 +228,99 @@ test.describe("P0 AI connections", () => {
       contentType: "image/png",
     })
 
+    await page.setViewportSize({ width: 1440, height: 1024 })
+    const paginationFooter = page.locator('[data-slot="app-pagination-footer"]')
+    const spacing = await paginationFooter.evaluate((footer) => {
+      const selector = footer.querySelector<HTMLElement>(
+        '[data-slot="select-trigger"]'
+      )
+      const navigation = footer.querySelector<HTMLElement>(
+        '[data-slot="pagination"]'
+      )
+      const navigationContent = footer.querySelector<HTMLElement>(
+        '[data-slot="pagination-content"]'
+      )
+      const summary = footer.querySelector<HTMLElement>("p")
+      const sizeGroup = selector?.parentElement
+      const controls = sizeGroup?.parentElement
+      const button = navigation?.querySelector<HTMLElement>("button")
+      const icon = button?.querySelector<SVGSVGElement>("svg")
+
+      if (
+        !selector ||
+        !navigation ||
+        !navigationContent ||
+        !summary ||
+        !sizeGroup ||
+        !controls ||
+        !button ||
+        !icon
+      ) {
+        throw new Error("Pagination footer elements are missing")
+      }
+
+      const footerRect = footer.getBoundingClientRect()
+      const selectorRect = selector.getBoundingClientRect()
+      const navigationRect = navigation.getBoundingClientRect()
+      const controlsRect = controls.getBoundingClientRect()
+      const summaryRect = summary.getBoundingClientRect()
+      const dimensions = (element: HTMLElement | SVGSVGElement) => {
+        const { width, height } = element.getBoundingClientRect()
+        return [Math.round(width), Math.round(height)]
+      }
+
+      return {
+        footerGap: getComputedStyle(footer).gap,
+        footerPadding: [
+          getComputedStyle(footer).paddingTop,
+          getComputedStyle(footer).paddingRight,
+          getComputedStyle(footer).paddingBottom,
+          getComputedStyle(footer).paddingLeft,
+        ],
+        selectorPadding: [
+          getComputedStyle(selector).paddingLeft,
+          getComputedStyle(selector).paddingRight,
+        ],
+        labelSelectorGap: getComputedStyle(sizeGroup).gap,
+        selectorNavigationGap: getComputedStyle(controls).gap,
+        navigationGap: getComputedStyle(navigationContent).gap,
+        selectorSize: dimensions(selector),
+        buttonSize: dimensions(button),
+        iconSize: dimensions(icon),
+        countOnLeft: summaryRect.right < controlsRect.left,
+        controlsOnRight:
+          controlsRect.left > footerRect.left + footerRect.width / 2 &&
+          controlsRect.right < footerRect.right,
+        selectorBeforeNavigation: selectorRect.right < navigationRect.left,
+      }
+    })
+    expect(spacing).toEqual({
+      footerGap: "16px",
+      footerPadding: ["12px", "16px", "12px", "16px"],
+      selectorPadding: ["8px", "8px"],
+      labelSelectorGap: "8px",
+      selectorNavigationGap: "16px",
+      navigationGap: "4px",
+      selectorSize: [64, 32],
+      buttonSize: [32, 32],
+      iconSize: [16, 16],
+      countOnLeft: true,
+      controlsOnRight: true,
+      selectorBeforeNavigation: true,
+    })
+    await testInfo.attach("SIGN-462-m07-footer-dark-1440x1024.png", {
+      body: await paginationFooter.screenshot(),
+      contentType: "image/png",
+    })
+
+    const pageSizeTrigger = paginationFooter.getByRole("combobox", {
+      name: en.pagination.pageSize,
+    })
+    await pageSizeTrigger.press("Enter")
+    await expect(page.getByRole("listbox")).toBeVisible()
+    await page.keyboard.press("Escape")
+    await expect(pageSizeTrigger).toBeFocused()
+
     for (const viewport of responsiveViewports) {
       await page.setViewportSize(viewport)
       await expect(page.getByText("3 tasks", { exact: true })).toBeVisible()
