@@ -63,7 +63,6 @@ import {
 import { EVENT_READ_PERMISSIONS } from "@/app/lib/events/permissions"
 import { WorkspaceWatchlistAssetListItemResponse } from "@/app/lib/watchlists/definitions"
 import { AppTimeMetadata } from "@/components/app-time-metadata"
-import { LocalizedLink } from "@/components/localized-link"
 import { useHasAnyPermission } from "@/components/permission-provider"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -169,12 +168,11 @@ import {
   type MarketChartEconomicCalendarEventGroup,
 } from "./market-chart-annotations"
 import {
+  MARKET_CHART_CALENDAR_LOOKAHEAD_DAYS,
   MARKET_CHART_CALENDAR_REFRESH_INTERVAL_MS,
   createMarketChartFutureCalendarRequest,
-  getAwaitingMarketChartCalendarEvents,
   getMarketChartCalendarEventTimestamp,
   getNextMarketChartCalendarEvent,
-  getUpcomingMarketChartCalendarEvents,
 } from "./market-chart-calendar-helpers"
 import {
   LocalEntityQuickDetailDrawer,
@@ -227,8 +225,6 @@ type MarketChartSelectionState = {
   timeframe: MarketChartTimeframe
 }
 
-type MarketChartCalendarLookaheadDays = 1 | 7
-
 type FormErrors = Partial<Record<keyof MarketChartSelectionState, string>> & {
   form?: string
 }
@@ -248,6 +244,14 @@ type MarketChartLiveRuntimeState = {
 type MarketChartDisplayData = MarketChartCandleResponse & {
   annotations: MarketChartAnnotationResponse[]
   economicCalendarEvents: MarketChartEconomicCalendarEventResponse[]
+}
+
+type MarketChartFutureCalendarState = {
+  contextKey: string
+  events: MarketChartEconomicCalendarEventResponse[]
+  error: string | null
+  loadedAt: string | null
+  loading: boolean
 }
 
 const MARKET_CHART_ANNOTATION_LEGEND_DIRECTIONS = [
@@ -767,9 +771,7 @@ function MarketChartTopToolbar({
   calendarLoadError,
   calendarLoadedAt,
   calendarLoading,
-  calendarLookaheadDays,
   currentCalendarTimestamp,
-  onCalendarLookaheadDaysChange,
   onCalendarRetry,
   onAnnotationLayerChange,
   onCalendarLayerChange,
@@ -800,11 +802,7 @@ function MarketChartTopToolbar({
   calendarLoadError: string | null
   calendarLoadedAt: string | null
   calendarLoading: boolean
-  calendarLookaheadDays: MarketChartCalendarLookaheadDays
   currentCalendarTimestamp: number
-  onCalendarLookaheadDaysChange: (
-    days: MarketChartCalendarLookaheadDays
-  ) => void
   onCalendarRetry: () => void
   onAnnotationLayerChange: (checked: boolean) => void
   onCalendarLayerChange: (checked: boolean) => void
@@ -821,10 +819,9 @@ function MarketChartTopToolbar({
   const { dictionary } = useLocalization()
   const [mobileActionsOpen, setMobileActionsOpen] = useState(false)
   const [eventSettingsOpen, setEventSettingsOpen] = useState(false)
-  const [upcomingCalendarOpen, setUpcomingCalendarOpen] = useState(false)
   const [indicatorSettingsOpen, setIndicatorSettingsOpen] = useState(false)
   const [mobileSubmenu, setMobileSubmenu] = useState<
-    "events" | "calendar" | "indicators" | null
+    "events" | "indicators" | null
   >(null)
   const [mobileActionsAnchor, setMobileActionsAnchor] =
     useState<HTMLButtonElement | null>(null)
@@ -844,13 +841,12 @@ function MarketChartTopToolbar({
     )
   }
 
-  function openMobileSubmenu(submenu: "events" | "calendar" | "indicators") {
+  function openMobileSubmenu(submenu: "events" | "indicators") {
     mobileSubmenuFocusReturnRef.current = true
     setMobileActionsOpen(false)
     setMobileSubmenu(submenu)
 
     if (submenu === "events") setEventSettingsOpen(true)
-    if (submenu === "calendar") setUpcomingCalendarOpen(true)
     if (submenu === "indicators") setIndicatorSettingsOpen(true)
   }
 
@@ -861,6 +857,23 @@ function MarketChartTopToolbar({
     return mobileActionsAnchor ?? true
   }
 
+  const nextEvent =
+    selectedCalendarImpacts.length > 0
+      ? getNextMarketChartCalendarEvent({
+          currentTimestamp: currentCalendarTimestamp,
+          events: calendarEvents,
+          lookaheadDays: MARKET_CHART_CALENDAR_LOOKAHEAD_DAYS,
+        })
+      : null
+  const nextEventTitle =
+    nextEvent?.title?.trim() || dictionary.marketCharts.calendar.eventFallback
+  const nextEventStatus = nextEvent
+    ? nextEventTitle
+    : selectedCalendarImpacts.length === 0
+      ? dictionary.marketCharts.calendar.noSelectedImpacts
+      : calendarLoading
+        ? dictionary.marketCharts.calendar.loadingEvents
+        : calendarLoadError || dictionary.marketCharts.calendar.noNextEvent
   return (
     <div className="border-b bg-card p-2">
       <div className="flex flex-wrap items-center gap-1">
@@ -1114,25 +1127,14 @@ function MarketChartTopToolbar({
               </PopoverContentInOverlay>
             </Popover>
 
-            <MarketChartUpcomingCalendar
-              calendarEvents={calendarEvents}
+            <MarketChartNextEventBadge
+              nextEvent={nextEvent}
               calendarLoadError={calendarLoadError}
               calendarLoadedAt={calendarLoadedAt}
               calendarLoading={calendarLoading}
-              calendarLookaheadDays={calendarLookaheadDays}
               currentTimestamp={currentCalendarTimestamp}
-              onLookaheadDaysChange={onCalendarLookaheadDaysChange}
+              emptyStatus={nextEventStatus}
               onRetry={onCalendarRetry}
-              selectedImpactCount={selectedCalendarImpacts.length}
-              open={upcomingCalendarOpen}
-              onOpenChange={(open) => {
-                setUpcomingCalendarOpen(open)
-                if (!open) setMobileSubmenu(null)
-              }}
-              popoverAnchor={
-                mobileSubmenu === "calendar" ? mobileActionsAnchor : null
-              }
-              popoverFinalFocus={getMobileSubmenuFinalFocus}
             />
 
             <Popover
@@ -1308,17 +1310,16 @@ function MarketChartTopToolbar({
                   <CalendarCog data-icon="inline-start" />
                   {dictionary.marketCharts.controls.annotationsLabel}
                 </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="justify-start"
-                  aria-label={dictionary.marketCharts.calendar.openUpcoming}
-                  onClick={() => openMobileSubmenu("calendar")}
-                >
-                  <CalendarClock data-icon="inline-start" />
-                  {dictionary.marketCharts.calendar.openUpcoming}
-                </Button>
+                <MarketChartNextEventBadge
+                  nextEvent={nextEvent}
+                  calendarLoadError={calendarLoadError}
+                  calendarLoadedAt={calendarLoadedAt}
+                  calendarLoading={calendarLoading}
+                  currentTimestamp={currentCalendarTimestamp}
+                  emptyStatus={nextEventStatus}
+                  mobile
+                  onRetry={onCalendarRetry}
+                />
                 <Button
                   type="button"
                   variant="ghost"
@@ -1386,13 +1387,14 @@ function ChartSurface({
   annotationGroups,
   calendarEventGroups,
   calendarEvents,
+  nextCalendarEvents,
   calendarMarkerEvents,
   calendarLayerEnabled,
   selectedCalendarImpacts,
   calendarLoadError,
+  futureCalendarLoadError,
   calendarLoadedAt,
   calendarLoading,
-  calendarLookaheadDays,
   currentCalendarTimestamp,
   warmAnnotationGroups,
   data,
@@ -1423,7 +1425,6 @@ function ChartSurface({
   onQuickDetailClose,
   onCalendarLayerChange,
   onCalendarImpactChange,
-  onCalendarLookaheadDaysChange,
   onCalendarRetry,
   onAssetChange,
   onLoadedDataChange,
@@ -1436,13 +1437,14 @@ function ChartSurface({
   annotationGroups: MarketChartAnnotationGroup[]
   calendarEventGroups: MarketChartEconomicCalendarEventGroup[]
   calendarEvents: MarketChartEconomicCalendarEventResponse[]
+  nextCalendarEvents: MarketChartEconomicCalendarEventResponse[]
   calendarMarkerEvents: MarketChartEconomicCalendarEventResponse[]
   calendarLayerEnabled: boolean
   selectedCalendarImpacts: EconomicCalendarImpactLevel[]
   calendarLoadError: string | null
+  futureCalendarLoadError: string | null
   calendarLoadedAt: string | null
   calendarLoading: boolean
-  calendarLookaheadDays: MarketChartCalendarLookaheadDays
   currentCalendarTimestamp: number
   warmAnnotationGroups: MarketChartAnnotationGroup[]
   dataVersion: number
@@ -1475,9 +1477,6 @@ function ChartSurface({
   onCalendarImpactChange: (
     impact: EconomicCalendarImpactLevel,
     checked: boolean
-  ) => void
-  onCalendarLookaheadDaysChange: (
-    days: MarketChartCalendarLookaheadDays
   ) => void
   onCalendarRetry: () => void
   onAssetChange: (value: string) => void
@@ -1766,13 +1765,11 @@ function ChartSurface({
           timeframeLabels={timeframeLabels}
           watchlistAssets={watchlistAssets}
           watchlistError={watchlistError}
-          calendarEvents={calendarEvents}
-          calendarLoadError={calendarLoadError}
+          calendarEvents={nextCalendarEvents}
+          calendarLoadError={futureCalendarLoadError}
           calendarLoadedAt={calendarLoadedAt}
           calendarLoading={calendarLoading}
-          calendarLookaheadDays={calendarLookaheadDays}
           currentCalendarTimestamp={currentCalendarTimestamp}
-          onCalendarLookaheadDaysChange={onCalendarLookaheadDaysChange}
           onCalendarRetry={onCalendarRetry}
           onAnnotationLayerChange={onAnnotationLayerChange}
           onCalendarLayerChange={onCalendarLayerChange}
@@ -2820,40 +2817,33 @@ function formatCalendarCountdown(
   )
 }
 
-function MarketChartUpcomingCalendar({
-  calendarEvents,
+function MarketChartNextEventBadge({
+  nextEvent,
   calendarLoadError,
   calendarLoadedAt,
   calendarLoading,
-  calendarLookaheadDays,
   currentTimestamp,
-  onLookaheadDaysChange,
+  emptyStatus,
+  mobile = false,
   onRetry,
-  selectedImpactCount,
-  open,
-  onOpenChange,
-  popoverAnchor,
-  popoverFinalFocus,
 }: {
-  calendarEvents: MarketChartEconomicCalendarEventResponse[]
+  nextEvent: MarketChartEconomicCalendarEventResponse | null
   calendarLoadError: string | null
   calendarLoadedAt: string | null
   calendarLoading: boolean
-  calendarLookaheadDays: MarketChartCalendarLookaheadDays
   currentTimestamp: number
-  onLookaheadDaysChange: (days: MarketChartCalendarLookaheadDays) => void
+  emptyStatus: string
+  mobile?: boolean
   onRetry: () => void
-  selectedImpactCount: number
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  popoverAnchor: HTMLElement | null
-  popoverFinalFocus: () => HTMLElement | true
 }) {
   const localization = useLocalization()
   const { dictionary, formatDateTime } = localization
   const summaryContainerRef = useRef<HTMLDivElement | null>(null)
   const [summaryWidth, setSummaryWidth] = useState<number | null>(null)
   const [summaryMode, setSummaryMode] = useState<"compact" | "full">("compact")
+  const [open, setOpen] = useState(false)
+  const [openedEvent, setOpenedEvent] =
+    useState<MarketChartEconomicCalendarEventResponse | null>(null)
 
   useEffect(() => {
     const element = summaryContainerRef.current
@@ -2883,20 +2873,6 @@ function MarketChartUpcomingCalendar({
     return () => observer.disconnect()
   }, [])
 
-  const upcomingEvents = getUpcomingMarketChartCalendarEvents({
-    currentTimestamp,
-    events: calendarEvents,
-    lookaheadDays: calendarLookaheadDays,
-  })
-  const awaitingEvents = getAwaitingMarketChartCalendarEvents({
-    currentTimestamp,
-    events: calendarEvents,
-  })
-  const nextEvent = getNextMarketChartCalendarEvent({
-    currentTimestamp,
-    events: calendarEvents,
-    lookaheadDays: calendarLookaheadDays,
-  })
   const nextEventTimestamp = nextEvent
     ? getMarketChartCalendarEventTimestamp(nextEvent)
     : null
@@ -2929,179 +2905,158 @@ function MarketChartUpcomingCalendar({
           localization
         )
       : null
-  const summaryLabel = nextEvent
-    ? `${nextEventTitle}${nextEventTime ? ` · ${nextEventTime}` : ""}`
-    : dictionary.marketCharts.calendar.noNextEvent
   const fullSummaryLabel = nextEvent
     ? [nextEventTitle, nextEventTime, nextEventImpactLabel, countdownLabel]
         .filter(Boolean)
         .join(" · ")
-    : summaryLabel
-  const stale = !!calendarLoadedAt && !!calendarLoadError
+    : emptyStatus
   const showCompactCountdown = summaryWidth === null || summaryWidth >= 220
   const showCompactIconOnly = summaryWidth !== null && summaryWidth < 180
   const showFullSummary = summaryMode === "full"
+  const canOpenEvent = nextEvent !== null
+  const statusAnnouncement = calendarLoadError
+    ? calendarLoadedAt
+      ? `${dictionary.marketCharts.calendar.stale}: ${nextEvent ? nextEventTitle : emptyStatus}`
+      : calendarLoadError
+    : nextEvent
+      ? `${dictionary.marketCharts.calendar.nextEvent}: ${nextEventTitle}`
+      : emptyStatus
 
   return (
     <div
       ref={summaryContainerRef}
-      className="order-none min-w-0 flex-1 basis-full lg:order-last lg:ml-auto lg:max-w-[min(32rem,100%)] lg:basis-auto"
+      className={cn(
+        "min-w-0",
+        mobile
+          ? "w-full"
+          : "order-none flex-1 basis-full lg:order-last lg:ml-auto lg:max-w-[min(32rem,100%)] lg:basis-auto"
+      )}
     >
-      <Popover open={open} onOpenChange={onOpenChange}>
-        <PopoverTrigger
-          render={
-            <Button
-              type="button"
-              variant="ghost"
-              size={showCompactIconOnly ? "icon-sm" : "sm"}
-              className={cn(
-                "max-w-full min-w-0 justify-start gap-1.5 text-left",
-                showCompactIconOnly && "justify-center"
-              )}
-              title={showCompactIconOnly ? fullSummaryLabel : undefined}
-              aria-label={`${dictionary.marketCharts.calendar.openUpcoming}: ${fullSummaryLabel}`}
-            />
-          }
+      <div className="flex min-w-0 flex-col items-start gap-1">
+        <span
+          className="sr-only"
+          data-testid="market-chart-next-event-status"
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
         >
-          <CalendarClock data-icon="inline-start" />
-          {showFullSummary ? (
-            <span
-              className="flex min-w-0 items-baseline gap-1.5"
-              aria-live="polite"
-            >
-              <span className="shrink-0 font-semibold">
-                {dictionary.marketCharts.calendar.nextEvent}:
-              </span>
-              <span className="min-w-0 truncate font-semibold">
-                {nextEvent ? nextEventTitle : summaryLabel}
-              </span>
-              {nextEventTime ? (
-                <span className="shrink-0 text-muted-foreground">
-                  {nextEventTime}
-                </span>
-              ) : null}
-              {countdownLabel ? (
-                <span className="shrink-0 text-muted-foreground">
-                  {countdownLabel}
-                </span>
-              ) : null}
-            </span>
-          ) : (
-            <span
-              className="flex min-w-0 items-center gap-1.5"
-              aria-live="polite"
-            >
-              {!showCompactIconOnly ? (
-                <span className="shrink-0 font-semibold">
-                  {dictionary.marketCharts.calendar.nextEvent}
-                </span>
-              ) : null}
-              {showCompactCountdown && countdownLabel ? (
-                <span className="min-w-0 truncate text-muted-foreground">
-                  {countdownLabel}
-                </span>
-              ) : null}
-            </span>
-          )}
-        </PopoverTrigger>
-        <PopoverContentInOverlay
-          align="start"
-          anchor={popoverAnchor ?? undefined}
-          className="w-[min(32rem,calc(100vw_-_1.5rem))]"
-          finalFocus={popoverFinalFocus}
+          {statusAnnouncement}
+        </span>
+        <Popover
+          open={open}
+          onOpenChange={(nextOpen) => {
+            setOpen(nextOpen)
+            setOpenedEvent(nextOpen ? nextEvent : null)
+          }}
         >
-          <PopoverHeader>
-            <PopoverTitle>
-              {dictionary.marketCharts.calendar.upcomingTitle}
-            </PopoverTitle>
-            <PopoverDescription>
-              {stale
-                ? dictionary.marketCharts.calendar.stale
-                : calendarLoadError ||
-                  (calendarLoading
-                    ? dictionary.marketCharts.calendar.loadingEvents
-                    : dictionary.marketCharts.calendar.legendLabel)}
-            </PopoverDescription>
-          </PopoverHeader>
-
-          <ToggleGroup
-            multiple={false}
-            value={[String(calendarLookaheadDays)]}
-            variant="outline"
-            size="sm"
-            onValueChange={(values) => {
-              const value = values[0]
-
-              if (value === "1" || value === "7") {
-                onLookaheadDaysChange(
-                  Number(value) as MarketChartCalendarLookaheadDays
-                )
-              }
-            }}
-            aria-label={dictionary.marketCharts.calendar.upcomingTitle}
-          >
-            <ToggleGroupItem value="1">
-              {dictionary.marketCharts.calendar.upcoming24Hours}
-            </ToggleGroupItem>
-            <ToggleGroupItem value="7">
-              {dictionary.marketCharts.calendar.upcoming7Days}
-            </ToggleGroupItem>
-          </ToggleGroup>
-
-          {selectedImpactCount === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              {dictionary.marketCharts.calendar.noSelectedImpacts}
-            </p>
-          ) : null}
-
-          {calendarLoadError ? (
-            <div className="flex flex-col gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-2 text-sm text-destructive">
-              <span>{calendarLoadError}</span>
+          <PopoverTrigger
+            render={
               <Button
                 type="button"
-                variant="outline"
-                size="sm"
-                onClick={onRetry}
-              >
-                <RefreshCw data-icon="inline-start" />
-                {dictionary.marketCharts.controls.refreshLatestData}
-              </Button>
-            </div>
-          ) : null}
-
-          {awaitingEvents.length > 0 ? (
-            <div className="flex flex-col gap-2">
-              <div>
-                <p className="text-sm font-semibold">
-                  {dictionary.marketCharts.calendar.awaitingPublication}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {
-                    dictionary.marketCharts.calendar
-                      .awaitingPublicationDescription
-                  }
-                </p>
-              </div>
-              <MarketChartCalendarEventList events={awaitingEvents} />
-            </div>
-          ) : null}
-
-          {upcomingEvents.length > 0 ? (
-            <MarketChartCalendarEventList events={upcomingEvents} />
-          ) : !calendarLoading && selectedImpactCount > 0 ? (
-            <p className="text-sm text-muted-foreground">
-              {dictionary.marketCharts.calendar.noEvents}
-            </p>
-          ) : null}
-
-          <LocalizedLink
-            href="/economic-calendar"
-            className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+                variant="ghost"
+                size={
+                  mobile
+                    ? "sm"
+                    : canOpenEvent && showCompactIconOnly
+                      ? "icon-sm"
+                      : "sm"
+                }
+                className={cn(
+                  "max-w-full min-w-0 justify-start gap-1.5 text-left",
+                  mobile && "w-full",
+                  canOpenEvent &&
+                    showCompactIconOnly &&
+                    !mobile &&
+                    "justify-center"
+                )}
+                title={
+                  canOpenEvent && showCompactIconOnly && !mobile
+                    ? fullSummaryLabel
+                    : undefined
+                }
+                aria-label={`${dictionary.marketCharts.calendar.nextEvent}: ${fullSummaryLabel}`}
+                disabled={!canOpenEvent}
+              />
+            }
           >
-            {dictionary.marketCharts.calendar.viewFullCalendar}
-          </LocalizedLink>
-        </PopoverContentInOverlay>
-      </Popover>
+            <CalendarClock data-icon="inline-start" />
+            {nextEvent && showFullSummary && !mobile ? (
+              <span className="flex min-w-0 items-baseline gap-1.5">
+                <span className="shrink-0 font-semibold">
+                  {dictionary.marketCharts.calendar.nextEvent}:
+                </span>
+                <span className="min-w-0 truncate font-semibold">
+                  {nextEventTitle}
+                </span>
+                {nextEventTime ? (
+                  <span className="shrink-0 text-muted-foreground">
+                    {nextEventTime}
+                  </span>
+                ) : null}
+                {countdownLabel ? (
+                  <span className="shrink-0 text-muted-foreground">
+                    {countdownLabel}
+                  </span>
+                ) : null}
+              </span>
+            ) : nextEvent ? (
+              <span className="flex min-w-0 items-center gap-1.5">
+                {!showCompactIconOnly || mobile ? (
+                  <span className="shrink-0 font-semibold">
+                    {dictionary.marketCharts.calendar.nextEvent}
+                  </span>
+                ) : null}
+                <span className="min-w-0 truncate font-semibold">
+                  {nextEventTitle}
+                </span>
+                {(showCompactCountdown || mobile) && countdownLabel ? (
+                  <span className="min-w-0 truncate text-muted-foreground">
+                    {countdownLabel}
+                  </span>
+                ) : null}
+              </span>
+            ) : (
+              <span className="min-w-0 truncate text-sm text-muted-foreground">
+                {emptyStatus}
+              </span>
+            )}
+          </PopoverTrigger>
+          {openedEvent ? (
+            <PopoverContentInOverlay
+              align="start"
+              side="bottom"
+              className="w-[min(24rem,calc(100vw_-_1.5rem))]"
+            >
+              <PopoverHeader className="sr-only">
+                <PopoverTitle>
+                  {openedEvent.title?.trim() ||
+                    dictionary.marketCharts.calendar.eventFallback}
+                </PopoverTitle>
+              </PopoverHeader>
+              <MarketChartCalendarEventList events={[openedEvent]} />
+            </PopoverContentInOverlay>
+          ) : null}
+        </Popover>
+        {calendarLoadError ? (
+          <div className="flex max-w-full items-center justify-between gap-2 px-2 text-xs text-destructive">
+            <span className="min-w-0 truncate">
+              {calendarLoadedAt
+                ? dictionary.marketCharts.calendar.stale
+                : calendarLoadError}
+            </span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={calendarLoading}
+              onClick={onRetry}
+            >
+              <RefreshCw data-icon="inline-start" />
+              {dictionary.marketCharts.controls.refreshLatestData}
+            </Button>
+          </div>
+        ) : null}
+      </div>
     </div>
   )
 }
@@ -3290,23 +3245,12 @@ export function MarketChartWorkbench({
   const [calendarLoadError, setCalendarLoadError] = useState<string | null>(
     null
   )
-  const [futureCalendarEvents, setFutureCalendarEvents] = useState<
-    MarketChartEconomicCalendarEventResponse[]
-  >([])
-  const [futureCalendarLoadError, setFutureCalendarLoadError] = useState<
-    string | null
-  >(null)
-  const [futureCalendarLoadedAt, setFutureCalendarLoadedAt] = useState<
-    string | null
-  >(null)
-  const [futureCalendarLoading, setFutureCalendarLoading] = useState(false)
-  const [calendarLookaheadDays, setCalendarLookaheadDays] =
-    useState<MarketChartCalendarLookaheadDays>(7)
+  const [futureCalendarState, setFutureCalendarState] =
+    useState<MarketChartFutureCalendarState | null>(null)
   const [currentCalendarTimestamp, setCurrentCalendarTimestamp] = useState(0)
   const annotationLayerEnabledRef = useRef(annotationLayerEnabled)
   const selectedCalendarImpactsRef = useRef(selectedCalendarImpacts)
   const futureCalendarGenerationRef = useRef(0)
-  const futureCalendarAssetIdRef = useRef<number | null>(null)
   const [selectedAnnotationGroupId, setSelectedAnnotationGroupId] = useState<
     string | null
   >(null)
@@ -3323,6 +3267,24 @@ export function MarketChartWorkbench({
   const hasWatchlistAssets = watchlistAssets.length > 0
   const selectedAsset = findWatchlistAsset(watchlistAssets, selection.assetId)
   const selectedAssetId = selectedAsset?.assetId ?? null
+  const futureCalendarContextKey =
+    selectedAssetId === null
+      ? null
+      : `${selectedAssetId}:${selectedCalendarImpacts.join(",")}`
+  const currentFutureCalendarState =
+    futureCalendarState?.contextKey === futureCalendarContextKey
+      ? futureCalendarState
+      : null
+  const futureCalendarEvents = useMemo(
+    () => currentFutureCalendarState?.events ?? [],
+    [currentFutureCalendarState]
+  )
+  const futureCalendarLoadError = currentFutureCalendarState?.error ?? null
+  const futureCalendarLoadedAt = currentFutureCalendarState?.loadedAt ?? null
+  const futureCalendarLoading =
+    selectedAssetId !== null &&
+    selectedCalendarImpacts.length > 0 &&
+    (currentFutureCalendarState?.loading ?? true)
   const isBusy = phase === "loading" || isPending
   const timeframeLabels = getMarketChartTimeframeLabels(dictionary)
   const chartData = loadedData ?? data
@@ -3551,12 +3513,10 @@ export function MarketChartWorkbench({
       impacts: readonly EconomicCalendarImpactLevel[]
     ) {
       const generation = ++futureCalendarGenerationRef.current
+      const contextKey = `${assetId}:${impacts.join(",")}`
 
       if (!impacts.length) {
-        setFutureCalendarEvents([])
-        setFutureCalendarLoadError(null)
-        setFutureCalendarLoadedAt(null)
-        setFutureCalendarLoading(false)
+        setFutureCalendarState(null)
         return
       }
 
@@ -3570,27 +3530,60 @@ export function MarketChartWorkbench({
         return
       }
 
-      setFutureCalendarLoadError(null)
-      setFutureCalendarLoading(true)
+      setFutureCalendarState((current) =>
+        current?.contextKey === contextKey
+          ? { ...current, loading: true }
+          : {
+              contextKey,
+              events: [],
+              error: null,
+              loadedAt: null,
+              loading: true,
+            }
+      )
 
-      const result = await getMarketChartEconomicCalendarEvents(request)
+      function setFailure(error: string) {
+        setFutureCalendarState((current) => {
+          const cached = current?.contextKey === contextKey ? current : null
 
-      if (futureCalendarGenerationRef.current !== generation) {
-        return
+          return {
+            contextKey,
+            events: cached?.events ?? [],
+            error,
+            loadedAt: cached?.loadedAt ?? null,
+            loading: false,
+          }
+        })
       }
 
-      setFutureCalendarLoading(false)
+      try {
+        const result = await getMarketChartEconomicCalendarEvents(request)
 
-      if (!result.success) {
-        setFutureCalendarLoadError(result.error)
-        return
+        if (futureCalendarGenerationRef.current !== generation) {
+          return
+        }
+
+        if (!result.success) {
+          setFailure(dictionary.marketCharts.calendar.loadError)
+          return
+        }
+
+        setFutureCalendarState({
+          contextKey,
+          events: result.data,
+          error: null,
+          loadedAt: new Date().toISOString(),
+          loading: false,
+        })
+      } catch {
+        if (futureCalendarGenerationRef.current !== generation) {
+          return
+        }
+
+        setFailure(dictionary.marketCharts.calendar.loadError)
       }
-
-      setFutureCalendarEvents(result.data)
-      setFutureCalendarLoadError(null)
-      setFutureCalendarLoadedAt(new Date().toISOString())
     },
-    []
+    [dictionary.marketCharts.calendar.loadError]
   )
 
   const loadCandles = useCallback(
@@ -3769,19 +3762,7 @@ export function MarketChartWorkbench({
   useEffect(() => {
     futureCalendarGenerationRef.current += 1
 
-    if (futureCalendarAssetIdRef.current !== selectedAssetId) {
-      futureCalendarAssetIdRef.current = selectedAssetId
-      setFutureCalendarEvents([])
-      setFutureCalendarLoadError(null)
-      setFutureCalendarLoadedAt(null)
-    }
-
-    if (
-      selectedAssetId === null ||
-      !selectedCalendarImpacts.length ||
-      phase === "idle" ||
-      phase === "loading"
-    ) {
+    if (selectedAssetId === null || !selectedCalendarImpacts.length) {
       return
     }
 
@@ -3814,12 +3795,7 @@ export function MarketChartWorkbench({
       window.clearInterval(intervalId)
       document.removeEventListener("visibilitychange", handleVisibilityChange)
     }
-  }, [
-    loadFutureCalendarEvents,
-    phase,
-    selectedAssetId,
-    selectedCalendarImpacts,
-  ])
+  }, [loadFutureCalendarEvents, selectedAssetId, selectedCalendarImpacts])
 
   useEffect(() => {
     if (phase !== "success" || selectedAssetId === null) {
@@ -4457,13 +4433,19 @@ export function MarketChartWorkbench({
         annotationGroups={annotationGroups}
         calendarEventGroups={calendarEventGroups}
         calendarEvents={calendarEvents}
+        nextCalendarEvents={futureCalendarEvents.filter((event) =>
+          isEconomicCalendarImpactSelected(
+            event.impact,
+            selectedCalendarImpacts
+          )
+        )}
         calendarMarkerEvents={visibleCalendarEvents}
         calendarLayerEnabled={calendarLayerEnabled}
         selectedCalendarImpacts={selectedCalendarImpacts}
         calendarLoadError={futureCalendarLoadError || calendarLoadError}
+        futureCalendarLoadError={futureCalendarLoadError}
         calendarLoadedAt={futureCalendarLoadedAt}
         calendarLoading={futureCalendarLoading}
-        calendarLookaheadDays={calendarLookaheadDays}
         currentCalendarTimestamp={currentCalendarTimestamp}
         warmAnnotationGroups={warmAnnotationGroups}
         dataVersion={dataVersion}
@@ -4494,7 +4476,6 @@ export function MarketChartWorkbench({
         onQuickDetailClose={() => setQuickDetailEntity(null)}
         onCalendarLayerChange={handleCalendarLayerChange}
         onCalendarImpactChange={handleCalendarImpactChange}
-        onCalendarLookaheadDaysChange={setCalendarLookaheadDays}
         onCalendarRetry={() => {
           if (selectedAsset) {
             void loadFutureCalendarEvents(
