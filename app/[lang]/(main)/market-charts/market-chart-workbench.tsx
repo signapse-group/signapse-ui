@@ -1988,7 +1988,7 @@ function ChartSurface({
         />
 
         {selectedAnnotationGroup ? (
-          <div className="border-t bg-muted/10 p-3 sm:hidden">
+          <div className="border-t bg-muted/10 p-3 md:hidden">
             <div className="overflow-hidden rounded-xl border bg-popover">
               <div className="flex items-center justify-between gap-3 border-b px-3 py-2.5">
                 <div className="flex items-center gap-2">

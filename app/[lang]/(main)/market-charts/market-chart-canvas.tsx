@@ -2312,7 +2312,7 @@ export const MarketChartCanvas = forwardRef<
             <PopoverContentInOverlay
               align="start"
               side="top"
-              className="w-[min(22rem,calc(100vw_-_1.5rem))] max-sm:-translate-x-1/2 sm:block"
+              className="hidden w-[min(22rem,calc(100vw_-_1.5rem))] md:block"
             >
               {renderAnnotationPopup?.(group)}
             </PopoverContentInOverlay>

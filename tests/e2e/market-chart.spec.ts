@@ -143,6 +143,34 @@ async function expectNoHorizontalOverflow(page: Page) {
     .toBe(true)
 }
 
+async function expectPopoverWithinViewport(
+  page: Page,
+  viewport: { width: number; height: number }
+) {
+  const popover = page.getByRole("dialog")
+  await expect(popover).toBeVisible()
+
+  const bounds = await popover.boundingBox()
+  expect(bounds).not.toBeNull()
+  if (!bounds) {
+    return
+  }
+
+  expect(bounds.x).toBeGreaterThanOrEqual(0)
+  expect(bounds.x + bounds.width).toBeLessThanOrEqual(viewport.width)
+  expect(bounds.y).toBeGreaterThanOrEqual(0)
+  expect(bounds.y + bounds.height).toBeLessThanOrEqual(viewport.height)
+}
+
+async function expectPopoverHidden(page: Page) {
+  const popover = page
+    .locator('[data-slot="popover-content"]')
+    .filter({ hasText: "Fixture warm episode" })
+  await expect(page.getByRole("dialog")).toHaveCount(0)
+  await expect(popover).toBeHidden()
+  expect(await popover.boundingBox()).toBeNull()
+}
+
 async function clearChartCanvasTextDraws(page: Page) {
   await page.evaluate(() => {
     const trackedWindow = window as Window & {
@@ -959,6 +987,7 @@ test.describe("P0 market chart workbench", () => {
     const detail = page.getByRole("dialog")
     await expect(annotationMarker).toHaveAttribute("aria-pressed", "true")
     await expect(detail).toBeVisible()
+    await expectPopoverWithinViewport(page, { width: 1520, height: 1024 })
     await expect(
       detail.getByText(`Bắt đầu giai đoạn: ${expectedTime}`, { exact: true })
     ).toBeVisible()
@@ -1021,9 +1050,45 @@ test.describe("P0 market chart workbench", () => {
       contentType: "image/png",
     })
 
+    await page.setViewportSize({ width: 760, height: 512 })
+    await expect(annotationMarker).toHaveAttribute("aria-pressed", "true")
+    await expectPopoverHidden(page)
+    const resizedDetailTitle = page.getByRole("main").getByRole("heading", {
+      name: "U.S. debt snapshot",
+      exact: true,
+    })
+    await expect(resizedDetailTitle).toBeVisible()
+    await resizedDetailTitle.scrollIntoViewIfNeeded()
+    await expect(resizedDetailTitle).toBeInViewport()
+    await expect(
+      page.getByRole("main").getByText("Lý giải", { exact: true })
+    ).toBeVisible()
+    await expectNoHorizontalOverflow(page)
+    await testInfo.attach("SIGN-478-warm-period-dark-resize-760", {
+      body: await page.screenshot({ animations: "disabled", fullPage: true }),
+      contentType: "image/png",
+    })
+
+    await page.setViewportSize({ width: 767, height: 512 })
+    await expectPopoverHidden(page)
+    await expect(
+      page.getByRole("main").getByRole("heading", {
+        name: "U.S. debt snapshot",
+        exact: true,
+      })
+    ).toBeVisible()
+    await expectNoHorizontalOverflow(page)
+
+    await page.setViewportSize({ width: 768, height: 768 })
+    await annotationMarker.scrollIntoViewIfNeeded()
+    await expect(detail).toBeVisible()
+    await expectPopoverWithinViewport(page, { width: 768, height: 768 })
+    await expectNoHorizontalOverflow(page)
+
     await page.emulateMedia({ colorScheme: "light" })
     await page.setViewportSize({ width: 1024, height: 768 })
     await expect(detail).toBeVisible()
+    await expectPopoverWithinViewport(page, { width: 1024, height: 768 })
     await expectNoHorizontalOverflow(page)
     await testInfo.attach("SIGN-478-warm-period-light-compact", {
       body: await page.screenshot({ animations: "disabled", fullPage: true }),
@@ -1032,6 +1097,7 @@ test.describe("P0 market chart workbench", () => {
 
     await page.emulateMedia({ colorScheme: "dark" })
     await page.setViewportSize({ width: 390, height: 844 })
+    await expectPopoverHidden(page)
     await expect(
       page.getByRole("main").getByRole("heading", {
         name: "U.S. debt snapshot",
@@ -1058,6 +1124,7 @@ test.describe("P0 market chart workbench", () => {
       contentType: "image/png",
     })
     await page.setViewportSize({ width: 360, height: 844 })
+    await expectPopoverHidden(page)
     await expect(
       page.getByRole("main").getByRole("heading", {
         name: "U.S. debt snapshot",
