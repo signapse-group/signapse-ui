@@ -936,7 +936,10 @@ test.describe("P0 market chart workbench", () => {
 
     await page.keyboard.press("Escape")
     await page.getByRole("button", { name: "Thao tác khác" }).click()
-    const mobileNextTrigger = page.getByRole("button", {
+    const mobileActionsDialog = page.getByRole("dialog", {
+      name: "Thao tác khác",
+    })
+    const mobileNextTrigger = mobileActionsDialog.getByRole("button", {
       name: /Sự kiện tiếp theo: Fixture inflation release/,
     })
     await expect(mobileNextTrigger).toBeVisible()
@@ -967,9 +970,11 @@ test.describe("P0 market chart workbench", () => {
         ).toBeVisible()
         await page.getByRole("button", { name: "Thao tác khác" }).click()
         await expect(
-          page.getByRole("button", {
-            name: /Sự kiện tiếp theo: Fixture inflation release/,
-          })
+          page
+            .getByRole("dialog", { name: "Thao tác khác" })
+            .getByRole("button", {
+              name: /Sự kiện tiếp theo: Fixture inflation release/,
+            })
         ).toBeVisible()
         await page.keyboard.press("Escape")
       } else {
@@ -1637,14 +1642,16 @@ test.describe("P0 market chart workbench", () => {
     const nextTrigger = page.getByRole("button", {
       name: /Sự kiện tiếp theo: Fixture employment release/,
     })
-    await nextTrigger.focus()
-    await page.keyboard.press("Enter")
+    await nextTrigger.click()
     const employment = page.getByRole("heading", {
       name: "Fixture employment release",
       level: 3,
     })
+    const employmentDetail = page.getByRole("dialog", {
+      name: "Fixture employment release",
+    })
+    await expect(employmentDetail).toBeVisible()
     await expect(employment).toBeVisible()
-    const employmentDetail = employment.locator("..")
     await expect(
       employmentDetail.getByText("USD", { exact: true })
     ).toBeVisible()
