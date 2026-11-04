@@ -724,6 +724,7 @@ test.describe("P0 market chart workbench", () => {
   }) => {
     test.setTimeout(180_000)
 
+    await page.clock.setFixedTime(new Date(MARKET_CHART_FIXTURE_NOW))
     await trackMarketChartCanvasText(page)
     await fixture.setScenario("/market-charts/live", "no-quote", "GET")
     await page.goto("/vi/market-charts?assetId=101&timeframe=1h")
