@@ -9,6 +9,7 @@ import {
 } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { Suspense, useState } from "react"
+import { renderToString } from "react-dom/server"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 const {
@@ -655,6 +656,35 @@ describe("AI connection UI", () => {
     ).toBeVisible()
   })
 
+  it("renders non-final key deletion disabled before client hydration", () => {
+    const markup = renderToString(
+      <LocalizationProvider locale="en" dictionary={en}>
+        <PermissionProvider
+          permissions={["ai-provider-config:read", "ai-provider-config:delete"]}
+        >
+          <AiProviderConfigDraftProvider>
+            <AiProviderConfigDetail
+              provider={{
+                ...legacyProvider,
+                credentials: [
+                  { id: 101, keyPreview: "gsk-...legacy" },
+                  { id: 102, keyPreview: "gsk-...second" },
+                ],
+                taskReferences: [],
+              }}
+            />
+          </AiProviderConfigDraftProvider>
+        </PermissionProvider>
+      </LocalizationProvider>
+    )
+    const serverMarkup = document.createElement("div")
+    serverMarkup.innerHTML = markup
+
+    expect(
+      within(serverMarkup).getByRole("button", { name: "Remove API key 1" })
+    ).toBeDisabled()
+  })
+
   it("requires confirmation to remove a non-final key and to delete an unreferenced connection", async () => {
     const user = userEvent.setup()
     const provider = {
@@ -685,7 +715,7 @@ describe("AI connection UI", () => {
     })
     expect(removeKeyButton).toHaveClass("bg-destructive/10")
     await user.click(removeKeyButton)
-    const keyDialog = screen.getByRole("alertdialog")
+    let keyDialog = screen.getByRole("alertdialog")
     expect(keyDialog).toHaveAttribute("data-size", "sm")
     expect(
       keyDialog.querySelector('[data-slot="alert-dialog-media"]')
@@ -697,6 +727,15 @@ describe("AI connection UI", () => {
       within(keyDialog).getByRole("button", { name: en.common.delete })
     ).toHaveClass("bg-destructive/10")
     expect(within(keyDialog).getByText(/gsk-\.\.\.legacy/)).toBeVisible()
+
+    await user.click(
+      within(keyDialog).getByRole("button", { name: en.common.cancel })
+    )
+    expect(deleteAiProviderCredential).not.toHaveBeenCalled()
+    expect(screen.getByText("gsk-...legacy", { exact: true })).toBeVisible()
+
+    await user.click(removeKeyButton)
+    keyDialog = screen.getByRole("alertdialog")
     await user.click(
       within(keyDialog).getByRole("button", { name: en.common.delete })
     )
@@ -704,6 +743,7 @@ describe("AI connection UI", () => {
       expect(deleteAiProviderCredential).toHaveBeenCalledWith(12, 101)
     )
     expect(screen.queryByText("gsk-...legacy")).not.toBeInTheDocument()
+    expect(screen.getByText("gsk-...second", { exact: true })).toBeVisible()
 
     const deleteConnectionButton = screen.getByRole("button", {
       name: en.aiProviderConfigs.deleteConnection,
@@ -739,6 +779,45 @@ describe("AI connection UI", () => {
       expect(deleteAiProviderConfig).toHaveBeenCalledWith(12)
     )
     expect(routerReplace).toHaveBeenCalledWith("/vi/ai-provider-configs")
+  })
+
+  it("keeps selected-key confirmation open and reports a failed deletion", async () => {
+    const user = userEvent.setup()
+    vi.mocked(deleteAiProviderCredential).mockResolvedValue({
+      success: false,
+      error: "Credential is still in use.",
+    })
+
+    renderWithProviders(
+      <AiProviderConfigDetail
+        provider={{
+          ...legacyProvider,
+          credentials: [
+            { id: 101, keyPreview: "gsk-...legacy" },
+            { id: 102, keyPreview: "gsk-...second" },
+          ],
+          taskReferences: [],
+        }}
+      />,
+      ["ai-provider-config:read", "ai-provider-config:delete"],
+      en
+    )
+
+    await user.click(screen.getByRole("button", { name: "Remove API key 1" }))
+    const dialog = screen.getByRole("alertdialog")
+    await user.click(
+      within(dialog).getByRole("button", { name: en.common.delete })
+    )
+
+    await vi.waitFor(() =>
+      expect(deleteAiProviderCredential).toHaveBeenCalledWith(12, 101)
+    )
+    expect(dialog).toBeVisible()
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Credential is still in use."
+    )
+    expect(screen.getByText("gsk-...legacy", { exact: true })).toBeVisible()
+    expect(screen.getByText("gsk-...second", { exact: true })).toBeVisible()
   })
 
   it("allows a reader without update permission to reach the detail route", async () => {

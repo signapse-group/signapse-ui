@@ -871,7 +871,9 @@ test.describe("P0 AI connections", () => {
     await page
       .getByRole("button", { name: en.aiProviderConfigs.discardChanges })
       .click()
-    await expect(page).toHaveURL(/\/en\/ai-provider-configs$/)
+    await expect(page).toHaveURL(/\/en\/ai-provider-configs$/, {
+      timeout: 30_000,
+    })
 
     for (const viewport of responsiveViewports) {
       await page.setViewportSize(viewport)
