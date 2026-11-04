@@ -3496,15 +3496,15 @@ export function MarketChartWorkbench({
       const failedResult = results.find((result) => !result.success)
 
       if (failedResult && !failedResult.success) {
-        setCalendarLoadError(failedResult.error)
-        toast.error(failedResult.error)
+        setCalendarLoadError(dictionary.marketCharts.calendar.loadError)
+        toast.error(dictionary.marketCharts.calendar.loadError)
       } else {
         setCalendarLoadError(null)
       }
 
       return results.flatMap((result) => (result.success ? result.data : []))
     },
-    []
+    [dictionary.marketCharts.calendar.loadError]
   )
 
   const loadFutureCalendarEvents = useCallback(
