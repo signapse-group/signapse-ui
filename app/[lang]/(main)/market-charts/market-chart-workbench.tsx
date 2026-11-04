@@ -47,6 +47,7 @@ import {
   type MarketChartAnnotationDirection,
   type MarketChartAnnotationReactionResponse,
   type MarketChartAnnotationResponse,
+  type MarketChartCandleItemResponse,
   MarketChartCandleRequest,
   MarketChartCandleResponse,
   MarketChartEconomicCalendarEventRequest,
@@ -224,6 +225,7 @@ import {
   type MarketChartDrawingStyle,
 } from "./market-chart-drawing-style"
 import {
+  deriveLiveCandleItemFromQuote,
   hasUsableVolumeData,
   normalizeCandleItems,
 } from "./market-chart-candle-helpers"
@@ -251,9 +253,12 @@ type FormErrors = Partial<Record<keyof MarketChartSelectionState, string>> & {
 type MarketChartLiveTransportState = "CONNECTING" | "RECONNECTING" | "ERROR"
 
 type MarketChartLiveRuntimeState = {
+  assetId: number | null
+  candle: MarketChartCandleItemResponse | null
   error: string | null
   quote: MarketChartLiveQuoteResponse | null
   status: MarketChartLiveStatusResponse | null
+  timeframe: MarketChartTimeframe | null
   transportState: MarketChartLiveTransportState | null
 }
 
@@ -306,10 +311,53 @@ const DEFAULT_MARKET_CHART_DRAWING_STATE: MarketChartDrawingState = {
   selectedTools: DEFAULT_MARKET_CHART_DRAWING_PALETTE_TOOLS,
 }
 const DEFAULT_MARKET_CHART_LIVE_STATE: MarketChartLiveRuntimeState = {
+  assetId: null,
+  candle: null,
   error: null,
   quote: null,
   status: null,
+  timeframe: null,
   transportState: null,
+}
+
+function getLiveStateForContext(
+  liveState: MarketChartLiveRuntimeState,
+  assetId: number,
+  timeframe: MarketChartTimeframe
+) {
+  return liveState.assetId === assetId && liveState.timeframe === timeframe
+    ? liveState
+    : { ...DEFAULT_MARKET_CHART_LIVE_STATE, assetId, timeframe }
+}
+
+function deriveLiveCandleUpdate({
+  assetId,
+  chartData,
+  current,
+  quote,
+  timeframe,
+}: {
+  assetId: number
+  chartData: MarketChartDisplayData | null
+  current: MarketChartLiveRuntimeState
+  quote: MarketChartLiveQuoteResponse
+  timeframe: MarketChartTimeframe
+}) {
+  const currentCandles = current.candle
+    ? [current.candle]
+    : chartData?.asset.id === assetId && chartData.timeframe === timeframe
+      ? chartData.candles
+      : []
+  const candle = deriveLiveCandleItemFromQuote({
+    current: currentCandles,
+    quote,
+    timeframe,
+  })
+
+  return {
+    accepted: currentCandles.length === 0 || candle !== null,
+    candle,
+  }
 }
 const MARKET_CHART_ANNOTATION_BADGE_TONE_CLASS_NAMES = {
   blue: "bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
@@ -1368,6 +1416,7 @@ function ChartSurface({
   error,
   errors,
   freshnessLabel,
+  liveCandle,
   liveQuote,
   liveQuoteIsLive,
   isBusy,
@@ -1418,6 +1467,7 @@ function ChartSurface({
   error: string | null
   errors: FormErrors
   freshnessLabel: string | null
+  liveCandle: MarketChartCandleItemResponse | null
   liveQuote: MarketChartLiveQuoteResponse | null
   liveQuoteIsLive: boolean
   isBusy: boolean
@@ -1551,8 +1601,8 @@ function ChartSurface({
     useState<MarketChartDrawingSelection | null>(null)
   const [isFullscreen, setIsFullscreen] = useState(false)
 
-  const hasCandles = (data?.candles.length ?? 0) > 0
-  const volumeAvailable = hasUsableVolumeData(data?.candles)
+  const hasCandles = (data?.candles.length ?? 0) > 0 || !!liveCandle
+  const volumeAvailable = hasUsableVolumeData(data?.candles, liveCandle)
   const availableActiveIndicators = volumeAvailable
     ? activeIndicators
     : activeIndicators.filter((indicator) => indicator !== "VOL")
@@ -1789,6 +1839,7 @@ function ChartSurface({
                     assetId={selectedAsset.assetId}
                     candles={data?.candles ?? []}
                     dataVersion={dataVersion}
+                    liveCandle={liveCandle}
                     liveQuote={liveQuote}
                     liveQuoteIsLive={liveQuoteIsLive}
                     className="h-full min-h-0"
@@ -3416,11 +3467,17 @@ export function MarketChartWorkbench({
   useEffect(() => {
     chartDataRef.current = chartData
   }, [chartData])
-  const freshnessLabel = getFreshnessLabel(liveState, localization)
-  const liveStatusLabel = getLiveStatusLabel(liveState, localization)
-  const liveStatusTone = getLiveStatusTone(liveState)
+  const currentLiveState = selectedAssetId
+    ? getLiveStateForContext(liveState, selectedAssetId, selection.timeframe)
+    : DEFAULT_MARKET_CHART_LIVE_STATE
+  const freshnessLabel = getFreshnessLabel(currentLiveState, localization)
+  const liveStatusLabel = getLiveStatusLabel(currentLiveState, localization)
+  const liveStatusTone = getLiveStatusTone(currentLiveState)
   const liveQuote =
-    liveState.quote?.assetId === selectedAssetId ? liveState.quote : null
+    currentLiveState.quote?.assetId === selectedAssetId
+      ? currentLiveState.quote
+      : null
+  const liveCandle = currentLiveState.candle
   const annotationGroups = useMemo(() => {
     if (!annotationLayerEnabled || !chartData) {
       return []
@@ -3693,7 +3750,11 @@ export function MarketChartWorkbench({
       setAnnotationLoadError(null)
       setCalendarLoadError(null)
       setLoadedData(null)
-      setLiveState(DEFAULT_MARKET_CHART_LIVE_STATE)
+      setLiveState({
+        ...DEFAULT_MARKET_CHART_LIVE_STATE,
+        assetId: asset.assetId,
+        timeframe,
+      })
       setLastAssetId(String(asset.assetId))
       setSelectedAnnotationGroupId(null)
 
@@ -3827,6 +3888,8 @@ export function MarketChartWorkbench({
       setLoadedData(nextData)
       setLiveState({
         ...DEFAULT_MARKET_CHART_LIVE_STATE,
+        assetId: asset.assetId,
+        timeframe,
         transportState: "CONNECTING",
       })
       setDataVersion((v) => v + 1)
@@ -3906,12 +3969,16 @@ export function MarketChartWorkbench({
       assetId: selectedAssetId,
       timeframe: selection.timeframe,
       onErrorEvent(value) {
-        if (!active) {
+        if (!active || value.assetId !== selectedAssetId) {
           return
         }
 
-        setLiveState((current) => ({
-          ...current,
+        setLiveState((state) => ({
+          ...getLiveStateForContext(
+            state,
+            selectedAssetId,
+            selection.timeframe
+          ),
           error: value.message,
           transportState: "ERROR",
         }))
@@ -3921,8 +3988,12 @@ export function MarketChartWorkbench({
           return
         }
 
-        setLiveState((current) => ({
-          ...current,
+        setLiveState((state) => ({
+          ...getLiveStateForContext(
+            state,
+            selectedAssetId,
+            selection.timeframe
+          ),
           error: dictionary.marketCharts.live.invalidPayload,
           transportState: "ERROR",
         }))
@@ -3932,57 +4003,119 @@ export function MarketChartWorkbench({
           return
         }
 
-        setLiveState((current) => ({ ...current, error: null }))
+        setLiveState((state) => ({
+          ...getLiveStateForContext(
+            state,
+            selectedAssetId,
+            selection.timeframe
+          ),
+          error: null,
+        }))
       },
       onPrice(value) {
-        if (!active) {
+        if (!active || value.assetId !== selectedAssetId) {
           return
         }
 
-        setLiveState((current) => ({
-          ...current,
-          error: null,
-          quote: value,
-          status: null,
-          transportState: null,
-        }))
+        setLiveState((state) => {
+          const current = getLiveStateForContext(
+            state,
+            selectedAssetId,
+            selection.timeframe
+          )
+          const update = deriveLiveCandleUpdate({
+            assetId: selectedAssetId,
+            chartData: chartDataRef.current,
+            current,
+            quote: value,
+            timeframe: selection.timeframe,
+          })
+
+          if (!update.accepted) {
+            return current
+          }
+
+          return {
+            ...current,
+            candle: update.candle,
+            error: null,
+            quote: value,
+            status: null,
+            transportState: null,
+          }
+        })
       },
       onSnapshot(value) {
-        if (!active) {
+        if (
+          !active ||
+          value.timeframe !== selection.timeframe ||
+          value.status.assetId !== selectedAssetId ||
+          (value.quote !== null && value.quote.assetId !== selectedAssetId)
+        ) {
           return
         }
 
-        setLiveState((current) => ({
-          ...current,
-          error: null,
-          quote: value.quote,
-          status: value.status,
-          transportState: null,
-        }))
+        setLiveState((state) => {
+          const current = getLiveStateForContext(
+            state,
+            selectedAssetId,
+            selection.timeframe
+          )
+          const update = value.quote
+            ? deriveLiveCandleUpdate({
+                assetId: selectedAssetId,
+                chartData: chartDataRef.current,
+                current,
+                quote: value.quote,
+                timeframe: selection.timeframe,
+              })
+            : null
+          const acceptedUpdate = update?.accepted ? update : null
+
+          return {
+            ...current,
+            candle: acceptedUpdate ? acceptedUpdate.candle : current.candle,
+            error: null,
+            quote: acceptedUpdate && value.quote ? value.quote : current.quote,
+            status: value.status,
+            transportState: null,
+          }
+        })
       },
       onStatus(value) {
-        if (!active) {
+        if (!active || value.assetId !== selectedAssetId) {
           return
         }
 
-        setLiveState((current) => ({
-          ...current,
+        setLiveState((state) => ({
+          ...getLiveStateForContext(
+            state,
+            selectedAssetId,
+            selection.timeframe
+          ),
           error: value.state === "ERROR" ? value.message : null,
           status: value,
           transportState: null,
         }))
       },
-      onTransportError(state) {
+      onTransportError(transportState) {
         if (!active) {
           return
         }
 
-        setLiveState((current) => ({
-          ...current,
-          error: state === "RECONNECTING" ? null : current.error,
-          status: null,
-          transportState: state,
-        }))
+        setLiveState((state) => {
+          const current = getLiveStateForContext(
+            state,
+            selectedAssetId,
+            selection.timeframe
+          )
+          return {
+            ...current,
+            error: transportState === "RECONNECTING" ? null : current.error,
+            status: null,
+            transportState,
+          }
+        })
       },
     })
 
@@ -4475,6 +4608,7 @@ export function MarketChartWorkbench({
         error={loadError}
         errors={errors}
         freshnessLabel={freshnessLabel}
+        liveCandle={liveCandle}
         liveQuote={liveQuote}
         liveQuoteIsLive={liveStatusTone === "live"}
         isBusy={isBusy}
