@@ -17,6 +17,7 @@ import {
   init,
   type Chart,
   type DataLoaderGetBarsParams,
+  type DataLoaderSubscribeBarParams,
   type DeepPartial,
   type KLineData,
   type Overlay,
@@ -63,7 +64,6 @@ import {
   getMarketChartCalendarActualDirection,
   getMarketChartCalendarEventTimestamp,
 } from "./market-chart-calendar-helpers"
-import { syncMarketChartLiveQuoteOverlay } from "./market-chart-live-quote-overlay"
 import {
   createMarketChartDrawingGroupId,
   createMarketChartDrawingMode,
@@ -104,6 +104,7 @@ import {
   hasUsableVolume,
   isValidMarketChartCandle,
   mergeCandleItems,
+  mergeLiveCandleItem,
   normalizeCandleItems,
 } from "./market-chart-candle-helpers"
 import {
@@ -171,6 +172,7 @@ interface MarketChartCanvasProps {
   dataVersion: number
   liveQuote: MarketChartLiveQuoteResponse | null
   liveQuoteIsLive: boolean
+  liveCandle?: MarketChartCandleItemResponse | null
   timeframe: MarketChartTimeframe
   symbol?: string
   pricePrecision?: number | null
@@ -276,7 +278,7 @@ export function MarketChartCalendarEventList({
                     </Badge>
                   ) : null}
                 </div>
-                <h3 className="break-words text-sm font-semibold text-foreground">
+                <h3 className="text-sm font-semibold break-words text-foreground">
                   {getEventTitle(event)}
                 </h3>
                 <div className="flex flex-wrap items-center gap-1.5">
@@ -345,7 +347,7 @@ export function MarketChartCalendarEventList({
                   </p>
                 ) : null}
                 {event.description?.trim() ? (
-                  <p className="break-words whitespace-pre-wrap text-xs leading-relaxed text-muted-foreground">
+                  <p className="text-xs leading-relaxed break-words whitespace-pre-wrap text-muted-foreground">
                     {event.description}
                   </p>
                 ) : null}
@@ -747,6 +749,7 @@ export const MarketChartCanvas = forwardRef<
     dataVersion = 0,
     liveQuote,
     liveQuoteIsLive,
+    liveCandle = null,
     className,
     drawingToolActive = false,
     onAnnotationClose,
@@ -894,6 +897,11 @@ export const MarketChartCanvas = forwardRef<
     MarketChartEconomicCalendarEventResponse[]
   >([])
   const loadedCandlesRef = useRef<MarketChartCandleItemResponse[]>([])
+  const liveCandleRef = useRef<MarketChartCandleItemResponse | null>(liveCandle)
+  const liveCandleSubscriberRef = useRef<
+    DataLoaderSubscribeBarParams["callback"] | null
+  >(null)
+  const liveCandleSubscriberLoadIdRef = useRef<number | null>(null)
   const historyExhaustedRef = useRef(false)
   const onDrawingSelectionChangeRef = useRef(onDrawingSelectionChange)
   const onDrawingToolCompleteRef = useRef(onDrawingToolComplete)
@@ -922,8 +930,7 @@ export const MarketChartCanvas = forwardRef<
   const { resolvedTheme } = useTheme()
   const chartThemeMode = resolveChartThemeMode(resolvedTheme)
   const chartThemePalette = getMarketChartThemePalette(chartThemeMode)
-  const liveQuoteAssetId = liveQuote?.assetId
-  const liveQuotePrice = liveQuote?.price
+  const neutralizeLastPrice = Boolean(liveQuote && !liveQuoteIsLive)
   const historyState =
     historyFeedback.loadId === chartLoadId ? historyFeedback.state : "idle"
   const historyError =
@@ -1054,6 +1061,39 @@ export const MarketChartCanvas = forwardRef<
     activeOutcomeHoverRangeRef.current = activeOutcomeHoverRange
     scheduleMarkerPositionUpdateRef.current()
   }, [activeOutcomeHoverRange])
+
+  useEffect(() => {
+    liveCandleRef.current = liveCandle
+
+    if (
+      liveCandle &&
+      liveCandleSubscriberLoadIdRef.current === chartLoadIdRef.current &&
+      liveCandleSubscriberRef.current
+    ) {
+      const [liveData] = createKLineData([liveCandle])
+
+      if (liveData) {
+        liveCandleSubscriberRef.current(liveData)
+        window.requestAnimationFrame(() => {
+          const chart = chartRef.current
+          const candles = chart?.getDataList() ?? []
+          const latestIndex = candles.length - 1
+          const inspectedIndex = keyboardInspectionIndexRef.current
+
+          if (
+            latestIndex >= 0 &&
+            (inspectedIndex === null || inspectedIndex === latestIndex)
+          ) {
+            setChartReadout(
+              readoutFormatterRef.current(candles[latestIndex] as KLineData)
+            )
+          }
+        })
+      }
+    }
+
+    scheduleMarkerPositionUpdateRef.current()
+  }, [liveCandle, setChartReadout])
 
   useEffect(() => {
     onLoadedDataChangeRef.current = onLoadedDataChange
@@ -1729,6 +1769,8 @@ export const MarketChartCanvas = forwardRef<
       }
       resizeObserver.disconnect()
       scheduleMarkerPositionUpdateRef.current = () => {}
+      liveCandleSubscriberRef.current = null
+      liveCandleSubscriberLoadIdRef.current = null
       activeDrawingDraftIdRef.current = null
       activeDrawingToolRef.current = null
       selectedDrawingIdRef.current = null
@@ -1743,46 +1785,6 @@ export const MarketChartCanvas = forwardRef<
     }
   }, [])
 
-  // ── Sync: current quote — independent from REST candle data ──
-  useEffect(() => {
-    const chart = chartRef.current
-
-    if (!chart) {
-      return
-    }
-
-    if (
-      liveQuoteAssetId !== assetId ||
-      typeof liveQuotePrice !== "number" ||
-      !Number.isFinite(liveQuotePrice)
-    ) {
-      syncMarketChartLiveQuoteOverlay(chart, null)
-      return
-    }
-
-    syncMarketChartLiveQuoteOverlay(chart, {
-      color: liveQuoteIsLive
-        ? chartThemePalette.drawing
-        : chartThemePalette.axis,
-      label: formatMarketChartPrice(
-        liveQuotePrice,
-        pricePrecision,
-        formatNumber
-      ),
-      price: liveQuotePrice,
-    })
-  }, [
-    assetId,
-    chartThemePalette.axis,
-    chartThemePalette.drawing,
-    formatNumber,
-    liveQuoteAssetId,
-    liveQuotePrice,
-    liveQuoteIsLive,
-    pricePrecision,
-    timeframe,
-  ])
-
   // ── Sync: theme styles — klinecharts native ──
   useEffect(() => {
     const chart = chartRef.current
@@ -1791,7 +1793,13 @@ export const MarketChartCanvas = forwardRef<
       return
     }
 
-    chart.setStyles(createChartStyles(chartThemePalette, chartLegendFormatters))
+    chart.setStyles(
+      createChartStyles(
+        chartThemePalette,
+        chartLegendFormatters,
+        neutralizeLastPrice
+      )
+    )
 
     chart
       .getOverlays({ groupId: drawingGroupIdRef.current })
@@ -1818,7 +1826,7 @@ export const MarketChartCanvas = forwardRef<
       })
 
     scheduleMarkerPositionUpdateRef.current()
-  }, [chartLegendFormatters, chartThemePalette])
+  }, [chartLegendFormatters, chartThemePalette, neutralizeLastPrice])
 
   // ── Sync: locale ──
   useEffect(() => {
@@ -1936,10 +1944,14 @@ export const MarketChartCanvas = forwardRef<
       type,
     }: DataLoaderGetBarsParams) {
       if (type === "init") {
-        const initialData = createKLineData(loadedCandlesRef.current)
+        const displayedCandles = mergeLiveCandleItem(
+          loadedCandlesRef.current,
+          liveCandleRef.current
+        )
+        const initialData = createKLineData(displayedCandles)
         callback(initialData, {
           backward: false,
-          forward: initialData.length > 0,
+          forward: displayedCandles.length > 0,
         })
         const latest = initialData[initialData.length - 1]
         chartContextReadyRef.current = !!latest
@@ -2044,8 +2056,18 @@ export const MarketChartCanvas = forwardRef<
       getBars(params) {
         void loadBars(params)
       },
-      subscribeBar() {},
-      unsubscribeBar() {},
+      subscribeBar(params) {
+        liveCandleSubscriberRef.current = params.callback
+        liveCandleSubscriberLoadIdRef.current = loadId
+        const [liveData] = createKLineData(
+          liveCandleRef.current ? [liveCandleRef.current] : []
+        )
+        if (liveData) params.callback(liveData)
+      },
+      unsubscribeBar() {
+        liveCandleSubscriberRef.current = null
+        liveCandleSubscriberLoadIdRef.current = null
+      },
     })
   }, [assetId, dataVersion, dictionary.marketCharts.responseInvalid, timeframe])
 

@@ -110,7 +110,13 @@ export interface CreateChartStylesResult {
     priceMark: {
       high: { show: boolean }
       low: { show: boolean }
-      last: { line: { size: number }; text: { family: string; size: number } }
+      last: {
+        downColor: string
+        line: { size: number }
+        noChangeColor: string
+        text: { family: string; size: number }
+        upColor: string
+      }
     }
     tooltip: {
       legend: {
@@ -220,7 +226,8 @@ export function formatMarketChartVolume(
 
 export function createChartStyles(
   palette: MarketChartThemePalette,
-  legendFormatters: MarketChartLegendFormatters
+  legendFormatters: MarketChartLegendFormatters,
+  neutralizeLastPrice = false
 ): CreateChartStylesResult {
   const fontFamily = getCssTextVariable("--font-sans", "Geist, sans-serif")
   const timeOptions = getCandleTimeFormatOptions(legendFormatters.timeframe)
@@ -318,8 +325,11 @@ export function createChartStyles(
         high: { show: false },
         low: { show: false },
         last: {
+          downColor: neutralizeLastPrice ? palette.axis : palette.down,
           line: { size: 1 },
+          noChangeColor: neutralizeLastPrice ? palette.axis : palette.noChange,
           text: { family: fontFamily, size: 10 },
+          upColor: neutralizeLastPrice ? palette.axis : palette.up,
         },
       },
       tooltip: {

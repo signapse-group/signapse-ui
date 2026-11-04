@@ -10,7 +10,9 @@ const {
   getAnnotations,
   getCalendarEvents,
 } = vi.hoisted(() => ({
-  routeSearchParams: new URLSearchParams("assetId=101&timeframe=1m"),
+  routeSearchParams: {
+    current: new URLSearchParams("assetId=101&timeframe=1m"),
+  },
   routerReplace: vi.fn(),
   getCandles: vi.fn(),
   getAnnotations: vi.fn(),
@@ -21,7 +23,7 @@ const router = { replace: routerReplace }
 vi.mock("next/navigation", () => ({
   usePathname: () => "/vi/market-charts",
   useRouter: () => router,
-  useSearchParams: () => routeSearchParams,
+  useSearchParams: () => routeSearchParams.current,
 }))
 
 vi.mock("@/app/lib/i18n/dictionaries", () => ({
@@ -49,10 +51,12 @@ vi.mock(
       MarketChartCalendarEventList: () => null,
       MarketChartCanvas: ({
         candles,
+        liveCandle,
         liveQuote,
         liveQuoteIsLive,
       }: {
         candles: unknown[]
+        liveCandle: MarketChartCandleItemResponse | null
         liveQuote: { assetId: number; price: number } | null
         liveQuoteIsLive: boolean
       }) => {
@@ -64,8 +68,13 @@ vi.mock(
             { "data-testid": "chart-rest-candles" },
             JSON.stringify(candles)
           ),
+          React.createElement(
+            "output",
+            { "data-testid": "chart-live-candle" },
+            JSON.stringify(liveCandle)
+          ),
           React.createElement("output", {
-            "data-testid": "chart-live-quote",
+            "data-testid": "chart-accessible-quote",
             "data-price": liveQuote ? String(liveQuote.price) : "none",
             "data-tone": liveQuote
               ? liveQuoteIsLive
@@ -82,7 +91,10 @@ vi.mock(
 import { MarketChartWorkbench } from "@/app/[lang]/(main)/market-charts/market-chart-workbench"
 import { vi as viDictionary } from "@/app/lib/i18n/dictionaries/vi"
 import { LocalizationProvider } from "@/app/lib/i18n/provider"
-import type { MarketChartCandleItemResponse } from "@/app/lib/market-charts/definitions"
+import type {
+  MarketChartCandleItemResponse,
+  MarketChartTimeframe,
+} from "@/app/lib/market-charts/definitions"
 import type { WorkspaceWatchlistAssetListItemResponse } from "@/app/lib/watchlists/definitions"
 
 type EventListener = (event: Event) => void
@@ -134,6 +146,14 @@ const watchlistAssets: WorkspaceWatchlistAssetListItemResponse[] = [
     assetType: "CRYPTO",
     createdDate: "2026-01-01T00:00:00.000Z",
   },
+  {
+    id: 2,
+    assetId: 102,
+    assetName: "Gold",
+    assetSymbol: "XAUUSD",
+    assetType: "COMMODITY",
+    createdDate: "2026-01-02T00:00:00.000Z",
+  },
 ]
 
 const candlesForBoundary = {
@@ -154,7 +174,37 @@ function createRestCandles(times: readonly [string, string]) {
   })) satisfies MarketChartCandleItemResponse[]
 }
 
-describe("Market chart quote-only candle flow", () => {
+function createCandleResponse(
+  assetId: number,
+  timeframe: MarketChartTimeframe
+) {
+  const asset = watchlistAssets.find(
+    (candidate) => candidate.assetId === assetId
+  )!
+  const restCandles = createRestCandles(
+    timeframe === "5m"
+      ? ["2026-08-23T00:00:00.000Z", "2026-08-23T00:05:00.000Z"]
+      : ["2026-08-23T00:00:00.000Z", "2026-08-23T00:01:00.000Z"]
+  )
+
+  return {
+    provider: "fixture",
+    symbol: asset.assetSymbol,
+    asset: {
+      id: asset.assetId,
+      name: asset.assetName,
+      symbol: asset.assetSymbol,
+      type: asset.assetType,
+      pricePrecision: 2,
+    },
+    timeframe,
+    from: restCandles[0].time,
+    to: restCandles[1].time,
+    candles: restCandles,
+  }
+}
+
+describe("Market chart quote-driven candle flow", () => {
   afterEach(() => {
     cleanup()
     vi.unstubAllGlobals()
@@ -163,7 +213,7 @@ describe("Market chart quote-only candle flow", () => {
   })
 
   beforeEach(() => {
-    routeSearchParams.set("assetId", "101")
+    routeSearchParams.current = new URLSearchParams("assetId=101&timeframe=1m")
     routerReplace.mockReset()
     getCandles.mockReset()
     getAnnotations.mockReset().mockResolvedValue({ success: true, data: [] })
@@ -173,9 +223,11 @@ describe("Market chart quote-only candle flow", () => {
   })
 
   it.each(["1m", "1w", "1mo"] as const)(
-    "updates quote while retaining every REST candle at the %s boundary",
+    "updates the native live candle while preserving REST history at the %s boundary",
     async (timeframe: keyof typeof candlesForBoundary) => {
-      routeSearchParams.set("timeframe", timeframe)
+      routeSearchParams.current = new URLSearchParams(
+        `assetId=101&timeframe=${timeframe}`
+      )
       const restCandles = createRestCandles(candlesForBoundary[timeframe])
       const receivedAt = candlesForBoundary[timeframe][1]
       const candleResponse = {
@@ -208,9 +260,11 @@ describe("Market chart quote-only candle flow", () => {
       await waitFor(() =>
         expect(candlesOnChart).toHaveTextContent(JSON.stringify(restCandles))
       )
-      const liveQuoteOnChart = () => screen.getByTestId("chart-live-quote")
-      expect(liveQuoteOnChart()).toHaveAttribute("data-price", "none")
-      expect(liveQuoteOnChart()).toHaveAttribute("data-tone", "none")
+      const liveCandleOnChart = () => screen.getByTestId("chart-live-candle")
+      const accessibleQuote = () => screen.getByTestId("chart-accessible-quote")
+      expect(JSON.parse(liveCandleOnChart().textContent || "null")).toBeNull()
+      expect(accessibleQuote()).toHaveAttribute("data-price", "none")
+      expect(accessibleQuote()).toHaveAttribute("data-tone", "none")
       await waitFor(() => {
         expect(FakeEventSource.current).not.toBeNull()
         expect(
@@ -233,7 +287,7 @@ describe("Market chart quote-only candle flow", () => {
           quote: {
             assetId: 101,
             symbol: "BTCUSD",
-            price: 4245.5,
+            price: 4261.5,
             receivedAt,
             stale: false,
           },
@@ -248,9 +302,19 @@ describe("Market chart quote-only candle flow", () => {
         })
       })
       await waitFor(() =>
-        expect(liveQuoteOnChart()).toHaveAttribute("data-price", "4245.5")
+        expect(
+          JSON.parse(liveCandleOnChart().textContent || "null")
+        ).toMatchObject({
+          time: restCandles[1].time,
+          open: restCandles[1].open,
+          high: 4261.5,
+          low: restCandles[1].low,
+          close: 4261.5,
+          volume: restCandles[1].volume,
+        })
       )
-      expect(liveQuoteOnChart()).toHaveAttribute("data-tone", "live")
+      expect(accessibleQuote()).toHaveAttribute("data-price", "4261.5")
+      expect(accessibleQuote()).toHaveAttribute("data-tone", "live")
       expect(
         screen.getByText(viDictionary.marketCharts.live.live)
       ).toBeVisible()
@@ -262,16 +326,26 @@ describe("Market chart quote-only candle flow", () => {
         source.emit("price", {
           assetId: 101,
           symbol: "BTCUSD",
-          price: 4246.25,
+          price: 4234,
           receivedAt,
           stale: false,
         })
       })
 
       await waitFor(() =>
-        expect(liveQuoteOnChart()).toHaveAttribute("data-price", "4246.25")
+        expect(
+          JSON.parse(liveCandleOnChart().textContent || "null")
+        ).toMatchObject({
+          time: restCandles[1].time,
+          open: restCandles[1].open,
+          high: 4261.5,
+          low: 4234,
+          close: 4234,
+          volume: restCandles[1].volume,
+        })
       )
-      expect(liveQuoteOnChart()).toHaveAttribute("data-tone", "live")
+      expect(accessibleQuote()).toHaveAttribute("data-price", "4234")
+      expect(accessibleQuote()).toHaveAttribute("data-tone", "live")
       expect(candlesOnChart).toHaveTextContent(JSON.stringify(restCandles))
 
       await act(async () => {
@@ -284,18 +358,40 @@ describe("Market chart quote-only candle flow", () => {
           observedAt: receivedAt,
         })
       })
-      expect(liveQuoteOnChart()).toHaveAttribute("data-price", "4246.25")
-      expect(liveQuoteOnChart()).toHaveAttribute("data-tone", "neutral")
+      expect(accessibleQuote()).toHaveAttribute("data-price", "4234")
+      expect(accessibleQuote()).toHaveAttribute("data-tone", "neutral")
       expect(
         screen.getByText(viDictionary.marketCharts.live.stale)
       ).toBeVisible()
 
       await act(async () => {
+        source.emit("snapshot", {
+          asset: candleResponse.asset,
+          symbol: "BTCUSD",
+          timeframe,
+          quote: null,
+          status: {
+            assetId: 101,
+            symbol: "BTCUSD",
+            state: "RECONNECTING",
+            message: null,
+            stale: true,
+            observedAt: receivedAt,
+          },
+        })
+      })
+      expect(accessibleQuote()).toHaveAttribute("data-price", "4234")
+      expect(accessibleQuote()).toHaveAttribute("data-tone", "neutral")
+      expect(
+        JSON.parse(liveCandleOnChart().textContent || "null")
+      ).toMatchObject({ close: 4234, volume: restCandles[1].volume })
+
+      await act(async () => {
         source.readyState = FakeEventSource.CONNECTING
         source.emit("error")
       })
-      expect(liveQuoteOnChart()).toHaveAttribute("data-price", "4246.25")
-      expect(liveQuoteOnChart()).toHaveAttribute("data-tone", "neutral")
+      expect(accessibleQuote()).toHaveAttribute("data-price", "4234")
+      expect(accessibleQuote()).toHaveAttribute("data-tone", "neutral")
       expect(
         screen.getByText(viDictionary.marketCharts.live.reconnecting)
       ).toBeVisible()
@@ -308,8 +404,8 @@ describe("Market chart quote-only candle flow", () => {
           observedAt: receivedAt,
         })
       })
-      expect(liveQuoteOnChart()).toHaveAttribute("data-price", "4246.25")
-      expect(liveQuoteOnChart()).toHaveAttribute("data-tone", "neutral")
+      expect(accessibleQuote()).toHaveAttribute("data-price", "4234")
+      expect(accessibleQuote()).toHaveAttribute("data-tone", "neutral")
       expect(
         screen.getByText(viDictionary.marketCharts.live.error)
       ).toBeVisible()
@@ -324,12 +420,129 @@ describe("Market chart quote-only candle flow", () => {
           observedAt: receivedAt,
         })
       })
-      expect(liveQuoteOnChart()).toHaveAttribute("data-price", "4246.25")
-      expect(liveQuoteOnChart()).toHaveAttribute("data-tone", "neutral")
+      expect(accessibleQuote()).toHaveAttribute("data-price", "4234")
+      expect(accessibleQuote()).toHaveAttribute("data-tone", "neutral")
       expect(
         screen.getByText(viDictionary.marketCharts.live.marketClosed)
       ).toBeVisible()
       expect(FakeEventSource.instances).toHaveLength(sourceCount)
     }
   )
+
+  it("clears quote state when the asset or timeframe changes", async () => {
+    getCandles.mockResolvedValue({
+      success: true,
+      data: createCandleResponse(101, "1m"),
+    })
+
+    const view = render(
+      <LocalizationProvider locale="vi" dictionary={viDictionary}>
+        <MarketChartWorkbench
+          watchlistAssets={watchlistAssets}
+          watchlistError={null}
+        />
+      </LocalizationProvider>
+    )
+
+    const quote = () => screen.getByTestId("chart-accessible-quote")
+    const candleOnChart = () => screen.getByTestId("chart-live-candle")
+    await waitFor(() => {
+      expect(FakeEventSource.current).not.toBeNull()
+      expect(
+        new URL(FakeEventSource.current!.url).searchParams.get("timeframe")
+      ).toBe("1m")
+    })
+
+    const bitcoinSource = FakeEventSource.current!
+    await act(async () => {
+      bitcoinSource.emit("price", {
+        assetId: 101,
+        symbol: "BTCUSD",
+        price: 4234,
+        receivedAt: "2026-08-23T00:01:15.000Z",
+        stale: false,
+      })
+    })
+    await waitFor(() => expect(quote()).toHaveAttribute("data-price", "4234"))
+    expect(JSON.parse(candleOnChart().textContent || "null")).toMatchObject({
+      close: 4234,
+    })
+
+    getCandles.mockResolvedValue({
+      success: true,
+      data: createCandleResponse(102, "1m"),
+    })
+    routeSearchParams.current = new URLSearchParams("assetId=102&timeframe=1m")
+    view.rerender(
+      <LocalizationProvider locale="vi" dictionary={viDictionary}>
+        <MarketChartWorkbench
+          watchlistAssets={watchlistAssets}
+          watchlistError={null}
+        />
+      </LocalizationProvider>
+    )
+
+    await waitFor(() => {
+      expect(getCandles).toHaveBeenLastCalledWith(
+        expect.objectContaining({ assetId: 102, timeframe: "1m" })
+      )
+      expect(FakeEventSource.current).not.toBe(bitcoinSource)
+      expect(
+        new URL(FakeEventSource.current!.url).searchParams.get("assetId")
+      ).toBe("102")
+      expect(quote()).toHaveAttribute("data-price", "none")
+      expect(JSON.parse(candleOnChart().textContent || "null")).toBeNull()
+    })
+    expect(bitcoinSource.close).toHaveBeenCalledTimes(1)
+
+    const goldSource = FakeEventSource.current!
+    await act(async () => {
+      bitcoinSource.emit("price", {
+        assetId: 101,
+        symbol: "BTCUSD",
+        price: 9999,
+        receivedAt: "2026-08-23T00:01:30.000Z",
+        stale: false,
+      })
+    })
+    expect(quote()).toHaveAttribute("data-price", "none")
+
+    await act(async () => {
+      goldSource.emit("price", {
+        assetId: 102,
+        symbol: "XAUUSD",
+        price: 2300,
+        receivedAt: "2026-08-23T00:01:30.000Z",
+        stale: false,
+      })
+    })
+    await waitFor(() => expect(quote()).toHaveAttribute("data-price", "2300"))
+
+    getCandles.mockResolvedValue({
+      success: true,
+      data: createCandleResponse(102, "5m"),
+    })
+    routeSearchParams.current = new URLSearchParams("assetId=102&timeframe=5m")
+    view.rerender(
+      <LocalizationProvider locale="vi" dictionary={viDictionary}>
+        <MarketChartWorkbench
+          watchlistAssets={watchlistAssets}
+          watchlistError={null}
+        />
+      </LocalizationProvider>
+    )
+
+    await waitFor(() => {
+      expect(getCandles).toHaveBeenLastCalledWith(
+        expect.objectContaining({ assetId: 102, timeframe: "5m" })
+      )
+      expect(FakeEventSource.current).not.toBe(goldSource)
+      expect(
+        new URL(FakeEventSource.current!.url).searchParams.get("timeframe")
+      ).toBe("5m")
+      expect(quote()).toHaveAttribute("data-price", "none")
+      expect(JSON.parse(candleOnChart().textContent || "null")).toBeNull()
+    })
+    expect(goldSource.close).toHaveBeenCalledTimes(1)
+  })
 })

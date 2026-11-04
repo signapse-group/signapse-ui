@@ -23,11 +23,17 @@ import {
 } from "@/app/[lang]/(main)/market-charts/market-chart-annotations"
 import {
   createKLineData,
+  deriveLiveCandleItemFromQuote,
   getMarketChartWarmBandPriceRange,
   mergeCandleItems,
+  mergeLiveCandleItem,
   normalizeCandleItems,
 } from "@/app/[lang]/(main)/market-charts/market-chart-candle-helpers"
-import { formatMarketChartPrice } from "@/app/[lang]/(main)/market-charts/market-chart-theme"
+import {
+  createChartStyles,
+  formatMarketChartPrice,
+  getMarketChartThemePalette,
+} from "@/app/[lang]/(main)/market-charts/market-chart-theme"
 import {
   INITIAL_COUNT_BACK,
   OLDER_COUNT_BACK,
@@ -325,6 +331,97 @@ describe("market-chart candle and history helpers", () => {
   })
 })
 
+describe("market-chart live candle derivation", () => {
+  const quote = (price: number, receivedAt: string) => ({
+    assetId: 7,
+    symbol: "BTC/USD",
+    price,
+    receivedAt,
+    stale: false,
+  })
+
+  it("keeps the candle open and volume while quotes update close, high, and low", () => {
+    const current = candle("2026-08-23T00:01:00.000Z", 4245, 100)
+    const highQuote = deriveLiveCandleItemFromQuote({
+      current: [current],
+      quote: quote(4252, "2026-08-23T00:01:15.000Z"),
+      timeframe: "1m",
+    })!
+
+    expect(highQuote).toMatchObject({
+      time: current.time,
+      open: current.open,
+      high: 4252,
+      low: current.low,
+      close: 4252,
+      volume: 100,
+    })
+
+    const lowQuote = deriveLiveCandleItemFromQuote({
+      current: [highQuote],
+      quote: quote(4230, "2026-08-23T00:01:45.000Z"),
+      timeframe: "1m",
+    })
+
+    expect(lowQuote).toMatchObject({
+      time: current.time,
+      open: current.open,
+      high: 4252,
+      low: 4230,
+      close: 4230,
+      volume: 100,
+    })
+  })
+
+  it.each([
+    ["1w", "2026-08-17T00:00:00.000Z", "2026-08-24T00:00:00.000Z"],
+    ["1mo", "2026-08-01T00:00:00.000Z", "2026-09-01T00:00:00.000Z"],
+  ] as const)(
+    "starts the next %s candle at its UTC boundary",
+    (timeframe, currentTime, quoteTime) => {
+      const nextCandle = deriveLiveCandleItemFromQuote({
+        current: [candle(currentTime, 100, 20)],
+        quote: quote(101, quoteTime),
+        timeframe,
+      })
+
+      expect(nextCandle).toEqual({
+        time: quoteTime,
+        open: 101,
+        high: 101,
+        low: 101,
+        close: 101,
+      })
+      expect(nextCandle).not.toHaveProperty("volume")
+    }
+  )
+
+  it("starts a new intraday candle without inventing volume and ignores older quotes", () => {
+    const current = candle("2026-08-23T00:01:00.000Z", 4245, 100)
+    const nextCandle = deriveLiveCandleItemFromQuote({
+      current: [current],
+      quote: quote(4248, "2026-08-23T00:02:00.000Z"),
+      timeframe: "1m",
+    })!
+
+    expect(nextCandle).toEqual({
+      time: "2026-08-23T00:02:00.000Z",
+      open: 4248,
+      high: 4248,
+      low: 4248,
+      close: 4248,
+    })
+    expect(
+      deriveLiveCandleItemFromQuote({
+        current: [nextCandle],
+        quote: quote(4300, "2026-08-23T00:01:45.000Z"),
+        timeframe: "1m",
+      })
+    ).toBeNull()
+    expect(mergeLiveCandleItem([current], null)).toEqual([current])
+  })
+})
+
 describe("market-chart price formatting", () => {
   it("uses configured asset precision or four digits when it is missing", () => {
     const formatNumber = vi.fn(
@@ -340,6 +437,34 @@ describe("market-chart price formatting", () => {
       maximumFractionDigits: 4,
     })
     expect(formatMarketChartPrice(110.5, 2, formatNumber)).toBe("110.50")
+  })
+})
+
+describe("native market-chart last-price marker", () => {
+  it("uses candle direction colors while live and a neutral color when stale", () => {
+    const palette = getMarketChartThemePalette("light")
+    const legendFormatters = {
+      formatDateTime: (value: number) => String(value),
+      formatNumber: (value: number) => String(value),
+      notAvailable: "N/A",
+      pricePrecision: 2,
+      timeframe: "1m" as const,
+    }
+    const liveMark = createChartStyles(palette, legendFormatters).candle
+      .priceMark.last
+    const staleMark = createChartStyles(palette, legendFormatters, true).candle
+      .priceMark.last
+
+    expect(liveMark).toMatchObject({
+      downColor: palette.down,
+      noChangeColor: palette.noChange,
+      upColor: palette.up,
+    })
+    expect(staleMark).toMatchObject({
+      downColor: palette.axis,
+      noChangeColor: palette.axis,
+      upColor: palette.axis,
+    })
   })
 })
 

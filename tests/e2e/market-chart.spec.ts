@@ -3,6 +3,7 @@ import type { Locator, Page } from "@playwright/test"
 import { expect, test } from "./fixtures"
 
 const MARKET_CHART_FIXTURE_NOW = "2026-01-15T08:00:00.000Z"
+const MARKET_CHART_PRIOR_BUCKET_NOW = "2026-01-15T07:00:00.000Z"
 
 type ChartCanvasTextDraw = {
   canvas: HTMLCanvasElement
@@ -14,9 +15,9 @@ type ChartCanvasTextDraw = {
 async function trackMarketChartCanvasText(page: Page) {
   await page.addInitScript(() => {
     const trackedWindow = window as Window & {
-      __sign475ChartCanvasTextDraws?: ChartCanvasTextDraw[]
+      __sign498ChartCanvasTextDraws?: ChartCanvasTextDraw[]
     }
-    trackedWindow.__sign475ChartCanvasTextDraws = []
+    trackedWindow.__sign498ChartCanvasTextDraws = []
 
     const nativeFillText = CanvasRenderingContext2D.prototype.fillText
     CanvasRenderingContext2D.prototype.fillText = function (
@@ -28,7 +29,7 @@ async function trackMarketChartCanvasText(page: Page) {
       if (
         this.canvas.closest('[role="application"][aria-label="Biểu đồ giá"]')
       ) {
-        trackedWindow.__sign475ChartCanvasTextDraws?.push({
+        trackedWindow.__sign498ChartCanvasTextDraws?.push({
           canvas: this.canvas,
           text: String(text),
           x,
@@ -85,11 +86,11 @@ async function hasMarketChartCanvasText(page: Page, expectedText: string) {
       Array.from(chart?.querySelectorAll("canvas") ?? [])
     )
     const trackedWindow = window as Window & {
-      __sign475ChartCanvasTextDraws?: ChartCanvasTextDraw[]
+      __sign498ChartCanvasTextDraws?: ChartCanvasTextDraw[]
     }
 
     return (
-      trackedWindow.__sign475ChartCanvasTextDraws?.some(
+      trackedWindow.__sign498ChartCanvasTextDraws?.some(
         ({ canvas, text: drawnText }) =>
           canvas.isConnected &&
           chartCanvases.has(canvas) &&
@@ -97,6 +98,40 @@ async function hasMarketChartCanvasText(page: Page, expectedText: string) {
       ) ?? false
     )
   }, expectedText)
+}
+
+async function expectNativeLegendShowsClose(page: Page, expectedClose: string) {
+  await expect
+    .poll(
+      () =>
+        page.evaluate((close) => {
+          const chart = document.querySelector(
+            '[role="application"][aria-label="Biểu đồ giá"]'
+          )
+          const chartCanvases = new Set(
+            Array.from(chart?.querySelectorAll("canvas") ?? [])
+          )
+          const trackedWindow = window as Window & {
+            __sign498ChartCanvasTextDraws?: ChartCanvasTextDraw[]
+          }
+
+          return (
+            trackedWindow.__sign498ChartCanvasTextDraws?.some(
+              ({ canvas, text, y }) => {
+                if (!canvas.isConnected || !chartCanvases.has(canvas)) {
+                  return false
+                }
+
+                const width = canvas.getBoundingClientRect().width
+                const scale = canvas.width / Math.max(width, 1)
+                return y / scale <= 80 && text.includes(close)
+              }
+            ) ?? false
+          )
+        }, expectedClose),
+      { timeout: 10_000 }
+    )
+    .toBe(true)
 }
 
 async function setAnnotationsVisible(page: Page, visible: boolean) {
@@ -174,9 +209,9 @@ async function expectPopoverHidden(page: Page) {
 async function clearChartCanvasTextDraws(page: Page) {
   await page.evaluate(() => {
     const trackedWindow = window as Window & {
-      __sign475ChartCanvasTextDraws?: ChartCanvasTextDraw[]
+      __sign498ChartCanvasTextDraws?: ChartCanvasTextDraw[]
     }
-    trackedWindow.__sign475ChartCanvasTextDraws = []
+    trackedWindow.__sign498ChartCanvasTextDraws = []
   })
 }
 
@@ -197,11 +232,11 @@ async function expectNativeLegendShowsReadoutTime(page: Page, status: Locator) {
             Array.from(chart?.querySelectorAll("canvas") ?? [])
           )
           const trackedWindow = window as Window & {
-            __sign475ChartCanvasTextDraws?: ChartCanvasTextDraw[]
+            __sign498ChartCanvasTextDraws?: ChartCanvasTextDraw[]
           }
 
           return (
-            trackedWindow.__sign475ChartCanvasTextDraws?.some(
+            trackedWindow.__sign498ChartCanvasTextDraws?.some(
               ({ canvas, text, y }) => {
                 if (!canvas.isConnected || !chartCanvases.has(canvas)) {
                   return false
@@ -245,7 +280,7 @@ async function dragChartTouch(
 }
 
 test.describe("P0 market chart workbench", () => {
-  test("renders the live quote across responsive viewports", async ({
+  test("renders a quote-updated native candle across responsive viewports", async ({
     page,
     fixture,
   }, testInfo) => {
@@ -283,8 +318,12 @@ test.describe("P0 market chart workbench", () => {
       timeout: 30_000,
     })
     await expectMarketChartCanvasText(page, "110,50")
+    await expectNativeLegendShowsClose(page, "110,50")
     const chart = page.getByRole("application", { name: "Biểu đồ giá" })
     await expect(chart).toHaveAccessibleDescription(/Quote gần nhất: 110,50/)
+    await expect(chart.locator('span[role="status"]')).toContainText(
+      "đóng cửa 110,50; khối lượng 1,003K."
+    )
     const freshness = page.getByText(/^Cập nhật /).locator("..")
     await expect(freshness).toBeVisible()
 
@@ -296,13 +335,17 @@ test.describe("P0 market chart workbench", () => {
       await page.setViewportSize(viewport)
       await expectNoHorizontalOverflow(page)
       await expectMarketChartCanvasText(page, "110,50")
+      await expectNativeLegendShowsClose(page, "110,50")
       await expect(chart).toHaveAccessibleDescription(/Quote gần nhất: 110,50/)
+      await expect(chart.locator('span[role="status"]')).toContainText(
+        "đóng cửa 110,50; khối lượng 1,003K."
+      )
       await expect(
         page.getByText("Giá trực tiếp", { exact: true })
       ).toBeVisible()
       await expect(page.getByText(/^Cập nhật /)).toBeVisible()
       await expectMarketChartFreshnessClearOfAssistant(page)
-      await testInfo.attach(`sign-475-quote-${label}`, {
+      await testInfo.attach(`sign-498-native-live-candle-${label}`, {
         body: await page.screenshot({ fullPage: true }),
         contentType: "image/png",
       })
@@ -312,7 +355,32 @@ test.describe("P0 market chart workbench", () => {
     await expectNoHorizontalOverflow(page)
     await expectMarketChartCanvasText(page, "110,50")
     await expectMarketChartFreshnessClearOfAssistant(page)
-    await testInfo.attach("sign-475-quote-mobile-360", {
+    await testInfo.attach("sign-498-native-live-candle-mobile-360", {
+      body: await page.screenshot({ fullPage: true }),
+      contentType: "image/png",
+    })
+  })
+
+  test("starts a new live candle without inventing volume", async ({
+    page,
+    fixture,
+  }, testInfo) => {
+    await page.clock.setFixedTime(new Date(MARKET_CHART_PRIOR_BUCKET_NOW))
+    await page.setViewportSize({ width: 1520, height: 1024 })
+    await trackMarketChartCanvasText(page)
+    await fixture.setScenario("/market-charts/candles", "success", "GET")
+    await page.goto("/vi/market-charts?assetId=101&timeframe=1h")
+
+    const chart = page.getByRole("application", { name: "Biểu đồ giá" })
+    await expect(page.getByText("Giá trực tiếp", { exact: true })).toBeVisible({
+      timeout: 30_000,
+    })
+    await expectMarketChartCanvasText(page, "110,50")
+    await expectNativeLegendShowsClose(page, "110,50")
+    await expect(chart.locator('span[role="status"]')).toContainText(
+      "mở cửa 110,50; cao nhất 110,50; thấp nhất 110,50; đóng cửa 110,50; khối lượng Chưa có."
+    )
+    await testInfo.attach("sign-498-native-live-candle-new-bucket", {
       body: await page.screenshot({ fullPage: true }),
       contentType: "image/png",
     })
@@ -656,6 +724,7 @@ test.describe("P0 market chart workbench", () => {
   }) => {
     test.setTimeout(180_000)
 
+    await page.clock.setFixedTime(new Date(MARKET_CHART_FIXTURE_NOW))
     await trackMarketChartCanvasText(page)
     await fixture.setScenario("/market-charts/live", "no-quote", "GET")
     await page.goto("/vi/market-charts?assetId=101&timeframe=1h")
@@ -765,6 +834,7 @@ test.describe("P0 market chart workbench", () => {
     page,
     fixture,
   }) => {
+    await page.clock.setFixedTime(new Date(MARKET_CHART_FIXTURE_NOW))
     await trackMarketChartCanvasText(page)
     await fixture.setScenario("/market-charts/live", "error-reconnect", "GET")
     await page.goto("/vi/market-charts?assetId=101&timeframe=1h")
@@ -784,10 +854,10 @@ test.describe("P0 market chart workbench", () => {
     await expectMarketChartCanvasText(page, "110,50")
   })
 
-  test("shows the upcoming calendar list through the next-event summary", async (
-    { page, fixture },
-    testInfo
-  ) => {
+  test("shows the upcoming calendar list through the next-event summary", async ({
+    page,
+    fixture,
+  }, testInfo) => {
     await page.setViewportSize({ width: 1520, height: 1024 })
     await page.emulateMedia({ colorScheme: "dark" })
     await page.clock.install({ time: new Date(MARKET_CHART_FIXTURE_NOW) })
@@ -823,19 +893,27 @@ test.describe("P0 market chart workbench", () => {
       "This long synthetic calendar description continues across several lines and remains fully readable in the chart event detail. It includes the source explanation and additional context without requiring a second detail page."
     await expect(inflation).toBeVisible()
     await expect(eventDetail.getByText("USD", { exact: true })).toBeVisible()
-    await expect(eventDetail.getByText("Đang chờ", { exact: true })).toBeVisible()
+    await expect(
+      eventDetail.getByText("Đang chờ", { exact: true })
+    ).toBeVisible()
     await expect(eventDetail.getByText("Dự báo", { exact: true })).toBeVisible()
     await expect(eventDetail.getByText("3.0", { exact: true })).toBeVisible()
-    await expect(eventDetail.getByText("Trước đó", { exact: true })).toBeVisible()
+    await expect(
+      eventDetail.getByText("Trước đó", { exact: true })
+    ).toBeVisible()
     await expect(eventDetail.getByText("3.1", { exact: true })).toBeVisible()
-    await expect(eventDetail.getByText("Không có", { exact: true })).toBeVisible()
+    await expect(
+      eventDetail.getByText("Không có", { exact: true })
+    ).toBeVisible()
     await expect(
       eventDetail.getByText(fullDescription, { exact: true })
     ).toBeVisible()
     await expect(eventDetail.getByText(fullDescription)).not.toHaveClass(
       /line-clamp/
     )
-    await expect(eventDetail.getByRole("link", { name: "Chi tiết" })).toHaveCount(0)
+    await expect(
+      eventDetail.getByRole("link", { name: "Chi tiết" })
+    ).toHaveCount(0)
 
     await testInfo.attach("SIGN-477-event-detail-wide-dark", {
       body: await page.screenshot({ animations: "disabled" }),
@@ -847,9 +925,9 @@ test.describe("P0 market chart workbench", () => {
     await expect(inflation).toBeVisible()
     const detailBounds = await eventDetail.boundingBox()
     expect(detailBounds?.x).toBeGreaterThanOrEqual(0)
-    expect((detailBounds?.x ?? 0) + (detailBounds?.width ?? 0)).toBeLessThanOrEqual(
-      360
-    )
+    expect(
+      (detailBounds?.x ?? 0) + (detailBounds?.width ?? 0)
+    ).toBeLessThanOrEqual(360)
     await testInfo.attach("SIGN-477-event-detail-mobile-light", {
       body: await page.screenshot({ animations: "disabled" }),
       contentType: "image/png",
@@ -1422,16 +1500,24 @@ test.describe("P0 market chart workbench", () => {
     await page.getByRole("button", { name: "7 ngày tới" }).click()
     await expect(employment).toBeVisible()
     const employmentDetail = employment.locator("..")
-    await expect(employmentDetail.getByText("USD", { exact: true })).toBeVisible()
-    await expect(employmentDetail.getByText("Dự báo", { exact: true })).toBeVisible()
-    await expect(employmentDetail.getByText("3.0", { exact: true })).toBeVisible()
+    await expect(
+      employmentDetail.getByText("USD", { exact: true })
+    ).toBeVisible()
+    await expect(
+      employmentDetail.getByText("Dự báo", { exact: true })
+    ).toBeVisible()
+    await expect(
+      employmentDetail.getByText("3.0", { exact: true })
+    ).toBeVisible()
     await expect(
       employmentDetail.getByText("Synthetic calendar event.", { exact: true })
     ).toBeVisible()
     await expect(
       employmentDetail.getByRole("link", { name: "Chi tiết" })
     ).toHaveCount(0)
-    await expect(page).toHaveURL(/\/vi\/market-charts\?assetId=101&timeframe=1h/)
+    await expect(page).toHaveURL(
+      /\/vi\/market-charts\?assetId=101&timeframe=1h/
+    )
   })
 
   test("keeps the full calendar link available when upcoming is empty", async ({
@@ -1609,7 +1695,9 @@ test.describe("P0 market chart workbench", () => {
     await expect(
       page.getByRole("heading", { name: "Fixture inflation release" })
     ).toBeVisible()
-    await expect(page.getByText("Synthetic calendar event.", { exact: true })).toBeVisible()
+    await expect(
+      page.getByText("Synthetic calendar event.", { exact: true })
+    ).toBeVisible()
     await expect(page.getByRole("link", { name: "Chi tiết" })).toHaveCount(0)
     const localTime = await page.evaluate((scheduledAt) => {
       return new Intl.DateTimeFormat("vi-VN", {
@@ -1866,6 +1954,7 @@ test.describe("P0 market chart history selection", () => {
     page,
     fixture,
   }) => {
+    await page.clock.setFixedTime(new Date(MARKET_CHART_FIXTURE_NOW))
     await page.setViewportSize({ width: 1520, height: 1024 })
     await trackMarketChartCanvasText(page)
     await page.goto("/vi/market-charts?assetId=101&timeframe=1h")
