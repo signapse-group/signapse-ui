@@ -43,6 +43,45 @@ export function getCandleTimestamp(candle: unknown) {
   return toMarketChartEpochMillis(candle.time)
 }
 
+export function getMarketChartWarmBandPriceRange({
+  candles,
+  endTime,
+  startTime,
+}: {
+  candles: MarketChartCandleItemResponse[]
+  endTime: string
+  startTime: string
+}) {
+  const from = Date.parse(startTime)
+  const to = Date.parse(endTime)
+
+  if (!Number.isFinite(from) || !Number.isFinite(to) || to <= from) {
+    return null
+  }
+
+  let high = Number.NEGATIVE_INFINITY
+  let low = Number.POSITIVE_INFINITY
+
+  for (const candle of candles) {
+    const timestamp = getCandleTimestamp(candle)
+
+    if (
+      timestamp === null ||
+      timestamp < from ||
+      timestamp >= to ||
+      !Number.isFinite(candle.high) ||
+      !Number.isFinite(candle.low)
+    ) {
+      continue
+    }
+
+    high = Math.max(high, candle.high)
+    low = Math.min(low, candle.low)
+  }
+
+  return Number.isFinite(high) && Number.isFinite(low) ? { high, low } : null
+}
+
 export function normalizeCandleItems(
   candles: MarketChartCandleItemResponse[]
 ): MarketChartCandleItemResponse[] {

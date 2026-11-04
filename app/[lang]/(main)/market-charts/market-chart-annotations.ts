@@ -458,14 +458,13 @@ export function createMarketChartWarmAnnotationGroups(
         return []
       }
 
-      const start = Math.min(Number(periodStart), Number(periodEnd))
-      const end = Math.max(Number(periodStart), Number(periodEnd))
+      const periodStartTime = Number(periodStart)
 
       if (
-        end < firstTime ||
+        periodStartTime < firstTime ||
         lastCandleIntervalEndTime === null ||
         !Number.isFinite(lastCandleIntervalEndTime) ||
-        start >= lastCandleIntervalEndTime
+        periodStartTime >= lastCandleIntervalEndTime
       ) {
         return []
       }

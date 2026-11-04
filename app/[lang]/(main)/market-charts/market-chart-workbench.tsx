@@ -1988,7 +1988,7 @@ function ChartSurface({
         />
 
         {selectedAnnotationGroup ? (
-          <div className="border-t bg-muted/10 p-3 sm:hidden">
+          <div className="border-t bg-muted/10 p-3 md:hidden">
             <div className="overflow-hidden rounded-xl border bg-popover">
               <div className="flex items-center justify-between gap-3 border-b px-3 py-2.5">
                 <div className="flex items-center gap-2">
@@ -2665,6 +2665,7 @@ function MarketChartWarmEpisodeAnnotationDetail({
                       ),
                     })
                   : null
+              const reasoning = event.reaction?.reasoning?.trim()
 
               return (
                 <article
@@ -2685,6 +2686,16 @@ function MarketChartWarmEpisodeAnnotationDetail({
                     <p className="line-clamp-3 text-sm text-muted-foreground">
                       {event.summary}
                     </p>
+                  ) : null}
+                  {reasoning ? (
+                    <div className="flex flex-col gap-1">
+                      <p className="text-xs font-medium text-muted-foreground">
+                        {labels.warmEpisodeEventReasoningTitle}
+                      </p>
+                      <p className="text-sm leading-relaxed text-muted-foreground">
+                        {reasoning}
+                      </p>
+                    </div>
                   ) : null}
                   {relationLabel ||
                   direction ||

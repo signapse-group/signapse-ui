@@ -99,8 +99,8 @@ import {
 } from "./market-chart-period"
 import {
   createKLineData,
-  getCandleTimestamp,
   getFiniteVolume,
+  getMarketChartWarmBandPriceRange,
   hasUsableVolume,
   isValidMarketChartCandle,
   mergeCandleItems,
@@ -559,47 +559,6 @@ function getTimeRangeBand({
     top,
     width: right - left,
   }
-}
-
-function getWarmBandPriceRange({
-  candles,
-  endTime,
-  startTime,
-}: {
-  candles: MarketChartCandleItemResponse[]
-  endTime: string
-  startTime: string
-}) {
-  const start = Date.parse(startTime)
-  const end = Date.parse(endTime)
-
-  if (!Number.isFinite(start) || !Number.isFinite(end)) {
-    return null
-  }
-
-  const from = Math.min(start, end)
-  const to = Math.max(start, end)
-  let high = Number.NEGATIVE_INFINITY
-  let low = Number.POSITIVE_INFINITY
-
-  for (const candle of candles) {
-    const timestamp = getCandleTimestamp(candle)
-
-    if (
-      timestamp === null ||
-      timestamp < from ||
-      timestamp > to ||
-      !Number.isFinite(candle.high) ||
-      !Number.isFinite(candle.low)
-    ) {
-      continue
-    }
-
-    high = Math.max(high, candle.high)
-    low = Math.min(low, candle.low)
-  }
-
-  return Number.isFinite(high) && Number.isFinite(low) ? { high, low } : null
 }
 
 function getOutcomeHoverBand({
@@ -1690,7 +1649,7 @@ export const MarketChartCanvas = forwardRef<
             return []
           }
 
-          const priceRange = getWarmBandPriceRange({
+          const priceRange = getMarketChartWarmBandPriceRange({
             candles: loadedCandlesRef.current,
             endTime: warmEpisode.periodEnd,
             startTime: warmEpisode.periodStart,
@@ -2353,7 +2312,7 @@ export const MarketChartCanvas = forwardRef<
             <PopoverContentInOverlay
               align="start"
               side="top"
-              className="w-[min(22rem,calc(100vw_-_1.5rem))] sm:block"
+              className="hidden w-[min(22rem,calc(100vw_-_1.5rem))] md:block"
             >
               {renderAnnotationPopup?.(group)}
             </PopoverContentInOverlay>

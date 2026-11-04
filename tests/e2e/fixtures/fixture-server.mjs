@@ -1205,7 +1205,25 @@ function marketChartAnnotations(url, scenario) {
 
   if (scenario === "annotations-warm-episode") {
     const periodStart = new Date(
-      Date.parse(anchorTime) - 12 * 60 * 60 * 1000
+      Date.parse(NOW) - 2 * 24 * 60 * 60 * 1000
+    ).toISOString()
+    const from = Date.parse(url.searchParams.get("from") ?? "")
+    const periodStartTime = Date.parse(periodStart)
+    const periodEndTime = Date.parse(anchorTime)
+
+    if (
+      !Number.isFinite(from) ||
+      periodStartTime < from ||
+      periodStartTime >= periodEndTime
+    ) {
+      return []
+    }
+
+    const firstEventTime = new Date(
+      Date.parse(periodStart) + 60 * 60 * 1000
+    ).toISOString()
+    const secondEventTime = new Date(
+      Date.parse(periodStart) + 2 * 60 * 60 * 1000
     ).toISOString()
 
     return [
@@ -1222,7 +1240,49 @@ function marketChartAnnotations(url, scenario) {
           direction: "NEUTRAL",
           summary: "Fixture warm episode",
           outcome: null,
-          events: [],
+          events: [
+            {
+              warmEpisodeEventId: 420,
+              time: firstEventTime,
+              severity: "HIGH",
+              direction: "BEARISH",
+              title: "U.S. debt snapshot",
+              summary:
+                "Years of widening deficits pushed federal debt past $40 trillion.",
+              confidence: 0.05,
+              relationType: "PRIMARY_SUBJECT",
+              reaction: {
+                id: 421,
+                direction: "BULLISH",
+                timeHorizon: "MEDIUM_TERM",
+                confidence: 0.7,
+                reasoning:
+                  "Persistent deficits may increase demand for inflation hedges over the medium term.",
+                observedAt: firstEventTime,
+                outcome: null,
+              },
+            },
+            {
+              warmEpisodeEventId: 422,
+              time: secondEventTime,
+              severity: "LOW",
+              direction: "BULLISH",
+              title: "UAE trade snapshot",
+              summary:
+                "A missile strike prompted the UAE to suspend trade and financial transactions with Iran.",
+              confidence: 0.95,
+              relationType: "AFFECTED_ASSET",
+              reaction: {
+                id: 423,
+                direction: "BEARISH",
+                timeHorizon: "SHORT_TERM",
+                confidence: 0.35,
+                reasoning: " \t ",
+                observedAt: secondEventTime,
+                outcome: null,
+              },
+            },
+          ],
         },
       },
     ]
