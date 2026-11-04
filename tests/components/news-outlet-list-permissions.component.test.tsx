@@ -1,6 +1,12 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen, waitFor } from "@testing-library/react"
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import type { ComponentProps } from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
@@ -189,5 +195,47 @@ describe("News Outlet list permissions", () => {
     expect(
       screen.queryByRole("link", { name: viDictionary.newsOutlets.edit })
     ).not.toBeInTheDocument()
+  })
+
+  it("keeps the destructive confirmation open after a delete 403", async () => {
+    const user = userEvent.setup()
+    renderList([NEWS_OUTLET_READ_PERMISSION, NEWS_OUTLET_DELETE_PERMISSION])
+
+    await user.click(
+      screen.getByRole("button", { name: viDictionary.newsOutlets.delete })
+    )
+
+    const dialog = screen.getByRole("alertdialog")
+    expect(
+      within(dialog).getByRole("heading", {
+        name: viDictionary.newsOutlets.deleteTitle.replace(
+          "{name}",
+          outlet.name
+        ),
+      })
+    ).toBeInTheDocument()
+    expect(
+      within(dialog).getByText(
+        viDictionary.newsOutlets.deleteDescription.replaceAll(
+          "{name}",
+          outlet.name
+        )
+      )
+    ).toBeInTheDocument()
+
+    await user.click(
+      within(dialog).getByRole("button", {
+        name: viDictionary.newsOutlets.delete,
+      })
+    )
+
+    await waitFor(() =>
+      expect(mocks.toastError).toHaveBeenCalledWith(
+        "Bạn không có quyền xóa nguồn tin."
+      )
+    )
+    expect(screen.getByRole("alertdialog")).toBeInTheDocument()
+    expect(mocks.toastSuccess).not.toHaveBeenCalled()
+    expect(mocks.refresh).not.toHaveBeenCalled()
   })
 })

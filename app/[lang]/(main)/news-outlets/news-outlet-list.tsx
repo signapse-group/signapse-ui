@@ -50,6 +50,7 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
+  AlertDialogMedia,
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
@@ -424,13 +425,7 @@ function DeleteNewsOutletButton({ id, name }: { id: number; name: string }) {
         <TooltipTrigger
           render={
             <AlertDialogTrigger
-              render={
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                />
-              }
+              render={<Button variant="destructive" size="icon-sm" />}
             />
           }
         >
@@ -441,17 +436,20 @@ function DeleteNewsOutletButton({ id, name }: { id: number; name: string }) {
           {dictionary.newsOutlets.delete}
         </TooltipContentInOverlay>
       </Tooltip>
-      <AlertDialogContent>
+      <AlertDialogContent size="sm">
         <AlertDialogHeader>
+          <AlertDialogMedia className="bg-destructive/10 text-destructive">
+            <Trash2 />
+          </AlertDialogMedia>
           <AlertDialogTitle>
-            {dictionary.newsOutlets.deleteTitle}
+            {formatMessage(dictionary.newsOutlets.deleteTitle, { name })}
           </AlertDialogTitle>
           <AlertDialogDescription>
             {formatMessage(dictionary.newsOutlets.deleteDescription, { name })}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={isPending}>
+          <AlertDialogCancel disabled={isPending} variant="outline">
             {dictionary.common.cancel}
           </AlertDialogCancel>
           <AlertDialogAction
@@ -460,7 +458,7 @@ function DeleteNewsOutletButton({ id, name }: { id: number; name: string }) {
               handleDelete()
             }}
             disabled={isPending}
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            variant="destructive"
           >
             {isPending ? (
               <>

@@ -817,9 +817,9 @@ export const vi = {
     toggleAria: "{action} nguồn tin {name}",
     toggleError: "Không thể cập nhật trạng thái nguồn tin",
     delete: "Xóa nguồn tin",
-    deleteTitle: "Bạn có chắc chắn muốn xóa?",
+    deleteTitle: 'Xóa nguồn tin "{name}"?',
     deleteDescription:
-      "Hành động này không thể hoàn tác. Nguồn tin {name} sẽ bị xóa vĩnh viễn khỏi hệ thống.",
+      "Không thể hoàn tác thao tác này. {name} sẽ không được chọn trong các lần thu thập tiếp theo. Bài viết đã thu thập vẫn giữ nguyên nội dung, đường dẫn và tên nhà xuất bản đã ghi nhận.",
     deletePending: "Đang xóa...",
     deleted: 'Đã xóa nguồn tin "{name}".',
     deleteError: "Không thể xóa nguồn tin",

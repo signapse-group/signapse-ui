@@ -1,18 +1,28 @@
-export interface CreateNewsOutletRequest {
-  name: string
-  description?: string | null
-  homepageUrl: string
-  rssUrl?: string | null
-  active?: boolean
-}
+import { z } from "zod"
 
-export interface UpdateNewsOutletRequest {
-  name?: string | null
-  description?: string | null
-  homepageUrl?: string | null
-  rssUrl?: string | null
-  active?: boolean | null
-}
+export const createNewsOutletRequestSchema = z.object({
+  name: z.string().trim().min(1),
+  description: z.string().trim().nullable().optional(),
+  homepageUrl: z.string().trim().min(1),
+  rssUrl: z.string().trim().nullable().optional(),
+  active: z.boolean().optional(),
+})
+
+export const updateNewsOutletRequestSchema = z.object({
+  name: z.string().trim().min(1).nullable().optional(),
+  description: z.string().trim().nullable().optional(),
+  homepageUrl: z.string().trim().nullable().optional(),
+  rssUrl: z.string().trim().nullable().optional(),
+  active: z.boolean().nullable().optional(),
+})
+
+export type CreateNewsOutletRequest = z.infer<
+  typeof createNewsOutletRequestSchema
+>
+
+export type UpdateNewsOutletRequest = z.infer<
+  typeof updateNewsOutletRequestSchema
+>
 
 export interface NewsOutletResponse {
   id: number

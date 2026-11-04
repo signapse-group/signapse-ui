@@ -2,15 +2,16 @@
 
 import { revalidatePath } from "next/cache"
 
-import { fetchAuthenticated } from "@/app/api/auth/action"
-import { ActionResult, Page, SearchParams } from "@/app/lib/definitions"
-import { getDictionary } from "@/app/lib/i18n/dictionaries"
-import { getRequestLocale } from "@/app/lib/i18n/server"
+import { fetchAuthenticated, type BackendApiError } from "@/app/api/auth/action"
+import type { ActionResult, Page, SearchParams } from "@/app/lib/definitions"
+import { getServerDictionary } from "@/app/lib/i18n/server"
 import {
-  CreateNewsOutletRequest,
-  NewsOutletListResponse,
-  NewsOutletResponse,
-  UpdateNewsOutletRequest,
+  createNewsOutletRequestSchema,
+  updateNewsOutletRequestSchema,
+  type CreateNewsOutletRequest,
+  type NewsOutletListResponse,
+  type NewsOutletResponse,
+  type UpdateNewsOutletRequest,
 } from "@/app/lib/news-outlets/definitions"
 import { queryParamsToString } from "@/app/lib/utils"
 
@@ -39,12 +40,27 @@ export async function getNewsOutletById(
 export async function createNewsOutlet(
   request: CreateNewsOutletRequest
 ): Promise<ActionResult<NewsOutletResponse>> {
+  const dictionary = await getServerDictionary()
+  const parsed = createNewsOutletRequestSchema.safeParse(request)
+
+  if (!parsed.success) {
+    const invalidField = parsed.error.issues[0]?.path[0]
+    const error =
+      invalidField === "name"
+        ? dictionary.newsOutlets.nameRequired
+        : invalidField === "homepageUrl"
+          ? dictionary.newsOutlets.homepageRequired
+          : dictionary.newsOutlets.createError
+
+    return { success: false, error }
+  }
+
   try {
     const newsOutlet = await fetchAuthenticated<NewsOutletResponse>(
       "/news-outlets",
       {
         method: "POST",
-        body: JSON.stringify(request),
+        body: JSON.stringify(parsed.data),
       }
     )
 
@@ -52,13 +68,13 @@ export async function createNewsOutlet(
 
     return { success: true, data: newsOutlet }
   } catch (error: unknown) {
-    const dictionary = await getDictionary(await getRequestLocale())
-    const errorMessage =
-      error instanceof Error
-        ? error.message
-        : dictionary.newsOutlets.createError
-
-    return { success: false, error: errorMessage }
+    return {
+      success: false,
+      error: getNewsOutletActionError(
+        error,
+        dictionary.newsOutlets.createError
+      ),
+    }
   }
 }
 
@@ -66,12 +82,19 @@ export async function updateNewsOutlet(
   id: number,
   request: UpdateNewsOutletRequest
 ): Promise<ActionResult<NewsOutletResponse>> {
+  const dictionary = await getServerDictionary()
+  const parsed = updateNewsOutletRequestSchema.safeParse(request)
+
+  if (!parsed.success) {
+    return { success: false, error: dictionary.newsOutlets.updateError }
+  }
+
   try {
     const newsOutlet = await fetchAuthenticated<NewsOutletResponse>(
       `/news-outlets/${id}`,
       {
         method: "PUT",
-        body: JSON.stringify(request),
+        body: JSON.stringify(parsed.data),
       }
     )
 
@@ -80,13 +103,13 @@ export async function updateNewsOutlet(
 
     return { success: true, data: newsOutlet }
   } catch (error: unknown) {
-    const dictionary = await getDictionary(await getRequestLocale())
-    const errorMessage =
-      error instanceof Error
-        ? error.message
-        : dictionary.newsOutlets.updateError
-
-    return { success: false, error: errorMessage }
+    return {
+      success: false,
+      error: getNewsOutletActionError(
+        error,
+        dictionary.newsOutlets.updateError
+      ),
+    }
   }
 }
 
@@ -106,13 +129,14 @@ export async function toggleNewsOutletActive(
 
     return { success: true, data: newsOutlet }
   } catch (error: unknown) {
-    const dictionary = await getDictionary(await getRequestLocale())
-    const errorMessage =
-      error instanceof Error
-        ? error.message
-        : dictionary.newsOutlets.toggleError
-
-    return { success: false, error: errorMessage }
+    const dictionary = await getServerDictionary()
+    return {
+      success: false,
+      error: getNewsOutletActionError(
+        error,
+        dictionary.newsOutlets.toggleError
+      ),
+    }
   }
 }
 
@@ -126,12 +150,24 @@ export async function deleteNewsOutlet(id: number): Promise<ActionResult> {
 
     return { success: true, data: undefined }
   } catch (error: unknown) {
-    const dictionary = await getDictionary(await getRequestLocale())
-    const errorMessage =
-      error instanceof Error
-        ? error.message
-        : dictionary.newsOutlets.deleteError
-
-    return { success: false, error: errorMessage }
+    const dictionary = await getServerDictionary()
+    return {
+      success: false,
+      error: getNewsOutletActionError(
+        error,
+        dictionary.newsOutlets.deleteError
+      ),
+    }
   }
+}
+
+function getNewsOutletActionError(error: unknown, fallback: string): string {
+  if (!(error instanceof Error)) return fallback
+
+  const apiError = error as BackendApiError
+  if (typeof apiError.status === "number" && apiError.status >= 400) {
+    return error.message || fallback
+  }
+
+  return fallback
 }

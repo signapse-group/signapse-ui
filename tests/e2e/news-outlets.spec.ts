@@ -20,9 +20,9 @@ test("read permission keeps the outlet list and detail available without update 
     "aria-disabled",
     "true"
   )
-  await expect(
-    page.getByRole("link", { name: "Thêm nguồn tin" })
-  ).toHaveCount(0)
+  await expect(page.getByRole("link", { name: "Thêm nguồn tin" })).toHaveCount(
+    0
+  )
   await expect(page.getByRole("link", { name: "Chỉnh sửa" })).toHaveCount(0)
   await expect(page.getByRole("button", { name: "Xóa nguồn tin" })).toHaveCount(
     0
@@ -131,4 +131,83 @@ test("create and edit forms render for their effective permissions", async ({
     contentType: "image/png",
   })
   expect(browserErrors).toEqual([])
+})
+
+test("delete permission opens a localized confirmation that can be canceled", async ({
+  page,
+  fixture,
+}, testInfo) => {
+  await fixture.setPermissions(["news-outlet:read", "news-outlet:delete"])
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto("/vi/news-outlets")
+
+  const deleteButton = page.getByRole("button", {
+    name: "Xóa nguồn tin",
+    exact: true,
+  })
+  await expect(deleteButton).toBeVisible()
+  await expect(page.getByRole("switch")).toHaveAttribute(
+    "aria-disabled",
+    "true"
+  )
+  await deleteButton.click()
+
+  const dialog = page.getByRole("alertdialog")
+  await expect(dialog).toBeVisible()
+  await expect(
+    dialog.getByRole("heading", {
+      name: 'Xóa nguồn tin "Fixture News Outlet"?',
+    })
+  ).toBeVisible()
+  await expect(
+    dialog.getByText(
+      "Không thể hoàn tác thao tác này. Fixture News Outlet sẽ không được chọn trong các lần thu thập tiếp theo. Bài viết đã thu thập vẫn giữ nguyên nội dung, đường dẫn và tên nhà xuất bản đã ghi nhận."
+    )
+  ).toBeVisible()
+  expect(
+    await dialog.evaluate((element) => element.contains(document.activeElement))
+  ).toBe(true)
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth
+    )
+  ).toBe(true)
+
+  await testInfo.attach("news-outlet-delete-confirmation-mobile-390x844.png", {
+    body: await page.screenshot({ fullPage: true }),
+    contentType: "image/png",
+  })
+
+  const cancelButton = dialog.getByRole("button", {
+    name: "Hủy",
+    exact: true,
+  })
+  await cancelButton.focus()
+  await page.keyboard.press("Enter")
+  await expect(page.getByRole("alertdialog")).toHaveCount(0)
+  await expect(deleteButton).toBeFocused()
+
+  await page.getByRole("button", { name: "Chọn giao diện" }).click()
+  await page.getByRole("menuitem", { name: "Tối", exact: true }).click()
+  await expect(page.locator("html")).toHaveClass(/dark/)
+
+  await deleteButton.click()
+  const darkDialog = page.getByRole("alertdialog")
+  await expect(darkDialog).toBeVisible()
+  expect(
+    await darkDialog.evaluate((element) =>
+      element.contains(document.activeElement)
+    )
+  ).toBe(true)
+  await testInfo.attach(
+    "news-outlet-delete-confirmation-dark-mobile-390x844.png",
+    {
+      body: await page.screenshot({ fullPage: true }),
+      contentType: "image/png",
+    }
+  )
+
+  await page.keyboard.press("Escape")
+  await expect(page.getByRole("alertdialog")).toHaveCount(0)
+  await expect(deleteButton).toBeFocused()
 })

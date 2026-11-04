@@ -820,9 +820,9 @@ export const en: Dictionary = {
     toggleAria: "{action} news outlet {name}",
     toggleError: "Could not update news outlet status",
     delete: "Delete news outlet",
-    deleteTitle: "Are you sure you want to delete this?",
+    deleteTitle: 'Delete news outlet "{name}"?',
     deleteDescription:
-      "This action cannot be undone. News outlet {name} will be permanently deleted from the system.",
+      "This cannot be undone. {name} will no longer be selected for future collection. Previously collected articles keep their content, link, and captured publisher name.",
     deletePending: "Deleting...",
     deleted: 'Deleted news outlet "{name}".',
     deleteError: "Could not delete news outlet",

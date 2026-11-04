@@ -42,6 +42,7 @@ import {
   NEWS_OUTLET_UPDATE_PERMISSION,
 } from "@/app/lib/news-outlets/permissions"
 import NewsOutletDetailPage from "@/app/[lang]/(main)/news-outlets/[id]/page"
+import NewsOutletsError from "@/app/[lang]/(main)/news-outlets/error"
 
 const newsOutlet = {
   id: 7,
@@ -147,5 +148,19 @@ describe("News Outlet detail route", () => {
     })
     routeMocks.getNewsOutletById.mockRejectedValueOnce(loadError)
     await expect(loadPage()).rejects.toBe(loadError)
+  })
+
+  it("shows a localized load error without exposing the thrown exception", () => {
+    renderPage(
+      <NewsOutletsError error={new Error("fetch failed")} reset={vi.fn()} />
+    )
+
+    expect(
+      screen.getByText(viDictionary.newsOutlets.errorDescription)
+    ).toBeInTheDocument()
+    expect(screen.queryByText("fetch failed")).not.toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: viDictionary.common.retry })
+    ).toBeInTheDocument()
   })
 })
