@@ -78,6 +78,7 @@ type FixtureController = {
       | "annotations-delayed-old-scope"
       | "chart-later-page"
       | "overview-expanded"
+      | "article-reader-long-content"
       | "scope-mismatch"
       | "calendar-historical",
     method?: string

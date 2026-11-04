@@ -319,6 +319,7 @@ function getDemoQuickDetailFixture(
     id: entityId,
     lastModifiedDate: now,
     publishedAt: node.metadata?.publishedAt ?? now,
+    featureImage: null,
     sourceName: "Signapse Fixture",
     status: "EVENT_RESOLVED",
     title: node.label,

@@ -6,12 +6,15 @@ import { fetchAuthenticated } from "@/app/api/auth/action"
 import { ActionResult, Page, SearchParams } from "@/app/lib/definitions"
 import { getDictionary } from "@/app/lib/i18n/dictionaries"
 import { getRequestLocale } from "@/app/lib/i18n/server"
+import { reportValidationFailure } from "@/app/lib/observability/server"
+import { OBSERVABILITY_OPERATIONS } from "@/app/lib/observability/semantic"
 import {
   MediaReferenceRequest,
   NewsArticleListResponse,
   NewsArticleResponse,
   NewsPrimaryEventDerivationResult,
   PendingNewsEventDerivationBatchResult,
+  newsArticleResponseSchema,
 } from "@/app/lib/news-articles/definitions"
 import { queryParamsToString } from "@/app/lib/utils"
 
@@ -37,7 +40,35 @@ export async function getNewsArticles(
 export async function getNewsArticleById(
   id: number
 ): Promise<NewsArticleResponse> {
-  return fetchAuthenticated<NewsArticleResponse>(`/news-articles/${id}`)
+  const dictionary = await getDictionary(await getRequestLocale())
+  const response = await fetchAuthenticated<unknown>(`/news-articles/${id}`)
+  const parsed = newsArticleResponseSchema.safeParse(response)
+
+  if (!parsed.success) {
+    reportValidationFailure(
+      OBSERVABILITY_OPERATIONS.backendRequest,
+      { feature: "news_articles", route: "/news-articles/:id" },
+      parsed.error.issues
+    )
+    throw new Error(dictionary.newsArticles.errorDescription)
+  }
+
+  if (parsed.data.id !== undefined && parsed.data.id !== id) {
+    reportValidationFailure(
+      OBSERVABILITY_OPERATIONS.backendRequest,
+      { feature: "news_articles", route: "/news-articles/:id" },
+      [
+        {
+          code: "custom",
+          path: ["id"],
+        },
+      ]
+    )
+    throw new Error(dictionary.newsArticles.errorDescription)
+  }
+
+  // The request path remains the identity when the response omits its optional ID.
+  return { ...parsed.data, id }
 }
 
 export async function deleteNewsArticle(id: number): Promise<ActionResult> {
