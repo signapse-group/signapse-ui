@@ -1,6 +1,137 @@
-import { expect, test } from "./fixtures"
+import { expect, test, waitForClientHandler } from "./fixtures"
 
 test.describe("P0 quick-detail overlay", () => {
+  test("renders the complete localized Article within wide, compact, and mobile readers", async ({
+    page,
+    fixture,
+  }, testInfo) => {
+    await fixture.setScenario(
+      "/news-articles",
+      "article-reader-long-content",
+      "GET"
+    )
+    await page.setViewportSize({ width: 1520, height: 1000 })
+    await page.goto("/vi/dashboard")
+
+    const trigger = page.getByRole("button", {
+      name: "Mở bài viết: Fixture market update",
+      exact: true,
+    })
+    await expect(trigger).toBeVisible()
+    await waitForClientHandler(trigger)
+    await trigger.click()
+
+    const dialog = page.getByRole("dialog")
+    const overlay = page.locator("[data-quick-detail-placement]")
+    await expect(dialog).toBeVisible()
+    await expect(overlay).toHaveAttribute(
+      "data-quick-detail-placement",
+      "right"
+    )
+    await expect(overlay).toHaveAttribute(
+      "data-quick-detail-profile",
+      "news-article"
+    )
+    await expect(
+      dialog.getByRole("heading", {
+        name: "Bản tin thị trường đã bản địa hóa",
+        exact: true,
+      })
+    ).toBeVisible()
+    await expect(
+      dialog.getByText("Dấu mốc cuối bài: Nội dung dài vẫn được giữ đầy đủ.")
+    ).toBeVisible()
+    await expect(
+      dialog.getByText("Fixture Wire", { exact: true }).first()
+    ).toBeVisible()
+    await expect(
+      dialog.getByRole("link", {
+        name: "Mở liên kết gốc",
+        exact: true,
+      })
+    ).toHaveAttribute("href", "https://fixture.invalid/news/71")
+    await expect(
+      dialog.getByRole("link", { name: "Mở trang đầy đủ", exact: true })
+    ).toHaveAttribute("href", "/vi/news-articles/71")
+
+    const image = dialog.getByRole("img", { name: "Ảnh minh họa bài viết mẫu" })
+    await expect(image).toBeVisible()
+    await expect
+      .poll(() =>
+        image.evaluate((element: HTMLImageElement) => element.naturalWidth)
+      )
+      .toBeGreaterThan(0)
+
+    const tableScroll = dialog.locator(".typeset-scroll")
+    const codeScroll = dialog.locator("article pre")
+    await expect(tableScroll).toHaveCount(1)
+    await expect(codeScroll).toHaveCount(1)
+
+    for (const viewport of [
+      { width: 1520, height: 1000, placement: "right", name: "wide" },
+      { width: 1024, height: 900, placement: "bottom", name: "compact" },
+      { width: 390, height: 844, placement: "bottom", name: "mobile" },
+    ]) {
+      await page.setViewportSize({
+        width: viewport.width,
+        height: viewport.height,
+      })
+      await expect(overlay).toHaveAttribute(
+        "data-quick-detail-placement",
+        viewport.placement
+      )
+      await expect(dialog).toBeVisible()
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth)
+      ).toBeLessThanOrEqual(viewport.width)
+
+      const wideRegions = await Promise.all(
+        [tableScroll, codeScroll].map((element) =>
+          element.evaluate((node) => node.scrollWidth > node.clientWidth)
+        )
+      )
+      expect(wideRegions).toEqual([true, true])
+
+      await testInfo.attach(`article-reader-${viewport.name}.png`, {
+        body: await page.screenshot(),
+        contentType: "image/png",
+      })
+    }
+
+    for (const viewport of [
+      { width: 1440, placement: "right" },
+      { width: 1439, placement: "bottom" },
+      { width: 768, placement: "bottom" },
+      { width: 767, placement: "bottom" },
+      { width: 760, placement: "bottom" },
+      { width: 360, placement: "bottom" },
+    ]) {
+      await page.setViewportSize({ width: viewport.width, height: 512 })
+      await expect(overlay).toHaveAttribute(
+        "data-quick-detail-placement",
+        viewport.placement
+      )
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth)
+      ).toBeLessThanOrEqual(viewport.width)
+    }
+
+    await page.setViewportSize({ width: 390, height: 844 })
+    await dialog
+      .getByText("Dấu mốc cuối bài: Nội dung dài vẫn được giữ đầy đủ.")
+      .scrollIntoViewIfNeeded()
+    await testInfo.attach("article-reader-mobile-content-end.png", {
+      body: await page.screenshot(),
+      contentType: "image/png",
+    })
+
+    const detailRequest = (await fixture.state()).requests.find(
+      (request) =>
+        request.method === "GET" && request.path === "/news-articles/71"
+    )
+    expect(detailRequest?.locale).toBe("vi")
+  })
+
   test("keeps Dashboard mounted while one Event session crosses placement breakpoints", async ({
     page,
   }) => {

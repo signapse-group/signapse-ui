@@ -627,6 +627,7 @@ function createState() {
         description: "Synthetic news item.",
         url: "https://fixture.invalid/news/71",
         sourceName: "Fixture Wire",
+        featureImage: null,
         publishedAt: NOW,
         status: "INGESTED",
         createdDate: NOW,
@@ -1093,10 +1094,35 @@ function overviewNews() {
     description: `System-wide news item ${index + 1}, not linked to a workspace asset or event.`,
     url: `https://fixture.invalid/news/${71 + index}`,
     sourceName: "Fixture Wire",
+    featureImage: null,
     publishedAt: new Date(Date.parse(NOW) - index * 60_000).toISOString(),
     status: "INGESTED",
     createdDate: NOW,
   }))
+}
+
+function articleReaderLongContent() {
+  const paragraphs = Array.from(
+    { length: 30 },
+    (_, index) =>
+      `Đoạn nội dung ${index + 1}: Bản tin giữ nguyên toàn bộ phần nội dung đã được xử lý để người đọc có thể đối chiếu bối cảnh và nguồn. ` +
+      "Dữ liệu trong đoạn này được cung cấp bởi fixture cục bộ."
+  )
+  const wideTable = [
+    "| Mã tài sản | Ngôn ngữ | Thời điểm công bố | Trạng thái xử lý | Nguồn snapshot | URL chuẩn | Mức độ liên quan | Ghi chú |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- |",
+    "| BTCUSD | vi-VN | 2026-11-04T08:00:00Z | DERIVATION_FAILED | Fixture Wire | /news-articles/71 | 0.987654321 | Nội dung bài vẫn đọc được |",
+  ].join("\n")
+
+  return [
+    "# Bản tin đầy đủ",
+    ...paragraphs,
+    '```ts\nconst sourceSnapshot = "' +
+      "market-source-reference-".repeat(18) +
+      '";\n```',
+    wideTable,
+    "### Dấu mốc cuối bài: Nội dung dài vẫn được giữ đầy đủ.",
+  ].join("\n\n")
 }
 
 function graphView(state) {
@@ -2840,10 +2866,9 @@ function responseForRoute(state, method, pathname, url, body, locale = "en") {
   const newsArticleDetailMatch = pathname.match(/^\/news-articles\/(\d+)$/)
   if (method === "GET" && newsArticleDetailMatch) {
     const id = Number(newsArticleDetailMatch[1])
+    const scenario = getScenario(state, method, "/news-articles")
     const articles =
-      getScenario(state, method, "/news-articles") === "overview-expanded"
-        ? overviewNews()
-        : state.newsArticles
+      scenario === "overview-expanded" ? overviewNews() : state.newsArticles
     const article = articles.find((item) => item.id === id)
 
     if (!article) {
@@ -2853,7 +2878,25 @@ function responseForRoute(state, method, pathname, url, body, locale = "en") {
       }
     }
 
-    return article
+    if (scenario === "article-reader-long-content") {
+      return {
+        ...article,
+        title: "Bản tin thị trường đã bản địa hóa",
+        description: "Tóm tắt tiếng Việt từ nguồn snapshot đã lưu.",
+        featureImage: {
+          id: 711,
+          name: "Fixture article image",
+          altText: "Ảnh minh họa bài viết mẫu",
+          urlOriginal: "/images/signapse_logo_dark_2048x2048.webp",
+          urlLarge: "/images/signapse_logo_dark_2048x2048.webp",
+          urlMedium: "/images/signapse_logo_dark_2048x2048.webp",
+        },
+        content: articleReaderLongContent(),
+        status: "DERIVATION_FAILED",
+      }
+    }
+
+    return { ...article, content: null }
   }
 
   if (method === "GET" && pathname === "/events") {

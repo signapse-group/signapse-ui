@@ -3,12 +3,7 @@ import {
   type PermissionCollection,
 } from "@/app/lib/permissions"
 
-// Prefer the canon news-article permission keys, but accept legacy source-document
-// keys until backend permission literals are confirmed and fully migrated.
-export const NEWS_ARTICLE_READ_PERMISSIONS = [
-  "news-article:read",
-  "source-document:read",
-] as const
+export const NEWS_ARTICLE_READ_PERMISSIONS = ["news-article:read"] as const
 
 export const NEWS_ARTICLE_ANALYZE_PERMISSIONS = [
   "news-article:analyze",

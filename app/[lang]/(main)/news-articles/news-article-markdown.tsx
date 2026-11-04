@@ -15,9 +15,7 @@ const markdownComponents: Components = {
   h3: ({ children }) => <h4>{children}</h4>,
   h4: ({ children }) => <h5>{children}</h5>,
   h5: ({ children }) => <h6>{children}</h6>,
-  hr: () => (
-    <Separator className="mt-[calc(var(--typeset-flow)*2.4)]" />
-  ),
+  hr: () => <Separator className="mt-[calc(var(--typeset-flow)*2.4)]" />,
   table: ({ children }) => (
     <div className="typeset-scroll">
       <table>{children}</table>
@@ -32,7 +30,7 @@ export function NewsArticleMarkdown({
   return (
     <article
       className={cn(
-        "typeset typeset-article w-full max-w-[72ch] pb-10",
+        "typeset typeset-article w-full max-w-[72ch] min-w-0 pb-10",
         className
       )}
     >

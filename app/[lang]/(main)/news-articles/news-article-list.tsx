@@ -95,19 +95,27 @@ export function NewsArticleList({ newsArticlePage }: NewsArticleListProps) {
           </TableHeader>
           <TableBody>
             {articles.length > 0 ? (
-              articles.map((article) => (
+              articles.map((article, index) => (
                 <TableRow
-                  key={article.id}
+                  key={article.id ?? `news-article-${index}`}
                   className="border-border transition-colors hover:bg-muted/50"
                 >
                   <TableCell className="align-top whitespace-normal">
                     <div className="flex min-w-0 flex-col gap-1">
-                      <Link
-                        href={`/news-articles/${article.id}`}
-                        className="line-clamp-1 font-medium break-words hover:underline"
-                      >
-                        {article.title}
-                      </Link>
+                      {article.id !== undefined ? (
+                        <Link
+                          href={`/news-articles/${article.id}`}
+                          className="line-clamp-1 font-medium break-words hover:underline"
+                        >
+                          {article.title ??
+                            dictionary.newsArticles.titleUnavailable}
+                        </Link>
+                      ) : (
+                        <span className="line-clamp-1 font-medium break-words">
+                          {article.title ??
+                            dictionary.newsArticles.titleUnavailable}
+                        </span>
+                      )}
                       <span className="line-clamp-2 text-xs break-words text-muted-foreground">
                         {article.description?.trim() ||
                           dictionary.newsArticles.noDescription}
@@ -137,40 +145,49 @@ export function NewsArticleList({ newsArticlePage }: NewsArticleListProps) {
                   </TableCell>
                   <TableCell className="w-28 text-right">
                     <div className="flex justify-end gap-1">
-                      <Link
-                        href={`/news-articles/${article.id}`}
-                        className={buttonVariants({
-                          variant: "ghost",
-                          size: "icon-sm",
-                          className:
-                            "text-muted-foreground hover:text-foreground",
-                        })}
-                      >
-                        <Eye data-icon="inline-start" />
-                        <span className="sr-only">
-                          {dictionary.newsArticles.viewDetail}
-                        </span>
-                      </Link>
-                      <a
-                        href={article.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className={buttonVariants({
-                          variant: "ghost",
-                          size: "icon-sm",
-                          className:
-                            "text-muted-foreground hover:text-foreground",
-                        })}
-                      >
-                        <ExternalLink data-icon="inline-start" />
-                        <span className="sr-only">
-                          {dictionary.newsArticles.openOriginalLink}
-                        </span>
-                      </a>
-                      <NewsArticleDeleteButton
-                        id={article.id}
-                        title={article.title}
-                      />
+                      {article.id !== undefined ? (
+                        <Link
+                          href={`/news-articles/${article.id}`}
+                          className={buttonVariants({
+                            variant: "ghost",
+                            size: "icon-sm",
+                            className:
+                              "text-muted-foreground hover:text-foreground",
+                          })}
+                        >
+                          <Eye data-icon="inline-start" />
+                          <span className="sr-only">
+                            {dictionary.newsArticles.viewDetail}
+                          </span>
+                        </Link>
+                      ) : null}
+                      {article.url?.trim() ? (
+                        <a
+                          href={article.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={buttonVariants({
+                            variant: "ghost",
+                            size: "icon-sm",
+                            className:
+                              "text-muted-foreground hover:text-foreground",
+                          })}
+                        >
+                          <ExternalLink data-icon="inline-start" />
+                          <span className="sr-only">
+                            {dictionary.newsArticles.openOriginalLink}
+                          </span>
+                        </a>
+                      ) : null}
+                      {article.id !== undefined ? (
+                        <NewsArticleDeleteButton
+                          id={article.id}
+                          title={
+                            article.title ??
+                            dictionary.newsArticles.titleUnavailable
+                          }
+                        />
+                      ) : null}
                     </div>
                   </TableCell>
                 </TableRow>

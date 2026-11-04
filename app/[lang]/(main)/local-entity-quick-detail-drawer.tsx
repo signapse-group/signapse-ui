@@ -69,7 +69,7 @@ type DetailState =
   | ({ phase: "loading" } & DetailSession)
   | ({ phase: "event"; event: EventResponse } & DetailSession)
   | ({ phase: "news-article"; article: NewsArticleResponse } & DetailSession)
-  | ({ phase: "error"; error: string | null } & DetailSession)
+  | ({ phase: "error" } & DetailSession)
   | ({ phase: "missing" } & DetailSession)
   | ({ phase: "denied" } & DetailSession)
 
@@ -80,10 +80,6 @@ interface LocalEntityQuickDetailDrawerProps {
   onClose: () => void
   owner: LocalQuickDetailOwner
   returnFocusRef?: RefObject<HTMLElement | null> | null
-}
-
-function getErrorMessage(error: unknown) {
-  return error instanceof Error ? error.message : null
 }
 
 function getErrorStatus(error: unknown) {
@@ -209,7 +205,8 @@ export function LocalEntityQuickDetailDrawer({
       : currentState?.phase === "event"
         ? currentState.event.title
         : currentState?.phase === "news-article"
-          ? currentState.article.title
+          ? (currentState.article.title ??
+            dictionary.newsArticles.titleUnavailable)
           : currentState?.phase === "missing"
             ? dictionary.quickDetail.notFoundTitle
             : currentState?.phase === "error"
@@ -345,7 +342,6 @@ export function LocalEntityQuickDetailDrawer({
 
         setState({
           entityKey: currentEntityKey,
-          error: getErrorMessage(error),
           phase: "error",
           retryNonce,
           sessionId,
@@ -485,8 +481,7 @@ export function LocalEntityQuickDetailDrawer({
                 </EmptyMedia>
                 <EmptyTitle>{dictionary.quickDetail.errorTitle}</EmptyTitle>
                 <EmptyDescription>
-                  {currentState.error ??
-                    dictionary.quickDetail.errorDescription}
+                  {dictionary.quickDetail.errorDescription}
                 </EmptyDescription>
               </EmptyHeader>
               <EmptyContent>

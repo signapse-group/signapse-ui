@@ -164,6 +164,7 @@ function LatestNewsItems({
   return (
     <ItemGroup className="gap-0">
       {articles.map((article, index) => {
+        const title = article.title ?? dictionary.newsArticles.titleUnavailable
         const description =
           article.description?.trim() || dictionary.newsArticles.noDescription
         const source =
@@ -183,14 +184,14 @@ function LatestNewsItems({
           article.featureImage?.urlOriginal
 
         return (
-          <div key={article.id} role="listitem">
+          <div key={article.id ?? `news-article-${index}`} role="listitem">
             {index > 0 ? <ItemSeparator /> : null}
             <Item>
               <ItemMedia variant={imageUrl ? "image" : "icon"}>
                 {imageUrl ? (
                   <Image
                     src={imageUrl}
-                    alt={article.featureImage?.altText?.trim() || article.title}
+                    alt={article.featureImage?.altText?.trim() || title}
                     width={40}
                     height={40}
                     sizes="40px"
@@ -203,13 +204,17 @@ function LatestNewsItems({
               <ItemContent className="min-w-0">
                 <ItemTitle>
                   <h3 className="line-clamp-2">
-                    <DashboardQuickDetailButton
-                      className="cursor-pointer text-left font-medium underline-offset-4 transition-colors outline-none hover:text-primary hover:underline focus-visible:ring-2 focus-visible:ring-ring/50"
-                      entity={{ id: article.id, kind: "news-article" }}
-                      aria-label={`${t.openArticle}: ${article.title}`}
-                    >
-                      {article.title}
-                    </DashboardQuickDetailButton>
+                    {article.id !== undefined ? (
+                      <DashboardQuickDetailButton
+                        className="cursor-pointer text-left font-medium underline-offset-4 transition-colors outline-none hover:text-primary hover:underline focus-visible:ring-2 focus-visible:ring-ring/50"
+                        entity={{ id: article.id, kind: "news-article" }}
+                        aria-label={`${t.openArticle}: ${title}`}
+                      >
+                        {title}
+                      </DashboardQuickDetailButton>
+                    ) : (
+                      <span className="font-medium">{title}</span>
+                    )}
                   </h3>
                 </ItemTitle>
                 <ItemDescription className="line-clamp-2">

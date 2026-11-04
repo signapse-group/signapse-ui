@@ -27,7 +27,7 @@ interface PageProps {
 type ApiLikeError = Error & { status?: number }
 
 function formatDateTime(
-  value: string | undefined,
+  value: string | null | undefined,
   locale: AppLocale,
   dictionary: Dictionary
 ) {
@@ -131,6 +131,7 @@ async function FetchNewsArticleData({
   }
 
   const imageUrl = getImageUrl(article)
+  const title = article.title ?? dictionary.newsArticles.titleUnavailable
   const description = article.description?.trim()
   const content = article.content?.trim()
 
@@ -139,7 +140,7 @@ async function FetchNewsArticleData({
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex min-w-0 flex-col gap-2">
           <h1 className="text-xl leading-tight font-semibold tracking-tight text-foreground">
-            {article.title}
+            {title}
           </h1>
           {description ? (
             <p className="whitespace-pre-wrap text-muted-foreground">
@@ -176,7 +177,7 @@ async function FetchNewsArticleData({
         {imageUrl ? (
           <Image
             src={imageUrl}
-            alt={article.featureImage?.altText?.trim() || article.title}
+            alt={article.featureImage?.altText?.trim() || title}
             width={800}
             height={450}
           />
