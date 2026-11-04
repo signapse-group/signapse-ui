@@ -916,10 +916,41 @@ test.describe("P0 market chart workbench", () => {
       eventDetail.getByRole("link", { name: "Chi tiết" })
     ).toHaveCount(0)
 
+    const wideScreenshot = await page.screenshot({
+      path: "test-results/SIGN-479-next-detail-wide-dark.png",
+      animations: "disabled",
+    })
     await testInfo.attach("SIGN-479-next-event-detail-wide-dark", {
-      body: await page.screenshot({ animations: "disabled" }),
+      body: wideScreenshot,
       contentType: "image/png",
     })
+
+    await page.setViewportSize({ width: 1024, height: 768 })
+    await expect(inflation).toBeVisible()
+    await expectNoHorizontalOverflow(page)
+    const compactScreenshot = await page.screenshot({
+      path: "test-results/SIGN-479-next-detail-compact-1024x768.png",
+      animations: "disabled",
+    })
+    await testInfo.attach("SIGN-479-next-event-detail-compact-1024x768", {
+      body: compactScreenshot,
+      contentType: "image/png",
+    })
+
+    await page.setViewportSize({ width: 760, height: 512 })
+    await expect(inflation).toBeVisible()
+    await expectNoHorizontalOverflow(page)
+    const effectiveZoomScreenshot = await page.screenshot({
+      path: "test-results/SIGN-479-next-detail-effective-200pct-760x512.png",
+      animations: "disabled",
+    })
+    await testInfo.attach(
+      "SIGN-479-next-event-detail-effective-200pct-760x512",
+      {
+        body: effectiveZoomScreenshot,
+        contentType: "image/png",
+      }
+    )
 
     await page.setViewportSize({ width: 360, height: 800 })
     await page.emulateMedia({ colorScheme: "light" })
@@ -929,8 +960,12 @@ test.describe("P0 market chart workbench", () => {
     expect(
       (detailBounds?.x ?? 0) + (detailBounds?.width ?? 0)
     ).toBeLessThanOrEqual(360)
+    const mobileScreenshot = await page.screenshot({
+      path: "test-results/SIGN-479-next-detail-mobile-360.png",
+      animations: "disabled",
+    })
     await testInfo.attach("SIGN-479-next-event-detail-mobile-light", {
-      body: await page.screenshot({ animations: "disabled" }),
+      body: mobileScreenshot,
       contentType: "image/png",
     })
 
@@ -954,12 +989,23 @@ test.describe("P0 market chart workbench", () => {
       (mobileDetailBounds?.x ?? 0) + (mobileDetailBounds?.width ?? 0)
     ).toBeLessThanOrEqual(360)
     await expectNoHorizontalOverflow(page)
+    const mobileMenuScreenshot = await page.screenshot({
+      path: "test-results/SIGN-479-next-detail-mobile-menu-360.png",
+      animations: "disabled",
+    })
     await testInfo.attach("SIGN-479-next-event-detail-mobile-menu-360", {
-      body: await page.screenshot({ animations: "disabled" }),
+      body: mobileMenuScreenshot,
       contentType: "image/png",
     })
     await page.keyboard.press("Escape")
     await page.keyboard.press("Escape")
+
+    const toolbarNextTrigger = page
+      .getByTestId("market-chart-next-event-status")
+      .locator("..")
+      .getByRole("button", {
+        name: /Sự kiện tiếp theo: Fixture inflation release/,
+      })
 
     for (const width of [767, 768, 1439, 1440, 760]) {
       await page.setViewportSize({ width, height: 844 })
@@ -982,10 +1028,11 @@ test.describe("P0 market chart workbench", () => {
           page.getByRole("button", { name: "Thao tác khác" })
         ).toBeHidden()
         await expect(
-          page.getByRole("button", {
-            name: /Sự kiện tiếp theo: Fixture inflation release/,
-          })
-        ).toBeVisible()
+          page.getByRole("dialog", { name: "Thao tác khác" })
+        ).toBeHidden()
+        await expect(toolbarNextTrigger.filter({ visible: true })).toHaveCount(
+          1
+        )
       }
     }
 
@@ -1053,10 +1100,7 @@ test.describe("P0 market chart workbench", () => {
       name: "Xem bài viết",
       exact: true,
     })
-    await expect(articleLink).toHaveAttribute(
-      "href",
-      "/vi/news-articles/71"
-    )
+    await expect(articleLink).toHaveAttribute("href", "/vi/news-articles/71")
     await testInfo.attach("SIGN-476-event-quick-detail-wide-1520x1024", {
       body: await page.screenshot({ animations: "disabled" }),
       contentType: "image/png",
@@ -1065,10 +1109,12 @@ test.describe("P0 market chart workbench", () => {
     await page.keyboard.press("Escape")
     await expect(eventQuickDetail).toBeHidden()
     await expect(finalEvent).toBeFocused()
-    const annotationDetail = page.getByRole("dialog").filter({ has: finalEvent })
-    await expect(annotationDetail.getByText("Fixture evidence 125")).toHaveCount(
-      0
-    )
+    const annotationDetail = page
+      .getByRole("dialog")
+      .filter({ has: finalEvent })
+    await expect(
+      annotationDetail.getByText("Fixture evidence 125")
+    ).toHaveCount(0)
     await expect(
       annotationDetail.getByRole("link", { name: "Xem bài viết", exact: true })
     ).toHaveCount(0)
@@ -1497,9 +1543,9 @@ test.describe("P0 market chart workbench", () => {
         .getByRole("status")
         .getByText("Không có quyền xem sự kiện", { exact: true })
     ).toBeVisible()
-    await expect(annotationDialog.getByText("Fixture market update")).toHaveCount(
-      0
-    )
+    await expect(
+      annotationDialog.getByText("Fixture market update")
+    ).toHaveCount(0)
     await expect(page.locator("#market-chart-asset")).toBeVisible()
     await expect(annotationMarker).toBeVisible()
     await expect(
@@ -1687,6 +1733,42 @@ test.describe("P0 market chart workbench", () => {
     })
     await expect(nextTrigger).toBeDisabled()
     await expect(page.getByRole("dialog")).toHaveCount(0)
+  })
+
+  test("announces Next becoming empty without moving focus", async ({
+    page,
+    fixture,
+  }) => {
+    await page.clock.install({ time: new Date(MARKET_CHART_FIXTURE_NOW) })
+    await fixture.setScenario(
+      "/market-charts/economic-calendar-events",
+      "calendar-upcoming",
+      "GET"
+    )
+    await page.goto("/vi/market-charts?assetId=101&timeframe=1h")
+
+    const nextStatus = page.getByTestId("market-chart-next-event-status")
+    await expect(nextStatus).toContainText("Fixture inflation release")
+    const assetControl = page.locator("#market-chart-asset")
+    await assetControl.focus()
+    await expect(assetControl).toBeFocused()
+
+    await fixture.setScenario(
+      "/market-charts/economic-calendar-events",
+      "calendar-empty",
+      "GET"
+    )
+    await page.evaluate(() => {
+      document.dispatchEvent(new Event("visibilitychange"))
+    })
+
+    await expect(nextStatus).toContainText(
+      "Chưa có sự kiện phù hợp trong dữ liệu lịch đã đồng bộ trong 7 ngày tới."
+    )
+    await expect(
+      page.getByRole("button", { name: /Sự kiện tiếp theo:/ })
+    ).toBeDisabled()
+    await expect(assetControl).toBeFocused()
   })
 
   test("shows calendar errors without discarding candle or annotation data", async ({

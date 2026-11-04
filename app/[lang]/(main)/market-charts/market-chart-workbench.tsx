@@ -2913,7 +2913,14 @@ function MarketChartNextEventBadge({
   const showCompactCountdown = summaryWidth === null || summaryWidth >= 220
   const showCompactIconOnly = summaryWidth !== null && summaryWidth < 180
   const showFullSummary = summaryMode === "full"
-  const canOpenEvent = typeof nextEvent?.id === "number"
+  const canOpenEvent = nextEvent !== null
+  const statusAnnouncement = calendarLoadError
+    ? calendarLoadedAt
+      ? `${dictionary.marketCharts.calendar.stale}: ${nextEvent ? nextEventTitle : emptyStatus}`
+      : calendarLoadError
+    : nextEvent
+      ? `${dictionary.marketCharts.calendar.nextEvent}: ${nextEventTitle}`
+      : emptyStatus
 
   return (
     <div
@@ -2926,6 +2933,15 @@ function MarketChartNextEventBadge({
       )}
     >
       <div className="flex min-w-0 flex-col items-start gap-1">
+        <span
+          className="sr-only"
+          data-testid="market-chart-next-event-status"
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+        >
+          {statusAnnouncement}
+        </span>
         <Popover
           open={open}
           onOpenChange={(nextOpen) => {
@@ -2965,10 +2981,7 @@ function MarketChartNextEventBadge({
           >
             <CalendarClock data-icon="inline-start" />
             {nextEvent && showFullSummary && !mobile ? (
-              <span
-                className="flex min-w-0 items-baseline gap-1.5"
-                aria-live="polite"
-              >
+              <span className="flex min-w-0 items-baseline gap-1.5">
                 <span className="shrink-0 font-semibold">
                   {dictionary.marketCharts.calendar.nextEvent}:
                 </span>
@@ -2987,10 +3000,7 @@ function MarketChartNextEventBadge({
                 ) : null}
               </span>
             ) : nextEvent ? (
-              <span
-                className="flex min-w-0 items-center gap-1.5"
-                aria-live="polite"
-              >
+              <span className="flex min-w-0 items-center gap-1.5">
                 {!showCompactIconOnly || mobile ? (
                   <span className="shrink-0 font-semibold">
                     {dictionary.marketCharts.calendar.nextEvent}
@@ -3028,11 +3038,7 @@ function MarketChartNextEventBadge({
           ) : null}
         </Popover>
         {calendarLoadError ? (
-          <div
-            className="flex max-w-full items-center justify-between gap-2 px-2 text-xs text-destructive"
-            role="status"
-            aria-live="polite"
-          >
+          <div className="flex max-w-full items-center justify-between gap-2 px-2 text-xs text-destructive">
             <span className="min-w-0 truncate">
               {calendarLoadedAt
                 ? dictionary.marketCharts.calendar.stale

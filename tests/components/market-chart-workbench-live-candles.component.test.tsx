@@ -259,7 +259,7 @@ function createCandleResponse(
 }
 
 function createNextEvent(
-  id: number,
+  id: number | undefined,
   title: string,
   impact = "HIGH",
   minutes = 60
@@ -267,7 +267,7 @@ function createNextEvent(
   const scheduledAt = new Date(Date.now() + minutes * 60_000).toISOString()
 
   return {
-    id,
+    ...(id === undefined ? {} : { id }),
     assetId: 101,
     impact,
     scheduledAt,
@@ -543,6 +543,37 @@ describe("Market chart quote-driven candle flow", () => {
     await act(async () => resolveCandleRequest())
   })
 
+  it("opens a valid Next event when its optional API id is missing", async () => {
+    getCandles.mockResolvedValue({
+      success: true,
+      data: createCandleResponse(101, "1m"),
+    })
+
+    const eventWithoutId = createNextEvent(undefined, "US CPI")
+    getCalendarEvents.mockImplementation(async (request) =>
+      Date.parse(request.to) > Date.now()
+        ? { success: true, data: [eventWithoutId] }
+        : { success: true, data: [] }
+    )
+
+    render(
+      <LocalizationProvider locale="vi" dictionary={viDictionary}>
+        <MarketChartWorkbench
+          watchlistAssets={watchlistAssets}
+          watchlistError={null}
+        />
+      </LocalizationProvider>
+    )
+
+    const nextBadge = await screen.findByRole("button", { name: /US CPI/ })
+    expect(nextBadge).toBeEnabled()
+    fireEvent.click(nextBadge)
+
+    expect(
+      await screen.findByTestId("calendar-event-detail")
+    ).toHaveTextContent("US CPI")
+  })
+
   it("distinguishes loading, an empty calendar, and no selected impacts", async () => {
     getCandles.mockResolvedValue({
       success: true,
@@ -578,6 +609,12 @@ describe("Market chart quote-driven candle flow", () => {
       name: new RegExp(viDictionary.marketCharts.calendar.loadingEvents),
     })
     expect(loadingButton).toBeDisabled()
+    const nextStatus = screen.getByTestId("market-chart-next-event-status")
+    expect(nextStatus).toHaveAttribute("role", "status")
+    expect(nextStatus).toHaveAttribute("aria-live", "polite")
+    expect(nextStatus).toHaveTextContent(
+      viDictionary.marketCharts.calendar.loadingEvents
+    )
 
     await act(async () => {
       resolveCalendarRequest({ success: true, data: [] })
@@ -589,6 +626,12 @@ describe("Market chart quote-driven candle flow", () => {
     expect(emptyButton).toBeDisabled()
     expect(emptyButton).not.toHaveTextContent(
       viDictionary.marketCharts.calendar.loadingEvents
+    )
+    expect(screen.getByTestId("market-chart-next-event-status")).toBe(
+      nextStatus
+    )
+    expect(nextStatus).toHaveTextContent(
+      viDictionary.marketCharts.calendar.noNextEvent
     )
 
     fireEvent.click(
@@ -608,6 +651,12 @@ describe("Market chart quote-driven candle flow", () => {
     expect(noImpactButton).toBeDisabled()
     expect(noImpactButton).not.toHaveTextContent(
       viDictionary.marketCharts.calendar.noNextEvent
+    )
+    expect(screen.getByTestId("market-chart-next-event-status")).toBe(
+      nextStatus
+    )
+    expect(nextStatus).toHaveTextContent(
+      viDictionary.marketCharts.calendar.noSelectedImpacts
     )
   })
 
@@ -790,6 +839,12 @@ describe("Market chart quote-driven candle flow", () => {
     )
 
     await screen.findByRole("button", { name: /US Natural Gas Storage/ })
+    const nextStatus = screen.getByTestId("market-chart-next-event-status")
+    const eventSettings = screen.getByRole("button", {
+      name: viDictionary.marketCharts.controls.eventSettingsAria,
+    })
+    eventSettings.focus()
+    expect(eventSettings).toHaveFocus()
 
     await act(async () => {
       document.dispatchEvent(new Event("visibilitychange"))
@@ -802,6 +857,13 @@ describe("Market chart quote-driven candle flow", () => {
     })
     expect(emptyNextButton).toBeDisabled()
     expect(emptyNextButton).not.toHaveTextContent("US Natural Gas Storage")
+    expect(screen.getByTestId("market-chart-next-event-status")).toBe(
+      nextStatus
+    )
+    expect(nextStatus).toHaveTextContent(
+      viDictionary.marketCharts.calendar.noNextEvent
+    )
+    expect(eventSettings).toHaveFocus()
   })
 
   it("does not show a cached Next event after the impact selection changes", async () => {
