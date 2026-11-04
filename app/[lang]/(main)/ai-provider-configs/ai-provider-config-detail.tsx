@@ -2,7 +2,7 @@
 
 import { ArrowLeft, ArrowRight, Plus, Trash2 } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useSyncExternalStore } from "react"
 import { toast } from "sonner"
 
 import {
@@ -56,6 +56,10 @@ type PendingDelete =
   | { kind: "connection" }
   | null
 
+const subscribeClientReady = () => () => {}
+const getClientReadySnapshot = () => true
+const getServerReadySnapshot = () => false
+
 export function AiProviderConfigDetail({
   provider,
 }: {
@@ -101,6 +105,11 @@ function AiProviderConfigDetailContent({
   const [pendingDelete, setPendingDelete] = useState<PendingDelete>(null)
   const [deleteError, setDeleteError] = useState("")
   const [discardDialogOpen, setDiscardDialogOpen] = useState(false)
+  const isClientReady = useSyncExternalStore(
+    subscribeClientReady,
+    getClientReadySnapshot,
+    getServerReadySnapshot
+  )
 
   const endpointChanged = endpoint !== (savedProvider.baseUrl ?? "")
   const descriptionChanged = description !== (savedProvider.description ?? "")
@@ -509,7 +518,11 @@ function AiProviderConfigDetailContent({
                           setDeleteError("")
                           setPendingDelete({ kind: "credential", credential })
                         }}
-                        disabled={isLastCredential || pendingOperation !== null}
+                        disabled={
+                          !isClientReady ||
+                          isLastCredential ||
+                          pendingOperation !== null
+                        }
                         aria-label={formatMessage(t.removeKey, {
                           index: formatNumber(index + 1),
                         })}
