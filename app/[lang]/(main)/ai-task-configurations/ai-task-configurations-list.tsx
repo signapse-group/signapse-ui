@@ -4,6 +4,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type FormEvent,
 } from "react"
@@ -261,6 +262,7 @@ function AiTaskConfigurationRow({
   const [tokenInput, setTokenInput] = useState(
     initialConfiguration.customOutputTokens?.toString() ?? ""
   )
+  const tokenInputRef = useRef<HTMLInputElement>(null)
   const [catalogs, setCatalogs] = useState<Record<number, CatalogState>>({})
   const [selectionError, setSelectionError] = useState<string>()
   const [tokenAttempted, setTokenAttempted] = useState(false)
@@ -278,6 +280,13 @@ function AiTaskConfigurationRow({
 
     document.getElementById(focusAfterSubmit.controlId)?.focus()
   }, [focusAfterSubmit, isSaving])
+
+  useEffect(() => {
+    // Keep edits made before hydration when React takes control of the input.
+    if (tokenInputRef.current) {
+      setTokenInput(tokenInputRef.current.value)
+    }
+  }, [])
 
   const connectionControlId = `${initialConfiguration.task}-connection`
   const modelControlId = `${initialConfiguration.task}-model`
@@ -765,6 +774,7 @@ function AiTaskConfigurationRow({
       <div className="flex min-w-0 flex-col gap-2">
         <Label htmlFor={tokenControlId}>{t.outputTokenLimit}</Label>
         <Input
+          ref={tokenInputRef}
           id={tokenControlId}
           type="number"
           inputMode="numeric"
