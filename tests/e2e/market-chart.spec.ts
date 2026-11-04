@@ -1774,8 +1774,9 @@ test.describe("P0 market chart workbench", () => {
   test("shows calendar errors without discarding candle or annotation data", async ({
     page,
     fixture,
-  }) => {
+  }, testInfo) => {
     await page.clock.install({ time: new Date(MARKET_CHART_FIXTURE_NOW) })
+    await page.setViewportSize({ width: 1520, height: 1024 })
     await fixture.setScenario(
       "/market-charts/economic-calendar-events",
       "calendar-error",
@@ -1797,12 +1798,27 @@ test.describe("P0 market chart workbench", () => {
       })
       .toEqual([true, true])
 
+    const calendarError = "Không thể tải sự kiện lịch kinh tế."
+    await expect(page.getByTestId("market-chart-next-event-status")).toHaveText(
+      calendarError
+    )
     await expect(
-      page.getByText("Calendar fixture unavailable", { exact: true }).first()
-    ).toBeVisible()
+      page.getByRole("button", { name: /Sự kiện tiếp theo:/ })
+    ).toContainText(calendarError)
+    await expect(
+      page.getByText("Calendar fixture unavailable", { exact: true })
+    ).toHaveCount(0)
     await expect(
       page.getByRole("button", { name: "Tải lại dữ liệu mới nhất" })
     ).toBeVisible()
+    const failureScreenshot = await page.screenshot({
+      path: "test-results/SIGN-479-next-refresh-error-wide.png",
+      animations: "disabled",
+    })
+    await testInfo.attach("SIGN-479-next-refresh-error-wide", {
+      body: failureScreenshot,
+      contentType: "image/png",
+    })
     await page.keyboard.press("Escape")
     await expect(page.locator("#market-chart-timeframe-selector")).toBeEnabled()
     await page.getByRole("button", { name: "Chú giải sự kiện" }).click()

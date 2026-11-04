@@ -3564,7 +3564,7 @@ export function MarketChartWorkbench({
         }
 
         if (!result.success) {
-          setFailure(result.error)
+          setFailure(dictionary.marketCharts.calendar.loadError)
           return
         }
 

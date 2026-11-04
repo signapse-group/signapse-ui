@@ -945,9 +945,12 @@ describe("Market chart quote-driven candle flow", () => {
     ).not.toBeInTheDocument()
     expect(
       screen.getByRole("button", {
-        name: /Calendar refresh failed/,
+        name: `${viDictionary.marketCharts.calendar.nextEvent}: ${viDictionary.marketCharts.calendar.loadError}`,
       })
     ).toBeDisabled()
+    expect(
+      screen.queryByText("Calendar refresh failed")
+    ).not.toBeInTheDocument()
   })
 
   it("clears quote state when the asset or timeframe changes", async () => {
