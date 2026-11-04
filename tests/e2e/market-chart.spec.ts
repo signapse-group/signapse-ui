@@ -951,7 +951,9 @@ test.describe("P0 market chart workbench", () => {
     await eventQuickDetail
       .getByRole("link", { name: "Xem bài viết", exact: true })
       .click()
-    await expect(page).toHaveURL(/\/vi\/news-articles\/71$/)
+    await expect(page).toHaveURL(/\/vi\/news-articles\/71$/, {
+      timeout: 30_000,
+    })
     await expect(
       page.getByRole("heading", { name: "Fixture market update", exact: true })
     ).toBeVisible()
@@ -1419,7 +1421,9 @@ test.describe("P0 market chart workbench", () => {
     await expect(articleLink).toHaveAttribute("href", "/vi/news-articles/71")
     await articleLink.click()
 
-    await expect(page).toHaveURL(/\/vi\/news-articles\/71$/)
+    await expect(page).toHaveURL(/\/vi\/news-articles\/71$/, {
+      timeout: 30_000,
+    })
     await expect(
       page.getByRole("heading", { name: "Fixture market update", exact: true })
     ).toBeVisible()

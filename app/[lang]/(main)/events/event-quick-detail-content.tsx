@@ -90,13 +90,11 @@ export function EventQuickDetailContent({
   dictionary,
   event,
   locale,
-  onArticleOpen,
 }: {
   canReadNewsArticles: boolean
   dictionary: Dictionary
   event: EventResponse
   locale: AppLocale
-  onArticleOpen: () => void
 }) {
   const evidenceItems = event.evidence ?? []
   const assets = event.assets ?? []
@@ -192,7 +190,6 @@ export function EventQuickDetailContent({
                         size: "sm",
                         variant: "outline",
                       })}
-                      onNavigate={onArticleOpen}
                     >
                       <FileText aria-hidden="true" data-icon="inline-start" />
                       {dictionary.events.viewArticle}
