@@ -774,6 +774,55 @@ test.describe("P0 AI connections", () => {
     }
   })
 
+  test("enables Add and Replace inputs after hydration before accepting drafts", async ({
+    page,
+    fixture,
+  }) => {
+    await fixture.setPermissions([
+      "ai-provider-config:read",
+      "ai-provider-config:create",
+      "ai-provider-config:update",
+    ])
+
+    let resumeScripts = () => {}
+    const scriptsHeld = new Promise<void>((resolve) => {
+      resumeScripts = resolve
+    })
+    await page.route("**/_next/static/**/*.js*", async (route) => {
+      await scriptsHeld
+      await route.continue()
+    })
+
+    try {
+      await page.goto("/en/ai-provider-configs/12", { waitUntil: "commit" })
+
+      const newKeyInput = page.getByLabel("New key", { exact: true })
+      const replacementInput = page.getByLabel("Replacement key", {
+        exact: true,
+      })
+      const addButton = page.getByRole("button", { name: "Add key" })
+      const replaceButton = page.getByRole("button", { name: "Replace key" })
+
+      await expect(newKeyInput).toBeVisible({ timeout: 60_000 })
+      await expect(replacementInput).toBeVisible()
+      await expect(newKeyInput).toBeDisabled()
+      await expect(replacementInput).toBeDisabled()
+
+      resumeScripts()
+
+      await expect(newKeyInput).toBeEnabled()
+      await expect(replacementInput).toBeEnabled()
+      await newKeyInput.fill("probe")
+      await replacementInput.fill("probe")
+      await expect(newKeyInput).toHaveValue("probe")
+      await expect(replacementInput).toHaveValue("probe")
+      await expect(addButton).toBeEnabled()
+      await expect(replaceButton).toBeEnabled()
+    } finally {
+      resumeScripts()
+    }
+  })
+
   test("matches the approved edit design at 1520x1600 and stays usable on mobile", async ({
     page,
     fixture,
