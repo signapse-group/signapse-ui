@@ -789,7 +789,6 @@ export const en: Dictionary = {
   newsOutlets: {
     readDenied: "You do not have permission to view news outlets.",
     createDenied: "You do not have permission to create news outlets.",
-    updateDenied: "You do not have permission to update news outlets.",
     createAction: "Add news outlet",
     searchLabel: "Search news outlets",
     searchPending: "Searching",
@@ -832,6 +831,7 @@ export const en: Dictionary = {
     createSuccess: "News outlet created successfully.",
     createPending: "Creating...",
     createError: "Could not create news outlet",
+    detailTitle: "News outlet details",
     updateTitle: "Edit news outlet",
     updateDescription:
       "Update the identity and usage status of this news outlet.",
@@ -843,17 +843,15 @@ export const en: Dictionary = {
     nameLabel: "News outlet name",
     namePlaceholder: "Example: Investing VN News",
     nameRequired: "News outlet name is required",
-    nameTooLong: "News outlet name cannot exceed 255 characters",
     homepageLabel: "Homepage URL",
+    homepagePlaceholder: "example.com",
     homepageRequired: "Homepage URL is required",
-    homepageInvalid: "Homepage URL is invalid",
     rssLabel: "RSS URL",
-    rssInvalid: "RSS URL is invalid",
+    rssPlaceholder: "example.com/feed.xml",
     rssDescription: "Leave empty if the news outlet does not provide RSS.",
     descriptionLabel: "Description",
     descriptionPlaceholder:
       "Shortly describe this news outlet's scope and role.",
-    descriptionTooLong: "Description cannot exceed 1000 characters",
     statusLabel: "Status",
     activeLabel: "Activate news outlet",
     activeDescription:

@@ -47,6 +47,8 @@ export const fixtureContracts = [
   { method: "POST", path: "/watchlists/assets", mapping: "addAssetsToWorkspaceWatchlist", status: 200 },
   { method: "DELETE", path: "/watchlists/assets/{assetId}", mapping: "removeAssetFromWorkspaceWatchlist", status: 204 },
   { method: "GET", path: "/blogs/{id}", mapping: "getBlogPost", status: 200 },
+  { method: "GET", path: "/news-outlets", mapping: "getNewsOutlets", status: 200 },
+  { method: "GET", path: "/news-outlets/{id}", mapping: "getNewsOutletById", status: 200 },
   { method: "GET", path: "/news-articles", mapping: "getNewsArticles", status: 200 },
   { method: "GET", path: "/news-articles/{id}", mapping: "getNewsArticleById", status: 200 },
   { method: "GET", path: "/events", mapping: "getEvents", status: 200 },
