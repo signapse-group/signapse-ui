@@ -854,7 +854,7 @@ test.describe("P0 market chart workbench", () => {
     await expectMarketChartCanvasText(page, "110,50")
   })
 
-  test("shows the upcoming calendar list through the next-event summary", async ({
+  test("opens Next directly into the shared calendar event detail", async ({
     page,
     fixture,
   }, testInfo) => {
@@ -875,18 +875,19 @@ test.describe("P0 market chart workbench", () => {
     await page.goto("/vi/market-charts?assetId=101&timeframe=1h")
 
     await expect(page.locator("#market-chart-asset")).toBeVisible()
-    const upcomingTrigger = page.getByRole("button", {
-      name: /Mở lịch sắp diễn ra/,
+    await expect(
+      page.getByRole("application", { name: "Biểu đồ giá" })
+    ).toBeVisible()
+    const nextTrigger = page.getByRole("button", {
+      name: /Sự kiện tiếp theo: Fixture inflation release/,
     })
-    await expect(upcomingTrigger).toBeVisible()
-    await expect(upcomingTrigger).toHaveAccessibleName(
-      /Fixture inflation release/
-    )
-    await upcomingTrigger.focus()
-    await expect(upcomingTrigger).toBeFocused()
+    await expect(nextTrigger).toBeVisible()
+    await nextTrigger.focus()
+    await expect(nextTrigger).toBeFocused()
     await page.keyboard.press("Enter")
     const inflation = page.getByRole("heading", {
       name: "Fixture inflation release",
+      level: 3,
     })
     const eventDetail = inflation.locator("..")
     const fullDescription =
@@ -915,7 +916,7 @@ test.describe("P0 market chart workbench", () => {
       eventDetail.getByRole("link", { name: "Chi tiết" })
     ).toHaveCount(0)
 
-    await testInfo.attach("SIGN-477-event-detail-wide-dark", {
+    await testInfo.attach("SIGN-479-next-event-detail-wide-dark", {
       body: await page.screenshot({ animations: "disabled" }),
       contentType: "image/png",
     })
@@ -928,10 +929,60 @@ test.describe("P0 market chart workbench", () => {
     expect(
       (detailBounds?.x ?? 0) + (detailBounds?.width ?? 0)
     ).toBeLessThanOrEqual(360)
-    await testInfo.attach("SIGN-477-event-detail-mobile-light", {
+    await testInfo.attach("SIGN-479-next-event-detail-mobile-light", {
       body: await page.screenshot({ animations: "disabled" }),
       contentType: "image/png",
     })
+
+    await page.keyboard.press("Escape")
+    await page.getByRole("button", { name: "Thao tác khác" }).click()
+    const mobileNextTrigger = page.getByRole("button", {
+      name: /Sự kiện tiếp theo: Fixture inflation release/,
+    })
+    await expect(mobileNextTrigger).toBeVisible()
+    await mobileNextTrigger.click()
+    await expect(inflation).toBeVisible()
+    const mobileDetailDialog = page.getByRole("dialog", {
+      name: "Fixture inflation release",
+    })
+    const mobileDetailBounds = await mobileDetailDialog.boundingBox()
+    expect(mobileDetailBounds?.x).toBeGreaterThanOrEqual(0)
+    expect(
+      (mobileDetailBounds?.x ?? 0) + (mobileDetailBounds?.width ?? 0)
+    ).toBeLessThanOrEqual(360)
+    await expectNoHorizontalOverflow(page)
+    await testInfo.attach("SIGN-479-next-event-detail-mobile-menu-360", {
+      body: await page.screenshot({ animations: "disabled" }),
+      contentType: "image/png",
+    })
+    await page.keyboard.press("Escape")
+    await page.keyboard.press("Escape")
+
+    for (const width of [767, 768, 1439, 1440, 760]) {
+      await page.setViewportSize({ width, height: 844 })
+
+      if (width < 768) {
+        await expect(
+          page.getByRole("button", { name: "Thao tác khác" })
+        ).toBeVisible()
+        await page.getByRole("button", { name: "Thao tác khác" }).click()
+        await expect(
+          page.getByRole("button", {
+            name: /Sự kiện tiếp theo: Fixture inflation release/,
+          })
+        ).toBeVisible()
+        await page.keyboard.press("Escape")
+      } else {
+        await expect(
+          page.getByRole("button", { name: "Thao tác khác" })
+        ).toBeHidden()
+        await expect(
+          page.getByRole("button", {
+            name: /Sự kiện tiếp theo: Fixture inflation release/,
+          })
+        ).toBeVisible()
+      }
+    }
 
     const state = await fixture.state()
     const calendarRequest = state.requests.find(
@@ -1538,7 +1589,7 @@ test.describe("P0 market chart workbench", () => {
     await expect(annotationDialog.getByRole("link")).toHaveCount(0)
   })
 
-  test("filters upcoming events by impact and range with chart permission only", async ({
+  test("filters Next by impact independently of chart marker visibility", async ({
     page,
     fixture,
   }) => {
@@ -1577,24 +1628,21 @@ test.describe("P0 market chart workbench", () => {
     await page.keyboard.press("Escape")
     await expect(mediumImpact).toBeHidden()
 
-    const upcomingTrigger = page.getByRole("button", {
-      name: /Mở lịch sắp diễn ra/,
+    await page.getByRole("button", { name: "Mở tùy chỉnh sự kiện" }).click()
+    const highImpact = page.getByRole("checkbox", { name: "Cao" })
+    await highImpact.click()
+    await expect(highImpact).not.toBeChecked()
+    await page.keyboard.press("Escape")
+
+    const nextTrigger = page.getByRole("button", {
+      name: /Sự kiện tiếp theo: Fixture employment release/,
     })
-    await upcomingTrigger.focus()
+    await nextTrigger.focus()
     await page.keyboard.press("Enter")
-    await expect(upcomingTrigger).toHaveAttribute("aria-expanded", "true")
-    const inflation = page.getByRole("heading", {
-      name: "Fixture inflation release",
-    })
     const employment = page.getByRole("heading", {
       name: "Fixture employment release",
+      level: 3,
     })
-    await expect(inflation).toBeVisible()
-    await expect(employment).toBeVisible()
-    await page.getByRole("button", { name: "24 giờ tới" }).click()
-    await expect(employment).toBeHidden()
-    await expect(inflation).toBeVisible()
-    await page.getByRole("button", { name: "7 ngày tới" }).click()
     await expect(employment).toBeVisible()
     const employmentDetail = employment.locator("..")
     await expect(
@@ -1617,7 +1665,7 @@ test.describe("P0 market chart workbench", () => {
     )
   })
 
-  test("keeps the full calendar link available when upcoming is empty", async ({
+  test("keeps Next empty and disabled when the synced calendar has no event", async ({
     page,
     fixture,
   }) => {
@@ -1627,18 +1675,11 @@ test.describe("P0 market chart workbench", () => {
       "GET"
     )
     await page.goto("/vi/market-charts?assetId=101&timeframe=1h")
-    await page.getByRole("button", { name: /Mở lịch sắp diễn ra/ }).click()
-    await expect(
-      page
-        .getByRole("main")
-        .getByText("Chưa có sự kiện lịch kinh tế trong khoảng hiện tại.", {
-          exact: true,
-        })
-    ).toBeVisible()
-
-    await expect(
-      page.getByRole("link", { name: "Mở Lịch kinh tế đầy đủ" })
-    ).toHaveAttribute("href", "/vi/economic-calendar")
+    const nextTrigger = page.getByRole("button", {
+      name: /Sự kiện tiếp theo: Chưa có sự kiện phù hợp trong dữ liệu lịch đã đồng bộ trong 7 ngày tới\./,
+    })
+    await expect(nextTrigger).toBeDisabled()
+    await expect(page.getByRole("dialog")).toHaveCount(0)
   })
 
   test("shows calendar errors without discarding candle or annotation data", async ({
@@ -1667,7 +1708,6 @@ test.describe("P0 market chart workbench", () => {
       })
       .toEqual([true, true])
 
-    await page.getByRole("button", { name: /Mở lịch sắp diễn ra/ }).click()
     await expect(
       page.getByText("Calendar fixture unavailable", { exact: true }).first()
     ).toBeVisible()
@@ -1675,9 +1715,7 @@ test.describe("P0 market chart workbench", () => {
       page.getByRole("button", { name: "Tải lại dữ liệu mới nhất" })
     ).toBeVisible()
     await page.keyboard.press("Escape")
-    await expect(
-      page.getByRole("button", { name: "4 giờ", exact: true })
-    ).toBeEnabled()
+    await expect(page.locator("#market-chart-timeframe-selector")).toBeEnabled()
     await page.getByRole("button", { name: "Chú giải sự kiện" }).click()
     await expect(
       page.getByRole("heading", { name: "Chú giải sự kiện" })
@@ -1762,7 +1800,7 @@ test.describe("P0 market chart workbench", () => {
     ).toBeVisible()
   })
 
-  test("restores waiting calendar events with markers hidden through refresh and reload", async ({
+  test("refreshes Next with markers hidden and does not surface past waiting events", async ({
     page,
     fixture,
   }) => {
@@ -1781,78 +1819,71 @@ test.describe("P0 market chart workbench", () => {
     await page.goto("/vi/market-charts?assetId=101&timeframe=1m")
 
     await expect(page.locator("#market-chart-asset")).toBeVisible()
-    const upcomingTrigger = page.getByRole("button", {
-      name: /Mở lịch sắp diễn ra/,
+    await expect(
+      page.getByRole("application", { name: "Biểu đồ giá" })
+    ).toBeVisible()
+    const nextTrigger = page.getByRole("button", {
+      name: /Sự kiện tiếp theo:/,
     })
-    await upcomingTrigger.focus()
-    await page.keyboard.press("Enter")
-
-    const awaitingLabel = page.getByText("Chờ công bố", { exact: true })
-    await expect(awaitingLabel).toBeVisible()
+    await expect(nextTrigger).toBeDisabled()
+    await expect(nextTrigger).toHaveAccessibleName(
+      /Chưa có sự kiện phù hợp trong dữ liệu lịch đã đồng bộ trong 7 ngày tới/
+    )
+    await expect(page.getByRole("dialog")).toHaveCount(0)
     await expect(
       page.getByRole("heading", { name: "Fixture inflation release" })
-    ).toBeVisible()
-    await expect(
-      page.getByText("Synthetic calendar event.", { exact: true })
-    ).toBeVisible()
-    await expect(page.getByRole("link", { name: "Chi tiết" })).toHaveCount(0)
-    const localTime = await page.evaluate((scheduledAt) => {
-      return new Intl.DateTimeFormat("vi-VN", {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-      }).format(new Date(scheduledAt))
-    }, "2026-01-15T07:30:00.000Z")
-    await expect(page.getByText(localTime, { exact: true })).toBeVisible()
-    await expect(
-      page.getByRole("link", { name: "Mở Lịch kinh tế đầy đủ" })
-    ).toBeVisible()
+    ).toHaveCount(0)
 
-    const requests = (await fixture.state()).requests.filter(
-      (request) => request.path === "/market-charts/economic-calendar-events"
-    )
     const expectedFrom = Date.parse(MARKET_CHART_FIXTURE_NOW) - 60 * 60 * 1000
-    expect(
-      requests.some((request) => {
-        const requestedFrom = Date.parse(
-          new URLSearchParams(String(request.query)).get("from") ?? ""
+    const earliestExpectedTo =
+      Date.parse(MARKET_CHART_FIXTURE_NOW) + 7 * 24 * 60 * 60 * 1000 - 60_000
+    const calendarRequests = () =>
+      fixture
+        .state()
+        .then(({ requests }) =>
+          requests.filter(
+            (request) =>
+              request.path === "/market-charts/economic-calendar-events"
+          )
         )
+    const isFutureCalendarRequest = (request: Record<string, unknown>) => {
+      const query = new URLSearchParams(String(request.query))
+      const requestedFrom = Date.parse(query.get("from") ?? "")
+      const requestedTo = Date.parse(query.get("to") ?? "")
 
-        return (
-          requestedFrom >= expectedFrom && requestedFrom < expectedFrom + 60_000
-        )
-      })
-    ).toBe(true)
+      return (
+        requestedFrom >= expectedFrom &&
+        requestedFrom < expectedFrom + 60_000 &&
+        requestedTo >= earliestExpectedTo
+      )
+    }
+    await expect
+      .poll(async () =>
+        (await calendarRequests()).some(isFutureCalendarRequest)
+      )
+      .toBe(true)
 
-    const refreshCount = requests.length
+    const futureRefreshCount = async () =>
+      (await calendarRequests()).filter(isFutureCalendarRequest).length
+    const refreshCount = await futureRefreshCount()
     await page.evaluate(() => {
       document.dispatchEvent(new Event("visibilitychange"))
     })
     await expect
       .poll(async () => {
-        return (await fixture.state()).requests.filter(
-          (request) =>
-            request.path === "/market-charts/economic-calendar-events"
-        ).length
+        return futureRefreshCount()
       })
       .toBeGreaterThan(refreshCount)
-    await expect(awaitingLabel).toBeVisible()
+    await expect(nextTrigger).toBeDisabled()
 
-    const timedRefreshCount = (await fixture.state()).requests.filter(
-      (request) => request.path === "/market-charts/economic-calendar-events"
-    ).length
+    const timedRefreshCount = await futureRefreshCount()
     await page.clock.fastForward(60_000)
     await expect
       .poll(async () => {
-        return (await fixture.state()).requests.filter(
-          (request) =>
-            request.path === "/market-charts/economic-calendar-events"
-        ).length
+        return futureRefreshCount()
       })
       .toBeGreaterThan(timedRefreshCount)
-    await expect(awaitingLabel).toBeVisible()
+    await expect(nextTrigger).toBeDisabled()
 
     await fixture.setScenario(
       "/market-charts/economic-calendar-events",
@@ -1861,8 +1892,7 @@ test.describe("P0 market chart workbench", () => {
     )
     await page.reload()
     await expect(page.locator("#market-chart-asset")).toBeVisible()
-    await upcomingTrigger.click()
-    await expect(awaitingLabel).toBeHidden()
+    await expect(nextTrigger).toBeDisabled()
 
     await fixture.setScenario(
       "/market-charts/economic-calendar-events",
@@ -1871,18 +1901,12 @@ test.describe("P0 market chart workbench", () => {
     )
     await page.reload()
     await expect(page.locator("#market-chart-asset")).toBeVisible()
-    await upcomingTrigger.click()
-    await expect(awaitingLabel).toBeVisible()
+    await expect(nextTrigger).toBeDisabled()
 
     await page.goto("/vi/market-charts?assetId=101&timeframe=4h")
     await expect(page.locator("#market-chart-asset")).toBeVisible()
-    await expect(
-      page.getByRole("button", { name: "4 giờ", exact: true })
-    ).toBeEnabled()
-    await upcomingTrigger.click()
-    await expect(awaitingLabel).toBeVisible()
-
-    await page.keyboard.press("Escape")
+    await expect(page.locator("#market-chart-timeframe-selector")).toBeEnabled()
+    await expect(nextTrigger).toBeDisabled()
     await page.getByRole("button", { name: "Mở tùy chỉnh sự kiện" }).click()
     const markerSwitch = page.getByRole("switch", {
       name: "Hiện lịch trên biểu đồ",
@@ -1899,19 +1923,18 @@ test.describe("P0 market chart workbench", () => {
       page.getByText("1 sự kiện lịch kinh tế", { exact: true })
     ).toBeHidden()
     await page.keyboard.press("Escape")
-    await upcomingTrigger.click()
-    await expect(awaitingLabel).toBeVisible()
+    await expect(nextTrigger).toBeDisabled()
 
     await page.clock.setFixedTime(new Date("2026-01-15T08:29:59.000Z"))
     await page.evaluate(() => {
       document.dispatchEvent(new Event("visibilitychange"))
     })
-    await expect(awaitingLabel).toBeVisible()
+    await expect(nextTrigger).toBeDisabled()
     await page.clock.setFixedTime(new Date("2026-01-15T08:30:00.000Z"))
     await page.evaluate(() => {
       document.dispatchEvent(new Event("visibilitychange"))
     })
-    await expect(awaitingLabel).toBeHidden()
+    await expect(nextTrigger).toBeDisabled()
   })
 })
 

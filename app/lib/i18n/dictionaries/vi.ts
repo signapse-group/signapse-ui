@@ -2053,9 +2053,6 @@ export const vi = {
     },
     calendar: {
       actual: "Thực tế",
-      awaitingPublication: "Chờ công bố",
-      awaitingPublicationDescription:
-        "Sự kiện đã đến giờ dự kiến nhưng chưa có kết quả công bố.",
       countdownHours: "Còn {hours} giờ {minutes} phút",
       countdownHoursOnly: "Còn {hours} giờ",
       countdownMinutes: "Còn {minutes} phút",
@@ -2068,8 +2065,8 @@ export const vi = {
       noEvents: "Chưa có sự kiện lịch kinh tế trong khoảng hiện tại.",
       noSelectedImpacts: "Hãy chọn ít nhất một mức ảnh hưởng.",
       nextEvent: "Sự kiện tiếp theo",
-      noNextEvent: "Chưa có sự kiện sắp diễn ra trong khoảng đã chọn.",
-      openUpcoming: "Mở lịch sắp diễn ra",
+      noNextEvent:
+        "Chưa có sự kiện phù hợp trong dữ liệu lịch đã đồng bộ trong 7 ngày tới.",
       openMany: "Mở {count} sự kiện lịch kinh tế",
       openOne: "Mở sự kiện lịch kinh tế {title}",
       previous: "Trước đó",
@@ -2082,10 +2079,6 @@ export const vi = {
         AVAILABLE: "Đã công bố",
         PENDING: "Đang chờ",
       },
-      upcoming24Hours: "24 giờ tới",
-      upcoming7Days: "7 ngày tới",
-      upcomingTitle: "Lịch sắp diễn ra",
-      viewFullCalendar: "Mở Lịch kinh tế đầy đủ",
     },
     history: {
       loading: "Đang tải lịch sử...",

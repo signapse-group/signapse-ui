@@ -2072,9 +2072,6 @@ export const en: Dictionary = {
     },
     calendar: {
       actual: "Actual",
-      awaitingPublication: "Awaiting publication",
-      awaitingPublicationDescription:
-        "The event time has arrived, but its published result is not available yet.",
       countdownHours: "{hours}h {minutes}m remaining",
       countdownHoursOnly: "{hours}h remaining",
       countdownMinutes: "{minutes}m remaining",
@@ -2087,8 +2084,8 @@ export const en: Dictionary = {
       noEvents: "No calendar events in the current range.",
       noSelectedImpacts: "Select at least one impact level.",
       nextEvent: "Next event",
-      noNextEvent: "No upcoming event in the selected interval.",
-      openUpcoming: "Open upcoming calendar",
+      noNextEvent:
+        "No matching event in the synced calendar data for the next 7 days.",
       openMany: "Open {count} calendar events",
       openOne: "Open calendar event {title}",
       previous: "Previous",
@@ -2101,10 +2098,6 @@ export const en: Dictionary = {
         AVAILABLE: "Published",
         PENDING: "Pending",
       },
-      upcoming24Hours: "Next 24 hours",
-      upcoming7Days: "Next 7 days",
-      upcomingTitle: "Upcoming calendar",
-      viewFullCalendar: "Open full Economic Calendar",
     },
     history: {
       loading: "Loading history...",

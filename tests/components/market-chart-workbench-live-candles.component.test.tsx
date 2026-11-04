@@ -1,6 +1,13 @@
 // @vitest-environment jsdom
 
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react"
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 const {
@@ -37,6 +44,44 @@ vi.mock("@/app/api/market-charts/action", () => ({
   getMarketChartEconomicCalendarEvents: getCalendarEvents,
 }))
 
+vi.mock("@/app/[lang]/(main)/local-entity-quick-detail-drawer", async () => {
+  const React = await import("react")
+
+  return {
+    LocalEntityQuickDetailDrawer: ({
+      entity,
+      onBeforeClose,
+      onClose,
+    }: {
+      entity: { id: number; kind: string } | null
+      onBeforeClose: () => void
+      onClose: () => void
+    }) =>
+      entity
+        ? React.createElement(
+            "div",
+            { role: "dialog" },
+            React.createElement(
+              "output",
+              { "data-testid": "quick-detail-entity" },
+              `${entity.kind}:${entity.id}`
+            ),
+            React.createElement(
+              "button",
+              {
+                type: "button",
+                onClick: () => {
+                  onBeforeClose()
+                  onClose()
+                },
+              },
+              "Close"
+            )
+          )
+        : null,
+  }
+})
+
 vi.mock(
   "@/app/[lang]/(main)/market-charts/market-chart-canvas",
   async (importOriginal) => {
@@ -48,7 +93,16 @@ vi.mock(
 
     return {
       ...original,
-      MarketChartCalendarEventList: () => null,
+      MarketChartCalendarEventList: ({
+        events,
+      }: {
+        events: Array<{ id?: number | null; title?: string | null }>
+      }) =>
+        React.createElement(
+          "output",
+          { "data-testid": "calendar-event-detail" },
+          events.map((event) => `${event.id}:${event.title}`).join(",")
+        ),
       MarketChartCanvas: ({
         candles,
         liveCandle,
@@ -204,9 +258,29 @@ function createCandleResponse(
   }
 }
 
+function createNextEvent(
+  id: number,
+  title: string,
+  impact = "HIGH",
+  minutes = 60
+) {
+  const scheduledAt = new Date(Date.now() + minutes * 60_000).toISOString()
+
+  return {
+    id,
+    assetId: 101,
+    impact,
+    scheduledAt,
+    status: "PENDING" as const,
+    time: scheduledAt,
+    title,
+  }
+}
+
 describe("Market chart quote-driven candle flow", () => {
   afterEach(() => {
     cleanup()
+    vi.restoreAllMocks()
     vi.unstubAllGlobals()
     FakeEventSource.current = null
     FakeEventSource.instances = []
@@ -219,6 +293,7 @@ describe("Market chart quote-driven candle flow", () => {
     getAnnotations.mockReset().mockResolvedValue({ success: true, data: [] })
     getCalendarEvents.mockReset().mockResolvedValue({ success: true, data: [] })
     vi.stubGlobal("EventSource", FakeEventSource)
+    vi.stubGlobal("PointerEvent", MouseEvent)
     vi.stubGlobal("ResizeObserver", FakeResizeObserver)
   })
 
@@ -428,6 +503,289 @@ describe("Market chart quote-driven candle flow", () => {
       expect(FakeEventSource.instances).toHaveLength(sourceCount)
     }
   )
+
+  it("loads the Next event independently while candle history is pending", async () => {
+    const event = createNextEvent(151, "US Natural Gas Storage")
+    let resolveCandleRequest!: () => void
+    getCandles.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveCandleRequest = () =>
+            resolve({
+              success: true,
+              data: createCandleResponse(101, "1m"),
+            })
+        })
+    )
+    getCalendarEvents.mockImplementation(async (request) =>
+      Date.parse(request.to) > Date.now()
+        ? { success: true, data: [event] }
+        : { success: true, data: [] }
+    )
+
+    render(
+      <LocalizationProvider locale="vi" dictionary={viDictionary}>
+        <MarketChartWorkbench
+          watchlistAssets={watchlistAssets}
+          watchlistError={null}
+        />
+      </LocalizationProvider>
+    )
+
+    const nextBadge = await screen.findByRole("button", {
+      name: /US Natural Gas Storage/,
+    })
+    fireEvent.click(nextBadge)
+    expect(
+      await screen.findByTestId("calendar-event-detail")
+    ).toHaveTextContent("151:US Natural Gas Storage")
+
+    await act(async () => resolveCandleRequest())
+  })
+
+  it("keeps the clicked Next event open when refresh selects another event", async () => {
+    const intervalSpy = vi.spyOn(window, "setInterval")
+    getCandles.mockResolvedValue({
+      success: true,
+      data: createCandleResponse(101, "1m"),
+    })
+
+    const [eventA, eventB] = [
+      createNextEvent(201, "US Natural Gas Storage"),
+      createNextEvent(202, "US Crude Oil Inventories", "HIGH", 120),
+    ]
+    const eventC = createNextEvent(203, "US CPI", "HIGH", 180)
+    const refreshResponses = [eventA, eventB, eventC]
+    getCalendarEvents.mockImplementation(async (request) => {
+      if (Date.parse(request.to) > Date.now()) {
+        return {
+          success: true,
+          data: [refreshResponses.shift()].filter(Boolean),
+        }
+      }
+
+      return { success: true, data: [] }
+    })
+
+    render(
+      <LocalizationProvider locale="vi" dictionary={viDictionary}>
+        <MarketChartWorkbench
+          watchlistAssets={watchlistAssets}
+          watchlistError={null}
+        />
+      </LocalizationProvider>
+    )
+
+    const nextBadge = await screen.findByRole("button", {
+      name: /US Natural Gas Storage/,
+    })
+    fireEvent.click(nextBadge)
+
+    expect(
+      await screen.findByTestId("calendar-event-detail")
+    ).toHaveTextContent("201:US Natural Gas Storage")
+
+    expect(intervalSpy).toHaveBeenCalledWith(expect.any(Function), 60_000)
+    const countdownTick = intervalSpy.mock.calls.find(
+      ([, delay]) => delay === 1_000
+    )?.[0]
+    const calendarRefresh = intervalSpy.mock.calls.find(
+      ([, delay]) => delay === 60_000
+    )?.[0]
+    const futureCallCount = () =>
+      getCalendarEvents.mock.calls.filter(
+        ([request]) => Date.parse(request.to) > Date.now()
+      ).length
+    const initialFutureCallCount = futureCallCount()
+
+    await act(async () => {
+      if (typeof countdownTick === "function") {
+        countdownTick()
+        countdownTick()
+        countdownTick()
+      }
+    })
+    expect(futureCallCount()).toBe(initialFutureCallCount)
+
+    await act(async () => {
+      if (typeof calendarRefresh === "function") {
+        calendarRefresh()
+      }
+    })
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: /US Crude Oil Inventories/ })
+      ).toBeInTheDocument()
+    )
+
+    await act(async () => {
+      document.dispatchEvent(new Event("visibilitychange"))
+    })
+
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /US CPI/ })).toBeInTheDocument()
+    )
+    expect(screen.getByTestId("calendar-event-detail")).toHaveTextContent(
+      "201:US Natural Gas Storage"
+    )
+  })
+
+  it("retains a matching Next cache on refresh failure and retries it", async () => {
+    getCandles.mockResolvedValue({
+      success: true,
+      data: createCandleResponse(101, "1m"),
+    })
+
+    const eventA = createNextEvent(301, "US Natural Gas Storage")
+    const eventB = createNextEvent(302, "US Crude Oil Inventories", "HIGH", 120)
+    let futureRequestCount = 0
+    getCalendarEvents.mockImplementation(async (request) => {
+      if (Date.parse(request.to) > Date.now()) {
+        futureRequestCount += 1
+        if (futureRequestCount === 1) {
+          return { success: true, data: [eventA] }
+        }
+        if (futureRequestCount === 2) {
+          return { success: false, error: "Calendar refresh failed" }
+        }
+        return { success: true, data: [eventB] }
+      }
+
+      return { success: true, data: [] }
+    })
+
+    render(
+      <LocalizationProvider locale="vi" dictionary={viDictionary}>
+        <MarketChartWorkbench
+          watchlistAssets={watchlistAssets}
+          watchlistError={null}
+        />
+      </LocalizationProvider>
+    )
+
+    await screen.findByRole("button", { name: /US Natural Gas Storage/ })
+
+    await act(async () => {
+      document.dispatchEvent(new Event("visibilitychange"))
+    })
+
+    expect(
+      await screen.findByText(viDictionary.marketCharts.calendar.stale)
+    ).toBeVisible()
+    expect(
+      screen.getByRole("button", { name: /US Natural Gas Storage/ })
+    ).toBeEnabled()
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: viDictionary.marketCharts.controls.refreshLatestData,
+      })
+    )
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: /US Crude Oil Inventories/ })
+      ).toBeInTheDocument()
+    )
+    expect(futureRequestCount).toBe(3)
+  })
+
+  it("clears the previous Next title when the refreshed context has no event", async () => {
+    getCandles.mockResolvedValue({
+      success: true,
+      data: createCandleResponse(101, "1m"),
+    })
+
+    let futureRequestCount = 0
+    getCalendarEvents.mockImplementation(async (request) => {
+      if (Date.parse(request.to) > Date.now()) {
+        futureRequestCount += 1
+        return {
+          success: true,
+          data:
+            futureRequestCount === 1
+              ? [createNextEvent(401, "US Natural Gas Storage")]
+              : [],
+        }
+      }
+
+      return { success: true, data: [] }
+    })
+
+    render(
+      <LocalizationProvider locale="vi" dictionary={viDictionary}>
+        <MarketChartWorkbench
+          watchlistAssets={watchlistAssets}
+          watchlistError={null}
+        />
+      </LocalizationProvider>
+    )
+
+    await screen.findByRole("button", { name: /US Natural Gas Storage/ })
+
+    await act(async () => {
+      document.dispatchEvent(new Event("visibilitychange"))
+    })
+
+    await waitFor(() => expect(futureRequestCount).toBe(2))
+
+    const emptyNextButton = await screen.findByRole("button", {
+      name: new RegExp(viDictionary.marketCharts.calendar.noNextEvent),
+    })
+    expect(emptyNextButton).toBeDisabled()
+    expect(emptyNextButton).not.toHaveTextContent("US Natural Gas Storage")
+  })
+
+  it("does not show a cached Next event after the impact selection changes", async () => {
+    getCandles.mockResolvedValue({
+      success: true,
+      data: createCandleResponse(101, "1m"),
+    })
+
+    const eventA = createNextEvent(501, "US Natural Gas Storage", "HIGH")
+    let futureRequestCount = 0
+    getCalendarEvents.mockImplementation(async (request) => {
+      if (Date.parse(request.to) > Date.now()) {
+        futureRequestCount += 1
+        return futureRequestCount === 1
+          ? { success: true, data: [eventA] }
+          : { success: false, error: "Calendar refresh failed" }
+      }
+
+      return { success: true, data: [] }
+    })
+
+    render(
+      <LocalizationProvider locale="vi" dictionary={viDictionary}>
+        <MarketChartWorkbench
+          watchlistAssets={watchlistAssets}
+          watchlistError={null}
+        />
+      </LocalizationProvider>
+    )
+
+    await screen.findByRole("button", { name: /US Natural Gas Storage/ })
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: viDictionary.marketCharts.controls.eventSettingsAria,
+      })
+    )
+    fireEvent.click(
+      screen.getByRole("checkbox", {
+        name: viDictionary.marketCharts.controls.impactOptionLabels.MEDIUM,
+      })
+    )
+
+    await waitFor(() => expect(futureRequestCount).toBe(2))
+    expect(
+      screen.queryByRole("button", { name: /US Natural Gas Storage/ })
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByRole("button", {
+        name: /Calendar refresh failed/,
+      })
+    ).toBeDisabled()
+  })
 
   it("clears quote state when the asset or timeframe changes", async () => {
     getCandles.mockResolvedValue({
