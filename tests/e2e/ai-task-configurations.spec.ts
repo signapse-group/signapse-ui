@@ -691,16 +691,42 @@ test.describe("AI task inline configuration", () => {
       effectiveOutputTokens: 5000,
     })
 
-    // Keep both edits dirty in the control row while only saving the target row.
-    await select(controlRow, "OpenAI · #15", "gpt-4.1-mini")
     const controlToken = controlRow.getByRole("spinbutton", {
       name: tokenLabel,
     })
-    await controlToken.fill("1234")
-    await expect(
-      controlRow.getByRole("button", { name: saveLabel })
-    ).toBeEnabled()
+    const controlSave = controlRow.getByRole("button", { name: saveLabel })
+    await expect(controlToken).toHaveAttribute(
+      "id",
+      "SCHEDULED_TELEGRAM_ANALYSIS-output-tokens"
+    )
 
+    let releaseScripts: (() => void) | undefined
+    let heldScriptCount = 0
+    const scriptsReleased = new Promise<void>((resolve) => {
+      releaseScripts = resolve
+    })
+    await page.route("**/_next/static/**/*.js", async (route) => {
+      heldScriptCount += 1
+      await scriptsReleased
+      await route.continue()
+    })
+
+    try {
+      await page.reload({ waitUntil: "commit" })
+      await expect(controlToken).toBeEditable()
+      await expect.poll(() => heldScriptCount).toBeGreaterThan(0)
+      await controlToken.fill("1234")
+      await expect(controlToken).toHaveValue("1234")
+      await expect(controlSave).toBeDisabled()
+
+      releaseScripts?.()
+      releaseScripts = undefined
+      await expect(controlToken).toHaveValue("1234")
+    } finally {
+      releaseScripts?.()
+    }
+
+    // Keep the pre-hydration token draft while only saving the target row.
     await select(targetRow, "OpenAI · #15", "gpt-4.1-mini")
     await fixture.setScenario(targetSelectionPath, "delayed", "PUT")
     await targetRow.getByRole("button", { name: saveLabel }).click()
@@ -709,26 +735,18 @@ test.describe("AI task inline configuration", () => {
       targetRow.getByRole("button", { name: savingLabel })
     ).toBeDisabled()
     await expect(controlToken).toHaveValue("1234")
-    await expect(
-      controlRow.getByRole("combobox", { name: connectionLabel })
-    ).toContainText("OpenAI · #15")
-    await expect(
-      controlRow.getByRole("combobox", { name: modelLabel })
-    ).toContainText("gpt-4.1-mini")
-    await expect(
-      controlRow.getByRole("button", { name: saveLabel })
-    ).toBeEnabled()
     await fixture.setScenario(targetSelectionPath, "success", "PUT")
     await expect(targetRow.getByRole("status")).toContainText(
       en.aiTaskConfigurations.saveSuccess
     )
     await expect(controlToken).toHaveValue("1234")
+    await expect(controlSave).toBeEnabled()
     await expect(
       controlRow.getByRole("combobox", { name: connectionLabel })
-    ).toContainText("OpenAI · #15")
+    ).toContainText("DeepSeek · #14")
     await expect(
       controlRow.getByRole("combobox", { name: modelLabel })
-    ).toContainText("gpt-4.1-mini")
+    ).toContainText("deepseek-v4-pro")
     const stateAfterSelectionSave = await fixture.state()
     expect(
       stateAfterSelectionSave.aiTaskConfigurations?.find(
@@ -748,6 +766,16 @@ test.describe("AI task inline configuration", () => {
     await expect(
       targetRow.getByRole("combobox", { name: modelLabel })
     ).toBeFocused()
+
+    await select(controlRow, "OpenAI · #15", "gpt-4.1-mini")
+    await expect(controlToken).toHaveValue("1234")
+    await expect(
+      controlRow.getByRole("combobox", { name: connectionLabel })
+    ).toContainText("OpenAI · #15")
+    await expect(
+      controlRow.getByRole("combobox", { name: modelLabel })
+    ).toContainText("gpt-4.1-mini")
+    await expect(controlSave).toBeEnabled()
 
     await targetRow.getByRole("spinbutton", { name: tokenLabel }).fill("7000")
     await fixture.setScenario(targetTokenPath, "delayed", "PUT")
