@@ -632,6 +632,18 @@ function createState() {
         createdDate: NOW,
       },
     ],
+    newsOutlets: [
+      {
+        id: 7,
+        name: "Fixture News Outlet",
+        description: null,
+        homepageUrl: "ftp://fixture.example/source",
+        rssUrl: null,
+        active: true,
+        createdDate: NOW,
+        lastModifiedDate: NOW,
+      },
+    ],
     scenarios: {},
     responses: new Set(),
     pendingRequests: new Map(),
@@ -2791,6 +2803,38 @@ function responseForRoute(state, method, pathname, url, body, locale = "en") {
         ? overviewNews()
         : state.newsArticles
     return slicePage(articles, url)
+  }
+
+  if (method === "GET" && pathname === "/news-outlets") {
+    if (!hasFixturePermission(state, "news-outlet:read")) {
+      return {
+        __status: 403,
+        payload: errorPayload("News outlet permission denied", "FORBIDDEN"),
+      }
+    }
+
+    return slicePage(state.newsOutlets, url)
+  }
+
+  const newsOutletDetailMatch = pathname.match(/^\/news-outlets\/(\d+)$/)
+  if (method === "GET" && newsOutletDetailMatch) {
+    if (!hasFixturePermission(state, "news-outlet:read")) {
+      return {
+        __status: 403,
+        payload: errorPayload("News outlet permission denied", "FORBIDDEN"),
+      }
+    }
+
+    const id = Number(newsOutletDetailMatch[1])
+    const newsOutlet = state.newsOutlets.find((item) => item.id === id)
+    if (!newsOutlet) {
+      return {
+        __status: 404,
+        payload: errorPayload("News outlet not found", "NOT_FOUND"),
+      }
+    }
+
+    return newsOutlet
   }
 
   const newsArticleDetailMatch = pathname.match(/^\/news-articles\/(\d+)$/)

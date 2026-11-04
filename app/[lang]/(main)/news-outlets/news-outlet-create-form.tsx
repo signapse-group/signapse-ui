@@ -50,13 +50,11 @@ export function NewsOutletCreateForm() {
 
   async function onSubmit(data: NewsOutletFormValues) {
     const request: CreateNewsOutletRequest = {
-      name: data.name.trim(),
-      homepageUrl: data.homepageUrl.trim(),
+      name: data.name,
+      homepageUrl: data.homepageUrl,
       active: data.active,
-      ...(data.rssUrl?.trim() ? { rssUrl: data.rssUrl.trim() } : {}),
-      ...(data.description?.trim()
-        ? { description: data.description.trim() }
-        : {}),
+      ...(data.rssUrl ? { rssUrl: data.rssUrl } : {}),
+      ...(data.description ? { description: data.description } : {}),
     }
 
     const result = await createNewsOutlet(request)

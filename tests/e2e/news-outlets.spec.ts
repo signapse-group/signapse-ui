@@ -1,0 +1,213 @@
+import { expect, test, waitForClientHandler } from "./fixtures"
+
+test("read permission keeps the outlet list and detail available without update controls", async ({
+  page,
+  fixture,
+}, testInfo) => {
+  await fixture.setPermissions(["news-outlet:read"])
+  await page.setViewportSize({ width: 1520, height: 1024 })
+  await page.goto("/vi/news-outlets")
+
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Nguồn tin" })
+  ).toBeAttached()
+  const outletLink = page.getByRole("link", {
+    name: "Fixture News Outlet",
+    exact: true,
+  })
+  await expect(outletLink).toHaveAttribute("href", "/vi/news-outlets/7")
+  await expect(page.getByRole("switch")).toHaveAttribute(
+    "aria-disabled",
+    "true"
+  )
+  await expect(page.getByRole("link", { name: "Thêm nguồn tin" })).toHaveCount(
+    0
+  )
+  await expect(page.getByRole("link", { name: "Chỉnh sửa" })).toHaveCount(0)
+  await expect(page.getByRole("button", { name: "Xóa nguồn tin" })).toHaveCount(
+    0
+  )
+  await expect(page.locator('a[href^="ftp:"]')).toHaveCount(0)
+
+  await testInfo.attach("news-outlet-list-wide-1520x1024.png", {
+    body: await page.screenshot({ fullPage: true }),
+    contentType: "image/png",
+  })
+
+  await waitForClientHandler(outletLink)
+  await outletLink.click()
+  await expect(page).toHaveURL("/vi/news-outlets/7")
+  await expect(
+    page.getByRole("heading", { name: "Chi tiết nguồn tin", level: 1 })
+  ).toBeVisible()
+  await expect(page.getByText("ftp://fixture.example/source")).toBeVisible()
+  await expect(page.getByRole("textbox")).toHaveCount(0)
+  await expect(page.getByRole("button", { name: "Lưu thay đổi" })).toHaveCount(
+    0
+  )
+  await expect(page.locator('a[href^="ftp:"]')).toHaveCount(0)
+
+  for (const [width, height] of [
+    [360, 800],
+    [390, 844],
+    [767, 844],
+    [760, 512], // 1520×1024 effective CSS viewport at 200% zoom
+    [768, 768],
+    [1024, 768],
+    [1439, 900],
+    [1440, 1024],
+    [1520, 1024],
+  ]) {
+    await page.setViewportSize({ width, height })
+    await expect(page.getByText("ftp://fixture.example/source")).toBeVisible()
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth
+      ),
+      `page should not overflow at ${width}px`
+    ).toBe(true)
+  }
+
+  await page.setViewportSize({ width: 390, height: 844 })
+  await testInfo.attach("news-outlet-read-only-mobile-390x844.png", {
+    body: await page.screenshot({ fullPage: true }),
+    contentType: "image/png",
+  })
+})
+
+test("create and edit forms render for their effective permissions", async ({
+  page,
+  fixture,
+}, testInfo) => {
+  const browserErrors: string[] = []
+  page.on("console", (message) => {
+    if (message.type() === "error") browserErrors.push(message.text())
+  })
+  page.on("pageerror", (error) => browserErrors.push(error.message))
+
+  await page.setViewportSize({ width: 1520, height: 1024 })
+
+  await fixture.setPermissions(["news-outlet:read"])
+  await page.goto("/vi/news-outlets/create")
+  await expect(
+    page.getByText("Bạn không có quyền tạo nguồn tin mới.")
+  ).toBeVisible()
+
+  await fixture.setPermissions(["news-outlet:create"])
+  await page.goto("/vi/news-outlets/create")
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Tạo nguồn tin" })
+  ).toBeVisible()
+  await expect(page.getByLabel("Tên nguồn tin")).toHaveAttribute(
+    "aria-required",
+    "true"
+  )
+  await expect(page.getByLabel("URL trang chủ")).toHaveAttribute(
+    "aria-required",
+    "true"
+  )
+  expect(browserErrors).toEqual([])
+  await testInfo.attach("news-outlet-create-form-wide-1520x1024.png", {
+    body: await page.screenshot({ fullPage: true }),
+    contentType: "image/png",
+  })
+
+  await fixture.setPermissions(["news-outlet:read", "news-outlet:update"])
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto("/vi/news-outlets/7")
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Chỉnh sửa nguồn tin" })
+  ).toBeVisible()
+  await expect(
+    page.getByRole("switch", { name: "Kích hoạt nguồn tin" })
+  ).toBeVisible()
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth
+    )
+  ).toBe(true)
+  await testInfo.attach("news-outlet-edit-form-mobile-390x844.png", {
+    body: await page.screenshot({ fullPage: true }),
+    contentType: "image/png",
+  })
+  expect(browserErrors).toEqual([])
+})
+
+test("delete permission opens a localized confirmation that can be canceled", async ({
+  page,
+  fixture,
+}, testInfo) => {
+  await fixture.setPermissions(["news-outlet:read", "news-outlet:delete"])
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto("/vi/news-outlets")
+
+  const deleteButton = page.getByRole("button", {
+    name: "Xóa nguồn tin",
+    exact: true,
+  })
+  await expect(deleteButton).toBeVisible()
+  await expect(page.getByRole("switch")).toHaveAttribute(
+    "aria-disabled",
+    "true"
+  )
+  await deleteButton.click()
+
+  const dialog = page.getByRole("alertdialog")
+  await expect(dialog).toBeVisible()
+  await expect(
+    dialog.getByRole("heading", {
+      name: 'Xóa nguồn tin "Fixture News Outlet"?',
+    })
+  ).toBeVisible()
+  await expect(
+    dialog.getByText(
+      "Không thể hoàn tác thao tác này. Fixture News Outlet sẽ không được chọn trong các lần thu thập tiếp theo. Bài viết đã thu thập vẫn giữ nguyên nội dung, đường dẫn và tên nhà xuất bản đã ghi nhận."
+    )
+  ).toBeVisible()
+  expect(
+    await dialog.evaluate((element) => element.contains(document.activeElement))
+  ).toBe(true)
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth
+    )
+  ).toBe(true)
+
+  await testInfo.attach("news-outlet-delete-confirmation-mobile-390x844.png", {
+    body: await page.screenshot({ fullPage: true }),
+    contentType: "image/png",
+  })
+
+  const cancelButton = dialog.getByRole("button", {
+    name: "Hủy",
+    exact: true,
+  })
+  await cancelButton.focus()
+  await page.keyboard.press("Enter")
+  await expect(page.getByRole("alertdialog")).toHaveCount(0)
+  await expect(deleteButton).toBeFocused()
+
+  await page.getByRole("button", { name: "Chọn giao diện" }).click()
+  await page.getByRole("menuitem", { name: "Tối", exact: true }).click()
+  await expect(page.locator("html")).toHaveClass(/dark/)
+
+  await deleteButton.click()
+  const darkDialog = page.getByRole("alertdialog")
+  await expect(darkDialog).toBeVisible()
+  expect(
+    await darkDialog.evaluate((element) =>
+      element.contains(document.activeElement)
+    )
+  ).toBe(true)
+  await testInfo.attach(
+    "news-outlet-delete-confirmation-dark-mobile-390x844.png",
+    {
+      body: await page.screenshot({ fullPage: true }),
+      contentType: "image/png",
+    }
+  )
+
+  await page.keyboard.press("Escape")
+  await expect(page.getByRole("alertdialog")).toHaveCount(0)
+  await expect(deleteButton).toBeFocused()
+})

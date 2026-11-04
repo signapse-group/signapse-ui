@@ -45,14 +45,19 @@ export default async function NewsOutletsPage({ searchParams }: PageProps) {
 
   return (
     <Suspense fallback={<ListSkeleton dictionary={dictionary} />}>
-      <NewsOutletContent searchParamsPromise={searchParams} />
+      <NewsOutletContent
+        dictionary={dictionary}
+        searchParamsPromise={searchParams}
+      />
     </Suspense>
   )
 }
 
 async function NewsOutletContent({
+  dictionary,
   searchParamsPromise,
 }: {
+  dictionary: Dictionary
   searchParamsPromise: Promise<{ [key: string]: string | string[] | undefined }>
 }) {
   const resolvedParams = await searchParamsPromise
@@ -69,12 +74,26 @@ async function NewsOutletContent({
   const filter = buildFilterQuery(filterParams)
   const sortQuery = buildSortQuery(sort as string)
 
-  const newsOutletPage = await getNewsOutlets({
-    page: page - 1,
-    size,
-    sort: sortQuery,
-    filter,
-  })
+  let newsOutletPage: Awaited<ReturnType<typeof getNewsOutlets>>
+  try {
+    newsOutletPage = await getNewsOutlets({
+      page: page - 1,
+      size,
+      sort: sortQuery,
+      filter,
+    })
+  } catch (error) {
+    if (error instanceof Error && "status" in error && error.status === 403) {
+      return (
+        <AccessDenied
+          description={dictionary.newsOutlets.readDenied}
+          permission={NEWS_OUTLET_READ_PERMISSION}
+        />
+      )
+    }
+
+    throw error
+  }
 
   return <NewsOutletListPage newsOutletPage={newsOutletPage} />
 }

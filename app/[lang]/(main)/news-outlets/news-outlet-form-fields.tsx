@@ -19,26 +19,13 @@ import { Textarea } from "@/components/ui/textarea"
 
 export function getNewsOutletFormSchema(dictionary: Dictionary) {
   return z.object({
-    name: z
-      .string()
-      .trim()
-      .min(1, dictionary.newsOutlets.nameRequired)
-      .max(255, dictionary.newsOutlets.nameTooLong),
+    name: z.string().trim().min(1, dictionary.newsOutlets.nameRequired),
     homepageUrl: z
       .string()
       .trim()
-      .url(dictionary.newsOutlets.homepageInvalid)
       .min(1, dictionary.newsOutlets.homepageRequired),
-    rssUrl: z.union([
-      z.literal(""),
-      z.string().trim().url(dictionary.newsOutlets.rssInvalid),
-    ]),
-    description: z
-      .string()
-      .trim()
-      .max(1000, dictionary.newsOutlets.descriptionTooLong)
-      .optional()
-      .or(z.literal("")),
+    rssUrl: z.string().trim(),
+    description: z.string().trim(),
     active: z.boolean().default(true),
   })
 }
@@ -69,12 +56,15 @@ export function NewsOutletFormFields({
               <Field data-invalid={fieldState.invalid}>
                 <FieldLabel htmlFor="name">
                   {dictionary.newsOutlets.nameLabel}{" "}
-                  <span className="text-destructive">*</span>
+                  <span aria-hidden="true" className="text-destructive">
+                    *
+                  </span>
                 </FieldLabel>
                 <Input
                   {...field}
                   id="name"
                   aria-invalid={fieldState.invalid}
+                  aria-required="true"
                   placeholder={dictionary.newsOutlets.namePlaceholder}
                   autoComplete="off"
                   disabled={isSubmitting}
@@ -93,13 +83,16 @@ export function NewsOutletFormFields({
               <Field data-invalid={fieldState.invalid}>
                 <FieldLabel htmlFor="homepageUrl">
                   {dictionary.newsOutlets.homepageLabel}{" "}
-                  <span className="text-destructive">*</span>
+                  <span aria-hidden="true" className="text-destructive">
+                    *
+                  </span>
                 </FieldLabel>
                 <Input
                   {...field}
                   id="homepageUrl"
                   aria-invalid={fieldState.invalid}
-                  placeholder="https://example.com"
+                  aria-required="true"
+                  placeholder={dictionary.newsOutlets.homepagePlaceholder}
                   autoComplete="off"
                   disabled={isSubmitting}
                 />
@@ -122,7 +115,7 @@ export function NewsOutletFormFields({
                   {...field}
                   id="rssUrl"
                   aria-invalid={fieldState.invalid}
-                  placeholder="https://example.com/rss.xml"
+                  placeholder={dictionary.newsOutlets.rssPlaceholder}
                   autoComplete="off"
                   disabled={isSubmitting}
                 />
