@@ -1204,9 +1204,21 @@ function marketChartAnnotations(url, scenario) {
   }
 
   if (scenario === "annotations-warm-episode") {
-    const periodStart =
-      url.searchParams.get("from") ??
-      new Date(Date.parse(anchorTime) - 12 * 60 * 60 * 1000).toISOString()
+    const periodStart = new Date(
+      Date.parse(NOW) - 2 * 24 * 60 * 60 * 1000
+    ).toISOString()
+    const from = Date.parse(url.searchParams.get("from") ?? "")
+    const periodStartTime = Date.parse(periodStart)
+    const periodEndTime = Date.parse(anchorTime)
+
+    if (
+      !Number.isFinite(from) ||
+      periodStartTime < from ||
+      periodStartTime >= periodEndTime
+    ) {
+      return []
+    }
+
     const firstEventTime = new Date(
       Date.parse(periodStart) + 60 * 60 * 1000
     ).toISOString()

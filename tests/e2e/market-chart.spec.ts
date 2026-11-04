@@ -917,27 +917,48 @@ test.describe("P0 market chart workbench", () => {
     await page.keyboard.press("Enter")
 
     const state = await fixture.state()
+    const periodStart =
+      Date.parse(MARKET_CHART_FIXTURE_NOW) - 2 * 24 * 60 * 60 * 1000
     const annotationRequest = state.requests
       .filter((request) => request.path === "/market-charts/annotations")
-      .at(-1)
+      .find((request) => {
+        const params = new URLSearchParams(String(request.query))
+        const from = Date.parse(params.get("from") ?? "")
+        const to = Date.parse(params.get("to") ?? "")
+
+        return from <= periodStart && periodStart < to
+      })
     const annotationParams = new URLSearchParams(
       String(annotationRequest?.query)
     )
     const annotationFrom = annotationParams.get("from")
     const annotationTo = annotationParams.get("to")
+    expect(annotationRequest).toBeTruthy()
     expect(annotationFrom).toBeTruthy()
     expect(annotationTo).toBeTruthy()
+    const periodStartTime = new Date(periodStart).toISOString()
+    const periodStartTimestamp = Date.parse(periodStartTime)
+    expect(periodStartTimestamp).toBeGreaterThanOrEqual(
+      Date.parse(annotationFrom ?? "")
+    )
+    expect(periodStartTimestamp).toBeLessThan(Date.parse(annotationTo ?? ""))
 
-    const expectedTime = new Intl.DateTimeFormat("vi-VN", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      timeZone: "Asia/Ho_Chi_Minh",
-    }).format(new Date(annotationFrom ?? ""))
+    const expectedTime = await page.evaluate(
+      (value) =>
+        new Intl.DateTimeFormat("vi-VN", {
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+          timeZone: "Asia/Ho_Chi_Minh",
+        }).format(new Date(value)),
+      periodStartTime
+    )
 
     const detail = page.getByRole("dialog")
+    await expect(annotationMarker).toHaveAttribute("aria-pressed", "true")
+    await expect(detail).toBeVisible()
     await expect(
       detail.getByText(`Bắt đầu giai đoạn: ${expectedTime}`, { exact: true })
     ).toBeVisible()
@@ -1011,25 +1032,38 @@ test.describe("P0 market chart workbench", () => {
 
     await page.emulateMedia({ colorScheme: "dark" })
     await page.setViewportSize({ width: 390, height: 844 })
-    await expect(detail).toBeHidden()
     await expect(
-      page.getByRole("heading", {
+      page.getByRole("main").getByRole("heading", {
         name: "U.S. debt snapshot",
         exact: true,
       })
-    ).toHaveCount(1)
+    ).toBeVisible()
     await expect(
-      page.getByRole("heading", {
+      page.getByRole("main").getByRole("heading", {
         name: "UAE trade snapshot",
         exact: true,
       })
-    ).toHaveCount(1)
+    ).toBeVisible()
+    await expect(
+      page
+        .getByRole("main")
+        .getByText(
+          "Persistent deficits may increase demand for inflation hedges over the medium term.",
+          { exact: true }
+        )
+    ).toBeVisible()
     await expectNoHorizontalOverflow(page)
     await testInfo.attach("SIGN-478-warm-period-dark-mobile", {
       body: await page.screenshot({ animations: "disabled", fullPage: true }),
       contentType: "image/png",
     })
     await page.setViewportSize({ width: 360, height: 844 })
+    await expect(
+      page.getByRole("main").getByRole("heading", {
+        name: "U.S. debt snapshot",
+        exact: true,
+      })
+    ).toBeVisible()
     await expectNoHorizontalOverflow(page)
   })
 
