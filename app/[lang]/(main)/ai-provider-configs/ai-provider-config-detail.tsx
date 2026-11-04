@@ -567,7 +567,7 @@ function AiProviderConfigDetailContent({
                             updateReplacement(credential.id, event.target.value)
                           }
                           placeholder={t.replacementKeyPlaceholder}
-                          disabled={pendingOperation !== null}
+                          disabled={!isClientReady || pendingOperation !== null}
                         />
                         <FieldDescription>
                           {t.replacementKeyDescription}
@@ -615,7 +615,7 @@ function AiProviderConfigDetailContent({
                   updateDraft({ newKey: value })
                 }}
                 placeholder={t.newKeyPlaceholder}
-                disabled={pendingOperation !== null}
+                disabled={!isClientReady || pendingOperation !== null}
               />
               <FieldDescription>
                 <span className="hidden sm:inline">
