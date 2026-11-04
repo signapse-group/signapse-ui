@@ -41,12 +41,14 @@ export function LatestNews({
   dictionary,
   error,
   locale,
+  timeZone,
 }: {
   articles: NewsArticleListResponse[]
   denied?: boolean
   dictionary: Dictionary
   error: string | null
   locale: AppLocale
+  timeZone: string
 }) {
   const t = dictionary.workspaceOverview.latestNews
   const hasArticles = articles.length > 0
@@ -98,6 +100,7 @@ export function LatestNews({
               articles={articles}
               dictionary={dictionary}
               locale={locale}
+              timeZone={timeZone}
             />
           ) : (
             <Empty className="min-h-48">
@@ -154,26 +157,33 @@ function LatestNewsItems({
   articles,
   dictionary,
   locale,
+  timeZone,
 }: {
   articles: NewsArticleListResponse[]
   dictionary: Dictionary
   locale: AppLocale
+  timeZone: string
 }) {
   const t = dictionary.workspaceOverview.latestNews
 
   return (
     <ItemGroup className="gap-0">
       {articles.map((article, index) => {
-        const title = article.title ?? dictionary.newsArticles.titleUnavailable
         const description =
           article.description?.trim() || dictionary.newsArticles.noDescription
+        const title =
+          article.title?.trim() || dictionary.newsArticles.titleUnavailable
         const source =
           article.sourceName?.trim() || dictionary.newsArticles.noOutlet
         const publishedAt = article.publishedAt
           ? formatDateTime(
               article.publishedAt,
               locale,
-              { dateStyle: "medium", timeStyle: "short" },
+              {
+                dateStyle: "medium",
+                timeStyle: "short",
+                timeZone,
+              },
               t.invalidDate
             )
           : dictionary.workspaceOverview.noData

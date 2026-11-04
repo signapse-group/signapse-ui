@@ -205,8 +205,8 @@ export function LocalEntityQuickDetailDrawer({
       : currentState?.phase === "event"
         ? currentState.event.title
         : currentState?.phase === "news-article"
-          ? (currentState.article.title ??
-            dictionary.newsArticles.titleUnavailable)
+          ? currentState.article.title?.trim() ||
+            dictionary.newsArticles.titleUnavailable
           : currentState?.phase === "missing"
             ? dictionary.quickDetail.notFoundTitle
             : currentState?.phase === "error"

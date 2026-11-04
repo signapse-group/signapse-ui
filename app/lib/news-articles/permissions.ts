@@ -7,18 +7,11 @@ export const NEWS_ARTICLE_READ_PERMISSIONS = ["news-article:read"] as const
 
 export const NEWS_ARTICLE_ANALYZE_PERMISSIONS = [
   "news-article:analyze",
-  "source-document:analyze",
 ] as const
 
-export const NEWS_ARTICLE_UPDATE_PERMISSIONS = [
-  "news-article:update",
-  "source-document:update",
-] as const
+export const NEWS_ARTICLE_UPDATE_PERMISSIONS = ["news-article:update"] as const
 
-export const NEWS_ARTICLE_DELETE_PERMISSIONS = [
-  "news-article:delete",
-  "source-document:delete",
-] as const
+export const NEWS_ARTICLE_DELETE_PERMISSIONS = ["news-article:delete"] as const
 
 export const NEWS_ARTICLE_NAV_PERMISSIONS = NEWS_ARTICLE_READ_PERMISSIONS
 

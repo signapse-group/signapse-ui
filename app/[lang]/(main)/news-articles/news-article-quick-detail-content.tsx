@@ -2,42 +2,22 @@ import { ArrowUpRightIcon, Calendar, Globe2 } from "lucide-react"
 import Image from "next/image"
 
 import { AppLocale } from "@/app/lib/i18n/config"
+import { useBrowserTimeZone } from "@/app/lib/i18n/browser-time-zone"
 import type { Dictionary } from "@/app/lib/i18n/dictionary-types"
-import { formatDateTime as formatLocalizedDateTime } from "@/app/lib/i18n/format"
+import { formatNewsArticleDateTime } from "@/app/lib/news-articles/date-time"
 import type { NewsArticleResponse } from "@/app/lib/news-articles/definitions"
 import { AppTimeMetadata } from "@/components/app-time-metadata"
 import { Badge } from "@/components/ui/badge"
 
 import { NewsArticleMarkdown } from "./news-article-markdown"
-
-function formatDateTime(
-  value: string | null | undefined,
-  locale: AppLocale,
-  dictionary: Dictionary
-) {
-  if (!value) {
-    return dictionary.common.notAvailable
-  }
-
-  return formatLocalizedDateTime(
-    value,
-    locale,
-    {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    },
-    dictionary.common.notAvailable
-  )
-}
+import { NewsArticleStatusBadge } from "./news-article-status-badge"
 
 function getImageUrl(article: NewsArticleResponse) {
   return (
     article.featureImage?.urlMedium ||
     article.featureImage?.urlLarge ||
-    article.featureImage?.urlOriginal
+    article.featureImage?.urlOriginal ||
+    article.featureImage?.urlThumbnail
   )
 }
 
@@ -50,27 +30,39 @@ export function NewsArticleQuickDetailContent({
   dictionary: Dictionary
   locale: AppLocale
 }) {
+  const timeZone = useBrowserTimeZone()
   const imageUrl = getImageUrl(article)
   const description = article.description?.trim() ? article.description : null
-  const title = article.title ?? dictionary.newsArticles.titleUnavailable
+  const title =
+    article.title?.trim() || dictionary.newsArticles.titleUnavailable
   const content = article.content?.trim() ? article.content : null
   const contentFailed = article.status === "CONTENT_FAILED"
   const originalUrl = article.url?.trim() ? article.url : null
 
   return (
     <div className="flex min-w-0 flex-col gap-4">
-      {description ? (
-        <p className="break-words whitespace-pre-wrap text-muted-foreground">
-          {description}
-        </p>
+      {article.status ? (
+        <NewsArticleStatusBadge
+          status={article.status}
+          label={dictionary.newsArticles.statusLabels[article.status]}
+        />
       ) : null}
+
+      <p className="break-words whitespace-pre-wrap text-muted-foreground">
+        {description || dictionary.newsArticles.descriptionUnavailable}
+      </p>
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <AppTimeMetadata icon={Globe2}>
           {article.sourceName?.trim() || dictionary.newsArticles.noOutlet}
         </AppTimeMetadata>
         <AppTimeMetadata icon={Calendar}>
-          {formatDateTime(article.publishedAt, locale, dictionary)}
+          {formatNewsArticleDateTime(
+            article.publishedAt,
+            locale,
+            timeZone,
+            dictionary.common.notAvailable
+          )}
         </AppTimeMetadata>
         {originalUrl ? (
           <Badge

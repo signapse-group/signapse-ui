@@ -22,6 +22,7 @@ import {
   formatNumber,
 } from "@/app/lib/i18n/format"
 import { getRequestLocale } from "@/app/lib/i18n/server"
+import { getRequestTimeZone } from "@/app/lib/i18n/time-zone-server"
 import { canAccessMarketChartWorkbench } from "@/app/lib/market-charts/permissions"
 import { observeDashboardLoad } from "@/app/lib/observability/journeys"
 import type { NewsArticleListResponse } from "@/app/lib/news-articles/definitions"
@@ -62,6 +63,7 @@ import { TradingSnapshot, TradingSnapshotSkeleton } from "./trading-snapshot"
 import { AssetsInFocus, AssetsInFocusSkeleton } from "./assets-in-focus"
 import { EventTimeline, EventTimelineSkeleton } from "./event-timeline"
 import { LatestNews, LatestNewsSkeleton } from "./latest-news"
+import { NewsArticleTimeZoneSync } from "../news-articles/news-article-time-zone-sync"
 import { MarketNarratives, MarketNarrativesSkeleton } from "./market-narratives"
 import { DashboardQuickDetailProvider } from "./dashboard-quick-detail"
 import { WorkspaceOverviewActions } from "../workspace-overview-actions"
@@ -124,9 +126,10 @@ async function WorkspaceOverview() {
 }
 
 async function loadWorkspaceOverview() {
-  const [permissions, locale] = await Promise.all([
+  const [permissions, locale, requestTimeZone] = await Promise.all([
     getCurrentPermissions(),
     getRequestLocale(),
+    getRequestTimeZone(),
   ])
   const dictionary = await getDictionary(locale)
   const canReadWorkspace = hasPermission(permissions, "workspace:read")
@@ -281,13 +284,20 @@ async function loadWorkspaceOverview() {
               />
             </div>
             <div className="min-w-0 min-[1440px]:col-span-4">
-              <LatestNews
-                articles={latestNews.articles}
-                denied={!canReadNews}
-                dictionary={dictionary}
-                error={latestNews.error}
-                locale={locale}
-              />
+              <NewsArticleTimeZoneSync
+                timeZone={requestTimeZone.timeZone}
+                timeZoneKnown={requestTimeZone.known}
+                fallback={<LatestNewsSkeleton />}
+              >
+                <LatestNews
+                  articles={latestNews.articles}
+                  denied={!canReadNews}
+                  dictionary={dictionary}
+                  error={latestNews.error}
+                  locale={locale}
+                  timeZone={requestTimeZone.timeZone}
+                />
+              </NewsArticleTimeZoneSync>
             </div>
           </div>
         </DashboardQuickDetailProvider>

@@ -86,6 +86,7 @@ vi.mock("next/image", () => ({
 
 import { vi as viDictionary } from "@/app/lib/i18n/dictionaries/vi"
 import { LocalizationProvider } from "@/app/lib/i18n/provider"
+import { formatNewsArticleDateTime } from "@/app/lib/news-articles/date-time"
 import type { NewsArticleResponse } from "@/app/lib/news-articles/definitions"
 
 import { LocalEntityQuickDetailDrawer } from "@/app/[lang]/(main)/local-entity-quick-detail-drawer"
@@ -132,6 +133,7 @@ function renderDrawer(selectedArticle: NewsArticleResponse = article) {
 describe("LocalEntityQuickDetailDrawer news article reading surface", () => {
   afterEach(() => {
     cleanup()
+    vi.restoreAllMocks()
     vi.clearAllMocks()
     useHasAnyPermission.mockImplementation(() => true)
   })
@@ -156,6 +158,9 @@ describe("LocalEntityQuickDetailDrawer news article reading surface", () => {
     expect(heading.closest("header")?.querySelector("p")).toBeNull()
 
     expect(screen.getByText(article.description!)).toBeInTheDocument()
+    expect(
+      screen.getByText(viDictionary.newsArticles.statusLabels[article.status!])
+    ).toBeInTheDocument()
     expect(screen.getByText(article.sourceName!)).toBeInTheDocument()
     expect(useHasAnyPermission).toHaveBeenCalledWith(["news-article:read"])
     expect(
@@ -206,8 +211,40 @@ describe("LocalEntityQuickDetailDrawer news article reading surface", () => {
     ).toBeInTheDocument()
     expect(screen.queryByRole("img")).not.toBeInTheDocument()
     expect(
+      screen.getByText(viDictionary.newsArticles.descriptionUnavailable)
+    ).toBeInTheDocument()
+    expect(
       screen.queryByText("Sự kiện liên quan không hiển thị")
     ).not.toBeInTheDocument()
+  })
+
+  it("formats the quick reader timestamp with the browser IANA timezone", async () => {
+    vi.spyOn(Intl.DateTimeFormat.prototype, "resolvedOptions").mockReturnValue({
+      locale: "en-US",
+      calendar: "gregory",
+      numberingSystem: "latn",
+      timeZone: "Asia/Bangkok",
+      year: "numeric",
+      month: "numeric",
+      day: "numeric",
+      weekday: "long",
+      era: "AD",
+      hour: "numeric",
+      minute: "2-digit",
+      second: "2-digit",
+      timeZoneName: "long",
+      hourCycle: "h12",
+    })
+
+    renderDrawer()
+
+    const expected = formatNewsArticleDateTime(
+      article.publishedAt,
+      "vi",
+      "Asia/Bangkok",
+      viDictionary.common.notAvailable
+    )
+    await waitFor(() => expect(screen.getByText(expected)).toBeInTheDocument())
   })
 
   it("keeps the canonical action during transient errors and retries the snapshot", async () => {

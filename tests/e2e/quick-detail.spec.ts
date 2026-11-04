@@ -143,6 +143,7 @@ test.describe("P0 quick-detail overlay", () => {
       exact: true,
     })
     await expect(trigger).toBeVisible()
+    await waitForClientHandler(trigger)
     await trigger.click()
 
     const overlay = page.locator("[data-quick-detail-placement]")
