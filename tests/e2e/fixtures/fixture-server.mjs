@@ -631,6 +631,19 @@ function createState() {
         publishedAt: NOW,
         status: "INGESTED",
         createdDate: NOW,
+        featureImage: null,
+        content: "# Full article fixture\n\nProcessed fixture article content.",
+        linkedEvents: [
+          {
+            eventId: 61,
+            eventTitle: "Central bank signals a slower easing path",
+            eventCanonicalKey: "central-bank-slower-easing",
+            eventStatus: "ENRICHED",
+            evidenceRole: "PRIMARY",
+            evidenceConfidence: 0.92,
+            evidenceNote: "Fixture evidence summary.",
+          },
+        ],
       },
     ],
     newsOutlets: [
@@ -809,6 +822,87 @@ function slicePage(items, url) {
     size,
     filtered.length
   )
+}
+
+function getNewsArticleFilterValue(filter, expression) {
+  const match = filter.match(expression)
+  return match?.[1]?.replaceAll("''", "'")
+}
+
+function filterAndSortNewsArticles(articles, url) {
+  const filter = url.searchParams.get("$filter") ?? ""
+  const keyword = getNewsArticleFilterValue(
+    filter,
+    /containsIgnoreCase\(keyword,'((?:[^']|'')*)'\)/i
+  )?.toLowerCase()
+  const status = getNewsArticleFilterValue(
+    filter,
+    /\bstatus eq '((?:[^']|'')*)'/i
+  )
+  const sourceName = getNewsArticleFilterValue(
+    filter,
+    /\bsourceName eq '((?:[^']|'')*)'/i
+  )
+  const publishedFrom = getNewsArticleFilterValue(
+    filter,
+    /\bpublishedAt ge '((?:[^']|'')*)'/i
+  )
+  const publishedTo = getNewsArticleFilterValue(
+    filter,
+    /\bpublishedAt lt '((?:[^']|'')*)'/i
+  )
+
+  const filtered = articles.filter((article) => {
+    if (
+      keyword &&
+      ![article.title, article.description].some((value) =>
+        value?.toLowerCase().includes(keyword)
+      )
+    ) {
+      return false
+    }
+    if (status && article.status !== status) return false
+    if (sourceName && article.sourceName !== sourceName) return false
+
+    const publishedAt = article.publishedAt
+      ? new Date(article.publishedAt).getTime()
+      : null
+    if (
+      publishedFrom &&
+      (publishedAt === null || publishedAt < Date.parse(publishedFrom))
+    ) {
+      return false
+    }
+    if (
+      publishedTo &&
+      (publishedAt === null || publishedAt >= Date.parse(publishedTo))
+    ) {
+      return false
+    }
+    return true
+  })
+
+  const [sortField, sortDirection] = (
+    url.searchParams.get("sort") ?? "publishedAt,desc"
+  ).split(",")
+  if (["publishedAt", "createdDate"].includes(sortField)) {
+    const direction = sortDirection === "asc" ? 1 : -1
+    filtered.sort((left, right) => {
+      const leftValue = left[sortField]
+      const rightValue = right[sortField]
+      if (sortField === "publishedAt" && !leftValue)
+        return rightValue ? 1 : left.id - right.id
+      if (sortField === "publishedAt" && !rightValue) return -1
+      const comparison = String(leftValue ?? "").localeCompare(
+        String(rightValue ?? "")
+      )
+      return comparison === 0 ? left.id - right.id : comparison * direction
+    })
+  }
+
+  const pagingUrl = new URL(url)
+  pagingUrl.searchParams.delete("$filter")
+  return slicePage(filtered, pagingUrl)
 }
 
 function dashboardSummary(workspaceId, scenario = "success", locale = "en") {
@@ -2824,11 +2918,42 @@ function responseForRoute(state, method, pathname, url, body, locale = "en") {
   }
 
   if (method === "GET" && pathname === "/news-articles") {
+    if (!hasFixturePermission(state, "news-article:read")) {
+      return {
+        __status: 403,
+        payload: errorPayload("News article permission denied", "FORBIDDEN"),
+      }
+    }
     const articles =
       getScenario(state, method, pathname) === "overview-expanded"
         ? overviewNews()
         : state.newsArticles
-    return slicePage(articles, url)
+    return filterAndSortNewsArticles(articles, url)
+  }
+
+  if (method === "GET" && pathname === "/news-articles/publisher-options") {
+    if (!hasFixturePermission(state, "news-article:read")) {
+      return {
+        __status: 403,
+        payload: errorPayload("News article permission denied", "FORBIDDEN"),
+      }
+    }
+
+    const searchTerm = getNewsArticleFilterValue(
+      url.searchParams.get("$filter") ?? "",
+      /containsIgnoreCase\(sourceName,'((?:[^']|'')*)'\)/i
+    )?.toLowerCase()
+    return [
+      ...new Set(
+        state.newsArticles
+          .map((article) => article.sourceName)
+          .filter((sourceName) => typeof sourceName === "string" && sourceName)
+          .filter(
+            (sourceName) =>
+              !searchTerm || sourceName.toLowerCase().includes(searchTerm)
+          )
+      ),
+    ]
   }
 
   if (method === "GET" && pathname === "/news-outlets") {
@@ -2865,6 +2990,12 @@ function responseForRoute(state, method, pathname, url, body, locale = "en") {
 
   const newsArticleDetailMatch = pathname.match(/^\/news-articles\/(\d+)$/)
   if (method === "GET" && newsArticleDetailMatch) {
+    if (!hasFixturePermission(state, "news-article:read")) {
+      return {
+        __status: 403,
+        payload: errorPayload("News article permission denied", "FORBIDDEN"),
+      }
+    }
     const id = Number(newsArticleDetailMatch[1])
     const scenario = getScenario(state, method, "/news-articles")
     const articles =

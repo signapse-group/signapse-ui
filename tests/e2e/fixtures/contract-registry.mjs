@@ -50,6 +50,7 @@ export const fixtureContracts = [
   { method: "GET", path: "/news-outlets", mapping: "getNewsOutlets", status: 200 },
   { method: "GET", path: "/news-outlets/{id}", mapping: "getNewsOutletById", status: 200 },
   { method: "GET", path: "/news-articles", mapping: "getNewsArticles", status: 200 },
+  { method: "GET", path: "/news-articles/publisher-options", mapping: "getNewsArticlePublisherOptions", status: 200 },
   { method: "GET", path: "/news-articles/{id}", mapping: "getNewsArticleById", status: 200 },
   { method: "GET", path: "/events", mapping: "getEvents", status: 200 },
   { method: "GET", path: "/events/{id}", mapping: "getEventById", status: 200 },

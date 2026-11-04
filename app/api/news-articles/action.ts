@@ -16,7 +16,7 @@ import {
   PendingNewsEventDerivationBatchResult,
   newsArticleResponseSchema,
 } from "@/app/lib/news-articles/definitions"
-import { queryParamsToString } from "@/app/lib/utils"
+import { buildFilterQuery, queryParamsToString } from "@/app/lib/utils"
 
 function revalidateNewsArticleRoutes(id?: number) {
   revalidatePath("/news-articles")
@@ -69,6 +69,23 @@ export async function getNewsArticleById(
 
   // The request path remains the identity when the response omits its optional ID.
   return { ...parsed.data, id }
+}
+
+export async function getNewsArticlePublisherOptions(
+  searchTerm = ""
+): Promise<string[]> {
+  const filter = searchTerm.trim()
+    ? buildFilterQuery({
+        "sourceName[containsIgnoreCase]": searchTerm.trim(),
+      })
+    : undefined
+  const query = filter
+    ? new URLSearchParams({ $filter: filter }).toString()
+    : ""
+
+  return fetchAuthenticated<string[]>(
+    `/news-articles/publisher-options${query ? `?${query}` : ""}`
+  )
 }
 
 export async function deleteNewsArticle(id: number): Promise<ActionResult> {
