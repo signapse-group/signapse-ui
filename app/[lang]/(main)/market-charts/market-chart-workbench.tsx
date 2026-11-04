@@ -3575,16 +3575,12 @@ export function MarketChartWorkbench({
           loadedAt: new Date().toISOString(),
           loading: false,
         })
-      } catch (error) {
+      } catch {
         if (futureCalendarGenerationRef.current !== generation) {
           return
         }
 
-        setFailure(
-          error instanceof Error
-            ? error.message
-            : dictionary.marketCharts.calendar.loadError
-        )
+        setFailure(dictionary.marketCharts.calendar.loadError)
       }
     },
     [dictionary.marketCharts.calendar.loadError]

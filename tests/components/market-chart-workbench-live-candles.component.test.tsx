@@ -660,6 +660,39 @@ describe("Market chart quote-driven candle flow", () => {
     )
   })
 
+  it("shows a localized error when the calendar request rejects", async () => {
+    getCandles.mockResolvedValue({
+      success: true,
+      data: createCandleResponse(101, "1m"),
+    })
+    getCalendarEvents.mockImplementation(async (request) =>
+      Date.parse(request.to) > Date.now()
+        ? Promise.reject(new Error("Failed to fetch"))
+        : { success: true, data: [] }
+    )
+
+    render(
+      <LocalizationProvider locale="vi" dictionary={viDictionary}>
+        <MarketChartWorkbench
+          watchlistAssets={watchlistAssets}
+          watchlistError={null}
+        />
+      </LocalizationProvider>
+    )
+
+    await waitFor(() =>
+      expect(
+        screen.getByTestId("market-chart-next-event-status")
+      ).toHaveTextContent(viDictionary.marketCharts.calendar.loadError)
+    )
+    expect(screen.queryByText("Failed to fetch")).not.toBeInTheDocument()
+    expect(
+      screen.getByRole("button", {
+        name: viDictionary.marketCharts.controls.refreshLatestData,
+      })
+    ).toBeEnabled()
+  })
+
   it("keeps the clicked Next event open when refresh selects another event", async () => {
     const intervalSpy = vi.spyOn(window, "setInterval")
     getCandles.mockResolvedValue({
