@@ -123,7 +123,7 @@ describe("News Article list permissions and state", () => {
     ).toBeGreaterThan(0)
     expect(
       screen.getAllByText(
-        viDictionary.newsArticles.statusLabels[article.status]
+        viDictionary.newsArticles.statusLabels[article.status!]
       ).length
     ).toBeGreaterThan(0)
     expect(

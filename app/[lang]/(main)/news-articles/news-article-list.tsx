@@ -145,14 +145,14 @@ export function NewsArticleList({
                           </div>
                           {article.status ? (
                             <div className="min-[768px]:hidden">
-                            <NewsArticleStatusBadge
-                              status={article.status}
-                              label={
-                                dictionary.newsArticles.statusLabels[
-                                  article.status
-                                ]
-                              }
-                            />
+                              <NewsArticleStatusBadge
+                                status={article.status}
+                                label={
+                                  dictionary.newsArticles.statusLabels[
+                                    article.status
+                                  ]
+                                }
+                              />
                             </div>
                           ) : null}
                         </div>

@@ -175,13 +175,22 @@ test("news article list filters and full article respect the reading contract", 
   }
 
   await page.setViewportSize({ width: 1520, height: 1024 })
+  await fixture.setScenario(
+    "/news-articles",
+    "article-reader-long-content",
+    "GET"
+  )
   await page.goto("/vi/news-articles/71")
   await expect(
-    page.getByRole("heading", { name: "Fixture market update", exact: true })
+    page.getByRole("heading", {
+      name: "Bản tin thị trường đã bản địa hóa",
+      exact: true,
+    })
   ).toBeVisible()
   await expect(
-    page.getByRole("heading", { name: "Full article fixture" })
+    page.getByText("Dấu mốc cuối bài: Nội dung dài vẫn được giữ đầy đủ.")
   ).toBeVisible()
+  await expect(page.getByText("Lỗi suy diễn", { exact: true })).toBeVisible()
   await expect(page.getByText("Fixture evidence summary.")).toBeVisible()
   await expect(page.getByRole("link", { name: "Mở sự kiện" })).toHaveCount(0)
 
