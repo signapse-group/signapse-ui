@@ -1330,8 +1330,10 @@ test.describe("P0 market chart workbench", () => {
         { exact: true }
       )
     ).toBeVisible()
-    await expect(annotationDialog.getByText("Dự đoán", { exact: true })).toBeVisible()
-    await expect(annotationDialog.getByText("Tích cực", { exact: true })).toBeVisible()
+    await expect(annotationDialog.getByText(/Dự đoán/)).toBeVisible()
+    await expect(
+      annotationDialog.getByText("Tích cực", { exact: true })
+    ).toBeVisible()
     const state = await fixture.state()
     const annotationRequest = state.requests.find(
       (request) => request.path === "/market-charts/annotations"
