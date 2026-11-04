@@ -111,6 +111,12 @@ describe("News Outlet list permissions", () => {
   it("keeps detail readable without update and hides create, edit, and delete actions without their permissions", () => {
     renderList([NEWS_OUTLET_READ_PERMISSION])
 
+    expect(
+      screen.getByRole("heading", {
+        level: 1,
+        name: viDictionary.newsOutlets.listTitle,
+      })
+    ).toBeInTheDocument()
     expect(screen.getByRole("link", { name: outlet.name })).toHaveAttribute(
       "href",
       `/news-outlets/${outlet.id}`

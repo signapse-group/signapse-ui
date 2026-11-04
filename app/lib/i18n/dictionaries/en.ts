@@ -787,6 +787,7 @@ export const en: Dictionary = {
     unexpectedError: "An unexpected error occurred. Please try again.",
   },
   newsOutlets: {
+    listTitle: "News outlets",
     readDenied: "You do not have permission to view news outlets.",
     createDenied: "You do not have permission to create news outlets.",
     createAction: "Add news outlet",

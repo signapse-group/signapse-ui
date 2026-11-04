@@ -784,6 +784,7 @@ export const vi = {
     unexpectedError: "Đã có lỗi không mong muốn xảy ra. Vui lòng thử lại.",
   },
   newsOutlets: {
+    listTitle: "Nguồn tin",
     readDenied: "Bạn không có quyền xem khu vực quản lý nguồn tin.",
     createDenied: "Bạn không có quyền tạo nguồn tin mới.",
     createAction: "Thêm nguồn tin",

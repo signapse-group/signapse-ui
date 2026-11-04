@@ -56,12 +56,15 @@ export function NewsOutletFormFields({
               <Field data-invalid={fieldState.invalid}>
                 <FieldLabel htmlFor="name">
                   {dictionary.newsOutlets.nameLabel}{" "}
-                  <span className="text-destructive">*</span>
+                  <span aria-hidden="true" className="text-destructive">
+                    *
+                  </span>
                 </FieldLabel>
                 <Input
                   {...field}
                   id="name"
                   aria-invalid={fieldState.invalid}
+                  aria-required="true"
                   placeholder={dictionary.newsOutlets.namePlaceholder}
                   autoComplete="off"
                   disabled={isSubmitting}
@@ -80,12 +83,15 @@ export function NewsOutletFormFields({
               <Field data-invalid={fieldState.invalid}>
                 <FieldLabel htmlFor="homepageUrl">
                   {dictionary.newsOutlets.homepageLabel}{" "}
-                  <span className="text-destructive">*</span>
+                  <span aria-hidden="true" className="text-destructive">
+                    *
+                  </span>
                 </FieldLabel>
                 <Input
                   {...field}
                   id="homepageUrl"
                   aria-invalid={fieldState.invalid}
+                  aria-required="true"
                   placeholder={dictionary.newsOutlets.homepagePlaceholder}
                   autoComplete="off"
                   disabled={isSubmitting}

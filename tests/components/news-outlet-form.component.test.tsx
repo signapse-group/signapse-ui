@@ -104,6 +104,8 @@ describe("News Outlet form contract", () => {
 
     const name = screen.getByLabelText(/Tên nguồn tin/)
     const homepage = screen.getByLabelText(/URL trang chủ/)
+    expect(name).toHaveAttribute("aria-required", "true")
+    expect(homepage).toHaveAttribute("aria-required", "true")
     await user.type(name, "  Example source  ")
     await user.type(homepage, "  custom:homepage  ")
     await user.click(

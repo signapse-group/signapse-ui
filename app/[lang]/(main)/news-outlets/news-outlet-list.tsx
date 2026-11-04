@@ -121,6 +121,7 @@ export function NewsOutletListPage({ newsOutletPage }: NewsOutletListProps) {
 
   return (
     <div className="w-full">
+      <h1 className="sr-only">{dictionary.newsOutlets.listTitle}</h1>
       <AppListToolbar>
         <AppListToolbarLeading>
           {canCreateNewsOutlet ? (

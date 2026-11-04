@@ -8,6 +8,9 @@ test("read permission keeps the outlet list and detail available without update 
   await page.setViewportSize({ width: 1520, height: 1024 })
   await page.goto("/vi/news-outlets")
 
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Nguồn tin" })
+  ).toBeAttached()
   const outletLink = page.getByRole("link", {
     name: "Fixture News Outlet",
     exact: true,
@@ -48,6 +51,7 @@ test("read permission keeps the outlet list and detail available without update 
     [360, 800],
     [390, 844],
     [767, 844],
+    [760, 512], // 1520×1024 effective CSS viewport at 200% zoom
     [768, 768],
     [1024, 768],
     [1439, 900],
@@ -69,4 +73,62 @@ test("read permission keeps the outlet list and detail available without update 
     body: await page.screenshot({ fullPage: true }),
     contentType: "image/png",
   })
+})
+
+test("create and edit forms render for their effective permissions", async ({
+  page,
+  fixture,
+}, testInfo) => {
+  const browserErrors: string[] = []
+  page.on("console", (message) => {
+    if (message.type() === "error") browserErrors.push(message.text())
+  })
+  page.on("pageerror", (error) => browserErrors.push(error.message))
+
+  await page.setViewportSize({ width: 1520, height: 1024 })
+
+  await fixture.setPermissions(["news-outlet:read"])
+  await page.goto("/vi/news-outlets/create")
+  await expect(
+    page.getByText("Bạn không có quyền tạo nguồn tin mới.")
+  ).toBeVisible()
+
+  await fixture.setPermissions(["news-outlet:create"])
+  await page.goto("/vi/news-outlets/create")
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Tạo nguồn tin" })
+  ).toBeVisible()
+  await expect(page.getByLabel("Tên nguồn tin")).toHaveAttribute(
+    "aria-required",
+    "true"
+  )
+  await expect(page.getByLabel("URL trang chủ")).toHaveAttribute(
+    "aria-required",
+    "true"
+  )
+  expect(browserErrors).toEqual([])
+  await testInfo.attach("news-outlet-create-form-wide-1520x1024.png", {
+    body: await page.screenshot({ fullPage: true }),
+    contentType: "image/png",
+  })
+
+  await fixture.setPermissions(["news-outlet:read", "news-outlet:update"])
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto("/vi/news-outlets/7")
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Chỉnh sửa nguồn tin" })
+  ).toBeVisible()
+  await expect(
+    page.getByRole("switch", { name: "Kích hoạt nguồn tin" })
+  ).toBeVisible()
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth
+    )
+  ).toBe(true)
+  await testInfo.attach("news-outlet-edit-form-mobile-390x844.png", {
+    body: await page.screenshot({ fullPage: true }),
+    contentType: "image/png",
+  })
+  expect(browserErrors).toEqual([])
 })
