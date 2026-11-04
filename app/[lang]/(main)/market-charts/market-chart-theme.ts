@@ -1,5 +1,6 @@
 import type {
   CandleTooltipLegendsCustomCallback,
+  KLineData,
   LineType,
   PolygonType,
 } from "klinecharts"
@@ -163,6 +164,7 @@ export interface MarketChartLegendFormatters {
   notAvailable: string
   pricePrecision: number
   timeframe: MarketChartTimeframe
+  getReadoutCandle?: (crosshairCandle: KLineData | null) => KLineData | null
 }
 
 export function formatMarketChartPrice(
@@ -235,13 +237,15 @@ export function createChartStyles(
   const candleLegendTemplate: CandleTooltipLegendsCustomCallback = ({
     current,
   }) => {
-    if (!current) return []
+    const candle =
+      legendFormatters.getReadoutCandle?.(current ?? null) ?? current
+    if (!candle) return []
 
     return [
       {
         title: "time",
         value: legendFormatters.formatDateTime(
-          current.timestamp,
+          candle.timestamp,
           timeOptions,
           legendFormatters.notAvailable
         ),
@@ -249,7 +253,7 @@ export function createChartStyles(
       {
         title: "open",
         value: formatMarketChartPrice(
-          current.open,
+          candle.open,
           legendFormatters.pricePrecision,
           legendFormatters.formatNumber
         ),
@@ -257,7 +261,7 @@ export function createChartStyles(
       {
         title: "high",
         value: formatMarketChartPrice(
-          current.high,
+          candle.high,
           legendFormatters.pricePrecision,
           legendFormatters.formatNumber
         ),
@@ -265,7 +269,7 @@ export function createChartStyles(
       {
         title: "low",
         value: formatMarketChartPrice(
-          current.low,
+          candle.low,
           legendFormatters.pricePrecision,
           legendFormatters.formatNumber
         ),
@@ -273,7 +277,7 @@ export function createChartStyles(
       {
         title: "close",
         value: formatMarketChartPrice(
-          current.close,
+          candle.close,
           legendFormatters.pricePrecision,
           legendFormatters.formatNumber
         ),
@@ -281,9 +285,9 @@ export function createChartStyles(
       {
         title: "volume",
         value:
-          typeof current.volume === "number" && Number.isFinite(current.volume)
+          typeof candle.volume === "number" && Number.isFinite(candle.volume)
             ? formatMarketChartVolume(
-                current.volume,
+                candle.volume,
                 legendFormatters.formatNumber
               )
             : legendFormatters.notAvailable,

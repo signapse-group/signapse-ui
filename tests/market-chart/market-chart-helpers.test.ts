@@ -468,6 +468,57 @@ describe("native market-chart last-price marker", () => {
   })
 })
 
+describe("native market-chart readout", () => {
+  it("uses the latest loaded candle when inspection has been cleared", () => {
+    const latestCandle = {
+      close: 5.5,
+      high: 6,
+      low: 4,
+      open: 5,
+      timestamp: 200,
+      volume: 7,
+    }
+    const styles = createChartStyles(getMarketChartThemePalette("light"), {
+      formatDateTime: (value) => `time-${value}`,
+      formatNumber: (value) => String(value),
+      getReadoutCandle: () => latestCandle,
+      notAvailable: "N/A",
+      pricePrecision: 2,
+      timeframe: "1m",
+    })
+    const template = styles.candle.tooltip.legend.template
+
+    if (typeof template !== "function") {
+      throw new Error("Expected the native candle legend template")
+    }
+
+    const legends = template(
+      {
+        current: {
+          close: 1,
+          high: 2,
+          low: 0,
+          open: 1,
+          timestamp: 100,
+          volume: 3,
+        },
+        next: null,
+        prev: null,
+      },
+      {} as never
+    )
+
+    expect(legends.map(({ title, value }) => [title, value])).toEqual([
+      ["time", "time-200"],
+      ["open", "5"],
+      ["high", "6"],
+      ["low", "4"],
+      ["close", "5.5"],
+      ["volume", "7"],
+    ])
+  })
+})
+
 describe("market-chart annotation and drawing mappings", () => {
   it("groups nearby annotations by candle and preserves dominant priority", () => {
     const candles = [

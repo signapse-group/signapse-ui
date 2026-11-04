@@ -20,6 +20,24 @@ async function trackMarketChartCanvasText(page: Page) {
     trackedWindow.__sign498ChartCanvasTextDraws = []
 
     const nativeFillText = CanvasRenderingContext2D.prototype.fillText
+    const nativeClearRect = CanvasRenderingContext2D.prototype.clearRect
+    CanvasRenderingContext2D.prototype.clearRect = function (
+      x,
+      y,
+      width,
+      height
+    ) {
+      if (
+        this.canvas.closest('[role="application"][aria-label="Biểu đồ giá"]')
+      ) {
+        trackedWindow.__sign498ChartCanvasTextDraws =
+          trackedWindow.__sign498ChartCanvasTextDraws?.filter(
+            ({ canvas }) => canvas !== this.canvas
+          )
+      }
+
+      return nativeClearRect.call(this, x, y, width, height)
+    }
     CanvasRenderingContext2D.prototype.fillText = function (
       text,
       x,
@@ -254,6 +272,41 @@ async function expectNativeLegendShowsReadoutTime(page: Page, status: Locator) {
     .toBe(true)
 }
 
+async function expectMarketChartCrosshairAxisLabel(
+  page: Page,
+  visible: boolean
+) {
+  await expect
+    .poll(
+      () =>
+        page.evaluate(() => {
+          const chart = document.querySelector(
+            '[role="application"][aria-label="Biểu đồ giá"]'
+          )
+          const chartCanvases = new Set(
+            Array.from(chart?.querySelectorAll("canvas") ?? [])
+          )
+          const trackedWindow = window as Window & {
+            __sign498ChartCanvasTextDraws?: ChartCanvasTextDraw[]
+          }
+
+          return (
+            trackedWindow.__sign498ChartCanvasTextDraws?.some(
+              ({ canvas, text }) => {
+                if (!canvas.isConnected || !chartCanvases.has(canvas)) {
+                  return false
+                }
+
+                return /^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}$/.test(text.trim())
+              }
+            ) ?? false
+          )
+        }),
+      { timeout: 5_000 }
+    )
+    .toBe(visible)
+}
+
 async function dragChartTouch(
   page: Page,
   start: { x: number; y: number },
@@ -456,8 +509,43 @@ test.describe("P0 market chart workbench", () => {
     await page.mouse.move(5, 5)
     await page.mouse.move(hoverPoint.x, hoverPoint.y, { steps: 5 })
     await expect(status).not.toHaveText(latestReadout)
+    await expectMarketChartCrosshairAxisLabel(page, true)
+    await testInfo.attach("sign-511-before-mouse-axis-reset", {
+      body: await page.screenshot({ fullPage: true }),
+      contentType: "image/png",
+    })
+
+    const chartBounds = await chart.boundingBox()
+    if (!chartBounds) throw new Error("Market chart region was not laid out")
+    await clearChartCanvasTextDraws(page)
+    await page.mouse.move(
+      chartBounds.x + chartBounds.width - 4,
+      chartBounds.y + chartBounds.height * 0.5
+    )
+    await expect(status).toHaveText(latestReadout)
+    await expectNativeLegendShowsReadoutTime(page, status)
+    await expectMarketChartCrosshairAxisLabel(page, false)
+    await testInfo.attach("sign-511-after-mouse-axis-reset", {
+      body: await page.screenshot({ fullPage: true }),
+      contentType: "image/png",
+    })
+
+    const nextHoverPoint = {
+      x: wideCanvasBounds.x + wideCanvasBounds.width * 0.65,
+      y: wideCanvasBounds.y + wideCanvasBounds.height * 0.35,
+    }
+    await page.mouse.move(nextHoverPoint.x, nextHoverPoint.y)
+    await expect(status).not.toHaveText(latestReadout)
+    await expectMarketChartCrosshairAxisLabel(page, true)
+    await clearChartCanvasTextDraws(page)
     await page.mouse.move(5, 5)
     await expect(status).toHaveText(latestReadout)
+    await expectNativeLegendShowsReadoutTime(page, status)
+    await expectMarketChartCrosshairAxisLabel(page, false)
+    await testInfo.attach("sign-511-after-mouse-leave-reset", {
+      body: await page.screenshot({ fullPage: true }),
+      contentType: "image/png",
+    })
 
     await page.setViewportSize({ width: 1024, height: 768 })
     await expect(
@@ -621,6 +709,7 @@ test.describe("P0 market chart workbench", () => {
     await chart.press("Escape")
     await expect(status).toHaveText(latestReadout)
     await expectNativeLegendShowsReadoutTime(page, status)
+    await expectMarketChartCrosshairAxisLabel(page, false)
     await chart.evaluate((element) => (element as HTMLElement).blur())
     await expect(status).toHaveText(latestReadout)
 
@@ -629,6 +718,32 @@ test.describe("P0 market chart workbench", () => {
     await expect(status).toHaveText(latestReadout)
     await expectNoHorizontalOverflow(page)
     await testInfo.attach("sign-474-effective-viewport-760x512", {
+      body: await page.screenshot({ fullPage: true }),
+      contentType: "image/png",
+    })
+
+    await page.setViewportSize({ width: 1520, height: 1024 })
+    await page.getByRole("button", { name: "Nhóm đường: Đường ngang" }).click()
+    await page.getByRole("menuitem", { name: "Đường dọc" }).click()
+    const drawingCanvasBounds = await page
+      .locator("canvas")
+      .first()
+      .boundingBox()
+    if (!drawingCanvasBounds)
+      throw new Error("Market chart canvas was not laid out")
+    await page.mouse.click(
+      drawingCanvasBounds.x + drawingCanvasBounds.width * 0.65,
+      drawingCanvasBounds.y + drawingCanvasBounds.height * 0.4
+    )
+    const deleteSelectedDrawing = page
+      .getByLabel("Công cụ vẽ trên biểu đồ")
+      .getByRole("button", { name: "Xóa bản vẽ đang chọn" })
+    await expect(deleteSelectedDrawing).toBeEnabled()
+    await clearChartCanvasTextDraws(page)
+    await page.mouse.move(5, 5)
+    await expect(deleteSelectedDrawing).toBeEnabled()
+    await expectMarketChartCrosshairAxisLabel(page, false)
+    await testInfo.attach("sign-511-drawing-survives-inspection-reset", {
       body: await page.screenshot({ fullPage: true }),
       contentType: "image/png",
     })
@@ -997,10 +1112,7 @@ test.describe("P0 market chart workbench", () => {
       name: "Xem bài viết",
       exact: true,
     })
-    await expect(articleLink).toHaveAttribute(
-      "href",
-      "/vi/news-articles/71"
-    )
+    await expect(articleLink).toHaveAttribute("href", "/vi/news-articles/71")
     await testInfo.attach("SIGN-476-event-quick-detail-wide-1520x1024", {
       body: await page.screenshot({ animations: "disabled" }),
       contentType: "image/png",
@@ -1009,10 +1121,12 @@ test.describe("P0 market chart workbench", () => {
     await page.keyboard.press("Escape")
     await expect(eventQuickDetail).toBeHidden()
     await expect(finalEvent).toBeFocused()
-    const annotationDetail = page.getByRole("dialog").filter({ has: finalEvent })
-    await expect(annotationDetail.getByText("Fixture evidence 125")).toHaveCount(
-      0
-    )
+    const annotationDetail = page
+      .getByRole("dialog")
+      .filter({ has: finalEvent })
+    await expect(
+      annotationDetail.getByText("Fixture evidence 125")
+    ).toHaveCount(0)
     await expect(
       annotationDetail.getByRole("link", { name: "Xem bài viết", exact: true })
     ).toHaveCount(0)
@@ -1441,9 +1555,9 @@ test.describe("P0 market chart workbench", () => {
         .getByRole("status")
         .getByText("Không có quyền xem sự kiện", { exact: true })
     ).toBeVisible()
-    await expect(annotationDialog.getByText("Fixture market update")).toHaveCount(
-      0
-    )
+    await expect(
+      annotationDialog.getByText("Fixture market update")
+    ).toHaveCount(0)
     await expect(page.locator("#market-chart-asset")).toBeVisible()
     await expect(annotationMarker).toBeVisible()
     await expect(
@@ -1926,6 +2040,7 @@ test.describe("P0 market chart touch inspection", () => {
     page,
     fixture,
   }) => {
+    await trackMarketChartCanvasText(page)
     await page.clock.install({ time: new Date(MARKET_CHART_FIXTURE_NOW) })
     await fixture.setScenario("/market-charts/candles", "success", "GET")
     await fixture.setScenario("/market-charts/live", "no-quote", "GET")
@@ -1959,6 +2074,7 @@ test.describe("P0 market chart touch inspection", () => {
 
     await page.touchscreen.tap(firstTap.x, firstTap.y)
     await expect(status).not.toHaveText(latestReadout)
+    await expectMarketChartCrosshairAxisLabel(page, true)
     const firstInspection = await status.innerText()
     await page.clock.runFor(550)
     await expect(status).toHaveText(firstInspection)
@@ -1969,12 +2085,16 @@ test.describe("P0 market chart touch inspection", () => {
     await page.clock.runFor(550)
     await expect(status).toHaveText(draggedInspection)
 
+    await clearChartCanvasTextDraws(page)
     await page.touchscreen.tap(exitTap.x, exitTap.y)
     await expect(status).toHaveText(latestReadout)
+    await expectNativeLegendShowsReadoutTime(page, status)
+    await expectMarketChartCrosshairAxisLabel(page, false)
 
     await page.clock.runFor(550)
     await page.touchscreen.tap(reselectTap.x, reselectTap.y)
     await expect(status).not.toHaveText(latestReadout)
+    await expectMarketChartCrosshairAxisLabel(page, true)
   })
 })
 
