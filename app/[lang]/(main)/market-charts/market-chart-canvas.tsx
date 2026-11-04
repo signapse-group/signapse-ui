@@ -97,6 +97,7 @@ import {
   resolveKLineChartLocale,
   KLINE_CHART_VI_LOCALE,
 } from "./market-chart-period"
+import { clearMarketChartCrosshair } from "./market-chart-inspection"
 import {
   createKLineData,
   getFiniteVolume,
@@ -864,6 +865,12 @@ export const MarketChartCanvas = forwardRef<
       notAvailable: dictionary.marketCharts.format.notAvailable,
       pricePrecision: pricePrecision ?? 4,
       timeframe,
+      getReadoutCandle: (crosshairCandle: KLineData | null) => {
+        if (keyboardInspectionIndexRef.current !== null) return crosshairCandle
+
+        const candles = chartRef.current?.getDataList()
+        return candles?.[candles.length - 1] ?? crosshairCandle
+      },
     }),
     [
       dictionary.marketCharts.format.notAvailable,
@@ -945,7 +952,6 @@ export const MarketChartCanvas = forwardRef<
 
       const candles = chart.getDataList()
       const latest = candles[candles.length - 1]
-      chart.executeAction("onCrosshairChange", {})
       setChartReadout(latest ? readoutFormatterRef.current(latest) : "")
     },
     [setChartReadout]
@@ -963,6 +969,7 @@ export const MarketChartCanvas = forwardRef<
     touchSelectionPointRef.current = null
     touchMouseGuardUntilRef.current = 0
     touchGestureRef.current = null
+    clearMarketChartCrosshair(chart)
     setLatestChartReadout(chart)
   }
 
@@ -1529,6 +1536,7 @@ export const MarketChartCanvas = forwardRef<
       keyboardInspectingRef.current = false
       touchInspectionActiveRef.current = false
       touchSelectionPointRef.current = null
+      clearMarketChartCrosshair(chart)
       setLatestChartReadout(chart)
     }
     const handleChartMouseUp = () => {
@@ -1572,6 +1580,7 @@ export const MarketChartCanvas = forwardRef<
         keyboardInspectingRef.current = false
         touchInspectionActiveRef.current = false
         touchSelectionPointRef.current = null
+        clearMarketChartCrosshair(chart)
         setLatestChartReadout(chart)
       }
     }
@@ -1601,6 +1610,7 @@ export const MarketChartCanvas = forwardRef<
         keyboardInspectingRef.current = false
         touchInspectionActiveRef.current = false
         touchSelectionPointRef.current = null
+        clearMarketChartCrosshair(chart)
         setLatestChartReadout(chart)
       } else if (
         gesture.inspectingAtStart ||
@@ -1614,6 +1624,7 @@ export const MarketChartCanvas = forwardRef<
         keyboardInspectingRef.current = false
         touchInspectionActiveRef.current = false
         touchSelectionPointRef.current = null
+        clearMarketChartCrosshair(chart)
         setLatestChartReadout(chart)
       }
 
