@@ -942,10 +942,16 @@ test.describe("P0 market chart workbench", () => {
     expect(String(calendarRequest?.query)).toContain("to=")
   })
 
-  test("keeps all grouped annotations accessible and opens their evidence article", async ({
+  test("keeps all grouped HOT annotations accessible through Event quick detail", async ({
     page,
     fixture,
-  }) => {
+  }, testInfo) => {
+    await fixture.setPermissions([
+      "market-chart:read",
+      "watchlist:read",
+      "event:read",
+      "news-article:read",
+    ])
     await fixture.setScenario(
       "/market-charts/candles",
       "full-then-empty",
@@ -956,6 +962,7 @@ test.describe("P0 market chart workbench", () => {
       "annotations-many",
       "GET"
     )
+    await page.setViewportSize({ width: 1520, height: 1024 })
     await page.goto("/vi/market-charts?assetId=101&timeframe=1h")
 
     const annotationMarker = page.getByRole("button", {
@@ -975,26 +982,56 @@ test.describe("P0 market chart workbench", () => {
     })
     await expect(finalEvent).toBeVisible()
     await finalEvent.scrollIntoViewIfNeeded()
-    await finalEvent.click()
+    await finalEvent.focus()
+    await finalEvent.press("Enter")
+
+    const eventQuickDetail = page.locator('[data-quick-detail-profile="event"]')
+    await expect(eventQuickDetail).toBeVisible()
     await expect(
-      page.getByRole("heading", {
+      eventQuickDetail.getByRole("heading", {
         name: "Macro liquidity conditions stabilize",
         exact: true,
       })
     ).toBeVisible()
-
-    await page.getByRole("button", { name: "Đóng", exact: true }).click()
-    const finalEvidenceAction = page
-      .getByRole("link", { name: "Xem bài viết", exact: true })
-      .last()
-    await expect(finalEvidenceAction).toBeVisible()
-    await expect(finalEvidenceAction).toHaveAttribute(
+    const articleLink = eventQuickDetail.getByRole("link", {
+      name: "Xem bài viết",
+      exact: true,
+    })
+    await expect(articleLink).toHaveAttribute(
       "href",
       "/vi/news-articles/71"
     )
-    await finalEvidenceAction.scrollIntoViewIfNeeded()
-    await finalEvidenceAction.click()
-    await expect(page).toHaveURL(/\/vi\/news-articles\/71$/)
+    await testInfo.attach("SIGN-476-event-quick-detail-wide-1520x1024", {
+      body: await page.screenshot({ animations: "disabled" }),
+      contentType: "image/png",
+    })
+
+    await page.keyboard.press("Escape")
+    await expect(eventQuickDetail).toBeHidden()
+    await expect(finalEvent).toBeFocused()
+    const annotationDetail = page.getByRole("dialog").filter({ has: finalEvent })
+    await expect(annotationDetail.getByText("Fixture evidence 125")).toHaveCount(
+      0
+    )
+    await expect(
+      annotationDetail.getByRole("link", { name: "Xem bài viết", exact: true })
+    ).toHaveCount(0)
+    await expect(
+      annotationDetail.getByRole("link", { name: "Mở bài gốc", exact: true })
+    ).toHaveCount(0)
+    await testInfo.attach("SIGN-476-hot-annotation-detail-wide-1520x1024", {
+      body: await page.screenshot({ animations: "disabled" }),
+      contentType: "image/png",
+    })
+
+    await finalEvent.press("Enter")
+    await expect(eventQuickDetail).toBeVisible()
+    await eventQuickDetail
+      .getByRole("link", { name: "Xem bài viết", exact: true })
+      .click()
+    await expect(page).toHaveURL(/\/vi\/news-articles\/71$/, {
+      timeout: 30_000,
+    })
     await expect(
       page.getByRole("heading", { name: "Fixture market update", exact: true })
     ).toBeVisible()
@@ -1334,55 +1371,19 @@ test.describe("P0 market chart workbench", () => {
     ).toHaveCount(0)
   })
 
-  test("keeps context visible and gates event/article details by permission", async ({
+  test("keeps HOT context visible and requires Event access before evidence", async ({
     page,
     fixture,
   }) => {
+    await page.clock.install({ time: new Date(MARKET_CHART_FIXTURE_NOW) })
     await fixture.setScenario(
       "/market-charts/candles",
       "full-then-empty",
       "GET"
     )
-    await fixture.setPermissions(["market-chart:read", "watchlist:read"])
-    await page.goto("/vi/market-charts?assetId=101&timeframe=1h")
-
-    const annotationMarker = page.getByRole("button", {
-      name: "Mở sự kiện Central bank signals a slower easing path",
-      exact: true,
-    })
-    await expect(annotationMarker).toBeVisible()
-    await annotationMarker.click()
-
-    const annotationDialog = page.getByRole("dialog", { name: "1 sự kiện" })
-    await expect(annotationDialog).toBeVisible()
-    await expect(
-      annotationDialog.getByText("Fixture market update", { exact: true })
-    ).toBeVisible()
-    await expect(
-      annotationDialog.getByText("Không có quyền xem sự kiện", { exact: true })
-    ).toBeVisible()
-    await expect(
-      annotationDialog.getByText("Không có quyền xem bài viết", { exact: true })
-    ).toBeVisible()
-    await expect(annotationMarker).toBeVisible()
-    await expect(
-      page.getByRole("button", {
-        name: "Central bank signals a slower easing path",
-        exact: true,
-      })
-    ).toHaveCount(0)
-    await expect(
-      page.getByRole("button", { name: "Xem bài viết", exact: true })
-    ).toHaveCount(0)
-  })
-
-  test("navigates to canonical article detail when permission is granted", async ({
-    page,
-    fixture,
-  }) => {
     await fixture.setScenario(
-      "/market-charts/candles",
-      "full-then-empty",
+      "/market-charts/annotations",
+      "annotations-hot-event-reaction",
       "GET"
     )
     await fixture.setPermissions([
@@ -1400,20 +1401,115 @@ test.describe("P0 market chart workbench", () => {
     await annotationMarker.click()
 
     const annotationDialog = page.getByRole("dialog", { name: "1 sự kiện" })
-    const articleLink = annotationDialog.getByRole("link", {
+    await expect(annotationDialog).toBeVisible()
+    await expect(
+      annotationDialog.getByText(
+        "Synthetic chart annotation for the browser quality gate.",
+        { exact: true }
+      )
+    ).toBeVisible()
+    await expect(annotationDialog.getByText(/Dự đoán/)).toBeVisible()
+    await expect(
+      annotationDialog.getByText("Tích cực", { exact: true })
+    ).toBeVisible()
+    const state = await fixture.state()
+    const annotationRequest = state.requests.find(
+      (request) => request.path === "/market-charts/annotations"
+    )
+    const annotationParams = new URLSearchParams(
+      String(annotationRequest?.query)
+    )
+    const annotationTime = new Date(
+      Date.parse(annotationParams.get("to") ?? "") - 1000
+    )
+    const expectedTimestamp = await page.evaluate(
+      (value) =>
+        new Intl.DateTimeFormat("vi-VN", {
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+        }).format(new Date(value)),
+      annotationTime.toISOString()
+    )
+    await expect(
+      annotationDialog.getByText(expectedTimestamp, { exact: true })
+    ).toBeVisible()
+    await expect(
+      annotationDialog
+        .getByRole("status")
+        .getByText("Không có quyền xem sự kiện", { exact: true })
+    ).toBeVisible()
+    await expect(annotationDialog.getByText("Fixture market update")).toHaveCount(
+      0
+    )
+    await expect(page.locator("#market-chart-asset")).toBeVisible()
+    await expect(annotationMarker).toBeVisible()
+    await expect(
+      page.getByRole("button", {
+        name: "Central bank signals a slower easing path",
+        exact: true,
+      })
+    ).toHaveCount(0)
+    await expect(
+      annotationDialog.getByRole("link", { name: "Xem bài viết", exact: true })
+    ).toHaveCount(0)
+    await expect(
+      annotationDialog.getByRole("link", { name: "Mở bài gốc", exact: true })
+    ).toHaveCount(0)
+  })
+
+  test("navigates to the canonical News page from Event quick detail", async ({
+    page,
+    fixture,
+  }) => {
+    await fixture.setScenario(
+      "/market-charts/candles",
+      "full-then-empty",
+      "GET"
+    )
+    await fixture.setPermissions([
+      "market-chart:read",
+      "watchlist:read",
+      "event:read",
+      "news-article:read",
+    ])
+    await page.goto("/vi/market-charts?assetId=101&timeframe=1h")
+
+    const annotationMarker = page.getByRole("button", {
+      name: "Mở sự kiện Central bank signals a slower easing path",
+      exact: true,
+    })
+    await expect(annotationMarker).toBeVisible()
+    await annotationMarker.click()
+
+    const annotationDialog = page.getByRole("dialog", { name: "1 sự kiện" })
+    await annotationDialog
+      .getByRole("button", {
+        name: "Central bank signals a slower easing path",
+        exact: true,
+      })
+      .click()
+
+    const eventQuickDetail = page.locator('[data-quick-detail-profile="event"]')
+    await expect(eventQuickDetail).toBeVisible()
+    const articleLink = eventQuickDetail.getByRole("link", {
       name: "Xem bài viết",
       exact: true,
     })
     await expect(articleLink).toHaveAttribute("href", "/vi/news-articles/71")
     await articleLink.click()
 
-    await expect(page).toHaveURL(/\/vi\/news-articles\/71$/)
+    await expect(page).toHaveURL(/\/vi\/news-articles\/71$/, {
+      timeout: 30_000,
+    })
     await expect(
       page.getByRole("heading", { name: "Fixture market update", exact: true })
     ).toBeVisible()
   })
 
-  test("renders an unsafe evidence URL as text instead of a link", async ({
+  test("does not expose HOT evidence or its URL in annotation detail", async ({
     page,
     fixture,
   }) => {
@@ -1435,10 +1531,11 @@ test.describe("P0 market chart workbench", () => {
     const annotationDialog = page.getByRole("dialog", { name: "1 sự kiện" })
     await expect(
       annotationDialog.getByText("javascript:alert(1)", { exact: true })
-    ).toBeVisible()
-    await expect(
-      annotationDialog.locator('a[href^="javascript:"]')
     ).toHaveCount(0)
+    await expect(
+      annotationDialog.getByText("Fixture market update", { exact: true })
+    ).toHaveCount(0)
+    await expect(annotationDialog.getByRole("link")).toHaveCount(0)
   })
 
   test("filters upcoming events by impact and range with chart permission only", async ({

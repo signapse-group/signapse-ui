@@ -1309,7 +1309,18 @@ function marketChartAnnotations(url, scenario) {
             : "Central bank signals a slower easing path",
         summary: "Synthetic chart annotation for the browser quality gate.",
         confidence: 0.92,
-        topMarketReaction: null,
+        topMarketReaction:
+          scenario === "annotations-hot-event-reaction"
+            ? {
+                id: 610,
+                direction: "BULLISH",
+                timeHorizon: "SHORT_TERM",
+                confidence: 0.92,
+                reasoning: "Synthetic reaction for the browser quality gate.",
+                observedAt: annotationTime,
+                outcome: null,
+              }
+            : null,
         marketReactions: [],
         evidence: [
           {
@@ -2821,7 +2832,22 @@ function responseForRoute(state, method, pathname, url, body, locale = "en") {
       ...event,
       assets: [],
       themes: [],
-      evidence: [],
+      evidence:
+        id === 61 || id === 63
+          ? [
+              {
+                newsArticleId: 71,
+                newsArticleTitle: "Fixture market update",
+                newsArticleUrl: "https://fixture.invalid/news/71",
+                sourceName: "Fixture Wire",
+                publishedAt: NOW,
+                evidenceRole: "PRIMARY",
+                confidence: 0.92,
+                evidenceNote:
+                  "Synthetic evidence for the browser quality gate.",
+              },
+            ]
+          : [],
       marketReactions: [],
     }
   }
