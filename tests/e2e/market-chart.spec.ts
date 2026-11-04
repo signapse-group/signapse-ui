@@ -894,11 +894,13 @@ test.describe("P0 market chart workbench", () => {
     ).toBeVisible()
   })
 
-  test("shows the warm episode source timestamp in chart details", async ({
+  test("shows ordered Warm snapshots with their own reasoning and reaction", async ({
     page,
     fixture,
-  }) => {
+  }, testInfo) => {
     await page.clock.install({ time: new Date(MARKET_CHART_FIXTURE_NOW) })
+    await page.emulateMedia({ colorScheme: "dark" })
+    await page.setViewportSize({ width: 1520, height: 1024 })
     await fixture.setScenario(
       "/market-charts/annotations",
       "annotations-warm-episode",
@@ -918,9 +920,12 @@ test.describe("P0 market chart workbench", () => {
     const annotationRequest = state.requests
       .filter((request) => request.path === "/market-charts/annotations")
       .at(-1)
-    const annotationTo = new URLSearchParams(
+    const annotationParams = new URLSearchParams(
       String(annotationRequest?.query)
-    ).get("to")
+    )
+    const annotationFrom = annotationParams.get("from")
+    const annotationTo = annotationParams.get("to")
+    expect(annotationFrom).toBeTruthy()
     expect(annotationTo).toBeTruthy()
 
     const expectedTime = new Intl.DateTimeFormat("vi-VN", {
@@ -930,13 +935,102 @@ test.describe("P0 market chart workbench", () => {
       hour: "2-digit",
       minute: "2-digit",
       timeZone: "Asia/Ho_Chi_Minh",
-    }).format(new Date(Date.parse(annotationTo ?? "") - 12 * 60 * 60 * 1000))
+    }).format(new Date(annotationFrom ?? ""))
 
+    const detail = page.getByRole("dialog")
     await expect(
-      page
-        .getByRole("dialog")
-        .getByText(`Bắt đầu giai đoạn: ${expectedTime}`, { exact: true })
+      detail.getByText(`Bắt đầu giai đoạn: ${expectedTime}`, { exact: true })
     ).toBeVisible()
+    await expect(detail.getByText("Tóm tắt giai đoạn")).toBeVisible()
+    await expect(detail.getByText("Fixture warm episode")).toBeVisible()
+
+    const snapshots = detail.locator("article")
+    await expect(snapshots).toHaveCount(2)
+    await expect(snapshots.locator("h4")).toHaveText([
+      "U.S. debt snapshot",
+      "UAE trade snapshot",
+    ])
+
+    const firstSnapshot = snapshots.nth(0)
+    const secondSnapshot = snapshots.nth(1)
+    const firstTitle = firstSnapshot.getByRole("heading", {
+      name: "U.S. debt snapshot",
+      exact: true,
+    })
+    const secondTitle = secondSnapshot.getByRole("heading", {
+      name: "UAE trade snapshot",
+      exact: true,
+    })
+    await expect(firstTitle).toBeVisible()
+    await expect(secondTitle).toBeVisible()
+    expect(
+      await firstTitle.evaluate((title) => title.closest("a,button"))
+    ).toBe(null)
+    expect(
+      await secondTitle.evaluate((title) => title.closest("a,button"))
+    ).toBe(null)
+
+    await expect(detail.getByText("Lý giải", { exact: true })).toHaveCount(1)
+    await expect(
+      firstSnapshot.getByText(
+        "Persistent deficits may increase demand for inflation hedges over the medium term.",
+        { exact: true }
+      )
+    ).toBeVisible()
+    await expect(
+      secondSnapshot.getByText("Lý giải", { exact: true })
+    ).toHaveCount(0)
+
+    await expect(firstSnapshot.getByText("Chủ thể chính")).toBeVisible()
+    await expect(firstSnapshot.getByText("Tích cực")).toBeVisible()
+    await expect(firstSnapshot.getByText("MEDIUM_TERM")).toBeVisible()
+    await expect(firstSnapshot.getByText("Tin cậy 70%")).toBeVisible()
+    await expect(firstSnapshot.getByText("Tiêu cực")).toHaveCount(0)
+    await expect(firstSnapshot.getByText("Tin cậy 5%")).toHaveCount(0)
+
+    await expect(secondSnapshot.getByText("Tài sản bị ảnh hưởng")).toBeVisible()
+    await expect(secondSnapshot.getByText("Tiêu cực")).toBeVisible()
+    await expect(secondSnapshot.getByText("SHORT_TERM")).toBeVisible()
+    await expect(secondSnapshot.getByText("Tin cậy 35%")).toBeVisible()
+    await expect(secondSnapshot.getByText("Tích cực")).toHaveCount(0)
+    await expect(secondSnapshot.getByText("Tin cậy 95%")).toHaveCount(0)
+
+    await testInfo.attach("SIGN-478-warm-period-dark-wide", {
+      body: await page.screenshot({ animations: "disabled", fullPage: true }),
+      contentType: "image/png",
+    })
+
+    await page.emulateMedia({ colorScheme: "light" })
+    await page.setViewportSize({ width: 1024, height: 768 })
+    await expect(detail).toBeVisible()
+    await expectNoHorizontalOverflow(page)
+    await testInfo.attach("SIGN-478-warm-period-light-compact", {
+      body: await page.screenshot({ animations: "disabled", fullPage: true }),
+      contentType: "image/png",
+    })
+
+    await page.emulateMedia({ colorScheme: "dark" })
+    await page.setViewportSize({ width: 390, height: 844 })
+    await expect(detail).toBeHidden()
+    await expect(
+      page.getByRole("heading", {
+        name: "U.S. debt snapshot",
+        exact: true,
+      })
+    ).toHaveCount(1)
+    await expect(
+      page.getByRole("heading", {
+        name: "UAE trade snapshot",
+        exact: true,
+      })
+    ).toHaveCount(1)
+    await expectNoHorizontalOverflow(page)
+    await testInfo.attach("SIGN-478-warm-period-dark-mobile", {
+      body: await page.screenshot({ animations: "disabled", fullPage: true }),
+      contentType: "image/png",
+    })
+    await page.setViewportSize({ width: 360, height: 844 })
+    await expectNoHorizontalOverflow(page)
   })
 
   test("keeps the chart and valid annotations when an annotation refresh fails", async ({

@@ -2048,6 +2048,7 @@ export const en: Dictionary = {
       warmEpisodePeriodStart: "Period start: {time}",
       warmEpisodeSummaryTitle: "Period summary",
       warmEpisodeEventsTitle: "Events in period",
+      warmEpisodeEventReasoningTitle: "Reasoning",
       episodeOutcomeTitle: "Period outcome",
       openMany: "Open {count} events at {time}",
       openOne: "Open event {title}",

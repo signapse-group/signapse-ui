@@ -23,6 +23,7 @@ import {
 } from "@/app/[lang]/(main)/market-charts/market-chart-annotations"
 import {
   createKLineData,
+  getMarketChartWarmBandPriceRange,
   mergeCandleItems,
   normalizeCandleItems,
 } from "@/app/[lang]/(main)/market-charts/market-chart-candle-helpers"
@@ -434,6 +435,71 @@ describe("market-chart annotation and drawing mappings", () => {
     expect(groups[0]?.annotations[0]?.warmEpisode?.periodStart).toBe(
       periodStart
     )
+  })
+
+  it("includes warm episodes by start time in the loaded half-open range", () => {
+    const candles = [
+      candle("2026-07-29T00:00:00.000Z", 100),
+      candle("2026-07-30T00:00:00.000Z", 110),
+    ]
+    const loadedRangeEnd = "2026-07-31T00:00:00.000Z"
+
+    expect(
+      createMarketChartWarmAnnotationGroups(
+        [warmAnnotation(candles[0]!.time, candles[1]!.time)],
+        candles,
+        "1d"
+      )
+    ).toHaveLength(1)
+    expect(
+      createMarketChartWarmAnnotationGroups(
+        [warmAnnotation(loadedRangeEnd, "2026-08-01T00:00:00.000Z")],
+        candles,
+        "1d"
+      )
+    ).toHaveLength(0)
+    expect(
+      createMarketChartWarmAnnotationGroups(
+        [
+          warmAnnotation(
+            "2026-07-28T12:00:00.000Z",
+            "2026-07-29T12:00:00.000Z"
+          ),
+        ],
+        candles,
+        "1d"
+      )
+    ).toHaveLength(0)
+  })
+
+  it("uses loaded candles in a half-open Warm period price range", () => {
+    const candles = [
+      candle("2026-07-29T00:00:00.000Z", 100),
+      candle("2026-07-29T01:00:00.000Z", 110),
+      candle("2026-07-29T02:00:00.000Z", 1_000),
+    ]
+
+    expect(
+      getMarketChartWarmBandPriceRange({
+        candles,
+        startTime: "2026-07-29T00:00:00.000Z",
+        endTime: "2026-07-29T02:00:00.000Z",
+      })
+    ).toEqual({ high: 112, low: 98 })
+    expect(
+      getMarketChartWarmBandPriceRange({
+        candles: [],
+        startTime: "2026-07-29T00:00:00.000Z",
+        endTime: "2026-07-29T02:00:00.000Z",
+      })
+    ).toBeNull()
+    expect(
+      getMarketChartWarmBandPriceRange({
+        candles: [candles[2]!],
+        startTime: "2026-07-29T00:00:00.000Z",
+        endTime: "2026-07-29T02:00:00.000Z",
+      })
+    ).toBeNull()
   })
 
   it("groups high-impact calendar events against the nearest candle", () => {

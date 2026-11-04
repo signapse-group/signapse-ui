@@ -2665,6 +2665,7 @@ function MarketChartWarmEpisodeAnnotationDetail({
                       ),
                     })
                   : null
+              const reasoning = event.reaction?.reasoning?.trim()
 
               return (
                 <article
@@ -2685,6 +2686,16 @@ function MarketChartWarmEpisodeAnnotationDetail({
                     <p className="line-clamp-3 text-sm text-muted-foreground">
                       {event.summary}
                     </p>
+                  ) : null}
+                  {reasoning ? (
+                    <div className="flex flex-col gap-1">
+                      <p className="text-xs font-medium text-muted-foreground">
+                        {labels.warmEpisodeEventReasoningTitle}
+                      </p>
+                      <p className="text-sm leading-relaxed text-muted-foreground">
+                        {reasoning}
+                      </p>
+                    </div>
                   ) : null}
                   {relationLabel ||
                   direction ||

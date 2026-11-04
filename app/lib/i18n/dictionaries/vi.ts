@@ -2029,6 +2029,7 @@ export const vi = {
       warmEpisodePeriodStart: "Bắt đầu giai đoạn: {time}",
       warmEpisodeSummaryTitle: "Tóm tắt giai đoạn",
       warmEpisodeEventsTitle: "Sự kiện trong giai đoạn",
+      warmEpisodeEventReasoningTitle: "Lý giải",
       episodeOutcomeTitle: "Kết quả giai đoạn",
       openMany: "Mở {count} sự kiện tại {time}",
       openOne: "Mở sự kiện {title}",
