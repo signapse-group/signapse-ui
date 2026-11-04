@@ -1846,21 +1846,34 @@ test.describe("P0 market chart workbench", () => {
               request.path === "/market-charts/economic-calendar-events"
           )
         )
-    const isFutureCalendarRequest = (request: Record<string, unknown>) => {
+    const getRequestWindow = (request: Record<string, unknown>) => {
       const query = new URLSearchParams(String(request.query))
-      const requestedFrom = Date.parse(query.get("from") ?? "")
-      const requestedTo = Date.parse(query.get("to") ?? "")
 
-      return (
-        requestedFrom >= expectedFrom &&
-        requestedFrom < expectedFrom + 60_000 &&
-        requestedTo >= earliestExpectedTo
-      )
+      return {
+        from: Date.parse(query.get("from") ?? ""),
+        to: Date.parse(query.get("to") ?? ""),
+      }
+    }
+    const isFutureCalendarRequest = (request: Record<string, unknown>) => {
+      const { from, to } = getRequestWindow(request)
+
+      return to - from === 7 * 24 * 60 * 60 * 1000 + 60 * 60 * 1000
     }
     await expect
-      .poll(async () =>
-        (await calendarRequests()).some(isFutureCalendarRequest)
-      )
+      .poll(async () => {
+        const requests = await calendarRequests()
+
+        return requests.some((request) => {
+          const { from, to } = getRequestWindow(request)
+
+          return (
+            isFutureCalendarRequest(request) &&
+            from >= expectedFrom &&
+            from < expectedFrom + 60_000 &&
+            to >= earliestExpectedTo
+          )
+        })
+      })
       .toBe(true)
 
     const futureRefreshCount = async () =>

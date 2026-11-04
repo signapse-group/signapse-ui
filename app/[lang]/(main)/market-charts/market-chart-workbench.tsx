@@ -63,7 +63,6 @@ import {
 import { EVENT_READ_PERMISSIONS } from "@/app/lib/events/permissions"
 import { WorkspaceWatchlistAssetListItemResponse } from "@/app/lib/watchlists/definitions"
 import { AppTimeMetadata } from "@/components/app-time-metadata"
-import { LocalizedLink } from "@/components/localized-link"
 import { useHasAnyPermission } from "@/components/permission-provider"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"

@@ -543,6 +543,74 @@ describe("Market chart quote-driven candle flow", () => {
     await act(async () => resolveCandleRequest())
   })
 
+  it("distinguishes loading, an empty calendar, and no selected impacts", async () => {
+    getCandles.mockResolvedValue({
+      success: true,
+      data: createCandleResponse(101, "1m"),
+    })
+
+    let resolveCalendarRequest!: (result: {
+      success: true
+      data: ReturnType<typeof createNextEvent>[]
+    }) => void
+    const futureCalendarResult = new Promise<{
+      success: true
+      data: ReturnType<typeof createNextEvent>[]
+    }>((resolve) => {
+      resolveCalendarRequest = resolve
+    })
+    getCalendarEvents.mockImplementation(async (request) =>
+      Date.parse(request.to) > Date.now()
+        ? futureCalendarResult
+        : { success: true, data: [] }
+    )
+
+    render(
+      <LocalizationProvider locale="vi" dictionary={viDictionary}>
+        <MarketChartWorkbench
+          watchlistAssets={watchlistAssets}
+          watchlistError={null}
+        />
+      </LocalizationProvider>
+    )
+
+    const loadingButton = await screen.findByRole("button", {
+      name: new RegExp(viDictionary.marketCharts.calendar.loadingEvents),
+    })
+    expect(loadingButton).toBeDisabled()
+
+    await act(async () => {
+      resolveCalendarRequest({ success: true, data: [] })
+    })
+
+    const emptyButton = await screen.findByRole("button", {
+      name: new RegExp(viDictionary.marketCharts.calendar.noNextEvent),
+    })
+    expect(emptyButton).toBeDisabled()
+    expect(emptyButton).not.toHaveTextContent(
+      viDictionary.marketCharts.calendar.loadingEvents
+    )
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: viDictionary.marketCharts.controls.eventSettingsAria,
+      })
+    )
+    fireEvent.click(
+      screen.getByRole("checkbox", {
+        name: viDictionary.marketCharts.controls.impactOptionLabels.HIGH,
+      })
+    )
+
+    const noImpactButton = await screen.findByRole("button", {
+      name: new RegExp(viDictionary.marketCharts.calendar.noSelectedImpacts),
+    })
+    expect(noImpactButton).toBeDisabled()
+    expect(noImpactButton).not.toHaveTextContent(
+      viDictionary.marketCharts.calendar.noNextEvent
+    )
+  })
+
   it("keeps the clicked Next event open when refresh selects another event", async () => {
     const intervalSpy = vi.spyOn(window, "setInterval")
     getCandles.mockResolvedValue({
