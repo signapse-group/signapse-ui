@@ -60,13 +60,12 @@ import {
   isMarketChartTimeframe,
 } from "@/app/lib/market-charts/definitions"
 import { EVENT_READ_PERMISSIONS } from "@/app/lib/events/permissions"
-import { NEWS_ARTICLE_READ_PERMISSIONS } from "@/app/lib/news-articles/permissions"
 import { WorkspaceWatchlistAssetListItemResponse } from "@/app/lib/watchlists/definitions"
 import { AppTimeMetadata } from "@/components/app-time-metadata"
 import { LocalizedLink } from "@/components/localized-link"
 import { useHasAnyPermission } from "@/components/permission-provider"
 import { Badge } from "@/components/ui/badge"
-import { Button, buttonVariants } from "@/components/ui/button"
+import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
   Empty,
@@ -113,22 +112,6 @@ const MARKET_CHART_CALENDAR_VISIBILITY_STORAGE_KEY =
   "signapse:market-charts:calendar-layer:v1"
 const MARKET_CHART_COMPACT_WIDTH_PX = 768
 const MARKET_CHART_COMPACT_HEIGHT_PX = 720
-
-function getSafeEvidenceHref(value: string | null | undefined) {
-  if (!value?.trim()) {
-    return null
-  }
-
-  try {
-    const url = new URL(value)
-
-    return url.protocol === "http:" || url.protocol === "https:"
-      ? url.href
-      : null
-  } catch {
-    return null
-  }
-}
 
 function readStoredMarketChartCalendarVisibility(): boolean | null {
   if (typeof window === "undefined") {
@@ -2395,9 +2378,6 @@ function MarketChartHotAnnotationDetail({
   onOutcomeRangeLeave: () => void
 }) {
   const canReadEvents = useHasAnyPermission(EVENT_READ_PERMISSIONS)
-  const canReadNewsArticles = useHasAnyPermission(NEWS_ARTICLE_READ_PERMISSIONS)
-  const evidenceRoleLabels = localization.dictionary.events
-    .evidenceRoleLabels as Record<string, string>
 
   return (
     <div className="flex flex-col gap-3">
@@ -2444,7 +2424,7 @@ function MarketChartHotAnnotationDetail({
                 </h3>
               ) : null}
               {eventId && !canReadEvents ? (
-                <p className="text-xs text-muted-foreground">
+                <p role="status" className="text-xs text-muted-foreground">
                   {localization.dictionary.events.quickAccessDeniedTitle}
                 </p>
               ) : null}
@@ -2461,123 +2441,6 @@ function MarketChartHotAnnotationDetail({
                   reaction={reaction}
                 />
               ) : null}
-              {hotEvent.evidence.length ? (
-                <section className="flex flex-col gap-2">
-                  <h4 className="text-xs font-medium text-muted-foreground">
-                    {localization.dictionary.events.mainEvidence}
-                  </h4>
-                  {hotEvent.evidence.map((evidence, index) => {
-                    const evidenceTitle =
-                      evidence.title?.trim() ||
-                      localization.dictionary.events.evidenceUntitled
-                    const evidenceRole = evidence.evidenceRole?.trim()
-                    const publishedAt = formatOptionalMarketChartDateTime(
-                      evidence.publishedAt,
-                      localization
-                    )
-                    const confidence =
-                      typeof evidence.confidence === "number" &&
-                      Number.isFinite(evidence.confidence)
-                        ? localization.formatMessage(
-                            localization.dictionary.marketCharts.annotations
-                              .confidenceBadge,
-                            {
-                              value: localization.formatNumber(
-                                evidence.confidence,
-                                {
-                                  maximumFractionDigits: 0,
-                                  style: "percent",
-                                }
-                              ),
-                            }
-                          )
-                        : null
-                    const articleId = evidence.newsArticleId
-                    const articleUrl = evidence.url?.trim()
-                    const safeArticleUrl = getSafeEvidenceHref(articleUrl)
-
-                    return (
-                      <div
-                        key={`${annotation.id}:evidence:${index}`}
-                        className="flex flex-col gap-1 rounded-md border bg-background p-2.5"
-                      >
-                        <p className="text-sm font-medium text-foreground">
-                          {evidenceTitle}
-                        </p>
-                        {evidenceRole || confidence ? (
-                          <div className="flex flex-wrap gap-1">
-                            {evidenceRole ? (
-                              <Badge variant="secondary">
-                                {evidenceRoleLabels[evidenceRole] ??
-                                  evidenceRole}
-                              </Badge>
-                            ) : null}
-                            {confidence ? (
-                              <Badge variant="outline">{confidence}</Badge>
-                            ) : null}
-                          </div>
-                        ) : null}
-                        {evidence.publisher ? (
-                          <p className="text-xs text-muted-foreground">
-                            {evidence.publisher}
-                          </p>
-                        ) : null}
-                        {publishedAt ? (
-                          <AppTimeMetadata icon={CalendarClock}>
-                            {publishedAt}
-                          </AppTimeMetadata>
-                        ) : null}
-                        {evidence.evidenceNote?.trim() ? (
-                          <p className="text-sm text-muted-foreground">
-                            {evidence.evidenceNote}
-                          </p>
-                        ) : null}
-                        {typeof articleId === "number" &&
-                        Number.isInteger(articleId) &&
-                        articleId > 0 ? (
-                          canReadNewsArticles ? (
-                            <LocalizedLink
-                              href={`/news-articles/${articleId}`}
-                              className={buttonVariants({
-                                size: "sm",
-                                variant: "outline",
-                                className: "self-start",
-                              })}
-                            >
-                              {localization.dictionary.events.viewArticle}
-                            </LocalizedLink>
-                          ) : (
-                            <p className="text-xs text-muted-foreground">
-                              {
-                                localization.dictionary.newsArticles
-                                  .quickAccessDeniedTitle
-                              }
-                            </p>
-                          )
-                        ) : null}
-                        {articleUrl && safeArticleUrl ? (
-                          <a
-                            href={safeArticleUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="self-start text-xs font-medium text-primary underline-offset-4 hover:underline"
-                          >
-                            {localization.dictionary.events.openOriginal}
-                          </a>
-                        ) : articleUrl ? (
-                          <span className="self-start text-xs break-all text-muted-foreground">
-                            {articleUrl}
-                          </span>
-                        ) : null}
-                      </div>
-                    )
-                  })}
-                </section>
-              ) : (
-                <p className="text-xs text-muted-foreground">
-                  {localization.dictionary.events.noEvidenceQuick}
-                </p>
-              )}
             </article>
           )
         })}

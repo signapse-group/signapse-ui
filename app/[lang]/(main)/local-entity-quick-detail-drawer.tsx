@@ -528,6 +528,7 @@ export function LocalEntityQuickDetailDrawer({
               dictionary={dictionary}
               event={currentState.event}
               locale={locale}
+              onArticleOpen={requestClose}
             />
           ) : (
             <NewsArticleQuickDetailContent
