@@ -196,7 +196,7 @@ const watchlistAssets: WorkspaceWatchlistAssetListItemResponse[] = [
     id: 1,
     assetId: 101,
     assetName: "Bitcoin",
-    assetSymbol: "BTCUSD",
+    assetSymbol: "BTC/USDT",
     assetType: "CRYPTO",
     createdDate: "2026-01-01T00:00:00.000Z",
   },
@@ -307,11 +307,11 @@ describe("Market chart quote-driven candle flow", () => {
       const receivedAt = candlesForBoundary[timeframe][1]
       const candleResponse = {
         provider: "fixture",
-        symbol: "BTCUSD",
+        symbol: "BTC/USDT",
         asset: {
           id: 101,
           name: "Bitcoin",
-          symbol: "BTCUSD",
+          symbol: "BTC/USDT",
           type: "CRYPTO",
           pricePrecision: 2,
         },
@@ -357,18 +357,18 @@ describe("Market chart quote-driven candle flow", () => {
       await act(async () => {
         source.emit("snapshot", {
           asset: candleResponse.asset,
-          symbol: "BTCUSD",
+          symbol: "BTC/USDT",
           timeframe,
           quote: {
             assetId: 101,
-            symbol: "BTCUSD",
+            symbol: "BTC/USDT",
             price: 4261.5,
             receivedAt,
             stale: false,
           },
           status: {
             assetId: 101,
-            symbol: "BTCUSD",
+            symbol: "BTC/USDT",
             state: "SUBSCRIBED",
             message: null,
             stale: false,
@@ -400,7 +400,7 @@ describe("Market chart quote-driven candle flow", () => {
       await act(async () => {
         source.emit("price", {
           assetId: 101,
-          symbol: "BTCUSD",
+          symbol: "BTC/USDT",
           price: 4234,
           receivedAt,
           stale: false,
@@ -426,7 +426,7 @@ describe("Market chart quote-driven candle flow", () => {
       await act(async () => {
         source.emit("status", {
           assetId: 101,
-          symbol: "BTCUSD",
+          symbol: "BTC/USDT",
           state: "STALE",
           message: null,
           stale: true,
@@ -442,12 +442,12 @@ describe("Market chart quote-driven candle flow", () => {
       await act(async () => {
         source.emit("snapshot", {
           asset: candleResponse.asset,
-          symbol: "BTCUSD",
+          symbol: "BTC/USDT",
           timeframe,
           quote: null,
           status: {
             assetId: 101,
-            symbol: "BTCUSD",
+            symbol: "BTC/USDT",
             state: "RECONNECTING",
             message: null,
             stale: true,
@@ -474,7 +474,7 @@ describe("Market chart quote-driven candle flow", () => {
       await act(async () => {
         source.emit("error", {
           assetId: 101,
-          symbol: "BTCUSD",
+          symbol: "BTC/USDT",
           message: "Dịch vụ dữ liệu tạm thời không khả dụng.",
           observedAt: receivedAt,
         })
@@ -488,7 +488,7 @@ describe("Market chart quote-driven candle flow", () => {
       await act(async () => {
         source.emit("status", {
           assetId: 101,
-          symbol: "BTCUSD",
+          symbol: "BTC/USDT",
           state: "MARKET_CLOSED",
           message: null,
           stale: false,
@@ -981,7 +981,7 @@ describe("Market chart quote-driven candle flow", () => {
     await act(async () => {
       bitcoinSource.emit("price", {
         assetId: 101,
-        symbol: "BTCUSD",
+        symbol: "BTC/USDT",
         price: 4234,
         receivedAt: "2026-08-23T00:01:15.000Z",
         stale: false,
@@ -1023,7 +1023,7 @@ describe("Market chart quote-driven candle flow", () => {
     await act(async () => {
       bitcoinSource.emit("price", {
         assetId: 101,
-        symbol: "BTCUSD",
+        symbol: "BTC/USDT",
         price: 9999,
         receivedAt: "2026-08-23T00:01:30.000Z",
         stale: false,
