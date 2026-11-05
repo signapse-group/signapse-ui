@@ -476,7 +476,7 @@ function createState() {
         id: 101,
         assetId: 101,
         assetName: "Bitcoin",
-        assetSymbol: "BTCUSD",
+        assetSymbol: "BTC/USDT",
         assetType: "CRYPTO",
         createdDate: "2025-01-03T08:00:00.000Z",
         lastModifiedDate: NOW,
@@ -562,7 +562,7 @@ function createState() {
         destination,
         timezone: "Asia/Ho_Chi_Minh",
         localTimes: ["08:30"],
-        asset: { assetId: 101, assetSymbol: "BTCUSD", assetName: "Bitcoin" },
+        asset: { assetId: 101, assetSymbol: "BTC/USDT", assetName: "Bitcoin" },
         outputLanguage: { id: 1, isoCode: "vi", name: "Tiếng Việt" },
         status: "ACTIVE",
         createdDate: "2025-01-06T08:00:00.000Z",
@@ -936,7 +936,7 @@ function dashboardSummary(workspaceId, scenario = "success", locale = "en") {
             {
               assetId: 101,
               assetName: "Bitcoin",
-              assetSymbol: "BTCUSD",
+              assetSymbol: "BTC/USDT",
               assetType: "CRYPTO",
               relationType: "AFFECTED_ASSET",
               weight: 1,
@@ -992,7 +992,7 @@ function dashboardSummary(workspaceId, scenario = "success", locale = "en") {
         {
           assetId: 101,
           assetName: "Bitcoin",
-          assetSymbol: "BTCUSD",
+          assetSymbol: "BTC/USDT",
           assetType: "CRYPTO",
           context: {
             title: isVietnamese
@@ -1048,7 +1048,7 @@ function dashboardSummary(workspaceId, scenario = "success", locale = "en") {
       {
         assetId: 101,
         assetName: "Bitcoin",
-        assetSymbol: "BTCUSD",
+        assetSymbol: "BTC/USDT",
         assetType: "CRYPTO",
         context: {
           title: isVietnamese
@@ -1103,7 +1103,7 @@ function dashboardSummary(workspaceId, scenario = "success", locale = "en") {
           {
             assetId: 101,
             assetName: "Bitcoin",
-            assetSymbol: "BTCUSD",
+            assetSymbol: "BTC/USDT",
             assetType: "CRYPTO",
             relationType: "PRIMARY",
             weight: null,
@@ -1205,7 +1205,7 @@ function articleReaderLongContent() {
   const wideTable = [
     "| Mã tài sản | Ngôn ngữ | Thời điểm công bố | Trạng thái xử lý | Nguồn snapshot | URL chuẩn | Mức độ liên quan | Ghi chú |",
     "| --- | --- | --- | --- | --- | --- | --- | --- |",
-    "| BTCUSD | vi-VN | 2026-11-04T08:00:00Z | DERIVATION_FAILED | Fixture Wire | /news-articles/71 | 0.987654321 | Nội dung bài vẫn đọc được |",
+    "| BTC/USDT | vi-VN | 2026-11-04T08:00:00Z | DERIVATION_FAILED | Fixture Wire | /news-articles/71 | 0.987654321 | Nội dung bài vẫn đọc được |",
   ].join("\n")
 
   return [
@@ -1589,11 +1589,11 @@ function candles(url) {
 
   return {
     provider: "fixture",
-    symbol: assetId === 102 ? "XAUUSD" : "BTCUSD",
+    symbol: assetId === 102 ? "XAUUSD" : "BTC/USDT",
     asset: {
       id: assetId,
       name: assetId === 102 ? "Gold" : "Bitcoin",
-      symbol: assetId === 102 ? "XAUUSD" : "BTCUSD",
+      symbol: assetId === 102 ? "XAUUSD" : "BTC/USDT",
       type: assetId === 102 ? "COMMODITY" : "CRYPTO",
       pricePrecision: 2,
     },
@@ -1622,7 +1622,7 @@ function liveSnapshot(
   timeframe = "1h",
   staleQuote = state === "STALE"
 ) {
-  const symbol = assetId === 102 ? "XAUUSD" : "BTCUSD"
+  const symbol = assetId === 102 ? "XAUUSD" : "BTC/USDT"
   const quote =
     state === "MARKET_CLOSED" || (state === "CONNECTING" && !staleQuote)
       ? null
@@ -1673,7 +1673,7 @@ async function streamLive(response, state, url, scenario) {
   if (scenario === "post-open-error") {
     writeSse(response, "error", {
       assetId,
-      symbol: assetId === 102 ? "XAUUSD" : "BTCUSD",
+      symbol: assetId === 102 ? "XAUUSD" : "BTC/USDT",
       message: "Fixture stream outage",
       observedAt: NOW,
     })
