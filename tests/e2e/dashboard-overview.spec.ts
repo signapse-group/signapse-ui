@@ -8,6 +8,7 @@ test.describe("P0 Dashboard Overview", () => {
     await fixture.setScenario("/dashboard/summary", "overview-expanded", "GET")
     await fixture.setScenario("/watchlists", "overview-expanded", "GET")
     await fixture.setScenario("/news-articles", "overview-expanded", "GET")
+    await page.emulateMedia({ colorScheme: "dark" })
     await page.setViewportSize({ width: 1520, height: 1000 })
     await page.goto("/vi/dashboard")
 
@@ -33,6 +34,10 @@ test.describe("P0 Dashboard Overview", () => {
         name: "Mở sự kiện: Fixture overview event 6",
       })
     ).toHaveCount(0)
+    const untitledEventTrigger = timeline.getByRole("button", {
+      name: "Mở sự kiện: Chưa có tiêu đề",
+    })
+    await expect(untitledEventTrigger).toBeVisible()
     await expect(timeline.getByRole("listitem")).toHaveCount(5)
     await expect(
       news.getByRole("button", { name: "Mở bài viết: Global fixture news 5" })
@@ -61,7 +66,7 @@ test.describe("P0 Dashboard Overview", () => {
     expect(
       await assetsInFocus.getByRole("heading", { level: 3 }).allTextContents()
     ).toEqual([
-      "BTCUSD · Bitcoin",
+      "BTC/USDT · Bitcoin",
       "FOCUS2 · Tài sản chú ý mẫu 2",
       "FOCUS3 · Tài sản chú ý mẫu 3",
       "FOCUS4 · Tài sản chú ý mẫu 4",
@@ -72,7 +77,7 @@ test.describe("P0 Dashboard Overview", () => {
       assetsInFocus.getByText("Động lượng giá tổng hợp")
     ).toBeVisible()
     const marketCharts = assetsInFocus.getByRole("link", {
-      name: "Mở biểu đồ thị trường: BTCUSD",
+      name: "Mở biểu đồ thị trường: BTC/USDT",
     })
     await expect(marketCharts).toHaveAttribute(
       "href",
@@ -100,7 +105,7 @@ test.describe("P0 Dashboard Overview", () => {
         "Dòng tiền đang mở rộng sang nhiều nhóm tài sản."
       )
     ).toBeVisible()
-    await expect(marketNarratives.getByText("BTCUSD")).toBeVisible()
+    await expect(marketNarratives.getByText("BTC/USDT")).toBeVisible()
     await expect(marketNarratives.getByText("GOLD")).toBeVisible()
     await expect(marketNarratives.getByText("OIL")).toBeVisible()
     await expect(
@@ -126,6 +131,10 @@ test.describe("P0 Dashboard Overview", () => {
       body: await page.screenshot({ fullPage: true }),
       contentType: "image/png",
     })
+    await testInfo.attach("event-timeline-wide.png", {
+      body: await timeline.screenshot({ animations: "disabled" }),
+      contentType: "image/png",
+    })
 
     const summaryRequests = (await fixture.state()).requests.filter(
       (request) =>
@@ -145,7 +154,7 @@ test.describe("P0 Dashboard Overview", () => {
     )
     await page.goBack()
     await expect(
-      assetsInFocus.getByRole("heading", { name: "BTCUSD · Bitcoin" })
+      assetsInFocus.getByRole("heading", { name: "BTC/USDT · Bitcoin" })
     ).toBeVisible()
 
     const articleTrigger = news.getByRole("button", {
@@ -162,6 +171,19 @@ test.describe("P0 Dashboard Overview", () => {
     await expect(page).toHaveURL(/\/vi\/dashboard$/)
     await dialog.getByRole("button", { name: "Đóng" }).press("Escape")
     await expect(articleTrigger).toBeFocused()
+
+    await untitledEventTrigger.focus()
+    await untitledEventTrigger.press("Space")
+    await expect(
+      dialog.getByRole("heading", {
+        name: "Energy demand outlook revised higher",
+      })
+    ).toBeVisible()
+    await expect(
+      dialog.getByRole("link", { name: "Mở trang đầy đủ" })
+    ).toHaveAttribute("href", "/vi/events/62")
+    await dialog.getByRole("button", { name: "Đóng" }).click()
+    await expect(untitledEventTrigger).toBeFocused()
 
     const eventTrigger = timeline.getByRole("button", {
       name: "Mở sự kiện: Central bank signals a slower easing path",
@@ -223,6 +245,10 @@ test.describe("P0 Dashboard Overview", () => {
         body: await page.screenshot({ fullPage: true }),
         contentType: "image/png",
       })
+      await testInfo.attach(`event-timeline-${viewport.name}.png`, {
+        body: await timeline.screenshot({ animations: "disabled" }),
+        contentType: "image/png",
+      })
     }
 
     await page.setViewportSize({ width: 1024, height: 900 })
@@ -248,9 +274,21 @@ test.describe("P0 Dashboard Overview", () => {
     ).toBeVisible()
     await expect(
       englishAssetsInFocus.getByRole("link", {
-        name: "Open Market Charts: BTCUSD",
+        name: "Open Market Charts: BTC/USDT",
       })
     ).toHaveAttribute("href", "/en/market-charts?assetId=101&timeframe=1h")
+    const englishTimeline = page.locator(
+      'section[aria-labelledby="dashboard-event-timeline-title"]'
+    )
+    await expect(
+      englishTimeline.getByRole("button", {
+        name: "Open event: Untitled event",
+      })
+    ).toBeVisible()
+    await testInfo.attach("event-timeline-english.png", {
+      body: await englishTimeline.screenshot({ animations: "disabled" }),
+      contentType: "image/png",
+    })
     const englishNarratives = page.locator(
       'section[aria-labelledby="dashboard-market-narratives-title"]'
     )
@@ -275,6 +313,21 @@ test.describe("P0 Dashboard Overview", () => {
     expect(
       englishSummaryRequests.some((request) => request.locale === "en")
     ).toBe(true)
+
+    await page.emulateMedia({ colorScheme: "light" })
+    await page.goto("/vi/dashboard")
+    const lightTimeline = page.locator(
+      'section[aria-labelledby="dashboard-event-timeline-title"]'
+    )
+    await expect(
+      lightTimeline.getByRole("button", {
+        name: "Mở sự kiện: Chưa có tiêu đề",
+      })
+    ).toBeVisible()
+    await testInfo.attach("event-timeline-light.png", {
+      body: await lightTimeline.screenshot({ animations: "disabled" }),
+      contentType: "image/png",
+    })
   })
 
   test("reloads after workspace changes without carrying old scoped data", async ({
@@ -344,7 +397,7 @@ test.describe("P0 Dashboard Overview", () => {
       page.getByRole("heading", { name: "BETA · Beta only fixture asset" })
     ).toBeVisible()
     await expect(
-      page.getByRole("heading", { name: "BTCUSD · Bitcoin" })
+      page.getByRole("heading", { name: "BTC/USDT · Bitcoin" })
     ).toHaveCount(0)
     await expect(page.getByText("Fixture market update")).toBeVisible()
     await expect(
