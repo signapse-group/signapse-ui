@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Clock3, RefreshCw } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useMemo } from "react"
+import { useMemo, useSyncExternalStore } from "react"
 import { useForm } from "react-hook-form"
 import { toast } from "sonner"
 
@@ -29,6 +29,10 @@ import {
   NewsOutletFormValues,
 } from "./news-outlet-form-fields"
 import { NewsOutletDateTime } from "./news-outlet-date-time"
+
+const subscribeClientReady = () => () => {}
+const getClientReadySnapshot = () => true
+const getServerReadySnapshot = () => false
 
 interface NewsOutletUpdateFormProps {
   newsOutlet: NewsOutletResponse
@@ -64,6 +68,13 @@ export function NewsOutletUpdateForm({
   })
 
   const isSubmitting = form.formState.isSubmitting
+  const isHydrated = useSyncExternalStore(
+    subscribeClientReady,
+    getClientReadySnapshot,
+    getServerReadySnapshot
+  )
+
+  const isBusy = !isHydrated || isSubmitting
 
   async function onSubmit(data: NewsOutletFormValues) {
     const request: UpdateNewsOutletRequest = {
@@ -92,7 +103,7 @@ export function NewsOutletUpdateForm({
       description={dictionary.newsOutlets.updateDescription}
       width="lg"
     >
-      <form onSubmit={form.handleSubmit(onSubmit)}>
+      <form onSubmit={form.handleSubmit(onSubmit)} aria-busy={isBusy}>
         <AppFormShellBody className="flex flex-col gap-8">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="rounded-lg border border-border bg-muted/20 p-4">
@@ -118,16 +129,18 @@ export function NewsOutletUpdateForm({
             </div>
           </div>
 
-          <NewsOutletFormFields
-            control={form.control}
-            isSubmitting={isSubmitting}
-          />
+          <NewsOutletFormFields control={form.control} isDisabled={isBusy} />
         </AppFormShellBody>
 
         <AppFormShellFooter className="sm:justify-start">
           <div className="flex gap-4">
-            <Button disabled={isSubmitting} type="submit">
-              {isSubmitting ? (
+            <Button disabled={isBusy} type="submit">
+              {!isHydrated ? (
+                <>
+                  <Spinner data-icon="inline-start" />
+                  {dictionary.common.loading}
+                </>
+              ) : isSubmitting ? (
                 <>
                   <Spinner data-icon="inline-start" />
                   {dictionary.newsOutlets.saving}
@@ -140,7 +153,7 @@ export function NewsOutletUpdateForm({
               type="button"
               variant="ghost"
               onClick={() => form.reset(initialFormValues)}
-              disabled={isSubmitting}
+              disabled={isBusy}
             >
               {dictionary.common.cancel}
             </Button>

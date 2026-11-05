@@ -90,6 +90,14 @@ type FixtureController = {
     streamConnections: number
     smtpConfiguration?: Record<string, unknown>
     aiTaskConfigurations?: Array<Record<string, unknown>>
+    newsOutlets?: Array<{
+      id: number
+      name: string
+      homepageUrl: string
+      rssUrl: string | null
+      description: string | null
+      active: boolean
+    }>
   }>
   setFeedbackScenario(
     scenario:
