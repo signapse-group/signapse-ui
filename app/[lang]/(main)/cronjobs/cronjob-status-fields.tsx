@@ -49,13 +49,7 @@ export function CronjobStatusFields({
               ? X
               : undefined
         }
-        variant={
-          cronjob.latestResult === "FAILED"
-            ? "destructive"
-            : cronjob.latestResult === "SUCCESS"
-              ? "secondary"
-              : "outline"
-        }
+        variant={cronjob.latestResult === null ? "outline" : "secondary"}
       />
     </dl>
   )
@@ -70,20 +64,13 @@ function StatusField({
   label: string
   value: string
   icon?: LucideIcon
-  variant?: "default" | "secondary" | "outline" | "destructive"
+  variant?: "default" | "secondary" | "outline"
 }) {
   return (
     <div className="flex min-w-0 items-center justify-between gap-2">
       <dt className="shrink-0 text-xs text-muted-foreground">{label}</dt>
       <dd className="min-w-0">
-        <Badge
-          variant={variant}
-          className={`max-w-full ${
-            variant === "destructive"
-              ? "bg-destructive text-white dark:text-black"
-              : ""
-          }`}
-        >
+        <Badge variant={variant} className="max-w-full">
           {Icon ? <Icon aria-hidden="true" data-icon="inline-start" /> : null}
           <span className="truncate">{value}</span>
         </Badge>

@@ -7,6 +7,7 @@ test("cronjob read permission renders responsive list and in-context detail", as
   fixture,
 }, testInfo) => {
   await fixture.setPermissions(["cronjob:read"])
+  await page.emulateMedia({ colorScheme: "light" })
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto("/vi/cronjobs")
 
@@ -38,8 +39,24 @@ test("cronjob read permission renders responsive list and in-context detail", as
         violation.impact === "serious" || violation.impact === "critical"
     )
   ).toEqual([])
-
   await testInfo.attach("cronjobs-read-mobile-390x844.png", {
+    body: await page.screenshot({ fullPage: true }),
+    contentType: "image/png",
+  })
+
+  await page.emulateMedia({ colorScheme: "dark" })
+  await expect(page.locator("html")).toHaveClass(/\bdark\b/)
+  const darkListAxe = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa"])
+    .exclude(".bar")
+    .analyze()
+  expect(
+    darkListAxe.violations.filter(
+      (violation) =>
+        violation.impact === "serious" || violation.impact === "critical"
+    )
+  ).toEqual([])
+  await testInfo.attach("cronjobs-read-dark-list-390x844.png", {
     body: await page.screenshot({ fullPage: true }),
     contentType: "image/png",
   })
@@ -104,6 +121,10 @@ test("cronjob read permission renders responsive list and in-context detail", as
         violation.impact === "serious" || violation.impact === "critical"
     )
   ).toEqual([])
+  await testInfo.attach("cronjobs-read-dark-detail-390x844.png", {
+    body: await page.screenshot({ fullPage: true }),
+    contentType: "image/png",
+  })
 })
 
 test("read denial, detail errors, and a valid empty list stay distinct", async ({
