@@ -2113,9 +2113,9 @@ export const en: Dictionary = {
     },
     calendar: {
       actual: "Actual",
-      countdownHours: "{hours}h {minutes}m remaining",
-      countdownHoursOnly: "{hours}h remaining",
-      countdownMinutes: "{minutes}m remaining",
+      countdownHoursValue: "{hours}h {minutes}m",
+      countdownHoursOnlyValue: "{hours}h",
+      countdownMinutesValue: "{minutes}m",
       eventFallback: "Economic calendar event",
       eventMarkers: "{count} calendar events",
       forecast: "Forecast",
@@ -2127,6 +2127,7 @@ export const en: Dictionary = {
       nextEvent: "Next event",
       noNextEvent:
         "No matching event in the synced calendar data for the next 7 days.",
+      remainingLabel: "Remaining",
       openMany: "Open {count} calendar events",
       openOne: "Open calendar event {title}",
       previous: "Previous",

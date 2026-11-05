@@ -969,19 +969,22 @@ test.describe("P0 market chart workbench", () => {
     await expectMarketChartCanvasText(page, "110,50")
   })
 
-  test("opens Next directly into the shared calendar event detail", async ({
+  test("opens Next from the plot into the shared calendar event detail", async ({
     page,
     fixture,
   }, testInfo) => {
     await page.setViewportSize({ width: 1520, height: 1024 })
     await page.emulateMedia({ colorScheme: "dark" })
     await page.clock.install({ time: new Date(MARKET_CHART_FIXTURE_NOW) })
+    await trackMarketChartCanvasText(page)
+    await fixture.setScenario("/market-charts/candles", "success", "GET")
     await fixture.setScenario(
       "/market-charts/economic-calendar-events",
       "calendar-upcoming",
       "GET"
     )
     await page.addInitScript(() => {
+      window.localStorage.setItem("theme", "dark")
       window.localStorage.setItem(
         "signapse:market-charts:calendar-layer:v1",
         "false"
@@ -993,10 +996,53 @@ test.describe("P0 market chart workbench", () => {
     await expect(
       page.getByRole("application", { name: "Biểu đồ giá" })
     ).toBeVisible()
+    await expectMarketChartCanvasText(page, "110,50")
+    await expect
+      .poll(async () => {
+        const state = await fixture.state()
+        return state.requests.filter(
+          (request) => request.path === "/market-charts/candles"
+        ).length
+      })
+      .toBeGreaterThan(1)
+    await expect(
+      page.getByText("Đang tải lịch sử...", { exact: true })
+    ).toBeHidden()
     const nextTrigger = page.getByRole("button", {
       name: /Sự kiện tiếp theo: Fixture inflation release/,
     })
+    const plot = page.getByTestId("market-chart-plot")
+    const nextBadge = plot.getByTestId("market-chart-next-event-badge")
     await expect(nextTrigger).toBeVisible()
+    await expect(nextBadge).toBeVisible()
+    await expect(nextBadge).toContainText("Sự kiện tiếp theo")
+    await expect(nextBadge).toContainText("Còn lại")
+    await expect(nextBadge).toContainText("Fixture inflation release")
+    await expect(
+      page.getByTestId("market-chart-toolbar").getByRole("button", {
+        name: /Sự kiện tiếp theo: Fixture inflation release/,
+      })
+    ).toHaveCount(0)
+    const closedWideScreenshot = await page.screenshot({
+      path: "test-results/SIGN-543-next-badge-closed-wide-dark-1520x1024.png",
+      animations: "disabled",
+    })
+    await testInfo.attach("SIGN-543-next-badge-closed-wide-dark-1520x1024", {
+      body: closedWideScreenshot,
+      contentType: "image/png",
+    })
+    await page.setViewportSize({ width: 1024, height: 768 })
+    await expect(nextBadge).toBeVisible()
+    await expectNoHorizontalOverflow(page)
+    const closedCompactScreenshot = await page.screenshot({
+      path: "test-results/SIGN-543-next-badge-closed-compact-1024x768.png",
+      animations: "disabled",
+    })
+    await testInfo.attach("SIGN-543-next-badge-closed-compact-1024x768", {
+      body: closedCompactScreenshot,
+      contentType: "image/png",
+    })
+    await page.setViewportSize({ width: 1520, height: 1024 })
     await nextTrigger.focus()
     await expect(nextTrigger).toBeFocused()
     await page.keyboard.press("Enter")
@@ -1032,10 +1078,10 @@ test.describe("P0 market chart workbench", () => {
     ).toHaveCount(0)
 
     const wideScreenshot = await page.screenshot({
-      path: "test-results/SIGN-479-next-detail-wide-dark.png",
+      path: "test-results/SIGN-543-next-detail-wide-dark.png",
       animations: "disabled",
     })
-    await testInfo.attach("SIGN-479-next-event-detail-wide-dark", {
+    await testInfo.attach("SIGN-543-next-event-detail-wide-dark", {
       body: wideScreenshot,
       contentType: "image/png",
     })
@@ -1044,10 +1090,10 @@ test.describe("P0 market chart workbench", () => {
     await expect(inflation).toBeVisible()
     await expectNoHorizontalOverflow(page)
     const compactScreenshot = await page.screenshot({
-      path: "test-results/SIGN-479-next-detail-compact-1024x768.png",
+      path: "test-results/SIGN-543-next-detail-compact-1024x768.png",
       animations: "disabled",
     })
-    await testInfo.attach("SIGN-479-next-event-detail-compact-1024x768", {
+    await testInfo.attach("SIGN-543-next-event-detail-compact-1024x768", {
       body: compactScreenshot,
       contentType: "image/png",
     })
@@ -1056,11 +1102,11 @@ test.describe("P0 market chart workbench", () => {
     await expect(inflation).toBeVisible()
     await expectNoHorizontalOverflow(page)
     const effectiveZoomScreenshot = await page.screenshot({
-      path: "test-results/SIGN-479-next-detail-effective-200pct-760x512.png",
+      path: "test-results/SIGN-543-next-detail-effective-200pct-760x512.png",
       animations: "disabled",
     })
     await testInfo.attach(
-      "SIGN-479-next-event-detail-effective-200pct-760x512",
+      "SIGN-543-next-event-detail-effective-200pct-760x512",
       {
         body: effectiveZoomScreenshot,
         contentType: "image/png",
@@ -1076,67 +1122,71 @@ test.describe("P0 market chart workbench", () => {
       (detailBounds?.x ?? 0) + (detailBounds?.width ?? 0)
     ).toBeLessThanOrEqual(360)
     const mobileScreenshot = await page.screenshot({
-      path: "test-results/SIGN-479-next-detail-mobile-360.png",
+      path: "test-results/SIGN-543-next-detail-mobile-360.png",
       animations: "disabled",
     })
-    await testInfo.attach("SIGN-479-next-event-detail-mobile-light", {
+    await testInfo.attach("SIGN-543-next-event-detail-mobile-light", {
       body: mobileScreenshot,
       contentType: "image/png",
     })
 
     await page.keyboard.press("Escape")
-    await page.getByRole("button", { name: "Thao tác khác" }).click()
+    await expect(nextTrigger).toBeFocused()
+    const mobileActionsButton = page.getByRole("button", {
+      name: "Thao tác khác",
+    })
+    await mobileActionsButton.click()
     const mobileActionsDialog = page.getByRole("dialog", {
       name: "Thao tác khác",
     })
-    const mobileNextTrigger = mobileActionsDialog.getByRole("button", {
-      name: /Sự kiện tiếp theo: Fixture inflation release/,
-    })
-    await expect(mobileNextTrigger).toBeVisible()
-    await mobileNextTrigger.click()
-    await expect(inflation).toBeVisible()
-    const mobileDetailDialog = page.getByRole("dialog", {
-      name: "Fixture inflation release",
-    })
-    const mobileDetailBounds = await mobileDetailDialog.boundingBox()
-    expect(mobileDetailBounds?.x).toBeGreaterThanOrEqual(0)
-    expect(
-      (mobileDetailBounds?.x ?? 0) + (mobileDetailBounds?.width ?? 0)
-    ).toBeLessThanOrEqual(360)
-    await expectNoHorizontalOverflow(page)
-    const mobileMenuScreenshot = await page.screenshot({
-      path: "test-results/SIGN-479-next-detail-mobile-menu-360.png",
-      animations: "disabled",
-    })
-    await testInfo.attach("SIGN-479-next-event-detail-mobile-menu-360", {
-      body: mobileMenuScreenshot,
-      contentType: "image/png",
-    })
-    await page.keyboard.press("Escape")
-    await page.keyboard.press("Escape")
-
-    const toolbarNextTrigger = page
-      .getByTestId("market-chart-next-event-status")
-      .locator("..")
-      .getByRole("button", {
+    await expect(
+      mobileActionsDialog.getByRole("button", {
         name: /Sự kiện tiếp theo: Fixture inflation release/,
       })
+    ).toHaveCount(0)
+    await expect(
+      plot.getByTestId("market-chart-next-event-badge")
+    ).toBeVisible()
+    await expectNoHorizontalOverflow(page)
+    await page.keyboard.press("Escape")
+    await expect(mobileActionsButton).toBeFocused()
+    const mobileClosedScreenshot = await page.screenshot({
+      path: "test-results/SIGN-543-next-badge-closed-mobile-360.png",
+      animations: "disabled",
+    })
+    await testInfo.attach("SIGN-543-next-badge-closed-mobile-360", {
+      body: mobileClosedScreenshot,
+      contentType: "image/png",
+    })
 
-    for (const width of [767, 768, 1439, 1440, 760]) {
+    for (const width of [360, 390, 767, 768, 1439, 1440, 760]) {
       await page.setViewportSize({ width, height: 844 })
+      await expect(nextTrigger).toBeVisible()
+      await expect(
+        page
+          .getByTestId("market-chart-plot")
+          .getByTestId("market-chart-next-event-badge")
+      ).toBeVisible()
+      await expect(
+        page.getByTestId("market-chart-toolbar").getByRole("button", {
+          name: /Sự kiện tiếp theo: Fixture inflation release/,
+        })
+      ).toHaveCount(0)
+      await expectNoHorizontalOverflow(page)
 
       if (width < 768) {
-        await expect(
-          page.getByRole("button", { name: "Thao tác khác" })
-        ).toBeVisible()
-        await page.getByRole("button", { name: "Thao tác khác" }).click()
+        const moreActionsButton = page.getByRole("button", {
+          name: "Thao tác khác",
+        })
+        await expect(moreActionsButton).toBeVisible()
+        await moreActionsButton.click()
         await expect(
           page
             .getByRole("dialog", { name: "Thao tác khác" })
             .getByRole("button", {
               name: /Sự kiện tiếp theo: Fixture inflation release/,
             })
-        ).toBeVisible()
+        ).toHaveCount(0)
         await page.keyboard.press("Escape")
       } else {
         await expect(
@@ -1145,11 +1195,48 @@ test.describe("P0 market chart workbench", () => {
         await expect(
           page.getByRole("dialog", { name: "Thao tác khác" })
         ).toBeHidden()
-        await expect(toolbarNextTrigger.filter({ visible: true })).toHaveCount(
-          1
-        )
       }
     }
+
+    await page.setViewportSize({ width: 1520, height: 1024 })
+    const fullscreenButton = page
+      .getByTestId("market-chart-toolbar")
+      .getByRole("button", { name: "Mở biểu đồ toàn màn hình" })
+    await fullscreenButton.click()
+    const fullscreenSurface = page.locator('section[data-fullscreen="true"]')
+    await expect(fullscreenSurface).toBeVisible()
+    await expect(
+      fullscreenSurface.getByTestId("market-chart-next-event-badge")
+    ).toBeVisible()
+    await expect(
+      page.getByText("Đang tải lịch sử...", { exact: true })
+    ).toBeHidden()
+    const fullscreenClosedScreenshot = await page.screenshot({
+      path: "test-results/SIGN-543-next-badge-closed-fullscreen-dark.png",
+      animations: "disabled",
+    })
+    await testInfo.attach("SIGN-543-next-badge-closed-fullscreen-dark", {
+      body: fullscreenClosedScreenshot,
+      contentType: "image/png",
+    })
+    await nextTrigger.focus()
+    await page.keyboard.press("Enter")
+    await expect(inflation).toBeVisible()
+    await expect(
+      page.getByText("Đang tải lịch sử...", { exact: true })
+    ).toBeHidden()
+    const fullscreenDetailScreenshot = await page.screenshot({
+      path: "test-results/SIGN-543-next-detail-fullscreen-dark.png",
+      animations: "disabled",
+    })
+    await testInfo.attach("SIGN-543-next-detail-fullscreen-dark", {
+      body: fullscreenDetailScreenshot,
+      contentType: "image/png",
+    })
+    await page.keyboard.press("Escape")
+    await expect(nextTrigger).toBeFocused()
+    await page.getByRole("button", { name: "Thoát toàn màn hình" }).click()
+    await expect(page.locator('section[data-fullscreen="false"]')).toBeVisible()
 
     const state = await fixture.state()
     const calendarRequest = state.requests.find(
@@ -1158,6 +1245,81 @@ test.describe("P0 market chart workbench", () => {
     expect(String(calendarRequest?.query)).toContain("impact=HIGH")
     expect(String(calendarRequest?.query)).toContain("from=")
     expect(String(calendarRequest?.query)).toContain("to=")
+  })
+
+  test.describe("mobile Next badge", () => {
+    test.use({ viewport: { width: 390, height: 844 }, hasTouch: true })
+
+    test("opens shared event detail by tapping the plot badge", async ({
+      page,
+      fixture,
+    }, testInfo) => {
+      await page.emulateMedia({ colorScheme: "light" })
+      await page.clock.install({ time: new Date(MARKET_CHART_FIXTURE_NOW) })
+      await trackMarketChartCanvasText(page)
+      await fixture.setScenario("/market-charts/candles", "success", "GET")
+      await fixture.setScenario(
+        "/market-charts/economic-calendar-events",
+        "calendar-upcoming",
+        "GET"
+      )
+      await page.addInitScript(() => {
+        window.localStorage.setItem("theme", "light")
+        window.localStorage.setItem(
+          "signapse:market-charts:calendar-layer:v1",
+          "false"
+        )
+      })
+      await page.goto("/vi/market-charts?assetId=101&timeframe=1h")
+
+      await expectMarketChartCanvasText(page, "110,50")
+      await expect
+        .poll(async () => {
+          const state = await fixture.state()
+          return state.requests.filter(
+            (request) => request.path === "/market-charts/candles"
+          ).length
+        })
+        .toBeGreaterThan(1)
+      await expect(
+        page.getByText("Đang tải lịch sử...", { exact: true })
+      ).toBeHidden()
+      const plot = page.getByTestId("market-chart-plot")
+      const nextBadge = plot.getByRole("button", {
+        name: /Sự kiện tiếp theo: Fixture inflation release/,
+      })
+      await expect(nextBadge).toBeVisible()
+      await expect(
+        page.getByTestId("market-chart-toolbar").getByRole("button", {
+          name: /Sự kiện tiếp theo: Fixture inflation release/,
+        })
+      ).toHaveCount(0)
+      const closedScreenshot = await page.screenshot({
+        path: "test-results/SIGN-543-next-badge-closed-mobile-390-light.png",
+        animations: "disabled",
+      })
+      await testInfo.attach("SIGN-543-next-badge-closed-mobile-390-light", {
+        body: closedScreenshot,
+        contentType: "image/png",
+      })
+
+      await nextBadge.tap()
+      const inflation = page.getByRole("heading", {
+        name: "Fixture inflation release",
+        level: 3,
+      })
+      await expect(inflation).toBeVisible()
+      const detailScreenshot = await page.screenshot({
+        path: "test-results/SIGN-543-next-detail-mobile-390-light.png",
+        animations: "disabled",
+      })
+      await testInfo.attach("SIGN-543-next-detail-mobile-390-light", {
+        body: detailScreenshot,
+        contentType: "image/png",
+      })
+      await page.keyboard.press("Escape")
+      await expect(nextBadge).toBeFocused()
+    })
   })
 
   test("keeps all grouped HOT annotations accessible through Event quick detail", async ({
