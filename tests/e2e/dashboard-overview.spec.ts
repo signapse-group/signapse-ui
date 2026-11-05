@@ -66,7 +66,7 @@ test.describe("P0 Dashboard Overview", () => {
     expect(
       await assetsInFocus.getByRole("heading", { level: 3 }).allTextContents()
     ).toEqual([
-      "BTCUSD · Bitcoin",
+      "BTC/USDT · Bitcoin",
       "FOCUS2 · Tài sản chú ý mẫu 2",
       "FOCUS3 · Tài sản chú ý mẫu 3",
       "FOCUS4 · Tài sản chú ý mẫu 4",
@@ -77,7 +77,7 @@ test.describe("P0 Dashboard Overview", () => {
       assetsInFocus.getByText("Động lượng giá tổng hợp")
     ).toBeVisible()
     const marketCharts = assetsInFocus.getByRole("link", {
-      name: "Mở biểu đồ thị trường: BTCUSD",
+      name: "Mở biểu đồ thị trường: BTC/USDT",
     })
     await expect(marketCharts).toHaveAttribute(
       "href",
@@ -105,7 +105,7 @@ test.describe("P0 Dashboard Overview", () => {
         "Dòng tiền đang mở rộng sang nhiều nhóm tài sản."
       )
     ).toBeVisible()
-    await expect(marketNarratives.getByText("BTCUSD")).toBeVisible()
+    await expect(marketNarratives.getByText("BTC/USDT")).toBeVisible()
     await expect(marketNarratives.getByText("GOLD")).toBeVisible()
     await expect(marketNarratives.getByText("OIL")).toBeVisible()
     await expect(
@@ -154,7 +154,7 @@ test.describe("P0 Dashboard Overview", () => {
     )
     await page.goBack()
     await expect(
-      assetsInFocus.getByRole("heading", { name: "BTCUSD · Bitcoin" })
+      assetsInFocus.getByRole("heading", { name: "BTC/USDT · Bitcoin" })
     ).toBeVisible()
 
     const articleTrigger = news.getByRole("button", {
@@ -274,7 +274,7 @@ test.describe("P0 Dashboard Overview", () => {
     ).toBeVisible()
     await expect(
       englishAssetsInFocus.getByRole("link", {
-        name: "Open Market Charts: BTCUSD",
+        name: "Open Market Charts: BTC/USDT",
       })
     ).toHaveAttribute("href", "/en/market-charts?assetId=101&timeframe=1h")
     const englishTimeline = page.locator(
@@ -397,7 +397,7 @@ test.describe("P0 Dashboard Overview", () => {
       page.getByRole("heading", { name: "BETA · Beta only fixture asset" })
     ).toBeVisible()
     await expect(
-      page.getByRole("heading", { name: "BTCUSD · Bitcoin" })
+      page.getByRole("heading", { name: "BTC/USDT · Bitcoin" })
     ).toHaveCount(0)
     await expect(page.getByText("Fixture market update")).toBeVisible()
     await expect(
