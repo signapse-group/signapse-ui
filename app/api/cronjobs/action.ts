@@ -1,14 +1,19 @@
 "use server"
 
 import { fetchAuthenticated } from "@/app/api/auth/action"
-import { SearchParams, Page, ActionResult } from "@/app/lib/definitions"
+import type { ActionResult, Page, SearchParams } from "@/app/lib/definitions"
 import { getDictionary } from "@/app/lib/i18n/dictionaries"
 import { getRequestLocale } from "@/app/lib/i18n/server"
 import { queryParamsToString } from "@/app/lib/utils"
 import {
+  CronjobPageResponseSchema,
+  CronjobRequestSchema,
+  CronjobResponseSchema,
+} from "@/app/lib/cronjobs/definitions"
+import type {
+  CronjobListResponse,
   CronjobRequest,
   CronjobResponse,
-  CronjobListResponse,
 } from "@/app/lib/cronjobs/definitions"
 import { revalidatePath } from "next/cache"
 
@@ -16,16 +21,25 @@ function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback
 }
 
+async function fetchCronjob(
+  path: string,
+  options?: RequestInit
+): Promise<CronjobResponse> {
+  const response = await fetchAuthenticated<unknown>(path, options)
+  return CronjobResponseSchema.parse(response)
+}
+
 export async function getCronjobs(
   searchParams: SearchParams
 ): Promise<Page<CronjobListResponse>> {
-  return fetchAuthenticated<Page<CronjobListResponse>>(
+  const response = await fetchAuthenticated<unknown>(
     `/cronjobs?${queryParamsToString(searchParams)}`
   )
+  return CronjobPageResponseSchema.parse(response)
 }
 
 export async function getCronjobById(id: number): Promise<CronjobResponse> {
-  return fetchAuthenticated<CronjobResponse>(`/cronjobs/${id}`)
+  return fetchCronjob(`/cronjobs/${id}`)
 }
 
 export async function updateCronjob(
@@ -33,13 +47,16 @@ export async function updateCronjob(
   request: CronjobRequest
 ): Promise<ActionResult<CronjobResponse>> {
   try {
-    const cronjob = await fetchAuthenticated<CronjobResponse>(
-      `/cronjobs/${id}`,
-      {
-        method: "PATCH",
-        body: JSON.stringify(request),
-      }
-    )
+    const parsedRequest = CronjobRequestSchema.safeParse(request)
+    if (!parsedRequest.success) {
+      const dictionary = await getDictionary(await getRequestLocale())
+      return { success: false, error: dictionary.cronjobs.cronRequired }
+    }
+
+    const cronjob = await fetchCronjob(`/cronjobs/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(parsedRequest.data),
+    })
     revalidatePath("/cronjobs")
     return { success: true, data: cronjob }
   } catch (error: unknown) {
@@ -55,12 +72,9 @@ export async function startCronjob(
   id: number
 ): Promise<ActionResult<CronjobResponse>> {
   try {
-    const cronjob = await fetchAuthenticated<CronjobResponse>(
-      `/cronjobs/${id}/start`,
-      {
-        method: "POST",
-      }
-    )
+    const cronjob = await fetchCronjob(`/cronjobs/${id}/start`, {
+      method: "POST",
+    })
     revalidatePath("/cronjobs")
     return { success: true, data: cronjob }
   } catch (error: unknown) {
@@ -76,12 +90,9 @@ export async function pauseCronjob(
   id: number
 ): Promise<ActionResult<CronjobResponse>> {
   try {
-    const cronjob = await fetchAuthenticated<CronjobResponse>(
-      `/cronjobs/${id}/pause`,
-      {
-        method: "POST",
-      }
-    )
+    const cronjob = await fetchCronjob(`/cronjobs/${id}/pause`, {
+      method: "POST",
+    })
     revalidatePath("/cronjobs")
     return { success: true, data: cronjob }
   } catch (error: unknown) {
@@ -97,12 +108,9 @@ export async function resumeCronjob(
   id: number
 ): Promise<ActionResult<CronjobResponse>> {
   try {
-    const cronjob = await fetchAuthenticated<CronjobResponse>(
-      `/cronjobs/${id}/resume`,
-      {
-        method: "POST",
-      }
-    )
+    const cronjob = await fetchCronjob(`/cronjobs/${id}/resume`, {
+      method: "POST",
+    })
     revalidatePath("/cronjobs")
     return { success: true, data: cronjob }
   } catch (error: unknown) {

@@ -1,11 +1,14 @@
 import { Suspense } from "react"
-import { CronjobListPage } from "./cronjob-list"
+
 import { getCronjobs } from "@/app/api/cronjobs/action"
+import type { CronjobListResponse } from "@/app/lib/cronjobs/definitions"
+import type { Page as PaginationPage } from "@/app/lib/definitions"
+import type { Dictionary } from "@/app/lib/i18n/dictionary-types"
 import { getServerDictionary } from "@/app/lib/i18n/server"
 import { parsePaginationQuery } from "@/app/lib/pagination/query"
 import { hasPermission } from "@/app/lib/permissions"
 import { getCurrentPermissions } from "@/app/lib/permissions-server"
-import { buildSortQuery, buildFilterQuery } from "@/app/lib/utils"
+import { buildFilterQuery, buildSortQuery } from "@/app/lib/utils"
 import { AccessDenied } from "@/components/access-denied"
 import {
   AppListTable,
@@ -14,21 +17,23 @@ import {
 } from "@/components/app-list-table"
 import { AppPaginationSkeleton } from "@/components/app-pagination-controls"
 import { Skeleton } from "@/components/ui/skeleton"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
+
+import { CronjobDetailContent, CronjobDetailSkeleton } from "./cronjob-detail"
+import { CronjobListPage } from "./cronjob-list"
+
+type CronjobSearchParams = {
+  [key: string]: string | string[] | undefined
+}
 
 interface CronjobPageProps {
-  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+  searchParams: Promise<CronjobSearchParams>
 }
 
 export default async function Page({ searchParams }: CronjobPageProps) {
-  const permissions = await getCurrentPermissions()
-  const dictionary = await getServerDictionary()
+  const [permissions, dictionary] = await Promise.all([
+    getCurrentPermissions(),
+    getServerDictionary(),
+  ])
 
   if (!hasPermission(permissions, "cronjob:read")) {
     return (
@@ -40,22 +45,30 @@ export default async function Page({ searchParams }: CronjobPageProps) {
   }
 
   return (
-    <Suspense fallback={<CronjobListSkeleton />}>
-      <CronjobListContent searchParamsPromise={searchParams} />
+    <Suspense
+      fallback={<CronjobListSkeleton label={dictionary.cronjobs.loadingList} />}
+    >
+      <CronjobListContent
+        searchParamsPromise={searchParams}
+        dictionary={dictionary}
+      />
     </Suspense>
   )
 }
 
 async function CronjobListContent({
   searchParamsPromise,
+  dictionary,
 }: {
-  searchParamsPromise: Promise<{ [key: string]: string | string[] | undefined }>
+  searchParamsPromise: Promise<CronjobSearchParams>
+  dictionary: Dictionary
 }) {
   const resolvedParams = await searchParamsPromise
   const {
     page: pageParam,
     size: sizeParam,
     sort = "",
+    detail,
     ...filterParams
   } = resolvedParams
   const { page, size } = parsePaginationQuery({
@@ -63,83 +76,122 @@ async function CronjobListContent({
     size: sizeParam,
   })
 
-  const filter = buildFilterQuery(filterParams)
+  let cronjobPage: PaginationPage<CronjobListResponse>
+  try {
+    cronjobPage = await getCronjobs({
+      filter: buildFilterQuery(filterParams),
+      page: page - 1,
+      size,
+      sort: buildSortQuery(sort as string),
+    })
+  } catch (error) {
+    if (getBackendStatus(error) === 403) {
+      return (
+        <AccessDenied
+          description={dictionary.cronjobs.readDenied}
+          permission="cronjob:read"
+        />
+      )
+    }
+    throw error
+  }
 
-  const cronjobPage = await getCronjobs({
-    filter: filter,
-    page: page - 1,
-    size,
-    sort: buildSortQuery(sort as string),
-  })
+  const selectedDetailId = Array.isArray(detail) ? detail[0] : detail
+  const closeHref = buildCloseDetailHref(resolvedParams)
 
-  return <CronjobListPage cronjobPage={cronjobPage} />
+  return (
+    <div className="flex min-w-0 flex-col gap-4">
+      {selectedDetailId ? (
+        <Suspense
+          fallback={
+            <CronjobDetailSkeleton label={dictionary.cronjobs.detailLoading} />
+          }
+        >
+          <CronjobDetailContent id={selectedDetailId} closeHref={closeHref} />
+        </Suspense>
+      ) : null}
+      <CronjobListPage cronjobPage={cronjobPage} />
+    </div>
+  )
 }
 
-function CronjobListSkeleton() {
+function getBackendStatus(error: unknown): number | undefined {
+  return error instanceof Error &&
+    "status" in error &&
+    typeof error.status === "number"
+    ? error.status
+    : undefined
+}
+
+function buildCloseDetailHref(searchParams: CronjobSearchParams): string {
+  const query = new URLSearchParams()
+
+  Object.entries(searchParams).forEach(([key, value]) => {
+    if (key === "detail") {
+      return
+    }
+    if (Array.isArray(value)) {
+      value.forEach((entry) => query.append(key, entry))
+    } else if (value !== undefined) {
+      query.append(key, value)
+    }
+  })
+
+  const suffix = query.toString()
+  return `/cronjobs${suffix ? `?${suffix}` : ""}#cronjob-list`
+}
+
+function CronjobListSkeleton({ label }: { label: string }) {
   return (
-    <div className="flex flex-col">
+    <div role="status" aria-busy="true" aria-label={label} className="w-full">
+      <span className="sr-only">{label}</span>
       <div className="flex flex-col gap-4 sm:flex-row sm:justify-between">
-        <div className="flex w-full flex-1 items-center gap-4 sm:w-auto">
-          <Skeleton className="h-9 w-full sm:w-80 lg:w-96" />
-        </div>
-        <Skeleton className="h-9 w-[180px]" />
+        <Skeleton className="h-9 w-full sm:w-80 lg:w-96" />
+        <Skeleton className="h-9 w-full sm:w-[180px]" />
       </div>
 
-      <AppListTable>
-        <Table>
-          <TableHeader>
-            <AppListTableHeaderRow>
-              <AppListTableHead className="w-[32%]">
-                <Skeleton className="h-4 w-32" />
-              </AppListTableHead>
-              <AppListTableHead className="w-36 text-center">
-                <Skeleton className="mx-auto h-4 w-20" />
-              </AppListTableHead>
-              <AppListTableHead className="w-36 text-center">
-                <Skeleton className="mx-auto h-4 w-24" />
-              </AppListTableHead>
-              <AppListTableHead className="w-64 text-center">
-                <Skeleton className="mx-auto h-4 w-32" />
-              </AppListTableHead>
-              <AppListTableHead className="w-40 text-center">
-                <Skeleton className="mx-auto h-4 w-32" />
-              </AppListTableHead>
-              <AppListTableHead className="w-32 text-center">
-                <Skeleton className="ml-auto h-4 w-20" />
-              </AppListTableHead>
-            </AppListTableHeaderRow>
-          </TableHeader>
-          <TableBody>
-            {Array.from({ length: 5 }).map((_, i) => (
-              <TableRow key={i}>
-                <TableCell className="align-top whitespace-normal">
-                  <div className="flex min-w-0 flex-col gap-2">
-                    <Skeleton className="h-4 w-3/4" />
-                    <Skeleton className="h-3 w-1/2" />
-                  </div>
-                </TableCell>
-                <TableCell className="w-36 text-center">
-                  <Skeleton className="mx-auto h-6 w-20 rounded-full" />
-                </TableCell>
-                <TableCell className="w-36 text-center">
-                  <Skeleton className="mx-auto h-4 w-24" />
-                </TableCell>
-                <TableCell className="w-64 text-center">
-                  <Skeleton className="mx-auto h-4 w-32 font-mono" />
-                </TableCell>
-                <TableCell className="w-40 text-center">
+      <div className="mt-4 grid gap-3 md:hidden">
+        {Array.from({ length: 3 }).map((_, index) => (
+          <div
+            key={index}
+            className="rounded-xl border border-border bg-card p-4"
+          >
+            <Skeleton className="h-4 w-2/3" />
+            <Skeleton className="mt-2 h-3 w-4/5" />
+            <Skeleton className="mt-4 h-20 w-full" />
+            <Skeleton className="mt-4 h-8 w-full" />
+          </div>
+        ))}
+      </div>
+
+      <div className="hidden md:block">
+        <AppListTable className="mt-4">
+          <table className="min-w-[76rem] table-fixed">
+            <thead>
+              <AppListTableHeaderRow>
+                <AppListTableHead className="w-[26%]">
+                  <Skeleton className="h-4 w-32" />
+                </AppListTableHead>
+                <AppListTableHead className="w-32 text-center">
+                  <Skeleton className="mx-auto h-4 w-20" />
+                </AppListTableHead>
+                <AppListTableHead className="w-60">
+                  <Skeleton className="h-4 w-24" />
+                </AppListTableHead>
+                <AppListTableHead className="w-52 text-center">
                   <Skeleton className="mx-auto h-4 w-32" />
-                </TableCell>
-                <TableCell className="w-32 text-center">
-                  <div className="flex justify-end gap-2">
-                    <Skeleton className="h-8 w-8" />
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </AppListTable>
+                </AppListTableHead>
+                <AppListTableHead className="w-48 text-center">
+                  <Skeleton className="mx-auto h-4 w-32" />
+                </AppListTableHead>
+                <AppListTableHead className="w-28 text-center">
+                  <Skeleton className="ml-auto h-4 w-20" />
+                </AppListTableHead>
+              </AppListTableHeaderRow>
+            </thead>
+          </table>
+        </AppListTable>
+      </div>
 
       <AppPaginationSkeleton className="mt-4" />
     </div>

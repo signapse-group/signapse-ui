@@ -3,6 +3,8 @@ export const fixtureContracts = [
   { method: "PATCH", path: "/me", mapping: "updateProfile", status: 200 },
   { method: "PATCH", path: "/me/preferred-language", mapping: "updateMyPreferredLanguage", status: 200 },
   { method: "GET", path: "/contact-requests", mapping: "getContactRequests", status: 200 },
+  { method: "GET", path: "/cronjobs", mapping: "getCronjobs", status: 200 },
+  { method: "GET", path: "/cronjobs/{id}", mapping: "getCronjobById", status: 200 },
   { method: "GET", path: "/system-prompts", mapping: "getSystemPrompts", status: 200 },
   { method: "GET", path: "/system-prompts/{promptType}", mapping: "getSystemPromptByType", status: 200 },
   { method: "PUT", path: "/system-prompts/{promptType}", mapping: "updateSystemPrompt", status: 200 },
