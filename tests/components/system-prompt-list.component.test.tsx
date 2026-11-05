@@ -153,6 +153,37 @@ describe("system prompt list", () => {
     )
   })
 
+  it("adds missing pagination defaults with replace and preserves filtered search", async () => {
+    listState.searchParams = new URLSearchParams("search=telegram&sort=name")
+
+    renderList("en")
+
+    expect(screen.getByRole("searchbox")).toHaveValue("telegram")
+    expect(screen.getAllByRole("row")).toHaveLength(4)
+    expect(screen.getByText(/Showing 1-3 of 3 results/)).toBeInTheDocument()
+    expect(
+      screen.getByRole("combobox", { name: enDictionary.pagination.pageSize })
+    ).toHaveTextContent("10")
+    await waitFor(() =>
+      expect(listState.routerReplace).toHaveBeenCalledWith(
+        "/en/system-prompts?search=telegram&sort=name&page=1&size=10"
+      )
+    )
+    expect(listState.routerPush).not.toHaveBeenCalled()
+  })
+
+  it("does not replace an already canonical pagination URL", () => {
+    listState.searchParams = new URLSearchParams(
+      "page=1&size=10&search=telegram"
+    )
+
+    renderList("en")
+
+    expect(screen.getAllByRole("row")).toHaveLength(4)
+    expect(listState.routerReplace).not.toHaveBeenCalled()
+    expect(listState.routerPush).not.toHaveBeenCalled()
+  })
+
   it("keeps search and other query state when changing page size", async () => {
     const user = userEvent.setup()
     const searchablePrompts = prompts.map((prompt) => ({

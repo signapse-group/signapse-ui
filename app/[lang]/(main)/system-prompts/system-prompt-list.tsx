@@ -107,7 +107,10 @@ export function SystemPromptList({ prompts }: SystemPromptListProps) {
     : prompts
   const requestedPageSize = parsePaginationQuery(searchParams).size
   const totalPages = Math.ceil(filteredPrompts.length / requestedPageSize)
-  const pagination = useAppPaginationQuery({ totalPages })
+  const pagination = useAppPaginationQuery({
+    normalizeMissingParams: true,
+    totalPages,
+  })
   const currentPage = Math.min(pagination.currentPage, Math.max(totalPages, 1))
   const startIndex = (currentPage - 1) * pagination.pageSize
   const pagePrompts = filteredPrompts.slice(

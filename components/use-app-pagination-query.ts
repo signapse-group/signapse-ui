@@ -6,9 +6,11 @@ import { useEffect, useTransition } from "react"
 import { isPageSize, parsePaginationQuery } from "@/app/lib/pagination/query"
 
 export function useAppPaginationQuery({
+  normalizeMissingParams = false,
   normalizeUrl = true,
   totalPages,
 }: {
+  normalizeMissingParams?: boolean
   normalizeUrl?: boolean
   totalPages?: number
 }) {
@@ -31,8 +33,18 @@ export function useAppPaginationQuery({
     const rawSize = searchParams.get("size")
     let shouldReplace = false
 
+    if (normalizeMissingParams && rawPage === null) {
+      params.set("page", currentPage.toString())
+      shouldReplace = true
+    }
+
     if (rawPage !== null && rawPage !== currentPage.toString()) {
       params.set("page", currentPage.toString())
+      shouldReplace = true
+    }
+
+    if (normalizeMissingParams && rawSize === null) {
+      params.set("size", pageSize.toString())
       shouldReplace = true
     }
 
@@ -54,6 +66,7 @@ export function useAppPaginationQuery({
     }
   }, [
     currentPage,
+    normalizeMissingParams,
     normalizeUrl,
     pageSize,
     pathname,
