@@ -365,6 +365,59 @@ function contactRequestRecords() {
   })
 }
 
+function cronjobRecords() {
+  return [
+    {
+      id: 1,
+      jobName: "Scheduled and running",
+      jobGroup: "market",
+      scheduleStatus: "SCHEDULED",
+      executionStatus: "RUNNING",
+      cronExpression: "0 0/5 * * * ?",
+      description: "A recurring market refresh.",
+      latestResult: "SUCCESS",
+      lastExecutedTime: "2026-11-05T07:00:00Z",
+      nextTriggeredTime: "2026-11-05T07:05:00Z",
+    },
+    {
+      id: 2,
+      jobName: "Paused during execution",
+      jobGroup: "market",
+      scheduleStatus: "PAUSED",
+      executionStatus: "RUNNING",
+      cronExpression: "0 0/5 * * * ?",
+      description: null,
+      latestResult: null,
+      lastExecutedTime: "2026-11-05T07:00:00Z",
+      nextTriggeredTime: null,
+    },
+    {
+      id: 3,
+      jobName: "Paused after execution",
+      jobGroup: "market",
+      scheduleStatus: "PAUSED",
+      executionStatus: "NOT_RUNNING",
+      cronExpression: "0 0/5 * * * ?",
+      description: "The last attempt failed.",
+      latestResult: "FAILED",
+      lastExecutedTime: "2026-11-05T06:55:00Z",
+      nextTriggeredTime: null,
+    },
+    {
+      id: 4,
+      jobName: "Immediate trigger not started",
+      jobGroup: "manual",
+      scheduleStatus: "UNSCHEDULED",
+      executionStatus: "NOT_RUNNING",
+      cronExpression: "0 0/5 * * * ?",
+      description: null,
+      latestResult: null,
+      lastExecutedTime: null,
+      nextTriggeredTime: null,
+    },
+  ]
+}
+
 function systemPromptRecords() {
   const requiredVariables = [
     "locale",
@@ -438,6 +491,7 @@ function createState() {
     notes: [note(31, "Morning brief", "Review the fixture market brief.")],
     feedback: feedbackRecords(),
     contactRequests: contactRequestRecords(),
+    cronjobs: cronjobRecords(),
     systemPrompts: systemPromptRecords(),
     aiProviderConfigs: [
       {
@@ -2538,6 +2592,42 @@ function responseForRoute(state, method, pathname, url, body, locale = "en") {
     return Number(url.searchParams.get("size")) === 50
       ? { content: pageResponse.content }
       : pageResponse
+  }
+
+  if (method === "GET" && pathname === "/cronjobs") {
+    if (!hasFixturePermission(state, "cronjob:read")) {
+      return {
+        __status: 403,
+        payload: errorPayload("Cronjob permission denied", "FORBIDDEN"),
+      }
+    }
+
+    if (getScenario(state, method, pathname) === "missing-content") {
+      return {}
+    }
+
+    return slicePage(state.cronjobs, url)
+  }
+
+  const cronjobDetailMatch = pathname.match(/^\/cronjobs\/(\d+)$/)
+  if (method === "GET" && cronjobDetailMatch) {
+    if (!hasFixturePermission(state, "cronjob:read")) {
+      return {
+        __status: 403,
+        payload: errorPayload("Cronjob permission denied", "FORBIDDEN"),
+      }
+    }
+
+    const id = Number(cronjobDetailMatch[1])
+    const cronjob = state.cronjobs.find((item) => item.id === id)
+    if (!cronjob) {
+      return {
+        __status: 404,
+        payload: errorPayload("Cronjob not found", "NOT_FOUND"),
+      }
+    }
+
+    return cronjob
   }
 
   if (pathname === "/system-prompts" && method === "GET") {
