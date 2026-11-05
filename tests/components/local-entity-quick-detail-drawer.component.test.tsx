@@ -86,6 +86,7 @@ vi.mock("next/image", () => ({
 
 import { vi as viDictionary } from "@/app/lib/i18n/dictionaries/vi"
 import { LocalizationProvider } from "@/app/lib/i18n/provider"
+import type { EventResponse } from "@/app/lib/events/definitions"
 import { formatNewsArticleDateTime } from "@/app/lib/news-articles/date-time"
 import type { NewsArticleResponse } from "@/app/lib/news-articles/definitions"
 
@@ -116,6 +117,16 @@ const article: NewsArticleResponse = {
   ],
 }
 
+const event: EventResponse = {
+  id: 73,
+  title: "Sự kiện được chọn trong dòng thời gian",
+  status: "ENRICHED",
+  createdDate: "2026-08-19T12:00:00.000Z",
+  assets: [],
+  themes: [],
+  evidence: [],
+}
+
 function renderDrawer(selectedArticle: NewsArticleResponse = article) {
   getNewsArticleById.mockResolvedValueOnce(selectedArticle)
 
@@ -123,6 +134,20 @@ function renderDrawer(selectedArticle: NewsArticleResponse = article) {
     <LocalizationProvider locale="vi" dictionary={viDictionary}>
       <LocalEntityQuickDetailDrawer
         entity={{ id: selectedArticle.id, kind: "news-article" }}
+        onClose={vi.fn()}
+        owner="dashboard"
+      />
+    </LocalizationProvider>
+  )
+}
+
+function renderEventDrawer(selectedEvent: EventResponse = event) {
+  getEventById.mockResolvedValueOnce(selectedEvent)
+
+  return render(
+    <LocalizationProvider locale="vi" dictionary={viDictionary}>
+      <LocalEntityQuickDetailDrawer
+        entity={{ id: selectedEvent.id, kind: "event" }}
         onClose={vi.fn()}
         owner="dashboard"
       />
@@ -687,5 +712,28 @@ describe("LocalEntityQuickDetailDrawer news article reading surface", () => {
     expect(
       screen.queryByRole("heading", { name: "Nội dung" })
     ).not.toBeInTheDocument()
+  })
+})
+
+describe("LocalEntityQuickDetailDrawer event navigation", () => {
+  afterEach(() => {
+    cleanup()
+    vi.clearAllMocks()
+    useHasAnyPermission.mockImplementation(() => true)
+  })
+
+  it("loads and opens the selected Event ID on its canonical page", async () => {
+    renderEventDrawer()
+
+    await waitFor(() => {
+      expect(getEventById).toHaveBeenCalledWith(event.id)
+      expect(
+        screen.getByRole("heading", { level: 2, name: event.title })
+      ).toBeInTheDocument()
+    })
+
+    expect(
+      screen.getByRole("link", { name: viDictionary.common.openFullPage })
+    ).toHaveAttribute("href", `/vi/events/${event.id}`)
   })
 })

@@ -87,7 +87,7 @@ export const dashboardRecentEventAssetSummarySchema = z.object({
 
 export const dashboardRecentEventItemResponseSchema = z.object({
   id: z.number().int(),
-  title: z.string(),
+  title: z.string().nullable(),
   description: z.string().nullable(),
   occurredAt: z.string(),
   confidence: z.number().nullable(),

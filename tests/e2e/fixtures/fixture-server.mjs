@@ -1151,7 +1151,9 @@ function dashboardSummary(workspaceId, scenario = "success", locale = "en") {
         title:
           index === 0
             ? "Central bank signals a slower easing path"
-            : `Fixture overview event ${index + 1}`,
+            : index === 1
+              ? null
+              : `Fixture overview event ${index + 1}`,
         description: `Synthetic event ${index + 1} for the Overview fixture.`,
         occurredAt:
           index === 3

@@ -179,10 +179,14 @@ function EventTimelineItems({
   locale: AppLocale
 }) {
   const t = dictionary.workspaceOverview.eventTimeline
+  const titledItems = items.map((item) => ({
+    ...item,
+    title: item.title?.trim() ? item.title : t.untitledEvent,
+  }))
 
   return (
     <ItemGroup className="gap-0">
-      {items.map((item, index) => (
+      {titledItems.map((item, index) => (
         <div key={item.id} role="listitem">
           {index > 0 ? <ItemSeparator /> : null}
           <Item>

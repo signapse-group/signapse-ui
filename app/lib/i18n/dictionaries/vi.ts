@@ -493,6 +493,7 @@ export const vi = {
         "Hãy chọn không gian làm việc đang hoạt động để tải sự kiện theo tài sản được theo dõi.",
       viewAll: "Xem tất cả sự kiện",
       openEvent: "Mở sự kiện",
+      untitledEvent: "Chưa có tiêu đề",
       themes: "Chủ đề",
       affectedAssets: "Tài sản ảnh hưởng",
       confidence: "Độ tin cậy",

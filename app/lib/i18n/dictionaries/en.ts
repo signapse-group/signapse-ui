@@ -493,6 +493,7 @@ export const en: Dictionary = {
         "Choose an active workspace to load events for its tracked assets.",
       viewAll: "View all events",
       openEvent: "Open event",
+      untitledEvent: "Untitled event",
       themes: "Themes",
       affectedAssets: "Affected assets",
       confidence: "Confidence",

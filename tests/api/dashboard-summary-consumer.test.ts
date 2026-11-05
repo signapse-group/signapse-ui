@@ -30,7 +30,30 @@ it("parses the current summary without coupling the all-time count to the seven-
     timezone: "UTC",
     scope: { workspaceId: 7, watchlistAssetCount: 1 },
     nextKeyEvent: { state: "EMPTY", data: null, errorCode: null },
-    recentEvents: { state: "EMPTY", items: [], errorCode: null },
+    recentEvents: {
+      state: "AVAILABLE",
+      items: [
+        {
+          id: 71,
+          title: "Một sự kiện có tiêu đề",
+          description: "Mô tả sự kiện.",
+          occurredAt: "2026-01-15T07:30:00.000Z",
+          confidence: 0.8,
+          themes: [],
+          affectedAssets: [],
+        },
+        {
+          id: 72,
+          title: null,
+          description: null,
+          occurredAt: "2026-01-15T07:00:00.000Z",
+          confidence: null,
+          themes: [],
+          affectedAssets: [],
+        },
+      ],
+      errorCode: null,
+    },
     marketEvents24h: {
       state: "EMPTY",
       count: 0,
@@ -110,6 +133,13 @@ it("parses the current summary without coupling the all-time count to the seven-
 
   expect(fetchAuthenticatedMock).toHaveBeenCalledWith("/dashboard/summary")
   expect(summary.activeNarratives.count).toBe(14)
+  expect(summary.recentEvents).toMatchObject({
+    state: "AVAILABLE",
+    items: [
+      { id: 71, title: "Một sự kiện có tiêu đề" },
+      { id: 72, title: null, description: null },
+    ],
+  })
   expect(summary.marketNarratives.items).toHaveLength(1)
   expect(summary.marketNarratives.items[0]).toMatchObject({
     id: 81,
