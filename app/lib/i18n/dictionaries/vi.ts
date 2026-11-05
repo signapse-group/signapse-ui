@@ -2854,6 +2854,7 @@ export const vi = {
     emptyTitle: "Chưa có tác vụ định kỳ",
     emptyDescription: "Chưa có tác vụ hệ thống nào được backend cung cấp.",
     loadingList: "Đang tải danh sách tác vụ định kỳ",
+    paginationUnavailable: "Không thể hiển thị thông tin phân trang.",
     detailTitle: "Chi tiết tác vụ",
     viewDetails: "Xem chi tiết",
     closeDetails: "Đóng chi tiết",

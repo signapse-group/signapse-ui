@@ -1,7 +1,7 @@
 "use server"
 
 import { fetchAuthenticated } from "@/app/api/auth/action"
-import type { ActionResult, Page, SearchParams } from "@/app/lib/definitions"
+import type { ActionResult, SearchParams } from "@/app/lib/definitions"
 import { getDictionary } from "@/app/lib/i18n/dictionaries"
 import { getRequestLocale } from "@/app/lib/i18n/server"
 import { queryParamsToString } from "@/app/lib/utils"
@@ -11,15 +11,11 @@ import {
   CronjobResponseSchema,
 } from "@/app/lib/cronjobs/definitions"
 import type {
-  CronjobListResponse,
+  CronjobPageResponse,
   CronjobRequest,
   CronjobResponse,
 } from "@/app/lib/cronjobs/definitions"
 import { revalidatePath } from "next/cache"
-
-function getErrorMessage(error: unknown, fallback: string) {
-  return error instanceof Error ? error.message : fallback
-}
 
 async function fetchCronjob(
   path: string,
@@ -31,7 +27,7 @@ async function fetchCronjob(
 
 export async function getCronjobs(
   searchParams: SearchParams
-): Promise<Page<CronjobListResponse>> {
+): Promise<CronjobPageResponse> {
   const response = await fetchAuthenticated<unknown>(
     `/cronjobs?${queryParamsToString(searchParams)}`
   )
@@ -59,11 +55,11 @@ export async function updateCronjob(
     })
     revalidatePath("/cronjobs")
     return { success: true, data: cronjob }
-  } catch (error: unknown) {
+  } catch {
     const dictionary = await getDictionary(await getRequestLocale())
     return {
       success: false,
-      error: getErrorMessage(error, dictionary.cronjobs.cronUpdateError),
+      error: dictionary.cronjobs.cronUpdateError,
     }
   }
 }
@@ -77,11 +73,11 @@ export async function startCronjob(
     })
     revalidatePath("/cronjobs")
     return { success: true, data: cronjob }
-  } catch (error: unknown) {
+  } catch {
     const dictionary = await getDictionary(await getRequestLocale())
     return {
       success: false,
-      error: getErrorMessage(error, dictionary.cronjobs.startError),
+      error: dictionary.cronjobs.startError,
     }
   }
 }
@@ -95,11 +91,11 @@ export async function pauseCronjob(
     })
     revalidatePath("/cronjobs")
     return { success: true, data: cronjob }
-  } catch (error: unknown) {
+  } catch {
     const dictionary = await getDictionary(await getRequestLocale())
     return {
       success: false,
-      error: getErrorMessage(error, dictionary.cronjobs.pauseError),
+      error: dictionary.cronjobs.pauseError,
     }
   }
 }
@@ -113,11 +109,11 @@ export async function resumeCronjob(
     })
     revalidatePath("/cronjobs")
     return { success: true, data: cronjob }
-  } catch (error: unknown) {
+  } catch {
     const dictionary = await getDictionary(await getRequestLocale())
     return {
       success: false,
-      error: getErrorMessage(error, dictionary.cronjobs.resumeError),
+      error: dictionary.cronjobs.resumeError,
     }
   }
 }

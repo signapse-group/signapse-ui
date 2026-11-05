@@ -79,6 +79,19 @@ describe("cronjob read contract schemas", () => {
     ).toBe(false)
   })
 
+  it("accepts optional page metadata without treating missing content as empty", () => {
+    expect(CronjobPageResponseSchema.parse({ content: [cronjob] })).toEqual({
+      content: [cronjob],
+    })
+    expect(CronjobPageResponseSchema.parse({ content: [] })).toEqual({
+      content: [],
+    })
+    expect(
+      CronjobPageResponseSchema.parse({ content: [], pageable: {} })
+    ).toEqual({ content: [], pageable: {} })
+    expect(CronjobPageResponseSchema.parse({})).toEqual({})
+  })
+
   it("trims required schedule updates and rejects a blank expression", () => {
     expect(
       CronjobRequestSchema.parse({ expression: "  0 0 * * * ?  " })

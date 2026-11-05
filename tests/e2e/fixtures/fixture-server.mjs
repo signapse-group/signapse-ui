@@ -2602,6 +2602,10 @@ function responseForRoute(state, method, pathname, url, body, locale = "en") {
       }
     }
 
+    if (getScenario(state, method, pathname) === "missing-content") {
+      return {}
+    }
+
     return slicePage(state.cronjobs, url)
   }
 

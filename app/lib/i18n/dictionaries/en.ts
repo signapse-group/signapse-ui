@@ -2873,6 +2873,7 @@ export const en: Dictionary = {
     emptyTitle: "No cronjobs yet",
     emptyDescription: "The backend has not provided any system jobs yet.",
     loadingList: "Loading cronjobs",
+    paginationUnavailable: "Pagination details are unavailable.",
     detailTitle: "Cronjob details",
     viewDetails: "View details",
     closeDetails: "Close details",

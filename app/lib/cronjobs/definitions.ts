@@ -36,7 +36,7 @@ export type CronjobResponse = z.infer<typeof CronjobResponseSchema>
 
 export const CronjobPageResponseSchema = z
   .object({
-    content: z.array(CronjobResponseSchema),
+    content: z.array(CronjobResponseSchema).optional(),
     pageable: z
       .object({
         pageNumber: z.number(),
@@ -45,16 +45,20 @@ export const CronjobPageResponseSchema = z
         paged: z.boolean(),
         unpaged: z.boolean(),
       })
-      .passthrough(),
-    last: z.boolean(),
-    totalElements: z.number(),
-    totalPages: z.number(),
-    size: z.number(),
-    number: z.number(),
-    first: z.boolean(),
-    numberOfElements: z.number(),
-    empty: z.boolean(),
+      .partial()
+      .passthrough()
+      .optional(),
+    last: z.boolean().optional(),
+    totalElements: z.number().optional(),
+    totalPages: z.number().optional(),
+    size: z.number().optional(),
+    number: z.number().optional(),
+    first: z.boolean().optional(),
+    numberOfElements: z.number().optional(),
+    empty: z.boolean().optional(),
   })
   .passthrough()
+
+export type CronjobPageResponse = z.infer<typeof CronjobPageResponseSchema>
 
 export type CronjobListResponse = CronjobResponse

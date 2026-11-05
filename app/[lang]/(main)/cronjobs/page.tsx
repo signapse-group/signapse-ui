@@ -1,7 +1,10 @@
 import { Suspense } from "react"
 
 import { getCronjobs } from "@/app/api/cronjobs/action"
-import type { CronjobListResponse } from "@/app/lib/cronjobs/definitions"
+import type {
+  CronjobListResponse,
+  CronjobPageResponse,
+} from "@/app/lib/cronjobs/definitions"
 import type { Page as PaginationPage } from "@/app/lib/definitions"
 import type { Dictionary } from "@/app/lib/i18n/dictionary-types"
 import { getServerDictionary } from "@/app/lib/i18n/server"
@@ -76,9 +79,9 @@ async function CronjobListContent({
     size: sizeParam,
   })
 
-  let cronjobPage: PaginationPage<CronjobListResponse>
+  let cronjobResponse: CronjobPageResponse
   try {
-    cronjobPage = await getCronjobs({
+    cronjobResponse = await getCronjobs({
       filter: buildFilterQuery(filterParams),
       page: page - 1,
       size,
@@ -96,6 +99,10 @@ async function CronjobListContent({
     throw error
   }
 
+  if (cronjobResponse.content === undefined) {
+    throw new Error("Cronjob list response omitted content")
+  }
+
   const selectedDetailId = Array.isArray(detail) ? detail[0] : detail
   const closeHref = buildCloseDetailHref(resolvedParams)
 
@@ -110,9 +117,36 @@ async function CronjobListContent({
           <CronjobDetailContent id={selectedDetailId} closeHref={closeHref} />
         </Suspense>
       ) : null}
-      <CronjobListPage cronjobPage={cronjobPage} />
+      <CronjobListPage
+        cronjobPage={{
+          content: cronjobResponse.content,
+          pagination: getCronjobPagination(cronjobResponse),
+        }}
+      />
     </div>
   )
+}
+
+function getCronjobPagination(
+  page: CronjobPageResponse
+):
+  | Pick<
+      PaginationPage<CronjobListResponse>,
+      "number" | "numberOfElements" | "size" | "totalElements" | "totalPages"
+    >
+  | undefined {
+  const { number, numberOfElements, size, totalElements, totalPages } = page
+  if (
+    number === undefined ||
+    numberOfElements === undefined ||
+    size === undefined ||
+    totalElements === undefined ||
+    totalPages === undefined
+  ) {
+    return undefined
+  }
+
+  return { number, numberOfElements, size, totalElements, totalPages }
 }
 
 function getBackendStatus(error: unknown): number | undefined {

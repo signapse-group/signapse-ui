@@ -65,7 +65,13 @@ import { CronjobStatusFields } from "./cronjob-status-fields"
 import { CronjobSearch } from "./cronjob-search"
 
 interface CronjobListProps {
-  cronjobPage: Page<CronjobListResponse>
+  cronjobPage: {
+    content: CronjobListResponse[]
+    pagination?: Pick<
+      Page<CronjobListResponse>,
+      "number" | "numberOfElements" | "size" | "totalElements" | "totalPages"
+    >
+  }
 }
 
 const CRON_EXPRESSION_MAX_LENGTH = 100
@@ -224,7 +230,13 @@ export function CronjobListPage({ cronjobPage }: CronjobListProps) {
         </AppListTable>
       </div>
 
-      <AppPaginationControls page={cronjobPage} className="mt-4" />
+      {cronjobPage.pagination ? (
+        <AppPaginationControls page={cronjobPage.pagination} className="mt-4" />
+      ) : cronjobs.length > 0 ? (
+        <p role="status" className="mt-4 text-xs text-muted-foreground">
+          {dictionary.cronjobs.paginationUnavailable}
+        </p>
+      ) : null}
     </div>
   )
 }

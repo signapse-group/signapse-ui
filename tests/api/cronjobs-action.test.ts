@@ -22,6 +22,7 @@ import {
   getCronjobById,
   getCronjobs,
   pauseCronjob,
+  startCronjob,
   updateCronjob,
 } from "@/app/api/cronjobs/action"
 
@@ -64,6 +65,7 @@ beforeEach(() => {
     cronjobs: {
       cronRequired: "Cron expression is required.",
       cronUpdateError: "Could not update the cron schedule.",
+      startError: "Could not start cronjob.",
       pauseError: "Could not pause cronjob.",
     },
   })
@@ -91,6 +93,14 @@ describe("cronjob API actions", () => {
     )
   })
 
+  it("accepts an API page with omitted optional pagination metadata", async () => {
+    mocks.fetchAuthenticated.mockResolvedValue({ content: [cronjob] })
+
+    await expect(
+      getCronjobs({ filter: "", page: 0, size: 20, sort: [] })
+    ).resolves.toEqual({ content: [cronjob] })
+  })
+
   it("validates mutation responses against the same DTO while keeping callers intact", async () => {
     mocks.fetchAuthenticated.mockResolvedValue(cronjob)
 
@@ -114,8 +124,17 @@ describe("cronjob API actions", () => {
     expect(mocks.revalidatePath).not.toHaveBeenCalled()
   })
 
+  it("returns localized fallback copy when a mutation response fails validation", async () => {
+    mocks.fetchAuthenticated.mockResolvedValue({ invalid: true })
+
+    await expect(startCronjob(42)).resolves.toEqual({
+      success: false,
+      error: "Could not start cronjob.",
+    })
+  })
+
   it("rejects an invalid read response instead of treating it as an empty list", async () => {
-    mocks.fetchAuthenticated.mockResolvedValue({ content: [] })
+    mocks.fetchAuthenticated.mockResolvedValue({ content: [{}] })
 
     await expect(
       getCronjobs({ filter: "", page: 0, size: 20, sort: [] })

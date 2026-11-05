@@ -97,28 +97,21 @@ const cronjobs = [
 
 const page = {
   content: cronjobs,
-  pageable: {
-    pageNumber: 0,
-    pageSize: 20,
-    offset: 0,
-    paged: true,
-    unpaged: false,
-  },
-  last: true,
+  number: 0,
+  numberOfElements: cronjobs.length,
+  size: 20,
   totalElements: cronjobs.length,
   totalPages: 1,
-  size: 20,
-  number: 0,
-  first: true,
-  numberOfElements: cronjobs.length,
-  empty: false,
 }
 
-function renderCronjobList(permissions: string[]) {
+function renderCronjobList(
+  permissions: string[],
+  cronjobPage: ComponentProps<typeof CronjobListPage>["cronjobPage"] = page
+) {
   return render(
     <LocalizationProvider locale="en" dictionary={en}>
       <PermissionProvider permissions={permissions}>
-        <CronjobListPage cronjobPage={page} />
+        <CronjobListPage cronjobPage={cronjobPage} />
       </PermissionProvider>
     </LocalizationProvider>
   )
@@ -203,5 +196,19 @@ describe("CronjobListPage", () => {
     ).toBeNull()
     expect(within(queued).getByRole("button", { name: "Start" })).toBeEnabled()
     expect(within(queued).queryByRole("button", { name: "Pause" })).toBeNull()
+  })
+
+  it("keeps loaded rows visible and labels missing pagination metadata", () => {
+    renderCronjobList(["cronjob:read"], { content: [cronjobs[0]] })
+
+    expect(
+      screen.getByRole("article", { name: "Scheduled and running" })
+    ).toBeVisible()
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Pagination details are unavailable"
+    )
+    expect(
+      document.querySelector('[data-slot="app-pagination-footer"]')
+    ).not.toBeInTheDocument()
   })
 })

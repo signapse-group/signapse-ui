@@ -109,7 +109,7 @@ test("cronjob read permission renders responsive list and in-context detail", as
 test("read denial, detail errors, and a valid empty list stay distinct", async ({
   page,
   fixture,
-}) => {
+}, testInfo) => {
   await fixture.setPermissions(["cronjob:start"])
   await page.goto("/vi/cronjobs")
   await expect(page.getByText("Bạn không có quyền truy cập")).toBeVisible()
@@ -140,6 +140,23 @@ test("read denial, detail errors, and a valid empty list stay distinct", async (
       .locator("#cronjob-detail-panel")
       .getByText("Bạn không có quyền truy cập")
   ).toBeVisible()
+
+  await fixture.setScenario("/cronjobs", "missing-content")
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto("/vi/cronjobs")
+  const loadError = page
+    .getByRole("alert")
+    .filter({ hasText: "Đã có lỗi xảy ra" })
+  await expect(loadError).toBeVisible()
+  await expect(loadError).toContainText(
+    "Không thể tải dữ liệu tác vụ định kỳ lúc này."
+  )
+  await expect(page.getByText("Chưa có tác vụ định kỳ")).toHaveCount(0)
+  await expect(page.getByText(/Expected array|Expected number/)).toHaveCount(0)
+  await testInfo.attach("cronjobs-read-missing-content-error.png", {
+    body: await page.screenshot({ fullPage: true }),
+    contentType: "image/png",
+  })
 })
 
 test("cronjob controls remain permission-specific for queued and paused work", async ({
