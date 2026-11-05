@@ -2093,9 +2093,9 @@ export const vi = {
     },
     calendar: {
       actual: "Thực tế",
-      countdownHours: "Còn {hours} giờ {minutes} phút",
-      countdownHoursOnly: "Còn {hours} giờ",
-      countdownMinutes: "Còn {minutes} phút",
+      countdownHoursValue: "{hours} giờ {minutes} phút",
+      countdownHoursOnlyValue: "{hours} giờ",
+      countdownMinutesValue: "{minutes} phút",
       eventFallback: "Sự kiện lịch kinh tế",
       eventMarkers: "{count} sự kiện lịch kinh tế",
       forecast: "Dự báo",
@@ -2107,6 +2107,7 @@ export const vi = {
       nextEvent: "Sự kiện tiếp theo",
       noNextEvent:
         "Chưa có sự kiện phù hợp trong dữ liệu lịch đã đồng bộ trong 7 ngày tới.",
+      remainingLabel: "Còn lại",
       openMany: "Mở {count} sự kiện lịch kinh tế",
       openOne: "Mở sự kiện lịch kinh tế {title}",
       previous: "Trước đó",

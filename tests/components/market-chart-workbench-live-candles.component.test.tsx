@@ -535,6 +535,12 @@ describe("Market chart quote-driven candle flow", () => {
     const nextBadge = await screen.findByRole("button", {
       name: /US Natural Gas Storage/,
     })
+    const plot = screen.getByTestId("market-chart-plot")
+    const badge = screen.getByTestId("market-chart-next-event-badge")
+    expect(plot).toContainElement(badge)
+    expect(screen.getByTestId("market-chart-toolbar")).not.toContainElement(
+      badge
+    )
     fireEvent.click(nextBadge)
     expect(
       await screen.findByTestId("calendar-event-detail")
