@@ -260,6 +260,7 @@ export function SystemPromptList({ prompts }: SystemPromptListProps) {
           </Table>
         </AppListTable>
         <AppPaginationFooter
+          className="[&_[data-slot=pagination-content]]:gap-1 [&_[data-slot=select-trigger]]:px-2"
           currentPage={currentPage}
           isPending={pagination.isPending}
           onPageChange={pagination.setPage}

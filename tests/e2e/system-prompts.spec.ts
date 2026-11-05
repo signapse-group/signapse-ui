@@ -18,23 +18,105 @@ test.describe("P0 system prompt catalog and content hotfix", () => {
       "13 supported prompts"
     )
     await expect(page.locator("tbody tr")).toHaveCount(10)
-    await expect(
-      page.locator('[data-slot="app-pagination-footer"]')
-    ).toContainText("Showing 1-10 of 13 results")
+    const paginationFooter = page.locator('[data-slot="app-pagination-footer"]')
+    await expect(paginationFooter).toContainText("Showing 1-10 of 13 results")
     await expect(
       page
         .getByRole("combobox", { name: en.pagination.pageSize })
         .locator('[data-slot="select-value"]')
     ).toHaveText("10")
+
+    const spacing = await paginationFooter.evaluate((footer) => {
+      const selector = footer.querySelector<HTMLElement>(
+        '[data-slot="select-trigger"]'
+      )
+      const sizeGroup = selector?.parentElement
+      const navigationContent = footer.querySelector<HTMLElement>(
+        '[data-slot="pagination-content"]'
+      )
+      const navigationControls = Array.from(
+        navigationContent?.querySelectorAll<HTMLElement>(
+          'button, [data-slot="pagination-link"]'
+        ) ?? []
+      )
+      const icon = navigationControls[0]?.querySelector<SVGSVGElement>("svg")
+
+      if (!selector || !sizeGroup || !navigationContent || !icon) {
+        throw new Error("Pagination footer elements are missing")
+      }
+
+      const dimensions = (element: HTMLElement | SVGSVGElement) => {
+        const { width, height } = element.getBoundingClientRect()
+        return [Math.round(width), Math.round(height)]
+      }
+
+      return {
+        footerPadding: [
+          getComputedStyle(footer).paddingTop,
+          getComputedStyle(footer).paddingRight,
+          getComputedStyle(footer).paddingBottom,
+          getComputedStyle(footer).paddingLeft,
+        ],
+        selectorPadding: [
+          getComputedStyle(selector).paddingLeft,
+          getComputedStyle(selector).paddingRight,
+        ],
+        labelSelectorGap: getComputedStyle(sizeGroup).gap,
+        navigationGap: getComputedStyle(navigationContent).gap,
+        selectorSize: dimensions(selector),
+        navigationControlSize: dimensions(navigationControls[0]),
+        iconSize: dimensions(icon),
+        navigationControlGaps: navigationControls
+          .slice(1)
+          .map((control, index) => {
+            const previous = navigationControls[index].getBoundingClientRect()
+            return Math.round(
+              control.getBoundingClientRect().left - previous.right
+            )
+          }),
+      }
+    })
+    expect(spacing).toEqual({
+      footerPadding: ["12px", "16px", "12px", "16px"],
+      selectorPadding: ["8px", "8px"],
+      labelSelectorGap: "8px",
+      navigationGap: "4px",
+      selectorSize: [64, 32],
+      navigationControlSize: [32, 32],
+      iconSize: [16, 16],
+      navigationControlGaps: [4, 4, 4],
+    })
     const listAccessibility = await new AxeBuilder({ page })
       .include("main")
       .analyze()
     expect(listAccessibility.violations).toEqual([])
 
+    await testInfo.attach("system-prompts-pagination-footer-1520x1340", {
+      body: await paginationFooter.screenshot(),
+      contentType: "image/png",
+    })
     await testInfo.attach("system-prompt-list-1520x1340", {
       body: await page.screenshot(),
       contentType: "image/png",
     })
+
+    for (const viewport of [
+      { width: 360, height: 844 },
+      { width: 1024, height: 768 },
+      { width: 1439, height: 1024 },
+      { width: 1440, height: 1024 },
+      { width: 760, height: 672 },
+    ]) {
+      await page.setViewportSize(viewport)
+      const documentWidth = await page.evaluate(
+        () => document.documentElement.scrollWidth
+      )
+      expect(
+        documentWidth,
+        `No page overflow at ${viewport.width}px CSS width`
+      ).toBeLessThanOrEqual(viewport.width)
+    }
+    await page.setViewportSize({ width: 1520, height: 1340 })
 
     const nextPage = page.getByRole("button", {
       name: en.pagination.goToNext,
