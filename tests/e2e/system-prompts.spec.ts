@@ -125,19 +125,39 @@ test.describe("P0 system prompt catalog and content hotfix", () => {
   test("restores pagination from history and normalizes deep-link queries", async ({
     fixture,
     page,
-  }) => {
+  }, testInfo) => {
     await fixture.setPermissions(["*"])
     await page.setViewportSize({ width: 1520, height: 1340 })
     await page.addInitScript(() => localStorage.setItem("theme", "dark"))
 
-    await page.goto("/en/system-prompts")
+    await page.goto("/en/system-prompts?search=a")
+    await expect(page).toHaveURL(
+      /\/en\/system-prompts\?search=a&page=1&size=10$/
+    )
     await expect(page.locator("tbody tr")).toHaveCount(10)
+    await expect(page.getByRole("searchbox")).toHaveValue("a")
+    await expect(
+      page.locator('[data-slot="app-pagination-footer"]')
+    ).toContainText("Showing 1-10 of 13 results")
+    await testInfo.attach("system-prompts-canonical-search-a-1520x1340", {
+      body: await page.screenshot(),
+      contentType: "image/png",
+    })
+    await page.reload()
+    await expect(page).toHaveURL(
+      /\/en\/system-prompts\?search=a&page=1&size=10$/
+    )
+    await expect(page.getByRole("searchbox")).toHaveValue("a")
+    await expect(page.locator("tbody tr")).toHaveCount(10)
+
     await page.getByRole("button", { name: en.pagination.goToNext }).click()
     await expect(page).toHaveURL(/page=2/)
     await expect(page.locator("tbody tr")).toHaveCount(3)
 
     await page.goBack()
-    await expect(page).toHaveURL(/\/en\/system-prompts$/)
+    await expect(page).toHaveURL(
+      /\/en\/system-prompts\?search=a&page=1&size=10$/
+    )
     await expect(page.locator("tbody tr")).toHaveCount(10)
     await page.goForward()
     await expect(page).toHaveURL(/page=2/)
