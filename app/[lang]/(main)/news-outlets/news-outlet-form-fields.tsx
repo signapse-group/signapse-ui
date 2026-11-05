@@ -36,12 +36,12 @@ export type NewsOutletFormValues = z.infer<
 
 interface NewsOutletFormFieldsProps {
   control: Control<NewsOutletFormValues>
-  isSubmitting: boolean
+  isDisabled: boolean
 }
 
 export function NewsOutletFormFields({
   control,
-  isSubmitting,
+  isDisabled,
 }: NewsOutletFormFieldsProps) {
   const { dictionary } = useLocalization()
 
@@ -67,7 +67,7 @@ export function NewsOutletFormFields({
                   aria-required="true"
                   placeholder={dictionary.newsOutlets.namePlaceholder}
                   autoComplete="off"
-                  disabled={isSubmitting}
+                  disabled={isDisabled}
                 />
                 {fieldState.invalid ? (
                   <FieldError errors={[fieldState.error]} />
@@ -94,7 +94,7 @@ export function NewsOutletFormFields({
                   aria-required="true"
                   placeholder={dictionary.newsOutlets.homepagePlaceholder}
                   autoComplete="off"
-                  disabled={isSubmitting}
+                  disabled={isDisabled}
                 />
                 {fieldState.invalid ? (
                   <FieldError errors={[fieldState.error]} />
@@ -117,7 +117,7 @@ export function NewsOutletFormFields({
                   aria-invalid={fieldState.invalid}
                   placeholder={dictionary.newsOutlets.rssPlaceholder}
                   autoComplete="off"
-                  disabled={isSubmitting}
+                  disabled={isDisabled}
                 />
                 <FieldDescription>
                   {dictionary.newsOutlets.rssDescription}
@@ -143,7 +143,7 @@ export function NewsOutletFormFields({
                   aria-invalid={fieldState.invalid}
                   rows={4}
                   placeholder={dictionary.newsOutlets.descriptionPlaceholder}
-                  disabled={isSubmitting}
+                  disabled={isDisabled}
                 />
                 {fieldState.invalid ? (
                   <FieldError errors={[fieldState.error]} />
@@ -167,7 +167,7 @@ export function NewsOutletFormFields({
                 description={dictionary.newsOutlets.activeDescription}
                 checked={field.value}
                 onCheckedChange={field.onChange}
-                disabled={isSubmitting}
+                disabled={isDisabled}
               />
             )}
           />

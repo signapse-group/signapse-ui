@@ -1,5 +1,25 @@
 import { expect, test, waitForClientHandler } from "./fixtures"
 
+async function attachRenderedPage(
+  page: import("@playwright/test").Page,
+  testInfo: import("@playwright/test").TestInfo,
+  name: string
+) {
+  const session = await page.context().newCDPSession(page)
+  try {
+    const { data } = await session.send("Page.captureScreenshot", {
+      format: "png",
+      captureBeyondViewport: true,
+    })
+    await testInfo.attach(name, {
+      body: Buffer.from(data, "base64"),
+      contentType: "image/png",
+    })
+  } finally {
+    await session.detach()
+  }
+}
+
 test("read permission keeps the outlet list and detail available without update controls", async ({
   page,
   fixture,
@@ -29,10 +49,11 @@ test("read permission keeps the outlet list and detail available without update 
   )
   await expect(page.locator('a[href^="ftp:"]')).toHaveCount(0)
 
-  await testInfo.attach("news-outlet-list-wide-1520x1024.png", {
-    body: await page.screenshot({ fullPage: true }),
-    contentType: "image/png",
-  })
+  await attachRenderedPage(
+    page,
+    testInfo,
+    "news-outlet-list-wide-1520x1024.png"
+  )
 
   await waitForClientHandler(outletLink)
   await outletLink.click()
@@ -69,10 +90,11 @@ test("read permission keeps the outlet list and detail available without update 
   }
 
   await page.setViewportSize({ width: 390, height: 844 })
-  await testInfo.attach("news-outlet-read-only-mobile-390x844.png", {
-    body: await page.screenshot({ fullPage: true }),
-    contentType: "image/png",
-  })
+  await attachRenderedPage(
+    page,
+    testInfo,
+    "news-outlet-read-only-mobile-390x844.png"
+  )
 })
 
 test("create and edit forms render for their effective permissions", async ({
@@ -107,10 +129,11 @@ test("create and edit forms render for their effective permissions", async ({
     "true"
   )
   expect(browserErrors).toEqual([])
-  await testInfo.attach("news-outlet-create-form-wide-1520x1024.png", {
-    body: await page.screenshot({ fullPage: true }),
-    contentType: "image/png",
-  })
+  await attachRenderedPage(
+    page,
+    testInfo,
+    "news-outlet-create-form-wide-1520x1024.png"
+  )
 
   await fixture.setPermissions(["news-outlet:read", "news-outlet:update"])
   await page.setViewportSize({ width: 390, height: 844 })
@@ -126,11 +149,150 @@ test("create and edit forms render for their effective permissions", async ({
       () => document.documentElement.scrollWidth <= window.innerWidth
     )
   ).toBe(true)
-  await testInfo.attach("news-outlet-edit-form-mobile-390x844.png", {
-    body: await page.screenshot({ fullPage: true }),
-    contentType: "image/png",
-  })
+  await attachRenderedPage(
+    page,
+    testInfo,
+    "news-outlet-edit-form-mobile-390x844.png"
+  )
   expect(browserErrors).toEqual([])
+})
+
+test("news outlet form submits only after hydration and reports backend errors", async ({
+  page,
+  fixture,
+}, testInfo) => {
+  await page.setViewportSize({ width: 1520, height: 1024 })
+  await fixture.setPermissions(["news-outlet:create", "news-outlet:read"])
+
+  const blockScripts = async (route: import("@playwright/test").Route) => {
+    if (route.request().resourceType() === "script") {
+      await route.abort()
+      return
+    }
+    await route.continue()
+  }
+
+  await page.route("**/*", blockScripts)
+  await page.goto("/vi/news-outlets/create", { waitUntil: "commit" })
+
+  const form = page.locator("form")
+  const createButton = page.locator('form button[type="submit"]')
+  await expect(form).toHaveAttribute("aria-busy", "true")
+  await expect(createButton).toHaveText("Đang tải")
+  await expect(page.getByLabel("Tên nguồn tin")).toBeDisabled()
+  await expect(createButton).toBeDisabled()
+  await createButton.evaluate((button) => (button as HTMLButtonElement).click())
+  await expect(page).toHaveURL("/vi/news-outlets/create")
+
+  await page.unroute("**/*", blockScripts)
+  await page.reload()
+  await waitForClientHandler(form, "onSubmit")
+  await expect(createButton).toBeEnabled()
+  await attachRenderedPage(
+    page,
+    testInfo,
+    "news-outlet-create-wide-1520x1024.png"
+  )
+
+  await page.getByLabel("Tên nguồn tin").fill("Hydration source")
+  await page.getByLabel("URL trang chủ").fill("custom:hydration-source")
+  await createButton.click()
+  await expect
+    .poll(async () =>
+      (await fixture.state()).newsOutlets?.some(
+        (outlet) => outlet.name === "Hydration source"
+      )
+    )
+    .toBe(true)
+  await expect(page).toHaveURL("/vi/news-outlets", { timeout: 30_000 })
+  await expect(
+    page.getByRole("link", { name: "Hydration source", exact: true })
+  ).toBeVisible()
+
+  let state = await fixture.state()
+  expect(state.requests).toContainEqual(
+    expect.objectContaining({
+      method: "POST",
+      path: "/news-outlets",
+      locale: "vi",
+    })
+  )
+  expect(state.newsOutlets).toContainEqual(
+    expect.objectContaining({
+      name: "Hydration source",
+      homepageUrl: "custom:hydration-source",
+      active: true,
+    })
+  )
+
+  await page.goto("/vi/news-outlets/create")
+  await waitForClientHandler(page.locator("form"), "onSubmit")
+  await page.getByLabel("Tên nguồn tin").fill("Duplicate source")
+  await page.getByLabel("URL trang chủ").fill("ftp://fixture.example/source")
+  await page.getByRole("button", { name: "Tạo nguồn tin" }).click()
+  await expect(
+    page.getByText("Homepage URL đã tồn tại: ftp://fixture.example/source")
+  ).toBeVisible()
+  await expect(page).toHaveURL("/vi/news-outlets/create")
+  state = await fixture.state()
+  expect(state.newsOutlets).toHaveLength(2)
+  expect(state.requests).toContainEqual(
+    expect.objectContaining({
+      method: "POST",
+      path: "/news-outlets",
+      locale: "vi",
+    })
+  )
+
+  await fixture.setPermissions(["news-outlet:read", "news-outlet:update"])
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.route("**/*", blockScripts)
+  await page.goto("/vi/news-outlets/7", { waitUntil: "commit" })
+  const updateForm = page.locator("form")
+  const saveButton = updateForm.locator('button[type="submit"]')
+  await expect(updateForm).toHaveAttribute("aria-busy", "true")
+  await expect(page.getByLabel("Tên nguồn tin")).toBeDisabled()
+  await expect(saveButton).toBeDisabled()
+  await expect(saveButton).toHaveText("Đang tải")
+  await saveButton.evaluate((button) => (button as HTMLButtonElement).click())
+  await expect(page).toHaveURL("/vi/news-outlets/7")
+
+  await page.unroute("**/*", blockScripts)
+  await page.reload()
+  await waitForClientHandler(updateForm, "onSubmit")
+  await expect(saveButton).toBeEnabled()
+  const activitySwitch = page.getByRole("switch", {
+    name: "Kích hoạt nguồn tin",
+  })
+  await expect(activitySwitch).toBeEnabled()
+  await attachRenderedPage(
+    page,
+    testInfo,
+    "news-outlet-edit-mobile-390x844.png"
+  )
+
+  await page.getByLabel("Tên nguồn tin").fill("Renamed Fixture Outlet")
+  await page.getByLabel("URL trang chủ").fill("custom:renamed-outlet")
+  await page.getByLabel("URL RSS").fill("custom:feed")
+  await activitySwitch.click()
+  await expect(activitySwitch).toHaveAttribute("aria-checked", "false")
+  await page.getByRole("button", { name: "Lưu thay đổi" }).click()
+  await expect(page).toHaveURL("/vi/news-outlets", { timeout: 30_000 })
+
+  state = await fixture.state()
+  expect(state.requests).toContainEqual(
+    expect.objectContaining({
+      method: "PUT",
+      path: "/news-outlets/7",
+      locale: "vi",
+    })
+  )
+  expect(state.newsOutlets?.find((outlet) => outlet.id === 7)).toMatchObject({
+    name: "Renamed Fixture Outlet",
+    homepageUrl: "custom:renamed-outlet",
+    rssUrl: "custom:feed",
+    active: false,
+  })
 })
 
 test("delete permission opens a localized confirmation that can be canceled", async ({

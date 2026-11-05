@@ -664,7 +664,13 @@ function createState() {
     streamConnections: 0,
     requests: [],
     violations: [],
-    nextIds: { workspace: 3, note: 32, schedule: 52, feedback: 13 },
+    nextIds: {
+      workspace: 3,
+      note: 32,
+      schedule: 52,
+      feedback: 13,
+      newsOutlet: 8,
+    },
   }
 }
 
@@ -2969,6 +2975,56 @@ function responseForRoute(state, method, pathname, url, body, locale = "en") {
     return slicePage(state.newsOutlets, url)
   }
 
+  if (method === "POST" && pathname === "/news-outlets") {
+    if (!hasFixturePermission(state, "news-outlet:create")) {
+      return {
+        __status: 403,
+        payload: errorPayload("News outlet permission denied", "FORBIDDEN"),
+      }
+    }
+
+    const name = String(body?.name ?? "").trim()
+    const homepageUrl = String(body?.homepageUrl ?? "").trim()
+    const isVietnamese = locale.toLowerCase().startsWith("vi")
+    if (!name || !homepageUrl) {
+      return {
+        __status: 400,
+        payload: errorPayload(
+          isVietnamese
+            ? "Tên và URL trang chủ là bắt buộc."
+            : "Name and homepage URL are required.",
+          "INVALID_NEWS_OUTLET"
+        ),
+      }
+    }
+    if (
+      state.newsOutlets.some((item) => item.homepageUrl.trim() === homepageUrl)
+    ) {
+      return {
+        __status: 400,
+        payload: errorPayload(
+          isVietnamese
+            ? `Homepage URL đã tồn tại: ${homepageUrl}`
+            : `Homepage URL already exists: ${homepageUrl}`,
+          "DUPLICATE_HOMEPAGE_URL"
+        ),
+      }
+    }
+
+    const created = {
+      id: state.nextIds.newsOutlet++,
+      name,
+      homepageUrl,
+      rssUrl: String(body?.rssUrl ?? "").trim() || null,
+      description: String(body?.description ?? "").trim() || null,
+      active: typeof body?.active === "boolean" ? body.active : true,
+      createdDate: NOW,
+      lastModifiedDate: NOW,
+    }
+    state.newsOutlets.push(created)
+    return created
+  }
+
   const newsOutletDetailMatch = pathname.match(/^\/news-outlets\/(\d+)$/)
   if (method === "GET" && newsOutletDetailMatch) {
     if (!hasFixturePermission(state, "news-outlet:read")) {
@@ -2987,6 +3043,69 @@ function responseForRoute(state, method, pathname, url, body, locale = "en") {
       }
     }
 
+    return newsOutlet
+  }
+
+  if (method === "PUT" && newsOutletDetailMatch) {
+    if (!hasFixturePermission(state, "news-outlet:update")) {
+      return {
+        __status: 403,
+        payload: errorPayload("News outlet permission denied", "FORBIDDEN"),
+      }
+    }
+
+    const id = Number(newsOutletDetailMatch[1])
+    const newsOutlet = state.newsOutlets.find((item) => item.id === id)
+    if (!newsOutlet) {
+      return {
+        __status: 404,
+        payload: errorPayload("News outlet not found", "NOT_FOUND"),
+      }
+    }
+
+    const isVietnamese = locale.toLowerCase().startsWith("vi")
+    const name = typeof body?.name === "string" ? body.name.trim() : undefined
+    const homepageUrl =
+      typeof body?.homepageUrl === "string"
+        ? body.homepageUrl.trim()
+        : undefined
+    if (name !== undefined && !name) {
+      return {
+        __status: 400,
+        payload: errorPayload(
+          isVietnamese ? "Tên nguồn tin là bắt buộc." : "Name is required.",
+          "INVALID_NEWS_OUTLET"
+        ),
+      }
+    }
+    if (
+      homepageUrl &&
+      state.newsOutlets.some(
+        (item) => item.id !== id && item.homepageUrl.trim() === homepageUrl
+      )
+    ) {
+      return {
+        __status: 400,
+        payload: errorPayload(
+          isVietnamese
+            ? `Homepage URL đã tồn tại: ${homepageUrl}`
+            : `Homepage URL already exists: ${homepageUrl}`,
+          "DUPLICATE_HOMEPAGE_URL"
+        ),
+      }
+    }
+
+    if (name !== undefined) newsOutlet.name = name
+    if (homepageUrl) newsOutlet.homepageUrl = homepageUrl
+
+    if (typeof body?.rssUrl === "string") {
+      newsOutlet.rssUrl = body.rssUrl.trim() || null
+    }
+    if (typeof body?.description === "string") {
+      newsOutlet.description = body.description.trim() || null
+    }
+    if (typeof body?.active === "boolean") newsOutlet.active = body.active
+    newsOutlet.lastModifiedDate = NOW
     return newsOutlet
   }
 
@@ -3477,6 +3596,7 @@ async function handleControl(request, response, url, body) {
       feedbackScenarios: state.feedbackScenarios,
       permissions: state.permissions,
       aiTaskConfigurations: state.aiTaskConfigurations,
+      newsOutlets: state.newsOutlets,
       smtpConfiguration: smtpConfigurationResponse(state.smtpConfiguration),
       streamConnections: state.streamConnections,
       pendingRequests: state.pendingRequests.size,
