@@ -1,5 +1,5 @@
 import AxeBuilder from "@axe-core/playwright"
-import { expect, test, waitForClientHandler } from "./fixtures"
+import { expect, test } from "./fixtures"
 
 import { en } from "../../app/lib/i18n/dictionaries/en"
 import { vi } from "../../app/lib/i18n/dictionaries/vi"
@@ -842,7 +842,15 @@ test.describe("P0 AI connections", () => {
     })
 
     try {
+      await page.emulateMedia({ colorScheme: "dark" })
       await page.setViewportSize({ width: 1520, height: 1600 })
+      await page.context().addCookies([
+        {
+          name: "sidebar_state",
+          value: "true",
+          url: "http://127.0.0.1:3100/",
+        },
+      ])
       await page.goto("/en/ai-provider-configs/12", { waitUntil: "commit" })
 
       const endpoint = page.getByLabel(en.aiProviderConfigs.endpoint)
@@ -861,7 +869,6 @@ test.describe("P0 AI connections", () => {
       await expect(save).toBeDisabled()
 
       resumeScripts()
-      await waitForClientHandler(description, "onChange")
       await expect(endpoint).toBeEnabled()
       await expect(description).toBeEnabled()
       await expect(replacementKey).toBeEnabled()

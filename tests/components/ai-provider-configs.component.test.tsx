@@ -475,6 +475,8 @@ describe("AI connection UI", () => {
 
   it("saves a valid endpoint-only edit on an unreferenced connection with no replacement key", async () => {
     const user = userEvent.setup()
+    const submittedEndpoint = " https://custom.example.test/v1 "
+    const trimmedEndpoint = "https://custom.example.test/v1"
     const provider = {
       ...legacyProvider,
       baseUrl: "https://api.example.test/v1",
@@ -482,7 +484,7 @@ describe("AI connection UI", () => {
     }
     vi.mocked(updateAiProviderConfig).mockResolvedValueOnce({
       success: true,
-      data: { ...provider, baseUrl: "https://custom.example.test/v1" },
+      data: { ...provider, baseUrl: trimmedEndpoint },
     })
 
     renderWithProviders(
@@ -502,7 +504,7 @@ describe("AI connection UI", () => {
 
     expect(replacementKey).toHaveValue("")
     await user.clear(endpoint)
-    await user.type(endpoint, "https://custom.example.test/v1")
+    await user.type(endpoint, submittedEndpoint)
     expect(save).toBeEnabled()
     expect(updateAiProviderConfig).not.toHaveBeenCalled()
 
@@ -511,8 +513,9 @@ describe("AI connection UI", () => {
       expect(updateAiProviderConfig).toHaveBeenCalledTimes(1)
     )
     expect(updateAiProviderConfig).toHaveBeenCalledWith(12, {
-      baseUrl: "https://custom.example.test/v1",
+      baseUrl: submittedEndpoint,
     })
+    expect(endpoint).toHaveValue(trimmedEndpoint)
     expect(description).toHaveValue("Existing connection")
     expect(screen.getByText("gsk-...legacy")).toBeVisible()
   })

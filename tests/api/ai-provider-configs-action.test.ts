@@ -536,23 +536,31 @@ describe("AI connection actions", () => {
       name: "endpoint-only",
       request: { baseUrl: "https://custom.deepseek.test/v1" },
     },
+    {
+      name: "nonblank endpoint with surrounding whitespace",
+      request: { baseUrl: " https://custom.deepseek.test/v1 " },
+    },
     { name: "endpoint reset", request: { baseUrl: "" } },
-  ])("passes $name fields through without adding unchanged values", async ({
-    request,
-  }) => {
-    getCurrentPermissions.mockResolvedValue(["ai-provider-config:update"])
-    vi.mocked(fetchAuthenticated).mockResolvedValue(detailResponse)
+  ])(
+    "passes $name fields through without adding unchanged values",
+    async ({ request }) => {
+      getCurrentPermissions.mockResolvedValue(["ai-provider-config:update"])
+      vi.mocked(fetchAuthenticated).mockResolvedValue(detailResponse)
 
-    await expect(updateAiProviderConfig(42, request)).resolves.toEqual({
-      success: true,
-      data: detailResponse,
-    })
+      await expect(updateAiProviderConfig(42, request)).resolves.toEqual({
+        success: true,
+        data: detailResponse,
+      })
 
-    expect(fetchAuthenticated).toHaveBeenCalledWith("/ai-provider-configs/42", {
-      method: "PUT",
-      body: JSON.stringify(request),
-    })
-  })
+      expect(fetchAuthenticated).toHaveBeenCalledWith(
+        "/ai-provider-configs/42",
+        {
+          method: "PUT",
+          body: JSON.stringify(request),
+        }
+      )
+    }
+  )
 
   it("passes nullable baseUrl through unchanged because null keeps the endpoint", async () => {
     getCurrentPermissions.mockResolvedValue(["ai-provider-config:update"])
