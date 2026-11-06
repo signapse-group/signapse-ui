@@ -527,6 +527,33 @@ describe("AI connection actions", () => {
     expect(revalidatePath).toHaveBeenCalledWith("/ai-provider-configs/42")
   })
 
+  it.each([
+    {
+      name: "description-only",
+      request: { description: "Description-only update" },
+    },
+    {
+      name: "endpoint-only",
+      request: { baseUrl: "https://custom.deepseek.test/v1" },
+    },
+    { name: "endpoint reset", request: { baseUrl: "" } },
+  ])("passes $name fields through without adding unchanged values", async ({
+    request,
+  }) => {
+    getCurrentPermissions.mockResolvedValue(["ai-provider-config:update"])
+    vi.mocked(fetchAuthenticated).mockResolvedValue(detailResponse)
+
+    await expect(updateAiProviderConfig(42, request)).resolves.toEqual({
+      success: true,
+      data: detailResponse,
+    })
+
+    expect(fetchAuthenticated).toHaveBeenCalledWith("/ai-provider-configs/42", {
+      method: "PUT",
+      body: JSON.stringify(request),
+    })
+  })
+
   it("passes nullable baseUrl through unchanged because null keeps the endpoint", async () => {
     getCurrentPermissions.mockResolvedValue(["ai-provider-config:update"])
     vi.mocked(fetchAuthenticated).mockResolvedValue(detailResponse)

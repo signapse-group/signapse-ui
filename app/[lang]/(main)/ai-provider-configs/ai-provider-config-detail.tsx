@@ -382,7 +382,7 @@ function AiProviderConfigDetailContent({
                     }}
                     placeholder={t.endpointPlaceholder}
                     autoComplete="url"
-                    disabled={pendingOperation !== null}
+                    disabled={!isClientReady || pendingOperation !== null}
                   />
                   <FieldDescription>
                     <span className="hidden sm:inline">
@@ -407,7 +407,7 @@ function AiProviderConfigDetailContent({
                       updateDraft({ description: value })
                     }}
                     placeholder={t.descriptionPlaceholder}
-                    disabled={pendingOperation !== null}
+                    disabled={!isClientReady || pendingOperation !== null}
                   />
                 </Field>
               </div>

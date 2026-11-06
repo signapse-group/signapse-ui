@@ -1,5 +1,5 @@
 import AxeBuilder from "@axe-core/playwright"
-import { expect, test } from "./fixtures"
+import { expect, test, waitForClientHandler } from "./fixtures"
 
 import { en } from "../../app/lib/i18n/dictionaries/en"
 import { vi } from "../../app/lib/i18n/dictionaries/vi"
@@ -818,6 +818,68 @@ test.describe("P0 AI connections", () => {
       await expect(replacementInput).toHaveValue("probe")
       await expect(addButton).toBeEnabled()
       await expect(replaceButton).toBeEnabled()
+    } finally {
+      resumeScripts()
+    }
+  })
+
+  test("keeps connection edits disabled until hydration, then accepts a description-only draft", async ({
+    page,
+    fixture,
+  }, testInfo) => {
+    await fixture.setPermissions([
+      "ai-provider-config:read",
+      "ai-provider-config:update",
+    ])
+
+    let resumeScripts = () => {}
+    const scriptsHeld = new Promise<void>((resolve) => {
+      resumeScripts = resolve
+    })
+    await page.route("**/_next/static/**/*.js*", async (route) => {
+      await scriptsHeld
+      await route.continue()
+    })
+
+    try {
+      await page.setViewportSize({ width: 1520, height: 1600 })
+      await page.goto("/en/ai-provider-configs/12", { waitUntil: "commit" })
+
+      const endpoint = page.getByLabel(en.aiProviderConfigs.endpoint)
+      const description = page.getByLabel(en.aiProviderConfigs.description)
+      const replacementKey = page.getByLabel(
+        en.aiProviderConfigs.replacementKey,
+        { exact: true }
+      )
+      const save = page.getByRole("button", {
+        name: en.aiProviderConfigs.saveConnection,
+      })
+      await expect(description).toBeVisible({ timeout: 60_000 })
+      await expect(endpoint).toBeDisabled()
+      await expect(description).toBeDisabled()
+      await expect(replacementKey).toBeDisabled()
+      await expect(save).toBeDisabled()
+
+      resumeScripts()
+      await waitForClientHandler(description, "onChange")
+      await expect(endpoint).toBeEnabled()
+      await expect(description).toBeEnabled()
+      await expect(replacementKey).toBeEnabled()
+      await expect(replacementKey).toBeEmpty()
+
+      await description.fill("Description-only hydration regression")
+      await expect(description).toHaveValue(
+        "Description-only hydration regression"
+      )
+      await expect(save).toBeEnabled()
+
+      await testInfo.attach("ai-connection-description-draft-1520x1600.png", {
+        body: await page.screenshot({
+          fullPage: false,
+          style: "nextjs-portal { display: none !important; }",
+        }),
+        contentType: "image/png",
+      })
     } finally {
       resumeScripts()
     }

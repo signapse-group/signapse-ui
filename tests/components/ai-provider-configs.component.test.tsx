@@ -418,6 +418,105 @@ describe("AI connection UI", () => {
     expect(endpoint).toHaveValue("")
   })
 
+  it("saves a description-only edit with a blank replacement key and preserves credentials and references", async () => {
+    const user = userEvent.setup()
+    const provider = {
+      ...legacyProvider,
+      baseUrl: "https://api.example.test/v1",
+      taskReferences: [
+        { task: "MARKET_REACTION_ANALYSIS" as const, model: "preserved-model" },
+      ],
+    }
+    vi.mocked(updateAiProviderConfig).mockResolvedValueOnce({
+      success: true,
+      data: { ...provider, description: "Description-only update" },
+    })
+
+    renderWithProviders(
+      <AiProviderConfigDetail provider={provider} />,
+      [
+        "ai-provider-config:read",
+        "ai-provider-config:update",
+        "ai-task-configuration:read",
+      ],
+      en
+    )
+
+    const endpoint = screen.getByLabelText(en.aiProviderConfigs.endpoint)
+    const description = screen.getByLabelText(en.aiProviderConfigs.description)
+    const replacementKey = screen.getByLabelText(
+      en.aiProviderConfigs.replacementKey
+    )
+    const save = screen.getByRole("button", {
+      name: en.aiProviderConfigs.saveConnection,
+    })
+
+    expect(endpoint).toHaveValue("https://api.example.test/v1")
+    expect(replacementKey).toHaveValue("")
+    expect(screen.getByText("gsk-...legacy")).toBeVisible()
+    expect(screen.getByText("preserved-model")).toBeVisible()
+
+    await user.clear(description)
+    await user.type(description, "Description-only update")
+    expect(save).toBeEnabled()
+    expect(updateAiProviderConfig).not.toHaveBeenCalled()
+
+    await user.click(save)
+    await vi.waitFor(() =>
+      expect(updateAiProviderConfig).toHaveBeenCalledTimes(1)
+    )
+    expect(updateAiProviderConfig).toHaveBeenCalledWith(12, {
+      description: "Description-only update",
+    })
+    expect(endpoint).toHaveValue("https://api.example.test/v1")
+    expect(screen.getByText("preserved-model")).toBeVisible()
+    expect(screen.getByText("gsk-...legacy")).toBeVisible()
+  })
+
+  it("saves a valid endpoint-only edit on an unreferenced connection with no replacement key", async () => {
+    const user = userEvent.setup()
+    const provider = {
+      ...legacyProvider,
+      baseUrl: "https://api.example.test/v1",
+      taskReferences: [],
+    }
+    vi.mocked(updateAiProviderConfig).mockResolvedValueOnce({
+      success: true,
+      data: { ...provider, baseUrl: "https://custom.example.test/v1" },
+    })
+
+    renderWithProviders(
+      <AiProviderConfigDetail provider={provider} />,
+      ["ai-provider-config:read", "ai-provider-config:update"],
+      en
+    )
+
+    const endpoint = screen.getByLabelText(en.aiProviderConfigs.endpoint)
+    const description = screen.getByLabelText(en.aiProviderConfigs.description)
+    const replacementKey = screen.getByLabelText(
+      en.aiProviderConfigs.replacementKey
+    )
+    const save = screen.getByRole("button", {
+      name: en.aiProviderConfigs.saveConnection,
+    })
+
+    expect(replacementKey).toHaveValue("")
+    await user.clear(endpoint)
+    await user.type(endpoint, "https://custom.example.test/v1")
+    expect(save).toBeEnabled()
+    expect(updateAiProviderConfig).not.toHaveBeenCalled()
+
+    await user.click(save)
+    await vi.waitFor(() =>
+      expect(updateAiProviderConfig).toHaveBeenCalledTimes(1)
+    )
+    expect(updateAiProviderConfig).toHaveBeenCalledWith(12, {
+      baseUrl: "https://custom.example.test/v1",
+    })
+    expect(description).toHaveValue("Existing connection")
+    expect(screen.getByText("gsk-...legacy")).toBeVisible()
+  })
+
   it("warns before discarding unsaved endpoint, description, and key drafts", async () => {
     const user = userEvent.setup()
     renderWithProviders(
