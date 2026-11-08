@@ -1184,7 +1184,7 @@ function overviewAssets() {
     assetId: index === 0 ? 101 : 300 + index,
     assetName: `Overview tracked asset ${index + 1}`,
     assetSymbol: `OVR${index + 1}`,
-    assetType: "CRYPTO",
+    assetType: ["CRYPTO", "EQUITY", "ETF", "COMMODITY"][index] ?? "CRYPTO",
     createdDate: NOW,
   }))
 }

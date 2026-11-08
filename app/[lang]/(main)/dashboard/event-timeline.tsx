@@ -21,10 +21,8 @@ import { Badge } from "@/components/ui/badge"
 import { buttonVariants } from "@/components/ui/button"
 import {
   Card,
-  CardAction,
   CardContent,
   CardDescription,
-  CardHeader,
   CardTitle,
 } from "@/components/ui/card"
 import {
@@ -47,6 +45,10 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 
 import { DashboardQuickDetailButton } from "./dashboard-quick-detail"
+import {
+  OverviewModuleAction,
+  OverviewModuleHeader,
+} from "./overview-module-header"
 
 export function EventTimeline({
   denied = false,
@@ -69,24 +71,24 @@ export function EventTimeline({
   return (
     <section aria-labelledby="dashboard-event-timeline-title">
       <Card className="min-w-0">
-        <CardHeader>
+        <OverviewModuleHeader>
           <CardTitle>
             <h2 id="dashboard-event-timeline-title">{t.title}</h2>
           </CardTitle>
           <CardDescription>{t.description}</CardDescription>
           {!denied && metric?.state !== "DENIED" ? (
-            <CardAction>
+            <OverviewModuleAction>
               <LocalizedLink
                 href="/events"
                 aria-label={t.viewAll}
                 className={buttonVariants({ variant: "ghost" })}
               >
-                <span className="hidden sm:inline">{t.viewAll}</span>
+                {t.viewAll}
                 <ArrowRightIcon data-icon="inline-end" />
               </LocalizedLink>
-            </CardAction>
+            </OverviewModuleAction>
           ) : null}
-        </CardHeader>
+        </OverviewModuleHeader>
         <CardContent>
           {denied ? (
             <TimelineState
@@ -131,17 +133,17 @@ export function EventTimelineSkeleton() {
   return (
     <section aria-hidden="true">
       <Card className="min-w-0">
-        <CardHeader>
+        <OverviewModuleHeader>
           <CardTitle>
             <Skeleton className="h-5 w-36 motion-reduce:animate-none" />
           </CardTitle>
           <CardDescription>
             <Skeleton className="h-4 w-56 max-w-full motion-reduce:animate-none" />
           </CardDescription>
-          <CardAction>
-            <Skeleton className="h-9 w-9 motion-reduce:animate-none sm:w-28" />
-          </CardAction>
-        </CardHeader>
+          <OverviewModuleAction>
+            <Skeleton className="h-9 w-28 motion-reduce:animate-none" />
+          </OverviewModuleAction>
+        </OverviewModuleHeader>
         <CardContent>
           <div className="flex flex-col gap-4">
             {Array.from({ length: 6 }, (_, index) => (

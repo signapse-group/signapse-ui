@@ -33,6 +33,7 @@ import { resolveActiveWorkspace } from "@/app/lib/workspaces/active"
 import type { WorkspaceResponse } from "@/app/lib/workspaces/definitions"
 import type { WorkspaceWatchlistAssetListItemResponse } from "@/app/lib/watchlists/definitions"
 import { AppTimeMetadata } from "@/components/app-time-metadata"
+import { AssetCategoryBadge } from "@/components/asset-category-badge"
 import { Badge } from "@/components/ui/badge"
 import {
   Card,
@@ -554,7 +555,7 @@ function WorkspaceOverviewPanel({
 
   return (
     <Card size="sm">
-      <CardHeader>
+      <CardHeader className="max-md:has-data-[slot=card-action]:grid-cols-1">
         <CardTitle>
           <h2 className="text-2xl font-semibold tracking-tight">
             {workspace.name}
@@ -564,7 +565,7 @@ function WorkspaceOverviewPanel({
           {dictionary.workspaceOverview.description}
         </CardDescription>
         {canManageTrackedAssets ? (
-          <CardAction>
+          <CardAction className="max-md:col-start-1 max-md:row-span-1 max-md:row-start-3 max-md:justify-self-start">
             <WorkspaceOverviewActions
               workspace={workspace}
               canReadAsset={canReadAsset}
@@ -673,7 +674,9 @@ function WorkspaceOverviewPanel({
                     </ItemDescription>
                   </ItemContent>
                   <ItemActions className="shrink-0">
-                    <Badge variant="secondary">{asset.assetType}</Badge>
+                    <AssetCategoryBadge type={asset.assetType}>
+                      {asset.assetType}
+                    </AssetCategoryBadge>
                   </ItemActions>
                 </Item>
               ))}

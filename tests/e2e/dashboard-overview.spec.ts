@@ -1,6 +1,78 @@
 import { expect, test } from "./fixtures"
 
 test.describe("P0 Dashboard Overview", () => {
+  test("renders approved semantic badge colors in both themes", async ({
+    page,
+    fixture,
+  }, testInfo) => {
+    await fixture.setScenario("/dashboard/summary", "overview-expanded", "GET")
+    await fixture.setScenario("/watchlists", "overview-expanded", "GET")
+    await page.setViewportSize({ width: 1520, height: 1000 })
+    await page.goto("/en/dashboard")
+
+    const workspace = page.getByRole("list", { name: "Tracked assets" })
+    const focus = page.getByRole("region", { name: "Assets in focus" })
+    const narratives = page.getByRole("region", { name: "Market narratives" })
+    const news = page.getByRole("region", { name: "Latest news" })
+    const badgeColors = [
+      {
+        badges: [
+          workspace.getByText("EQUITY", { exact: true }),
+          focus.getByText("Equity", { exact: true }),
+        ],
+        light: ["rgb(224, 242, 254)", "rgb(7, 89, 133)"],
+        dark: ["rgb(8, 47, 73)", "rgb(125, 211, 252)"],
+      },
+      {
+        badges: [
+          workspace.getByText("ETF", { exact: true }),
+          focus.getByText("ETF", { exact: true }),
+          narratives.getByText("Emerging", { exact: true }),
+        ],
+        light: ["rgb(237, 233, 254)", "rgb(91, 33, 182)"],
+        dark: ["rgb(46, 16, 101)", "rgb(196, 181, 253)"],
+      },
+      {
+        badges: [
+          workspace.getByText("COMMODITY", { exact: true }),
+          focus.getByText("Commodity", { exact: true }),
+        ],
+        light: ["rgb(254, 243, 199)", "rgb(146, 64, 14)"],
+        dark: ["rgb(69, 26, 3)", "rgb(252, 211, 77)"],
+      },
+      {
+        badges: [narratives.getByText("Active", { exact: true })],
+        light: ["rgb(207, 250, 254)", "rgb(21, 94, 117)"],
+        dark: ["rgb(8, 51, 68)", "rgb(103, 232, 249)"],
+      },
+      {
+        badges: [narratives.getByText("Weakening", { exact: true })],
+        light: ["rgb(226, 232, 240)", "rgb(51, 65, 85)"],
+        dark: ["rgb(30, 41, 59)", "rgb(203, 213, 225)"],
+      },
+    ]
+
+    for (const theme of ["dark", "light"] as const) {
+      await page.emulateMedia({ colorScheme: theme })
+      await expect(page.locator("html")).toHaveClass(
+        new RegExp(`\\b${theme}\\b`)
+      )
+      for (const colors of badgeColors) {
+        const [background, foreground] = colors[theme]
+        for (const badge of colors.badges) {
+          await expect(badge).toBeVisible()
+          await expect(badge).toHaveCSS("background-color", background)
+          await expect(badge).toHaveCSS("color", foreground)
+        }
+      }
+      await expect(news.getByText("Global", { exact: true })).toBeVisible()
+      await testInfo.attach(`overview-badges-${theme}.png`, {
+        body: await page.screenshot({ fullPage: true, animations: "disabled" }),
+        contentType: "image/png",
+      })
+    }
+  })
+
   test("shows full workspace data and independent 5+5 global news across layouts", async ({
     page,
     fixture,
@@ -213,6 +285,19 @@ test.describe("P0 Dashboard Overview", () => {
       { width: 360, height: 780, name: "small-mobile" },
     ]) {
       await page.setViewportSize(viewport)
+      if (viewport.width < 768) {
+        const workspaceHeader = workspace.locator('[data-slot="card-header"]')
+        const manageAssets = workspaceHeader.getByRole("button", {
+          name: "Quản lý tài sản theo dõi",
+        })
+        const description = await workspaceHeader
+          .locator('[data-slot="card-description"]')
+          .boundingBox()
+        const action = await manageAssets.boundingBox()
+        expect(action?.y ?? 0).toBeGreaterThan(
+          (description?.y ?? Infinity) + (description?.height ?? 0)
+        )
+      }
       await expect(timeline).toBeVisible()
       await expect(news).toBeVisible()
       const timelineMobileBox = await timeline.boundingBox()
@@ -223,6 +308,24 @@ test.describe("P0 Dashboard Overview", () => {
         throw new Error(`${viewport.name} Overview cards are missing`)
       }
       expect(newsMobileBox.y).toBeGreaterThan(timelineMobileBox.y)
+      for (const [section, label] of [
+        [timeline, "Xem tất cả sự kiện"],
+        [news, "Xem tất cả tin tức"],
+        [assetsInFocus, "Mở Graph View"],
+        [marketNarratives, "Mở Graph View"],
+      ] as const) {
+        const header = section.locator('[data-slot="card-header"]')
+        const action = header.getByRole("link", { name: label })
+        await expect(action).toBeVisible()
+        await expect(action).toHaveText(label, { useInnerText: true })
+        const description = await header
+          .locator('[data-slot="card-description"]')
+          .boundingBox()
+        const actionBox = await action.boundingBox()
+        expect(actionBox?.y ?? 0).toBeGreaterThan(
+          (description?.y ?? Infinity) + (description?.height ?? 0)
+        )
+      }
       expect(
         await page.evaluate(() => document.documentElement.scrollWidth)
       ).toBeLessThanOrEqual(viewport.width)

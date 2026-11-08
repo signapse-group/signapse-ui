@@ -10,7 +10,7 @@ When framework versions, the UI preset, CI, or repository ownership change, refr
 - Before implementing or reviewing `app/api/**`, read `app/api/AGENTS.override.md`.
 - Before implementing or reviewing `app/lib/**`, read `app/lib/AGENTS.override.md`.
 - For UI implementation or review under `app/[lang]/**` or `components/**`, read `components/AGENTS.override.md`. For changes to visual presentation, interaction, accessibility, or user-facing content, read the relevant sections of `docs/design/DESIGN.md`, the UI/UX source of truth.
-- For assigned Jira UI work, apply the local [UI design gate](docs/design/DESIGN.md#ui-design-gate): read the native parent's accepted direction and view the representative reference/pattern in each phase. FE may complete routine detail under that gate; missing detailed mockups alone do not block implementation. Direct work keeps its accepted contract and supplied references. Verify affected rendered UI before handoff; escalate only consequential gaps outside FE authority.
+- For work affecting UI, apply the local [UI design gate](docs/design/DESIGN.md#ui-design-gate) in each assigned phase, on resume, and before direct handoff.
 - When a task spans multiple domains, read every applicable scoped instruction file.
 - Scoped instructions extend this file; the more specific instruction wins when guidance conflicts.
 - `.agents/skills` holds repository-specific or non-overlapping recipes.

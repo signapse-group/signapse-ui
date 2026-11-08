@@ -6,13 +6,12 @@ import type { Dictionary } from "@/app/lib/i18n/dictionary-types"
 import { formatDateTime } from "@/app/lib/i18n/format"
 import type { NewsArticleListResponse } from "@/app/lib/news-articles/definitions"
 import { LocalizedLink } from "@/components/localized-link"
+import { Badge } from "@/components/ui/badge"
 import { buttonVariants } from "@/components/ui/button"
 import {
   Card,
-  CardAction,
   CardContent,
   CardDescription,
-  CardHeader,
   CardTitle,
 } from "@/components/ui/card"
 import {
@@ -34,6 +33,10 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 
 import { DashboardQuickDetailButton } from "./dashboard-quick-detail"
+import {
+  OverviewModuleAction,
+  OverviewModuleHeader,
+} from "./overview-module-header"
 
 export function LatestNews({
   articles,
@@ -56,24 +59,25 @@ export function LatestNews({
   return (
     <section aria-labelledby="dashboard-latest-news-title">
       <Card className="min-w-0">
-        <CardHeader>
-          <CardTitle>
+        <OverviewModuleHeader>
+          <CardTitle className="flex flex-wrap items-center gap-2">
             <h2 id="dashboard-latest-news-title">{t.title}</h2>
+            <Badge variant="secondary">{t.globalScope}</Badge>
           </CardTitle>
           <CardDescription>{t.description}</CardDescription>
           {!denied ? (
-            <CardAction>
+            <OverviewModuleAction>
               <LocalizedLink
                 href="/news-articles"
                 aria-label={t.viewAll}
                 className={buttonVariants({ variant: "ghost" })}
               >
-                <span className="hidden sm:inline">{t.viewAll}</span>
+                {t.viewAll}
                 <ArrowRightIcon data-icon="inline-end" />
               </LocalizedLink>
-            </CardAction>
+            </OverviewModuleAction>
           ) : null}
-        </CardHeader>
+        </OverviewModuleHeader>
         <CardContent>
           {denied ? (
             <Empty className="min-h-48 border" role="status">
@@ -123,17 +127,17 @@ export function LatestNewsSkeleton() {
   return (
     <section aria-hidden="true">
       <Card className="min-w-0">
-        <CardHeader>
+        <OverviewModuleHeader>
           <CardTitle>
             <Skeleton className="h-5 w-36 motion-reduce:animate-none" />
           </CardTitle>
           <CardDescription>
             <Skeleton className="h-4 w-56 max-w-full motion-reduce:animate-none" />
           </CardDescription>
-          <CardAction>
-            <Skeleton className="h-9 w-9 motion-reduce:animate-none sm:w-28" />
-          </CardAction>
-        </CardHeader>
+          <OverviewModuleAction>
+            <Skeleton className="h-9 w-28 motion-reduce:animate-none" />
+          </OverviewModuleAction>
+        </OverviewModuleHeader>
         <CardContent>
           <div className="flex flex-col gap-4">
             {Array.from({ length: 5 }, (_, index) => (
