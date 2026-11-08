@@ -559,6 +559,7 @@ export const vi = {
     },
     latestNews: {
       title: "Tin tức mới nhất",
+      globalScope: "Toàn hệ thống",
       description:
         "Năm bài viết mới nhất trên toàn Signapse, độc lập với không gian làm việc hiện tại.",
       viewAll: "Xem tất cả tin tức",

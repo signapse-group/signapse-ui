@@ -559,6 +559,7 @@ export const en: Dictionary = {
     },
     latestNews: {
       title: "Latest news",
+      globalScope: "Global",
       description:
         "The five latest news articles across Signapse, independent of the current workspace.",
       viewAll: "View all news",
