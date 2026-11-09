@@ -16,6 +16,10 @@ Before publication/cutover the operator verifies:
 
 Without the hosting check, Vercel may publish before dev CI succeeds. Local YAML cannot enforce hosting settings. Domain configuration is an operator setup responsibility, not a per-ticket website gate. Keep current domain, environment variables and deployment protection as dev inputs; production provisioning and promotion to main need a separate coordinator release decision.
 
+## Production release pull requests
+
+Before opening a release pull request, fetch `origin/main` and `origin/dev`. If `main` has commits missing from `dev`, integrate them into `dev` through its required checks and verify that `dev` contains the current `main` tip. Open the release pull request from `dev` into `main` with the title `Release MMDDYYYY`, using the intended release date. For November 9, 2026, use `Release 11092026`.
+
 ## Confirm live dev revision
 
 After merge, the reviewer runs `pnpm verify:deploy <full-merge-sha>` in the FE workspace. Node 24 and authenticated `gh` need repository contents/actions read access. Set `SIGNAPSE_UI_VERCEL_ENV` to the absolute private dotenv file containing `VERCEL_AUTOMATION_BYPASS_SECRET`; parse it as data, never source it. Do not put this secret in Next.js env files, command arguments, logs or Git. Without the file, the verifier attempts the request without bypass.
