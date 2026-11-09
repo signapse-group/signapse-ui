@@ -13,7 +13,6 @@ import {
 } from "@/components/ui/empty"
 
 export default function Error({
-  error,
   reset,
 }: {
   error: Error & { digest?: string }
@@ -33,7 +32,7 @@ export default function Error({
           </EmptyMedia>
           <EmptyTitle>{dictionary.newsOutlets.errorTitle}</EmptyTitle>
           <EmptyDescription>
-            {error.message || dictionary.newsOutlets.errorDescription}
+            {dictionary.newsOutlets.errorDescription}
           </EmptyDescription>
         </EmptyHeader>
         <div className="mt-4 flex justify-center">

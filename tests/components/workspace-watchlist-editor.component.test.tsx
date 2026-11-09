@@ -172,8 +172,8 @@ describe("WorkspaceWatchlistEditor dialog contract", () => {
   })
 
   it("loads every watchlist page before showing the editable selection", async () => {
-    const firstAsset = asset(1, "Bitcoin", "BTCUSD")
-    const secondAsset = asset(2, "Ethereum", "ETHUSD")
+    const firstAsset = asset(1, "Bitcoin", "BTC/USDT")
+    const secondAsset = asset(2, "Ethereum", "ETH/USDT")
     getWorkspaceWatchlistAssets
       .mockResolvedValueOnce(watchlistPage([firstAsset], 0, 2))
       .mockResolvedValueOnce(watchlistPage([secondAsset], 1, 2))
@@ -194,8 +194,8 @@ describe("WorkspaceWatchlistEditor dialog contract", () => {
   })
 
   it("debounces server search, loads more results, and keeps selected chips", async () => {
-    const selected = asset(1, "Bitcoin", "BTCUSD")
-    const searchResult = asset(2, "Ethereum", "ETHUSD")
+    const selected = asset(1, "Bitcoin", "BTC/USDT")
+    const searchResult = asset(2, "Ethereum", "ETH/USDT")
     const nextResult = asset(3, "Litecoin", "LTCUSD")
     getWorkspaceWatchlistAssets.mockResolvedValue(
       watchlistPage([selected], 0, 1)
@@ -223,7 +223,7 @@ describe("WorkspaceWatchlistEditor dialog contract", () => {
     })
 
     await user.click(
-      await screen.findByRole("option", { name: /Ethereum.*ETHUSD/i })
+      await screen.findByRole("option", { name: /Ethereum.*ETH\/USDT/i })
     )
     expect(screen.getByText(selected.symbol)).toBeVisible()
     expect(
@@ -243,8 +243,8 @@ describe("WorkspaceWatchlistEditor dialog contract", () => {
   })
 
   it("opens a discard confirmation for a dirty Cancel dismissal", async () => {
-    const selected = asset(1, "Bitcoin", "BTCUSD")
-    const added = asset(2, "Ethereum", "ETHUSD")
+    const selected = asset(1, "Bitcoin", "BTC/USDT")
+    const added = asset(2, "Ethereum", "ETH/USDT")
     getWorkspaceWatchlistAssets.mockResolvedValue(
       watchlistPage([selected], 0, 1)
     )
@@ -257,7 +257,7 @@ describe("WorkspaceWatchlistEditor dialog contract", () => {
     const input = await screen.findByRole("combobox")
     await user.click(input)
     await user.click(
-      await screen.findByRole("option", { name: /Ethereum.*ETHUSD/i })
+      await screen.findByRole("option", { name: /Ethereum.*ETH\/USDT/i })
     )
     await user.keyboard("{Escape}")
     await user.click(
@@ -272,8 +272,8 @@ describe("WorkspaceWatchlistEditor dialog contract", () => {
   })
 
   it("blocks a save that would exceed the watchlist limit", async () => {
-    const first = asset(1, "Bitcoin", "BTCUSD")
-    const second = asset(2, "Ethereum", "ETHUSD")
+    const first = asset(1, "Bitcoin", "BTC/USDT")
+    const second = asset(2, "Ethereum", "ETH/USDT")
     const third = asset(3, "Litecoin", "LTCUSD")
     const fourth = asset(4, "Solana", "SOLUSD")
     getWorkspaceWatchlistAssets.mockResolvedValue(
@@ -309,8 +309,8 @@ describe("WorkspaceWatchlistEditor dialog contract", () => {
   })
 
   it("replaces an asset at the limit by removing before adding", async () => {
-    const first = asset(1, "Bitcoin", "BTCUSD")
-    const second = asset(2, "Ethereum", "ETHUSD")
+    const first = asset(1, "Bitcoin", "BTC/USDT")
+    const second = asset(2, "Ethereum", "ETH/USDT")
     const replaced = asset(3, "Litecoin", "LTCUSD")
     const replacement = asset(4, "Solana", "SOLUSD")
     getWorkspaceWatchlistAssets.mockResolvedValue(
@@ -378,8 +378,8 @@ describe("WorkspaceWatchlistEditor dialog contract", () => {
   })
 
   it("reloads the actual watchlist after a backend quota rejection", async () => {
-    const first = asset(1, "Bitcoin", "BTCUSD")
-    const second = asset(2, "Ethereum", "ETHUSD")
+    const first = asset(1, "Bitcoin", "BTC/USDT")
+    const second = asset(2, "Ethereum", "ETH/USDT")
     const removed = asset(3, "Litecoin", "LTCUSD")
     const selected = asset(4, "Solana", "SOLUSD")
     const concurrent = asset(5, "Cardano", "ADAUSD")

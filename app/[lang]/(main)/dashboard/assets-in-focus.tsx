@@ -18,14 +18,12 @@ import type { Dictionary } from "@/app/lib/i18n/dictionary-types"
 import { formatDateTime } from "@/app/lib/i18n/format"
 import { AppTimeMetadata } from "@/components/app-time-metadata"
 import { LocalizedLink } from "@/components/localized-link"
-import { Badge } from "@/components/ui/badge"
+import { AssetCategoryBadge } from "@/components/asset-category-badge"
 import { buttonVariants } from "@/components/ui/button"
 import {
   Card,
-  CardAction,
   CardContent,
   CardDescription,
-  CardHeader,
   CardTitle,
 } from "@/components/ui/card"
 import {
@@ -48,6 +46,11 @@ import {
 } from "@/components/ui/item"
 import { Skeleton } from "@/components/ui/skeleton"
 
+import {
+  OverviewModuleAction,
+  OverviewModuleHeader,
+} from "./overview-module-header"
+
 export function AssetsInFocus({
   canAccessMarketCharts,
   canReadGraphView,
@@ -65,29 +68,29 @@ export function AssetsInFocus({
 }) {
   const t = dictionary.workspaceOverview.assetsInFocus
   const hasItems = metric?.state === "AVAILABLE" && metric.items.length > 0
-  const showGraphView = hasItems && canReadGraphView
+  const showGraphView = canReadGraphView
 
   return (
     <section aria-labelledby="dashboard-assets-in-focus-title">
       <Card className="min-w-0">
-        <CardHeader>
+        <OverviewModuleHeader>
           <CardTitle>
             <h2 id="dashboard-assets-in-focus-title">{t.title}</h2>
           </CardTitle>
           <CardDescription>{t.description}</CardDescription>
           {showGraphView ? (
-            <CardAction>
+            <OverviewModuleAction>
               <LocalizedLink
                 href="/graph-view"
                 aria-label={t.graphView}
                 className={buttonVariants({ variant: "ghost" })}
               >
                 <WaypointsIcon data-icon="inline-start" />
-                <span className="hidden sm:inline">{t.graphView}</span>
+                {t.graphView}
               </LocalizedLink>
-            </CardAction>
+            </OverviewModuleAction>
           ) : null}
-        </CardHeader>
+        </OverviewModuleHeader>
         <CardContent>
           {error || !metric ? (
             <AssetsInFocusState
@@ -127,17 +130,17 @@ export function AssetsInFocusSkeleton() {
   return (
     <section aria-hidden="true">
       <Card className="min-w-0">
-        <CardHeader>
+        <OverviewModuleHeader>
           <CardTitle>
             <Skeleton className="h-5 w-40 motion-reduce:animate-none" />
           </CardTitle>
           <CardDescription>
             <Skeleton className="h-4 w-72 max-w-full motion-reduce:animate-none" />
           </CardDescription>
-          <CardAction>
-            <Skeleton className="h-9 w-9 motion-reduce:animate-none sm:w-32" />
-          </CardAction>
-        </CardHeader>
+          <OverviewModuleAction>
+            <Skeleton className="h-9 w-32 motion-reduce:animate-none" />
+          </OverviewModuleAction>
+        </OverviewModuleHeader>
         <CardContent>
           <ItemGroup className="gap-0">
             {Array.from({ length: 6 }, (_, index) => (
@@ -151,9 +154,9 @@ export function AssetsInFocusSkeleton() {
                     <ItemTitle>
                       <Skeleton className="h-4 w-48 max-w-full motion-reduce:animate-none" />
                     </ItemTitle>
-                    <ItemDescription>
+                    <div className="flex min-h-4 items-center">
                       <Skeleton className="h-4 w-full max-w-2xl motion-reduce:animate-none" />
-                    </ItemDescription>
+                    </div>
                     <Skeleton className="h-3 w-2/3 max-w-xl motion-reduce:animate-none" />
                   </ItemContent>
                   <ItemActions>
@@ -185,10 +188,18 @@ function AssetsInFocusItems({
   locale: AppLocale
 }) {
   const t = dictionary.workspaceOverview.assetsInFocus
+  const seenAssetIds = new Set<number>()
+  const uniqueItems = items
+    .filter(({ assetId }) => {
+      if (seenAssetIds.has(assetId)) return false
+      seenAssetIds.add(assetId)
+      return true
+    })
+    .slice(0, 6)
 
   return (
     <ItemGroup className="gap-0">
-      {items.map((item, index) => {
+      {uniqueItems.map((item, index) => {
         const summary = item.context.summary?.trim()
 
         return (
@@ -214,9 +225,9 @@ function AssetsInFocusItems({
                 ) : null}
               </ItemContent>
               <ItemActions>
-                <Badge variant="secondary">
+                <AssetCategoryBadge type={item.assetType}>
                   {t.assetTypes[item.assetType]}
-                </Badge>
+                </AssetCategoryBadge>
               </ItemActions>
               <ItemFooter className="flex-col items-start gap-2 sm:flex-row sm:items-center">
                 <AppTimeMetadata icon={CalendarClockIcon}>

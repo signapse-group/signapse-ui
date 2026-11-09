@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useRouter } from "next/navigation"
-import { useMemo } from "react"
+import { useMemo, useSyncExternalStore } from "react"
 import { useForm } from "react-hook-form"
 import { toast } from "sonner"
 
@@ -23,6 +23,10 @@ import {
   NewsOutletFormFields,
   NewsOutletFormValues,
 } from "./news-outlet-form-fields"
+
+const subscribeClientReady = () => () => {}
+const getClientReadySnapshot = () => true
+const getServerReadySnapshot = () => false
 
 const initialFormValues: NewsOutletFormValues = {
   name: "",
@@ -47,16 +51,21 @@ export function NewsOutletCreateForm() {
   })
 
   const isSubmitting = form.formState.isSubmitting
+  const isHydrated = useSyncExternalStore(
+    subscribeClientReady,
+    getClientReadySnapshot,
+    getServerReadySnapshot
+  )
+
+  const isBusy = !isHydrated || isSubmitting
 
   async function onSubmit(data: NewsOutletFormValues) {
     const request: CreateNewsOutletRequest = {
-      name: data.name.trim(),
-      homepageUrl: data.homepageUrl.trim(),
+      name: data.name,
+      homepageUrl: data.homepageUrl,
       active: data.active,
-      ...(data.rssUrl?.trim() ? { rssUrl: data.rssUrl.trim() } : {}),
-      ...(data.description?.trim()
-        ? { description: data.description.trim() }
-        : {}),
+      ...(data.rssUrl ? { rssUrl: data.rssUrl } : {}),
+      ...(data.description ? { description: data.description } : {}),
     }
 
     const result = await createNewsOutlet(request)
@@ -77,18 +86,20 @@ export function NewsOutletCreateForm() {
       description={dictionary.newsOutlets.createDescription}
       width="lg"
     >
-      <form onSubmit={form.handleSubmit(onSubmit)}>
+      <form onSubmit={form.handleSubmit(onSubmit)} aria-busy={isBusy}>
         <AppFormShellBody className="flex flex-col gap-8">
-          <NewsOutletFormFields
-            control={form.control}
-            isSubmitting={isSubmitting}
-          />
+          <NewsOutletFormFields control={form.control} isDisabled={isBusy} />
         </AppFormShellBody>
 
         <AppFormShellFooter className="sm:justify-start">
           <div className="flex gap-4">
-            <Button disabled={isSubmitting} type="submit">
-              {isSubmitting ? (
+            <Button disabled={isBusy} type="submit">
+              {!isHydrated ? (
+                <>
+                  <Spinner data-icon="inline-start" />
+                  {dictionary.common.loading}
+                </>
+              ) : isSubmitting ? (
                 <>
                   <Spinner data-icon="inline-start" />
                   {dictionary.newsOutlets.createPending}
@@ -101,7 +112,7 @@ export function NewsOutletCreateForm() {
               type="button"
               variant="secondary"
               onClick={() => form.reset(initialFormValues)}
-              disabled={isSubmitting}
+              disabled={isBusy}
             >
               {dictionary.common.cancel}
             </Button>

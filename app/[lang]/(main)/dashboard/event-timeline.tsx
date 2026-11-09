@@ -21,15 +21,12 @@ import { Badge } from "@/components/ui/badge"
 import { buttonVariants } from "@/components/ui/button"
 import {
   Card,
-  CardAction,
   CardContent,
   CardDescription,
-  CardHeader,
   CardTitle,
 } from "@/components/ui/card"
 import {
   Empty,
-  EmptyContent,
   EmptyDescription,
   EmptyHeader,
   EmptyMedia,
@@ -48,45 +45,58 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 
 import { DashboardQuickDetailButton } from "./dashboard-quick-detail"
+import {
+  OverviewModuleAction,
+  OverviewModuleHeader,
+} from "./overview-module-header"
 
 export function EventTimeline({
+  denied = false,
   dictionary,
   error,
   locale,
   metric,
 }: {
+  denied?: boolean
   dictionary: Dictionary
   error: string | null
   locale: AppLocale
   metric: DashboardRecentEventsMetricResponse | null
 }) {
   const t = dictionary.workspaceOverview.eventTimeline
-  const hasItems = metric?.state === "AVAILABLE" && metric.items.length > 0
-  const showViewAll = hasItems
+  const visibleItems =
+    metric?.state === "AVAILABLE" ? metric.items.slice(0, 5) : []
+  const hasItems = visibleItems.length > 0
 
   return (
     <section aria-labelledby="dashboard-event-timeline-title">
       <Card className="min-w-0">
-        <CardHeader>
+        <OverviewModuleHeader>
           <CardTitle>
             <h2 id="dashboard-event-timeline-title">{t.title}</h2>
           </CardTitle>
           <CardDescription>{t.description}</CardDescription>
-          {showViewAll ? (
-            <CardAction>
+          {!denied && metric?.state !== "DENIED" ? (
+            <OverviewModuleAction>
               <LocalizedLink
                 href="/events"
                 aria-label={t.viewAll}
                 className={buttonVariants({ variant: "ghost" })}
               >
-                <span className="hidden sm:inline">{t.viewAll}</span>
+                {t.viewAll}
                 <ArrowRightIcon data-icon="inline-end" />
               </LocalizedLink>
-            </CardAction>
+            </OverviewModuleAction>
           ) : null}
-        </CardHeader>
+        </OverviewModuleHeader>
         <CardContent>
-          {error || !metric ? (
+          {denied ? (
+            <TimelineState
+              description={t.deniedDescription}
+              icon={ShieldAlertIcon}
+              title={t.deniedTitle}
+            />
+          ) : error || !metric ? (
             <TimelineState
               description={error ?? t.errorDescription}
               icon={CircleSlashIcon}
@@ -107,7 +117,7 @@ export function EventTimeline({
           ) : hasItems ? (
             <EventTimelineItems
               dictionary={dictionary}
-              items={metric.items}
+              items={visibleItems}
               locale={locale}
             />
           ) : (
@@ -123,17 +133,17 @@ export function EventTimelineSkeleton() {
   return (
     <section aria-hidden="true">
       <Card className="min-w-0">
-        <CardHeader>
+        <OverviewModuleHeader>
           <CardTitle>
             <Skeleton className="h-5 w-36 motion-reduce:animate-none" />
           </CardTitle>
           <CardDescription>
             <Skeleton className="h-4 w-56 max-w-full motion-reduce:animate-none" />
           </CardDescription>
-          <CardAction>
-            <Skeleton className="h-9 w-9 motion-reduce:animate-none sm:w-28" />
-          </CardAction>
-        </CardHeader>
+          <OverviewModuleAction>
+            <Skeleton className="h-9 w-28 motion-reduce:animate-none" />
+          </OverviewModuleAction>
+        </OverviewModuleHeader>
         <CardContent>
           <div className="flex flex-col gap-4">
             {Array.from({ length: 6 }, (_, index) => (
@@ -171,10 +181,14 @@ function EventTimelineItems({
   locale: AppLocale
 }) {
   const t = dictionary.workspaceOverview.eventTimeline
+  const titledItems = items.map((item) => ({
+    ...item,
+    title: item.title?.trim() ? item.title : t.untitledEvent,
+  }))
 
   return (
     <ItemGroup className="gap-0">
-      {items.map((item, index) => (
+      {titledItems.map((item, index) => (
         <div key={item.id} role="listitem">
           {index > 0 ? <ItemSeparator /> : null}
           <Item>
@@ -284,15 +298,6 @@ function EmptyEventTimeline({ dictionary }: { dictionary: Dictionary }) {
         <EmptyTitle>{t.emptyTitle}</EmptyTitle>
         <EmptyDescription>{t.emptyDescription}</EmptyDescription>
       </EmptyHeader>
-      <EmptyContent>
-        <LocalizedLink
-          href="/events"
-          className={buttonVariants({ variant: "outline", size: "sm" })}
-        >
-          {t.viewAll}
-          <ArrowRightIcon data-icon="inline-end" />
-        </LocalizedLink>
-      </EmptyContent>
     </Empty>
   )
 }

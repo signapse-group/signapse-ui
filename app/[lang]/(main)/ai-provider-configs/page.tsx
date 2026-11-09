@@ -1,12 +1,11 @@
 import { Suspense } from "react"
+import { redirect } from "next/navigation"
 
 import { getAiProviderConfigs } from "@/app/api/ai-provider-configs/action"
 import { AI_PROVIDER_CONFIG_PERMISSIONS } from "@/app/lib/ai-provider-configs/permissions"
 import type { Dictionary } from "@/app/lib/i18n/dictionary-types"
 import { getServerDictionary } from "@/app/lib/i18n/server"
 import { parsePaginationQuery } from "@/app/lib/pagination/query"
-import { hasPermission } from "@/app/lib/permissions"
-import { getCurrentPermissions } from "@/app/lib/permissions-server"
 import { buildSortQuery } from "@/app/lib/utils"
 import { AccessDenied } from "@/components/access-denied"
 import {
@@ -33,28 +32,16 @@ interface PageProps {
 export default async function AiProviderConfigsPage({
   searchParams,
 }: PageProps) {
-  const [permissions, dictionary] = await Promise.all([
-    getCurrentPermissions(),
-    getServerDictionary(),
-  ])
-
-  if (!hasPermission(permissions, AI_PROVIDER_CONFIG_PERMISSIONS.read)) {
-    return (
-      <>
-        <h1 className="sr-only">{dictionary.navigation.aiProviders}</h1>
-        <AccessDenied
-          description={dictionary.aiProviderConfigs.readDenied}
-          permission={AI_PROVIDER_CONFIG_PERMISSIONS.read}
-        />
-      </>
-    )
-  }
+  const dictionary = await getServerDictionary()
 
   return (
     <>
       <h1 className="sr-only">{dictionary.navigation.aiProviders}</h1>
       <Suspense fallback={<ListSkeleton dictionary={dictionary} />}>
-        <AiProviderConfigsContent searchParamsPromise={searchParams} />
+        <AiProviderConfigsContent
+          searchParamsPromise={searchParams}
+          dictionary={dictionary}
+        />
       </Suspense>
     </>
   )
@@ -62,8 +49,10 @@ export default async function AiProviderConfigsPage({
 
 async function AiProviderConfigsContent({
   searchParamsPromise,
+  dictionary,
 }: {
   searchParamsPromise: Promise<{ [key: string]: string | string[] | undefined }>
+  dictionary: Dictionary
 }) {
   const resolvedParams = await searchParamsPromise
   const sortValue = Array.isArray(resolvedParams.sort)
@@ -72,12 +61,48 @@ async function AiProviderConfigsContent({
   const sort = sortValue === "id_asc" ? "id_asc" : "id_desc"
   const { page, size } = parsePaginationQuery(resolvedParams)
 
-  const providerPage = await getAiProviderConfigs({
-    page: page - 1,
-    size,
-    sort: buildSortQuery(sort),
-    filter: "",
-  })
+  let providerPage: Awaited<ReturnType<typeof getAiProviderConfigs>>
+  try {
+    // The protected list endpoint owns read access; /me can fail independently.
+    providerPage = await getAiProviderConfigs({
+      page: page - 1,
+      size,
+      sort: buildSortQuery(sort),
+      filter: "",
+    })
+  } catch (error: unknown) {
+    if (
+      error instanceof Error &&
+      "status" in error &&
+      error.status === 403
+    ) {
+      return (
+        <AccessDenied
+          description={dictionary.aiProviderConfigs.readDenied}
+          permission={AI_PROVIDER_CONFIG_PERMISSIONS.read}
+        />
+      )
+    }
+    throw error
+  }
+
+  const lastPage = Math.max(
+    providerPage.totalElements > 0 ? providerPage.totalPages : 1,
+    1
+  )
+  if (page > lastPage) {
+    const normalizedParams = new URLSearchParams()
+    for (const [key, value] of Object.entries(resolvedParams)) {
+      const values = Array.isArray(value)
+        ? value
+        : value === undefined
+          ? []
+          : [value]
+      values.forEach((entry) => normalizedParams.append(key, entry))
+    }
+    normalizedParams.set("page", lastPage.toString())
+    redirect(`?${normalizedParams.toString()}`)
+  }
 
   return <AiProviderConfigListPage providerPage={providerPage} />
 }
@@ -145,7 +170,7 @@ function ListSkeleton({ dictionary }: { dictionary: Dictionary }) {
         </Table>
       </AppListTable>
 
-      <AppPaginationSkeleton className="mt-4" />
+      <AppPaginationSkeleton className="mt-4 gap-4" />
     </div>
   )
 }

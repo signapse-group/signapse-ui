@@ -9,15 +9,22 @@ import {
 } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { Suspense, useState } from "react"
+import { renderToString } from "react-dom/server"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-const { routerPush, routerRefresh, routerReplace, getCurrentPermissions } =
-  vi.hoisted(() => ({
-    routerPush: vi.fn(),
-    routerRefresh: vi.fn(),
-    routerReplace: vi.fn(),
-    getCurrentPermissions: vi.fn(async () => ["ai-provider-config:read"]),
-  }))
+const {
+  routerPush,
+  routerRefresh,
+  routerReplace,
+  getCurrentPermissions,
+  searchParams,
+} = vi.hoisted(() => ({
+  routerPush: vi.fn(),
+  routerRefresh: vi.fn(),
+  routerReplace: vi.fn(),
+  getCurrentPermissions: vi.fn(async () => ["ai-provider-config:read"]),
+  searchParams: new URLSearchParams("page=1&size=10"),
+}))
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/vi/ai-provider-configs",
@@ -26,7 +33,7 @@ vi.mock("next/navigation", () => ({
     refresh: routerRefresh,
     replace: routerReplace,
   }),
-  useSearchParams: () => new URLSearchParams("page=1&size=10"),
+  useSearchParams: () => searchParams,
 }))
 
 vi.mock("@/components/localized-link", () => ({
@@ -42,7 +49,6 @@ vi.mock("@/app/api/ai-provider-configs/action", () => ({
   deleteAiProviderConfig: vi.fn(),
   deleteAiProviderCredential: vi.fn(),
   getAiProviderConfigById: vi.fn(),
-  getAiProviderConfigs: vi.fn(),
   updateAiProviderConfig: vi.fn(),
   updateAiProviderCredential: vi.fn(),
 }))
@@ -58,7 +64,6 @@ import {
   deleteAiProviderConfig,
   deleteAiProviderCredential,
   getAiProviderConfigById,
-  getAiProviderConfigs,
   updateAiProviderConfig,
   updateAiProviderCredential,
 } from "@/app/api/ai-provider-configs/action"
@@ -73,7 +78,6 @@ import { AiProviderConfigDetail } from "@/app/[lang]/(main)/ai-provider-configs/
 import { AiProviderConfigListPage } from "@/app/[lang]/(main)/ai-provider-configs/ai-provider-config-list"
 import AiProviderConfigDetailPage from "@/app/[lang]/(main)/ai-provider-configs/[id]/page"
 import CreateAiProviderConfigPage from "@/app/[lang]/(main)/ai-provider-configs/create/page"
-import AiProviderConfigsPage from "@/app/[lang]/(main)/ai-provider-configs/page"
 
 const legacyProvider = {
   id: 12,
@@ -84,7 +88,9 @@ const legacyProvider = {
 }
 
 const listPage = {
-  content: [legacyProvider],
+  content: [
+    { ...legacyProvider, taskReferencesStatus: "unavailable" as const },
+  ],
   pageable: {
     pageNumber: 0,
     pageSize: 10,
@@ -145,6 +151,9 @@ describe("AI connection UI", () => {
     routerPush.mockReset()
     routerRefresh.mockReset()
     routerReplace.mockReset()
+    for (const key of [...searchParams.keys()]) searchParams.delete(key)
+    searchParams.set("page", "1")
+    searchParams.set("size", "10")
     vi.mocked(createAiProviderCredential).mockReset()
     vi.mocked(createAiProviderConfig).mockReset()
     vi.mocked(deleteAiProviderConfig).mockReset()
@@ -159,7 +168,7 @@ describe("AI connection UI", () => {
 
   afterEach(() => cleanup())
 
-  it("shows legacy connection metadata and masked keys without implying task references", async () => {
+  it("shows an unavailable state instead of implying zero references", async () => {
     const user = userEvent.setup()
     renderWithProviders(<AiProviderConfigListPage providerPage={listPage} />)
 
@@ -172,7 +181,7 @@ describe("AI connection UI", () => {
     expect(screen.getByText("Endpoint mặc định của Groq")).toBeVisible()
     expect(screen.getByText("Endpoint của nhà cung cấp")).toBeVisible()
     expect(screen.getByText("gsk-...legacy")).toBeVisible()
-    expect(screen.getByText("API chưa cung cấp")).toBeVisible()
+    expect(screen.getByText("Không thể tải tham chiếu")).toBeVisible()
     expect(screen.queryByText("0 tác vụ")).not.toBeInTheDocument()
     expect(screen.queryByText("Mặc định")).not.toBeInTheDocument()
 
@@ -199,6 +208,89 @@ describe("AI connection UI", () => {
     )
   })
 
+  it.each(["2", "0"])(
+    "normalizes page=%s with an unsupported size in the rendered AI connections list",
+    async (requestedPage) => {
+      searchParams.set("page", requestedPage)
+      searchParams.set("size", "25")
+      searchParams.set("sort", "id_asc")
+
+      renderWithProviders(<AiProviderConfigListPage providerPage={listPage} />)
+
+      expect(screen.getByText("Hiển thị 1-1 trên 21 kết quả")).toBeVisible()
+      expect(
+        screen.getByRole("combobox", {
+          name: viDictionary.pagination.pageSize,
+        })
+      ).toHaveTextContent("10")
+      expect(
+        within(
+          screen.getByRole("navigation", {
+            name: viDictionary.pagination.navigationLabel,
+          })
+        ).getByRole("button", { name: "Đi tới trang 1" })
+      ).toHaveAttribute("aria-current", "page")
+
+      await vi.waitFor(() =>
+        expect(routerReplace).toHaveBeenCalledWith(
+          "/vi/ai-provider-configs?page=1&size=10&sort=id_asc"
+        )
+      )
+      expect(routerPush).not.toHaveBeenCalled()
+    }
+  )
+
+  it("shows the loaded reference count for the same connection and keeps its key masked", () => {
+    renderWithProviders(
+      <AiProviderConfigListPage
+        providerPage={{
+          ...listPage,
+          content: [
+            {
+              ...legacyProvider,
+              taskReferencesStatus: "loaded",
+              taskReferences: [
+                { task: "MARKET_REACTION_ANALYSIS", model: "model-a" },
+                { task: "NEWS_EVENT_EXTRACTION", model: "model-b" },
+              ],
+            },
+          ],
+        }}
+      />
+    )
+
+    expect(screen.getByRole("link", { name: "Groq #12" })).toHaveAttribute(
+      "href",
+      "/ai-provider-configs/12"
+    )
+    expect(screen.getByText("2 tác vụ")).toBeVisible()
+    expect(screen.getByText("gsk-...legacy")).toBeVisible()
+    expect(screen.queryByText("model-a")).not.toBeInTheDocument()
+    expect(screen.queryByText("0 tác vụ")).not.toBeInTheDocument()
+  })
+
+  it("shows a loaded zero-reference count distinctly from an unavailable read", () => {
+    renderWithProviders(
+      <AiProviderConfigListPage
+        providerPage={{
+          ...listPage,
+          content: [
+            {
+              ...legacyProvider,
+              taskReferencesStatus: "loaded",
+              taskReferences: [],
+            },
+          ],
+        }}
+      />
+    )
+
+    expect(screen.getByText("0 tác vụ")).toBeVisible()
+    expect(
+      screen.queryByText("Không thể tải tham chiếu")
+    ).not.toBeInTheDocument()
+  })
+
   it("shows the create link only when the separate create permission is present", () => {
     renderWithProviders(<AiProviderConfigListPage providerPage={listPage} />, [
       "ai-provider-config:read",
@@ -223,22 +315,6 @@ describe("AI connection UI", () => {
         name: viDictionary.aiProviderConfigs.openTaskConfiguration,
       })
     ).toHaveAttribute("href", "/ai-task-configurations")
-  })
-
-  it("denies the list route to a user without read permission", async () => {
-    getCurrentPermissions.mockResolvedValue(["ai-provider-config:create"])
-
-    const page = await AiProviderConfigsPage({
-      searchParams: Promise.resolve({}),
-    })
-    renderWithProviders(page, ["ai-provider-config:create"])
-
-    expect(
-      screen.getByText(viDictionary.aiProviderConfigs.readDenied, {
-        exact: false,
-      })
-    ).toBeVisible()
-    expect(getAiProviderConfigs).not.toHaveBeenCalled()
   })
 
   it("shows real task and model references to read-only actors without edit controls", () => {
@@ -342,10 +418,114 @@ describe("AI connection UI", () => {
     expect(endpoint).toHaveValue("")
   })
 
+  it("saves a description-only edit with a blank replacement key and preserves credentials and references", async () => {
+    const user = userEvent.setup()
+    const provider = {
+      ...legacyProvider,
+      baseUrl: "https://api.example.test/v1",
+      taskReferences: [
+        { task: "MARKET_REACTION_ANALYSIS" as const, model: "preserved-model" },
+      ],
+    }
+    vi.mocked(updateAiProviderConfig).mockResolvedValueOnce({
+      success: true,
+      data: { ...provider, description: "Description-only update" },
+    })
+
+    renderWithProviders(
+      <AiProviderConfigDetail provider={provider} />,
+      [
+        "ai-provider-config:read",
+        "ai-provider-config:update",
+        "ai-task-configuration:read",
+      ],
+      en
+    )
+
+    const endpoint = screen.getByLabelText(en.aiProviderConfigs.endpoint)
+    const description = screen.getByLabelText(en.aiProviderConfigs.description)
+    const replacementKey = screen.getByLabelText(
+      en.aiProviderConfigs.replacementKey
+    )
+    const save = screen.getByRole("button", {
+      name: en.aiProviderConfigs.saveConnection,
+    })
+
+    expect(endpoint).toHaveValue("https://api.example.test/v1")
+    expect(replacementKey).toHaveValue("")
+    expect(screen.getByText("gsk-...legacy")).toBeVisible()
+    expect(screen.getByText("preserved-model")).toBeVisible()
+
+    await user.clear(description)
+    await user.type(description, "Description-only update")
+    expect(save).toBeEnabled()
+    expect(updateAiProviderConfig).not.toHaveBeenCalled()
+
+    await user.click(save)
+    await vi.waitFor(() =>
+      expect(updateAiProviderConfig).toHaveBeenCalledTimes(1)
+    )
+    expect(updateAiProviderConfig).toHaveBeenCalledWith(12, {
+      description: "Description-only update",
+    })
+    expect(endpoint).toHaveValue("https://api.example.test/v1")
+    expect(screen.getByText("preserved-model")).toBeVisible()
+    expect(screen.getByText("gsk-...legacy")).toBeVisible()
+  })
+
+  it("saves a valid endpoint-only edit on an unreferenced connection with no replacement key", async () => {
+    const user = userEvent.setup()
+    const submittedEndpoint = " https://custom.example.test/v1 "
+    const trimmedEndpoint = "https://custom.example.test/v1"
+    const provider = {
+      ...legacyProvider,
+      baseUrl: "https://api.example.test/v1",
+      taskReferences: [],
+    }
+    vi.mocked(updateAiProviderConfig).mockResolvedValueOnce({
+      success: true,
+      data: { ...provider, baseUrl: trimmedEndpoint },
+    })
+
+    renderWithProviders(
+      <AiProviderConfigDetail provider={provider} />,
+      ["ai-provider-config:read", "ai-provider-config:update"],
+      en
+    )
+
+    const endpoint = screen.getByLabelText(en.aiProviderConfigs.endpoint)
+    const description = screen.getByLabelText(en.aiProviderConfigs.description)
+    const replacementKey = screen.getByLabelText(
+      en.aiProviderConfigs.replacementKey
+    )
+    const save = screen.getByRole("button", {
+      name: en.aiProviderConfigs.saveConnection,
+    })
+
+    expect(replacementKey).toHaveValue("")
+    await user.clear(endpoint)
+    await user.type(endpoint, submittedEndpoint)
+    expect(save).toBeEnabled()
+    expect(updateAiProviderConfig).not.toHaveBeenCalled()
+
+    await user.click(save)
+    await vi.waitFor(() =>
+      expect(updateAiProviderConfig).toHaveBeenCalledTimes(1)
+    )
+    expect(updateAiProviderConfig).toHaveBeenCalledWith(12, {
+      baseUrl: submittedEndpoint,
+    })
+    expect(endpoint).toHaveValue(trimmedEndpoint)
+    expect(description).toHaveValue("Existing connection")
+    expect(screen.getByText("gsk-...legacy")).toBeVisible()
+  })
+
   it("warns before discarding unsaved endpoint, description, and key drafts", async () => {
     const user = userEvent.setup()
     renderWithProviders(
-      <AiProviderConfigDetail provider={{ ...legacyProvider, taskReferences: [] }} />,
+      <AiProviderConfigDetail
+        provider={{ ...legacyProvider, taskReferences: [] }}
+      />,
       [
         "ai-provider-config:read",
         "ai-provider-config:update",
@@ -355,9 +535,7 @@ describe("AI connection UI", () => {
     )
 
     const endpoint = screen.getByLabelText(en.aiProviderConfigs.endpoint)
-    const description = screen.getByLabelText(
-      en.aiProviderConfigs.description
-    )
+    const description = screen.getByLabelText(en.aiProviderConfigs.description)
     const replacementKey = screen.getByLabelText(
       en.aiProviderConfigs.replacementKey
     )
@@ -580,6 +758,35 @@ describe("AI connection UI", () => {
     ).toBeVisible()
   })
 
+  it("renders non-final key deletion disabled before client hydration", () => {
+    const markup = renderToString(
+      <LocalizationProvider locale="en" dictionary={en}>
+        <PermissionProvider
+          permissions={["ai-provider-config:read", "ai-provider-config:delete"]}
+        >
+          <AiProviderConfigDraftProvider>
+            <AiProviderConfigDetail
+              provider={{
+                ...legacyProvider,
+                credentials: [
+                  { id: 101, keyPreview: "gsk-...legacy" },
+                  { id: 102, keyPreview: "gsk-...second" },
+                ],
+                taskReferences: [],
+              }}
+            />
+          </AiProviderConfigDraftProvider>
+        </PermissionProvider>
+      </LocalizationProvider>
+    )
+    const serverMarkup = document.createElement("div")
+    serverMarkup.innerHTML = markup
+
+    expect(
+      within(serverMarkup).getByRole("button", { name: "Remove API key 1" })
+    ).toBeDisabled()
+  })
+
   it("requires confirmation to remove a non-final key and to delete an unreferenced connection", async () => {
     const user = userEvent.setup()
     const provider = {
@@ -610,7 +817,7 @@ describe("AI connection UI", () => {
     })
     expect(removeKeyButton).toHaveClass("bg-destructive/10")
     await user.click(removeKeyButton)
-    const keyDialog = screen.getByRole("alertdialog")
+    let keyDialog = screen.getByRole("alertdialog")
     expect(keyDialog).toHaveAttribute("data-size", "sm")
     expect(
       keyDialog.querySelector('[data-slot="alert-dialog-media"]')
@@ -622,6 +829,15 @@ describe("AI connection UI", () => {
       within(keyDialog).getByRole("button", { name: en.common.delete })
     ).toHaveClass("bg-destructive/10")
     expect(within(keyDialog).getByText(/gsk-\.\.\.legacy/)).toBeVisible()
+
+    await user.click(
+      within(keyDialog).getByRole("button", { name: en.common.cancel })
+    )
+    expect(deleteAiProviderCredential).not.toHaveBeenCalled()
+    expect(screen.getByText("gsk-...legacy", { exact: true })).toBeVisible()
+
+    await user.click(removeKeyButton)
+    keyDialog = screen.getByRole("alertdialog")
     await user.click(
       within(keyDialog).getByRole("button", { name: en.common.delete })
     )
@@ -629,6 +845,7 @@ describe("AI connection UI", () => {
       expect(deleteAiProviderCredential).toHaveBeenCalledWith(12, 101)
     )
     expect(screen.queryByText("gsk-...legacy")).not.toBeInTheDocument()
+    expect(screen.getByText("gsk-...second", { exact: true })).toBeVisible()
 
     const deleteConnectionButton = screen.getByRole("button", {
       name: en.aiProviderConfigs.deleteConnection,
@@ -664,6 +881,45 @@ describe("AI connection UI", () => {
       expect(deleteAiProviderConfig).toHaveBeenCalledWith(12)
     )
     expect(routerReplace).toHaveBeenCalledWith("/vi/ai-provider-configs")
+  })
+
+  it("keeps selected-key confirmation open and reports a failed deletion", async () => {
+    const user = userEvent.setup()
+    vi.mocked(deleteAiProviderCredential).mockResolvedValue({
+      success: false,
+      error: "Credential is still in use.",
+    })
+
+    renderWithProviders(
+      <AiProviderConfigDetail
+        provider={{
+          ...legacyProvider,
+          credentials: [
+            { id: 101, keyPreview: "gsk-...legacy" },
+            { id: 102, keyPreview: "gsk-...second" },
+          ],
+          taskReferences: [],
+        }}
+      />,
+      ["ai-provider-config:read", "ai-provider-config:delete"],
+      en
+    )
+
+    await user.click(screen.getByRole("button", { name: "Remove API key 1" }))
+    const dialog = screen.getByRole("alertdialog")
+    await user.click(
+      within(dialog).getByRole("button", { name: en.common.delete })
+    )
+
+    await vi.waitFor(() =>
+      expect(deleteAiProviderCredential).toHaveBeenCalledWith(12, 101)
+    )
+    expect(dialog).toBeVisible()
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Credential is still in use."
+    )
+    expect(screen.getByText("gsk-...legacy", { exact: true })).toBeVisible()
+    expect(screen.getByText("gsk-...second", { exact: true })).toBeVisible()
   })
 
   it("allows a reader without update permission to reach the detail route", async () => {

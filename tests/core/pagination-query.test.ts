@@ -23,12 +23,15 @@ describe("dashboard pagination query", () => {
     }
   })
 
-  it("resets page and size when the requested size is unsupported", () => {
-    expect(parsePaginationQuery({ page: "7", size: "25" })).toEqual({
-      page: 1,
-      size: 10,
-    })
-  })
+  it.each(["2", "0"])(
+    "resets page=%s and size when the requested size is unsupported",
+    (page) => {
+      expect(parsePaginationQuery({ page, size: "25" })).toEqual({
+        page: 1,
+        size: 10,
+      })
+    }
+  )
 
   it("reads the first value from repeated server search params", () => {
     expect(

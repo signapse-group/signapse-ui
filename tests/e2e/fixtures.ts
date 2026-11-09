@@ -40,13 +40,16 @@ type FixtureController = {
       | "legacy-saved-provider-selection"
       | "legacy-provider-options"
       | "empty"
+      | "invalid-schema"
       | "short"
       | "short-then-empty"
       | "full-then-empty"
       | "validation-error"
       | "timeout"
       | "delayed"
+      | "delayed-old-workspace"
       | "delayed-outage"
+      | "workspace-not-selected"
       | "outage"
       | "mutation-failure"
       | "permission-denied"
@@ -67,10 +70,16 @@ type FixtureController = {
       | "calendar-awaiting"
       | "calendar-available"
       | "annotations-many"
+      | "positive-out-of-range"
+      | "authorized-page-two-size-twenty-101"
       | "annotations-warm-episode"
+      | "annotations-hot-event-reaction"
       | "annotations-unsafe-evidence-url"
       | "annotations-delayed-old-scope"
       | "chart-later-page"
+      | "overview-expanded"
+      | "article-reader-long-content"
+      | "scope-mismatch"
       | "calendar-historical",
     method?: string
   ): Promise<void>
@@ -81,6 +90,14 @@ type FixtureController = {
     streamConnections: number
     smtpConfiguration?: Record<string, unknown>
     aiTaskConfigurations?: Array<Record<string, unknown>>
+    newsOutlets?: Array<{
+      id: number
+      name: string
+      homepageUrl: string
+      rssUrl: string | null
+      description: string | null
+      active: boolean
+    }>
   }>
   setFeedbackScenario(
     scenario:

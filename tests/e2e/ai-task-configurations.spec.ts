@@ -1,4 +1,5 @@
 import AxeBuilder from "@axe-core/playwright"
+import type { Locator } from "@playwright/test"
 
 import { en } from "@/app/lib/i18n/dictionaries/en"
 import { vi } from "@/app/lib/i18n/dictionaries/vi"
@@ -215,6 +216,11 @@ test.describe("AI task inline configuration", () => {
       PROVIDER_READ,
       MODEL_CATALOG_READ,
     ])
+    await fixture.setScenario(
+      "/ai-provider-configs",
+      "legacy-provider-options",
+      "GET"
+    )
     await page.goto("/en/ai-task-configurations")
 
     const questionRow = page.getByRole("form", {
@@ -423,6 +429,402 @@ test.describe("AI task inline configuration", () => {
         (configuration) => configuration.task === "NEWS_EVENT_EXTRACTION"
       )
     ).toMatchObject({ customOutputTokens: null, effectiveOutputTokens: 8192 })
+  })
+
+  test("saves a valid Market Reaction token edit without disturbing another row", async ({
+    fixture,
+    page,
+  }, testInfo) => {
+    await fixture.setPermissions([
+      TASK_CONFIGURATION_READ,
+      TASK_CONFIGURATION_UPDATE,
+      PROVIDER_READ,
+      MODEL_CATALOG_READ,
+    ])
+    await fixture.setScenario(
+      "/ai-provider-configs",
+      "legacy-provider-options",
+      "GET"
+    )
+    await page.setViewportSize({ width: 1520, height: 2440 })
+    await page.emulateMedia({ colorScheme: "dark" })
+    await page.goto("/en/ai-task-configurations", {
+      waitUntil: "domcontentloaded",
+    })
+
+    const targetRow = page.getByRole("form", {
+      name: TASKS.MARKET_REACTION_ANALYSIS,
+    })
+    const targetToken = targetRow.getByRole("spinbutton", {
+      name: en.aiTaskConfigurations.outputTokenLimit,
+    })
+    const saveLabel = en.aiTaskConfigurations.save
+    const targetSave = targetRow.getByRole("button", { name: saveLabel })
+
+    await expect(targetToken).toBeEmpty()
+    await expect(targetSave).toBeDisabled()
+    await targetRow
+      .getByRole("combobox", { name: en.aiTaskConfigurations.connection })
+      .click()
+    await page
+      .getByRole("option", { name: "DeepSeek · #14", exact: true })
+      .click()
+    await targetRow
+      .getByRole("combobox", { name: en.aiTaskConfigurations.model })
+      .click()
+    await page.getByRole("option", { name: "deepseek-v4-flash" }).click()
+    await targetSave.click()
+    await expect(targetRow.getByRole("status")).toContainText(
+      en.aiTaskConfigurations.saveSuccess
+    )
+
+    const controlRow = page.getByRole("form", {
+      name: TASKS.MARKET_REACTION_SUMMARY,
+    })
+    const controlToken = controlRow.getByRole("spinbutton", {
+      name: en.aiTaskConfigurations.outputTokenLimit,
+    })
+    const controlSave = controlRow.getByRole("button", { name: saveLabel })
+    await controlToken.fill("2048")
+    await expect(controlSave).toBeEnabled()
+
+    const beforeTokenSave = await fixture.state()
+    const marketBaseline = beforeTokenSave.aiTaskConfigurations?.find(
+      (configuration) => configuration.task === "MARKET_REACTION_ANALYSIS"
+    )
+    expect(marketBaseline).toMatchObject({
+      selectedConnectionId: 14,
+      selectedModel: "deepseek-v4-flash",
+      customOutputTokens: null,
+    })
+
+    await targetToken.fill("4096")
+    await targetToken.press("Tab")
+    await expect(targetToken).toHaveValue("4096")
+    await expect(targetSave).toBeEnabled()
+    await page.screenshot({
+      path: testInfo.outputPath("market-reaction-token-dirty-1520x2440.png"),
+      fullPage: true,
+    })
+
+    await targetSave.click()
+    await expect(targetRow.getByRole("status")).toContainText(
+      en.aiTaskConfigurations.saveSuccess
+    )
+    await expect(targetToken).toHaveValue("4096")
+    await expect(targetSave).toBeDisabled()
+    await expect(controlToken).toHaveValue("2048")
+    await expect(controlSave).toBeEnabled()
+
+    const afterTokenSave = await fixture.state()
+    const tokenWrites = afterTokenSave.requests
+      .slice(beforeTokenSave.requests.length)
+      .filter(
+        (request) =>
+          request.method === "PUT" &&
+          typeof request.path === "string" &&
+          request.path.startsWith("/ai-task-configurations/")
+      )
+      .map(({ method, path, body }) => ({ method, path, body }))
+    expect(tokenWrites).toEqual([
+      {
+        method: "PUT",
+        path: "/ai-task-configurations/MARKET_REACTION_ANALYSIS/output-token",
+        body: { maxOutputTokens: 4096 },
+      },
+    ])
+
+    const marketAfterSave = afterTokenSave.aiTaskConfigurations?.find(
+      (configuration) => configuration.task === "MARKET_REACTION_ANALYSIS"
+    )
+    expect(marketAfterSave).toMatchObject({
+      selectedConnectionId: marketBaseline?.selectedConnectionId,
+      selectedModel: marketBaseline?.selectedModel,
+      customOutputTokens: 4096,
+      effectiveOutputTokens: 4096,
+    })
+    expect(
+      afterTokenSave.aiTaskConfigurations?.filter(
+        (configuration) => configuration.task !== "MARKET_REACTION_ANALYSIS"
+      )
+    ).toEqual(
+      beforeTokenSave.aiTaskConfigurations?.filter(
+        (configuration) => configuration.task !== "MARKET_REACTION_ANALYSIS"
+      )
+    )
+  })
+
+  test("preserves a Market Reaction token edit made before hydration", async ({
+    fixture,
+    page,
+  }) => {
+    await fixture.setPermissions([
+      TASK_CONFIGURATION_READ,
+      TASK_CONFIGURATION_UPDATE,
+      PROVIDER_READ,
+      MODEL_CATALOG_READ,
+    ])
+    await fixture.setScenario(
+      "/ai-provider-configs",
+      "legacy-provider-options",
+      "GET"
+    )
+
+    let releaseScripts: (() => void) | undefined
+    let heldScriptCount = 0
+    const scriptsReleased = new Promise<void>((resolve) => {
+      releaseScripts = resolve
+    })
+    await page.route("**/_next/static/**/*.js", async (route) => {
+      heldScriptCount += 1
+      await scriptsReleased
+      await route.continue()
+    })
+
+    try {
+      await page.goto("/en/ai-task-configurations", { waitUntil: "commit" })
+      const row = page.getByRole("form", {
+        name: TASKS.MARKET_REACTION_ANALYSIS,
+      })
+      const token = row.getByRole("spinbutton", {
+        name: en.aiTaskConfigurations.outputTokenLimit,
+      })
+      const save = row.getByRole("button", {
+        name: en.aiTaskConfigurations.save,
+      })
+
+      await expect(token).toBeEditable()
+      await expect.poll(() => heldScriptCount).toBeGreaterThan(0)
+      await token.fill("4096")
+      await expect(token).toHaveValue("4096")
+      await expect(save).toBeDisabled()
+
+      releaseScripts?.()
+      releaseScripts = undefined
+      await expect(token).toHaveValue("4096")
+      await expect(save).toBeEnabled()
+    } finally {
+      releaseScripts?.()
+    }
+  })
+
+  test("keeps another row's unsaved selection and token draft through target saves", async ({
+    fixture,
+    page,
+  }, testInfo) => {
+    await fixture.setPermissions([
+      TASK_CONFIGURATION_READ,
+      TASK_CONFIGURATION_UPDATE,
+      PROVIDER_READ,
+      MODEL_CATALOG_READ,
+    ])
+    await fixture.setScenario(
+      "/ai-provider-configs",
+      "legacy-provider-options",
+      "GET"
+    )
+    await page.setViewportSize({ width: 1520, height: 2440 })
+    await page.emulateMedia({ colorScheme: "dark" })
+    await page.goto("/en/ai-task-configurations", {
+      waitUntil: "domcontentloaded",
+    })
+
+    const targetRow = page.getByRole("form", {
+      name: TASKS.EVENT_ASSET_THEME_ENRICHMENT,
+    })
+    const controlRow = page.getByRole("form", {
+      name: TASKS.SCHEDULED_TELEGRAM_ANALYSIS,
+    })
+    const connectionLabel = en.aiTaskConfigurations.connection
+    const modelLabel = en.aiTaskConfigurations.model
+    const tokenLabel = en.aiTaskConfigurations.outputTokenLimit
+    const saveLabel = en.aiTaskConfigurations.save
+    const savingLabel = en.aiTaskConfigurations.saving
+
+    async function select(row: Locator, connection: string, model: string) {
+      await row.getByRole("combobox", { name: connectionLabel }).click()
+      await page.getByRole("option", { name: connection, exact: true }).click()
+      await row.getByRole("combobox", { name: modelLabel }).click()
+      await page.getByRole("option", { name: model, exact: true }).click()
+    }
+
+    const targetSelectionPath =
+      "/ai-task-configurations/EVENT_ASSET_THEME_ENRICHMENT/selection"
+    const targetTokenPath =
+      "/ai-task-configurations/EVENT_ASSET_THEME_ENRICHMENT/output-token"
+
+    // Establish saved baselines for both rows before entering the control draft.
+    await select(targetRow, "DeepSeek · #14", "deepseek-v4-flash")
+    await targetRow.getByRole("button", { name: saveLabel }).click()
+    await expect(targetRow.getByRole("status")).toContainText(
+      en.aiTaskConfigurations.saveSuccess
+    )
+    await targetRow.getByRole("spinbutton", { name: tokenLabel }).fill("6000")
+    await targetRow.getByRole("button", { name: saveLabel }).click()
+    await expect(targetRow.getByRole("status")).toContainText(
+      en.aiTaskConfigurations.saveSuccess
+    )
+
+    await select(controlRow, "DeepSeek · #14", "deepseek-v4-pro")
+    await controlRow.getByRole("button", { name: saveLabel }).click()
+    await expect(controlRow.getByRole("status")).toContainText(
+      en.aiTaskConfigurations.saveSuccess
+    )
+    await controlRow.getByRole("spinbutton", { name: tokenLabel }).fill("5000")
+    await controlRow.getByRole("button", { name: saveLabel }).click()
+    await expect(controlRow.getByRole("status")).toContainText(
+      en.aiTaskConfigurations.saveSuccess
+    )
+
+    const savedControlBaseline = (
+      await fixture.state()
+    ).aiTaskConfigurations?.find(
+      (configuration) => configuration.task === "SCHEDULED_TELEGRAM_ANALYSIS"
+    )
+    if (!savedControlBaseline) {
+      throw new Error("The fixture did not return the saved control task")
+    }
+    expect(savedControlBaseline).toMatchObject({
+      selectedConnectionId: 14,
+      selectedModel: "deepseek-v4-pro",
+      customOutputTokens: 5000,
+      effectiveOutputTokens: 5000,
+    })
+
+    const controlToken = controlRow.getByRole("spinbutton", {
+      name: tokenLabel,
+    })
+    const controlSave = controlRow.getByRole("button", { name: saveLabel })
+    await expect(controlToken).toHaveAttribute(
+      "id",
+      "SCHEDULED_TELEGRAM_ANALYSIS-output-tokens"
+    )
+
+    let releaseScripts: (() => void) | undefined
+    let heldScriptCount = 0
+    const scriptsReleased = new Promise<void>((resolve) => {
+      releaseScripts = resolve
+    })
+    await page.route("**/_next/static/**/*.js", async (route) => {
+      heldScriptCount += 1
+      await scriptsReleased
+      await route.continue()
+    })
+
+    try {
+      await page.reload({ waitUntil: "commit" })
+      await expect(controlToken).toBeEditable()
+      await expect.poll(() => heldScriptCount).toBeGreaterThan(0)
+      await controlToken.fill("1234")
+      await expect(controlToken).toHaveValue("1234")
+      await expect(controlSave).toBeDisabled()
+
+      releaseScripts?.()
+      releaseScripts = undefined
+      await expect(controlToken).toHaveValue("1234")
+    } finally {
+      releaseScripts?.()
+    }
+
+    // Keep the pre-hydration token draft while only saving the target row.
+    await select(targetRow, "OpenAI · #15", "gpt-4.1-mini")
+    await fixture.setScenario(targetSelectionPath, "delayed", "PUT")
+    await targetRow.getByRole("button", { name: saveLabel }).click()
+    await expect(targetRow).toHaveAttribute("aria-busy", "true")
+    await expect(
+      targetRow.getByRole("button", { name: savingLabel })
+    ).toBeDisabled()
+    await expect(controlToken).toHaveValue("1234")
+    await fixture.setScenario(targetSelectionPath, "success", "PUT")
+    await expect(targetRow.getByRole("status")).toContainText(
+      en.aiTaskConfigurations.saveSuccess
+    )
+    await expect(controlToken).toHaveValue("1234")
+    await expect(controlSave).toBeEnabled()
+    await expect(
+      controlRow.getByRole("combobox", { name: connectionLabel })
+    ).toContainText("DeepSeek · #14")
+    await expect(
+      controlRow.getByRole("combobox", { name: modelLabel })
+    ).toContainText("deepseek-v4-pro")
+    const stateAfterSelectionSave = await fixture.state()
+    expect(
+      stateAfterSelectionSave.aiTaskConfigurations?.find(
+        (configuration) => configuration.task === "EVENT_ASSET_THEME_ENRICHMENT"
+      )
+    ).toMatchObject({
+      selectedConnectionId: 15,
+      selectedModel: "gpt-4.1-mini",
+      customOutputTokens: 6000,
+      effectiveOutputTokens: 6000,
+    })
+    expect(
+      stateAfterSelectionSave.aiTaskConfigurations?.find(
+        (configuration) => configuration.task === "SCHEDULED_TELEGRAM_ANALYSIS"
+      )
+    ).toMatchObject(savedControlBaseline)
+    await expect(
+      targetRow.getByRole("combobox", { name: modelLabel })
+    ).toBeFocused()
+
+    await select(controlRow, "OpenAI · #15", "gpt-4.1-mini")
+    await expect(controlToken).toHaveValue("1234")
+    await expect(
+      controlRow.getByRole("combobox", { name: connectionLabel })
+    ).toContainText("OpenAI · #15")
+    await expect(
+      controlRow.getByRole("combobox", { name: modelLabel })
+    ).toContainText("gpt-4.1-mini")
+    await expect(controlSave).toBeEnabled()
+
+    await targetRow.getByRole("spinbutton", { name: tokenLabel }).fill("7000")
+    await fixture.setScenario(targetTokenPath, "delayed", "PUT")
+    await targetRow.getByRole("button", { name: saveLabel }).click()
+    await expect(targetRow).toHaveAttribute("aria-busy", "true")
+    await expect(
+      targetRow.getByRole("button", { name: savingLabel })
+    ).toBeDisabled()
+    await expect(controlToken).toHaveValue("1234")
+    await fixture.setScenario(targetTokenPath, "success", "PUT")
+    await expect(targetRow.getByRole("status")).toContainText(
+      en.aiTaskConfigurations.saveSuccess
+    )
+
+    await expect(controlToken).toHaveValue("1234")
+    await expect(
+      controlRow.getByRole("combobox", { name: connectionLabel })
+    ).toContainText("OpenAI · #15")
+    await expect(
+      controlRow.getByRole("combobox", { name: modelLabel })
+    ).toContainText("gpt-4.1-mini")
+    await expect(
+      controlRow.getByRole("button", { name: saveLabel })
+    ).toBeEnabled()
+
+    const savedConfigurations = (await fixture.state()).aiTaskConfigurations
+    expect(
+      savedConfigurations?.find(
+        (configuration) => configuration.task === "SCHEDULED_TELEGRAM_ANALYSIS"
+      )
+    ).toMatchObject(savedControlBaseline)
+    expect(
+      savedConfigurations?.find(
+        (configuration) => configuration.task === "EVENT_ASSET_THEME_ENRICHMENT"
+      )
+    ).toMatchObject({
+      selectedConnectionId: 15,
+      selectedModel: "gpt-4.1-mini",
+      customOutputTokens: 7000,
+      effectiveOutputTokens: 7000,
+    })
+    await expect(
+      targetRow.getByRole("spinbutton", { name: tokenLabel })
+    ).toBeFocused()
+
+    await page.screenshot({
+      path: testInfo.outputPath("ai-task-control-draft-after-target-saves.png"),
+      fullPage: true,
+    })
   })
 
   test("gates prompt links separately and shows producer denial safely", async ({

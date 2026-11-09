@@ -141,8 +141,9 @@ fixtures =
     phase
   end
 
-assert String.contains?(settings.hooks.before_run, "refs/heads/main:refs/remotes/origin/main")
-assert String.contains?(workflow.prompt_template, "git show origin/main:<path>")
+assert String.contains?(settings.hooks.after_create, "clone --depth 1 --branch dev ")
+assert String.contains?(settings.hooks.before_run, "refs/heads/dev:refs/remotes/origin/dev")
+assert String.contains?(workflow.prompt_template, "git show origin/dev:<path>")
 root = Path.dirname(Path.expand(workflow_path))
 for path <- ["AGENTS.md", "components/AGENTS.override.md"] ++ Map.values(runbooks) do
   source = File.read!(Path.join(root, path))

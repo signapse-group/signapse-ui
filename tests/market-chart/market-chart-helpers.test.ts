@@ -23,9 +23,17 @@ import {
 } from "@/app/[lang]/(main)/market-charts/market-chart-annotations"
 import {
   createKLineData,
+  deriveLiveCandleItemFromQuote,
+  getMarketChartWarmBandPriceRange,
   mergeCandleItems,
+  mergeLiveCandleItem,
   normalizeCandleItems,
 } from "@/app/[lang]/(main)/market-charts/market-chart-candle-helpers"
+import {
+  createChartStyles,
+  formatMarketChartPrice,
+  getMarketChartThemePalette,
+} from "@/app/[lang]/(main)/market-charts/market-chart-theme"
 import {
   INITIAL_COUNT_BACK,
   OLDER_COUNT_BACK,
@@ -44,6 +52,7 @@ import {
 import {
   MARKET_CHART_CALENDAR_WAITING_WINDOW_MS,
   createMarketChartFutureCalendarRequest,
+  getMarketChartCalendarActualDirection,
   getAwaitingMarketChartCalendarEvents,
   getMarketChartCalendarEventState,
   getMarketChartCalendarEventTimestamp,
@@ -129,6 +138,18 @@ describe("market-chart candle and history helpers", () => {
       timestamp: Date.parse(replacement.time),
       volume: 20,
     })
+  })
+
+  it("preserves missing Volume separately from an explicit zero", () => {
+    const missingVolume = createKLineData([
+      candle("2026-07-29T00:00:00.000Z", 100),
+    ])[0]
+    const zeroVolume = createKLineData([
+      candle("2026-07-29T00:00:00.000Z", 100, 0),
+    ])[0]
+
+    expect(missingVolume).not.toHaveProperty("volume")
+    expect(zeroVolume).toHaveProperty("volume", 0)
   })
 
   it("creates bounded older-history requests and filters already loaded candles", () => {
@@ -310,6 +331,194 @@ describe("market-chart candle and history helpers", () => {
   })
 })
 
+describe("market-chart live candle derivation", () => {
+  const quote = (price: number, receivedAt: string) => ({
+    assetId: 7,
+    symbol: "BTC/USD",
+    price,
+    receivedAt,
+    stale: false,
+  })
+
+  it("keeps the candle open and volume while quotes update close, high, and low", () => {
+    const current = candle("2026-08-23T00:01:00.000Z", 4245, 100)
+    const highQuote = deriveLiveCandleItemFromQuote({
+      current: [current],
+      quote: quote(4252, "2026-08-23T00:01:15.000Z"),
+      timeframe: "1m",
+    })!
+
+    expect(highQuote).toMatchObject({
+      time: current.time,
+      open: current.open,
+      high: 4252,
+      low: current.low,
+      close: 4252,
+      volume: 100,
+    })
+
+    const lowQuote = deriveLiveCandleItemFromQuote({
+      current: [highQuote],
+      quote: quote(4230, "2026-08-23T00:01:45.000Z"),
+      timeframe: "1m",
+    })
+
+    expect(lowQuote).toMatchObject({
+      time: current.time,
+      open: current.open,
+      high: 4252,
+      low: 4230,
+      close: 4230,
+      volume: 100,
+    })
+  })
+
+  it.each([
+    ["1w", "2026-08-17T00:00:00.000Z", "2026-08-24T00:00:00.000Z"],
+    ["1mo", "2026-08-01T00:00:00.000Z", "2026-09-01T00:00:00.000Z"],
+  ] as const)(
+    "starts the next %s candle at its UTC boundary",
+    (timeframe, currentTime, quoteTime) => {
+      const nextCandle = deriveLiveCandleItemFromQuote({
+        current: [candle(currentTime, 100, 20)],
+        quote: quote(101, quoteTime),
+        timeframe,
+      })
+
+      expect(nextCandle).toEqual({
+        time: quoteTime,
+        open: 101,
+        high: 101,
+        low: 101,
+        close: 101,
+      })
+      expect(nextCandle).not.toHaveProperty("volume")
+    }
+  )
+
+  it("starts a new intraday candle without inventing volume and ignores older quotes", () => {
+    const current = candle("2026-08-23T00:01:00.000Z", 4245, 100)
+    const nextCandle = deriveLiveCandleItemFromQuote({
+      current: [current],
+      quote: quote(4248, "2026-08-23T00:02:00.000Z"),
+      timeframe: "1m",
+    })!
+
+    expect(nextCandle).toEqual({
+      time: "2026-08-23T00:02:00.000Z",
+      open: 4248,
+      high: 4248,
+      low: 4248,
+      close: 4248,
+    })
+    expect(
+      deriveLiveCandleItemFromQuote({
+        current: [nextCandle],
+        quote: quote(4300, "2026-08-23T00:01:45.000Z"),
+        timeframe: "1m",
+      })
+    ).toBeNull()
+    expect(mergeLiveCandleItem([current], null)).toEqual([current])
+  })
+})
+
+describe("market-chart price formatting", () => {
+  it("uses configured asset precision or four digits when it is missing", () => {
+    const formatNumber = vi.fn(
+      (value: number, options?: Intl.NumberFormatOptions) =>
+        new Intl.NumberFormat("en-US", options).format(value)
+    )
+
+    expect(formatMarketChartPrice(110.5, undefined, formatNumber)).toBe(
+      "110.5000"
+    )
+    expect(formatNumber).toHaveBeenCalledWith(110.5, {
+      minimumFractionDigits: 4,
+      maximumFractionDigits: 4,
+    })
+    expect(formatMarketChartPrice(110.5, 2, formatNumber)).toBe("110.50")
+  })
+})
+
+describe("native market-chart last-price marker", () => {
+  it("uses candle direction colors while live and a neutral color when stale", () => {
+    const palette = getMarketChartThemePalette("light")
+    const legendFormatters = {
+      formatDateTime: (value: number) => String(value),
+      formatNumber: (value: number) => String(value),
+      notAvailable: "N/A",
+      pricePrecision: 2,
+      timeframe: "1m" as const,
+    }
+    const liveMark = createChartStyles(palette, legendFormatters).candle
+      .priceMark.last
+    const staleMark = createChartStyles(palette, legendFormatters, true).candle
+      .priceMark.last
+
+    expect(liveMark).toMatchObject({
+      downColor: palette.down,
+      noChangeColor: palette.noChange,
+      upColor: palette.up,
+    })
+    expect(staleMark).toMatchObject({
+      downColor: palette.axis,
+      noChangeColor: palette.axis,
+      upColor: palette.axis,
+    })
+  })
+})
+
+describe("native market-chart readout", () => {
+  it("uses the latest loaded candle when inspection has been cleared", () => {
+    const latestCandle = {
+      close: 5.5,
+      high: 6,
+      low: 4,
+      open: 5,
+      timestamp: 200,
+      volume: 7,
+    }
+    const styles = createChartStyles(getMarketChartThemePalette("light"), {
+      formatDateTime: (value) => `time-${value}`,
+      formatNumber: (value) => String(value),
+      getReadoutCandle: () => latestCandle,
+      notAvailable: "N/A",
+      pricePrecision: 2,
+      timeframe: "1m",
+    })
+    const template = styles.candle.tooltip.legend.template
+
+    if (typeof template !== "function") {
+      throw new Error("Expected the native candle legend template")
+    }
+
+    const legends = template(
+      {
+        current: {
+          close: 1,
+          high: 2,
+          low: 0,
+          open: 1,
+          timestamp: 100,
+          volume: 3,
+        },
+        next: null,
+        prev: null,
+      },
+      {} as never
+    )
+
+    expect(legends.map(({ title, value }) => [title, value])).toEqual([
+      ["time", "time-200"],
+      ["open", "5"],
+      ["high", "6"],
+      ["low", "4"],
+      ["close", "5.5"],
+      ["volume", "7"],
+    ])
+  })
+})
+
 describe("market-chart annotation and drawing mappings", () => {
   it("groups nearby annotations by candle and preserves dominant priority", () => {
     const candles = [
@@ -402,6 +611,71 @@ describe("market-chart annotation and drawing mappings", () => {
     expect(groups[0]?.annotations[0]?.warmEpisode?.periodStart).toBe(
       periodStart
     )
+  })
+
+  it("includes warm episodes by start time in the loaded half-open range", () => {
+    const candles = [
+      candle("2026-07-29T00:00:00.000Z", 100),
+      candle("2026-07-30T00:00:00.000Z", 110),
+    ]
+    const loadedRangeEnd = "2026-07-31T00:00:00.000Z"
+
+    expect(
+      createMarketChartWarmAnnotationGroups(
+        [warmAnnotation(candles[0]!.time, candles[1]!.time)],
+        candles,
+        "1d"
+      )
+    ).toHaveLength(1)
+    expect(
+      createMarketChartWarmAnnotationGroups(
+        [warmAnnotation(loadedRangeEnd, "2026-08-01T00:00:00.000Z")],
+        candles,
+        "1d"
+      )
+    ).toHaveLength(0)
+    expect(
+      createMarketChartWarmAnnotationGroups(
+        [
+          warmAnnotation(
+            "2026-07-28T12:00:00.000Z",
+            "2026-07-29T12:00:00.000Z"
+          ),
+        ],
+        candles,
+        "1d"
+      )
+    ).toHaveLength(0)
+  })
+
+  it("uses loaded candles in a half-open Warm period price range", () => {
+    const candles = [
+      candle("2026-07-29T00:00:00.000Z", 100),
+      candle("2026-07-29T01:00:00.000Z", 110),
+      candle("2026-07-29T02:00:00.000Z", 1_000),
+    ]
+
+    expect(
+      getMarketChartWarmBandPriceRange({
+        candles,
+        startTime: "2026-07-29T00:00:00.000Z",
+        endTime: "2026-07-29T02:00:00.000Z",
+      })
+    ).toEqual({ high: 112, low: 98 })
+    expect(
+      getMarketChartWarmBandPriceRange({
+        candles: [],
+        startTime: "2026-07-29T00:00:00.000Z",
+        endTime: "2026-07-29T02:00:00.000Z",
+      })
+    ).toBeNull()
+    expect(
+      getMarketChartWarmBandPriceRange({
+        candles: [candles[2]!],
+        startTime: "2026-07-29T00:00:00.000Z",
+        endTime: "2026-07-29T02:00:00.000Z",
+      })
+    ).toBeNull()
   })
 
   it("groups high-impact calendar events against the nearest candle", () => {
@@ -629,5 +903,22 @@ describe("market-chart calendar lookahead helpers", () => {
         events,
       }).map(({ id }) => id)
     ).toEqual([2])
+  })
+})
+
+describe("market-chart calendar actual comparison", () => {
+  it.each([
+    ["compares negative values numerically", "-1.2M", "-1.8M", "higher"],
+    ["compares values below forecast", "54.6", "55.2", "lower"],
+    ["treats zero as a value", "0", "-0.1", "higher"],
+    ["keeps equal values neutral", "3.0", "3.0", null],
+    ["keeps missing values neutral", null, "3.0", null],
+    ["keeps unparseable values neutral", "—", "3.0", null],
+    ["keeps different units neutral", "0.8M", "-1.5K", null],
+    ["keeps unit casing differences neutral", "1M", "2m", null],
+  ] as const)("%s", (_name, actual, forecast, expected) => {
+    expect(getMarketChartCalendarActualDirection(actual, forecast)).toBe(
+      expected
+    )
   })
 })

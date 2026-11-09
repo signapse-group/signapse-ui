@@ -5,6 +5,7 @@ import type { Dictionary } from "@/app/lib/i18n/dictionary-types"
 import { getServerDictionary } from "@/app/lib/i18n/server"
 import { canReadSystemPrompts } from "@/app/lib/system-prompts/permissions"
 import { getCurrentPermissions } from "@/app/lib/permissions-server"
+import { AppPaginationSkeleton } from "@/components/app-pagination-controls"
 import { AccessDenied } from "@/components/access-denied"
 import {
   AppListTable,
@@ -62,41 +63,44 @@ function SystemPromptListSkeleton({ dictionary }: { dictionary: Dictionary }) {
         <Skeleton className="h-5 w-48" />
         <Skeleton className="mt-3 h-4 w-full max-w-3xl" />
       </div>
-      <AppListTable className="mt-0">
-        <Table>
-          <TableHeader>
-            <AppListTableHeaderRow>
-              <AppListTableHead className="w-[50%]">
-                {t.typeColumn}
-              </AppListTableHead>
-              <AppListTableHead>{t.workflowColumn}</AppListTableHead>
-              <AppListTableHead>{t.updatedColumn}</AppListTableHead>
-              <AppListTableHead className="text-right">
-                <span className="sr-only">{t.editContent}</span>
-              </AppListTableHead>
-            </AppListTableHeaderRow>
-          </TableHeader>
-          <TableBody>
-            {Array.from({ length: 5 }, (_, index) => (
-              <TableRow key={index} className="hover:bg-transparent">
-                <TableCell>
-                  <Skeleton className="h-4 w-64" />
-                  <Skeleton className="mt-2 h-3 w-72" />
-                </TableCell>
-                <TableCell>
-                  <Skeleton className="h-4 w-24" />
-                </TableCell>
-                <TableCell>
-                  <Skeleton className="h-4 w-32" />
-                </TableCell>
-                <TableCell className="text-right">
-                  <Skeleton className="ml-auto h-8 w-32" />
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </AppListTable>
+      <div className="flex flex-col gap-4">
+        <AppListTable className="mt-0">
+          <Table>
+            <TableHeader>
+              <AppListTableHeaderRow>
+                <AppListTableHead className="w-[50%]">
+                  {t.typeColumn}
+                </AppListTableHead>
+                <AppListTableHead>{t.workflowColumn}</AppListTableHead>
+                <AppListTableHead>{t.updatedColumn}</AppListTableHead>
+                <AppListTableHead className="text-right">
+                  <span className="sr-only">{t.editContent}</span>
+                </AppListTableHead>
+              </AppListTableHeaderRow>
+            </TableHeader>
+            <TableBody>
+              {Array.from({ length: 5 }, (_, index) => (
+                <TableRow key={index} className="hover:bg-transparent">
+                  <TableCell>
+                    <Skeleton className="h-4 w-64" />
+                    <Skeleton className="mt-2 h-3 w-72" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-24" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-32" />
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Skeleton className="ml-auto h-8 w-32" />
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </AppListTable>
+        <AppPaginationSkeleton />
+      </div>
     </div>
   )
 }

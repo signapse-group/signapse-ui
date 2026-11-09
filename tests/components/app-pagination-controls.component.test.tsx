@@ -89,6 +89,14 @@ describe("AppPaginationControls", () => {
     await user.click(
       screen.getByRole("combobox", { name: viDictionary.pagination.pageSize })
     )
+    expect(
+      screen.getAllByRole("option").map((option) => option.textContent)
+    ).toEqual(["10 / trang", "20 / trang", "50 / trang", "100 / trang"])
+    const pageSizeTrigger = screen.getByRole("combobox", {
+      name: viDictionary.pagination.pageSize,
+    })
+    expect(pageSizeTrigger).toHaveTextContent("20")
+    expect(pageSizeTrigger).not.toHaveTextContent(/\/\s*(page|trang)/i)
     await user.click(await screen.findByRole("option", { name: /50/ }))
 
     await vi.waitFor(() =>
@@ -98,24 +106,35 @@ describe("AppPaginationControls", () => {
     )
   })
 
-  it("replaces invalid URL pagination while preserving other query state", async () => {
-    mocks.searchParams = new URLSearchParams(
-      "page=4&size=25&search=macro&sort=occurredAt_desc"
-    )
-    renderPagination({
-      number: 0,
-      numberOfElements: 10,
-      size: 10,
-      totalElements: 55,
-      totalPages: 6,
-    })
-
-    await vi.waitFor(() =>
-      expect(mocks.routerReplace).toHaveBeenCalledWith(
-        "/vi/events?page=1&size=10&search=macro&sort=occurredAt_desc"
+  it.each(["2", "0"])(
+    "replaces page=%s with page 1 for an unsupported size and preserves query state",
+    async (requestedPage) => {
+      mocks.searchParams = new URLSearchParams(
+        `page=${requestedPage}&size=25&search=macro&sort=occurredAt_desc`
       )
-    )
-  })
+      renderPagination({
+        number: 0,
+        numberOfElements: 10,
+        size: 10,
+        totalElements: 55,
+        totalPages: 6,
+      })
+
+      expect(screen.getByText("Hiển thị 1-10 trên 55 kết quả")).toBeVisible()
+      expect(
+        screen.getByRole("combobox", {
+          name: viDictionary.pagination.pageSize,
+        })
+      ).toHaveTextContent("10")
+
+      await vi.waitFor(() =>
+        expect(mocks.routerReplace).toHaveBeenCalledWith(
+          "/vi/events?page=1&size=10&search=macro&sort=occurredAt_desc"
+        )
+      )
+      expect(mocks.routerPush).not.toHaveBeenCalled()
+    }
+  )
 
   it("replaces a page confirmed to be beyond the result range", async () => {
     mocks.searchParams = new URLSearchParams(

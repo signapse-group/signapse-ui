@@ -97,4 +97,16 @@ describe("graph node label policy", () => {
       placeNodeLabels([candidate("partial", { x: 750 })], viewport)
     ).toHaveLength(1)
   })
+
+  it("moves a selected label clear of an inspector when its default side is covered", () => {
+    const inspector = { x: 600, y: 0, width: 200, height: 600 }
+    const [label] = placeNodeLabels(
+      [candidate("selected", { x: 620, y: 100, priority: 0 })],
+      viewport,
+      [inspector]
+    )
+
+    expect(label.side).toBe("left")
+    expect(label.x + label.width).toBeLessThanOrEqual(inspector.x)
+  })
 })

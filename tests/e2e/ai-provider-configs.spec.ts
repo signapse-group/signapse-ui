@@ -18,6 +18,147 @@ const responsiveViewports = [
 ]
 
 test.describe("P0 AI connections", () => {
+  test("renders page 2 when the API permits a 101-record response", async ({
+    page,
+    fixture,
+  }, testInfo) => {
+    // Preserve the actor's read grant while reproducing a missing /me permission snapshot.
+    await fixture.setPermissions(["ai-provider-config:read"])
+    await fixture.setScenario("/me", "permission-denied", "GET")
+    await fixture.setScenario(
+      "/ai-provider-configs",
+      "authorized-page-two-size-twenty-101",
+      "GET"
+    )
+    await page.emulateMedia({ colorScheme: "dark" })
+    await page.setViewportSize({ width: 1520, height: 1024 })
+
+    const requestsBefore = (await fixture.state()).requests.length
+    await page.goto("/vi/ai-provider-configs?page=2&size=20&sort=id_desc")
+
+    const listRequests = (await fixture.state()).requests
+      .slice(requestsBefore)
+      .filter(
+        (request) =>
+          request.method === "GET" && request.path === "/ai-provider-configs"
+      )
+    expect(listRequests.map((request) => request.query)).toEqual([
+      "?page=1&size=20&sort=id%2Cdesc",
+    ])
+
+    await expect(page.getByText("Hiển thị 21-40 trên 101 kết quả")).toBeVisible()
+    await expect(page.getByRole("row")).toHaveCount(21)
+    await expect(
+      page.getByRole("combobox", { name: vi.pagination.pageSize })
+    ).toContainText("20")
+
+    const rowIds = await page
+      .getByRole("table")
+      .locator("tbody")
+      .getByRole("link")
+      .evaluateAll((links) =>
+        links.map((link) =>
+          Number(
+            new URL(
+              (link as HTMLAnchorElement).href
+            ).pathname.split("/").at(-1)
+          )
+        )
+      )
+    expect(rowIds).toEqual(
+      Array.from({ length: 20 }, (_, index) => 81 - index)
+    )
+
+    await testInfo.attach("ai-connections-page-2-size-20-vi-1520x1024.png", {
+      body: await page.screenshot({
+        fullPage: false,
+        style: "nextjs-portal { display: none !important; }",
+      }),
+      contentType: "image/png",
+    })
+
+    await page.setViewportSize({ width: 375, height: 844 })
+    const paginationFooter = page.locator(
+      '[data-slot="app-pagination-footer"]'
+    )
+    await expect(
+      paginationFooter.getByText("Hiển thị 21-40 trên 101 kết quả")
+    ).toBeVisible()
+    await expect(
+      paginationFooter.getByRole("combobox", {
+        name: vi.pagination.pageSize,
+      })
+    ).toBeVisible()
+    await expect(
+      paginationFooter.getByRole("navigation", {
+        name: vi.pagination.navigationLabel,
+      })
+    ).toBeVisible()
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth
+      )
+    ).toBe(true)
+    await testInfo.attach("ai-connections-page-2-size-20-vi-375x844.png", {
+      body: await paginationFooter.screenshot(),
+      contentType: "image/png",
+    })
+
+    await page.setViewportSize({ width: 1520, height: 1024 })
+    const requestsBeforeSizeChange = (await fixture.state()).requests.length
+    await page
+      .getByRole("combobox", { name: vi.pagination.pageSize })
+      .click()
+    await page.getByRole("option", { name: "50 / trang", exact: true }).click()
+
+    await expect(page).toHaveURL(
+      (url) =>
+        `${url.pathname}${url.search}` ===
+        "/vi/ai-provider-configs?page=1&size=50&sort=id_desc"
+    )
+    await expect(page.getByText("Hiển thị 1-50 trên 101 kết quả")).toBeVisible()
+    await expect(page.getByRole("row")).toHaveCount(51)
+
+    const sizeChangeRequests = (await fixture.state()).requests
+      .slice(requestsBeforeSizeChange)
+      .filter(
+        (request) =>
+          request.method === "GET" && request.path === "/ai-provider-configs"
+      )
+    expect(sizeChangeRequests.map((request) => request.query)).toEqual([
+      "?page=0&size=50&sort=id%2Cdesc",
+    ])
+  })
+
+  test("keeps a genuine list API denial on the access-denied path", async ({
+    page,
+    fixture,
+  }) => {
+    await fixture.setPermissions(["ai-provider-config:read"])
+    await fixture.setScenario("/ai-provider-configs", "permission-denied", "GET")
+    await page.setViewportSize({ width: 1520, height: 1024 })
+
+    const requestsBefore = (await fixture.state()).requests.length
+    await page.goto("/vi/ai-provider-configs?page=2&size=20&sort=id_desc")
+
+    await expect(
+      page
+        .getByRole("main")
+        .getByText(vi.aiProviderConfigs.readDenied, { exact: false })
+    ).toBeVisible()
+    await expect(page.getByRole("table")).toHaveCount(0)
+
+    const deniedListRequests = (await fixture.state()).requests
+      .slice(requestsBefore)
+      .filter(
+        (request) =>
+          request.method === "GET" && request.path === "/ai-provider-configs"
+      )
+    expect(deniedListRequests.map((request) => request.query)).toEqual([
+      "?page=1&size=20&sort=id%2Cdesc",
+    ])
+  })
+
   test("renders the approved list and opens read-only legacy detail", async ({
     page,
     fixture,
@@ -61,11 +202,7 @@ test.describe("P0 AI connections", () => {
     await expect(
       page.getByText("Default endpoint for Groq", { exact: true })
     ).toBeVisible()
-    await expect(
-      page.getByText(en.aiProviderConfigs.referencesNotProvided, {
-        exact: true,
-      })
-    ).toBeVisible()
+    await expect(page.getByText("3 tasks", { exact: true })).toBeVisible()
     await expect(
       page.getByText(en.pagination.pageSize, { exact: true })
     ).toBeVisible()
@@ -90,6 +227,128 @@ test.describe("P0 AI connections", () => {
       body: listScreenshot,
       contentType: "image/png",
     })
+
+    await page.setViewportSize({ width: 1440, height: 1024 })
+    const paginationFooter = page.locator('[data-slot="app-pagination-footer"]')
+    const spacing = await paginationFooter.evaluate((footer) => {
+      const selector = footer.querySelector<HTMLElement>(
+        '[data-slot="select-trigger"]'
+      )
+      const navigation = footer.querySelector<HTMLElement>(
+        '[data-slot="pagination"]'
+      )
+      const navigationContent = footer.querySelector<HTMLElement>(
+        '[data-slot="pagination-content"]'
+      )
+      const summary = footer.querySelector<HTMLElement>("p")
+      const sizeGroup = selector?.parentElement
+      const controls = sizeGroup?.parentElement
+      const button = navigation?.querySelector<HTMLElement>("button")
+      const icon = button?.querySelector<SVGSVGElement>("svg")
+
+      if (
+        !selector ||
+        !navigation ||
+        !navigationContent ||
+        !summary ||
+        !sizeGroup ||
+        !controls ||
+        !button ||
+        !icon
+      ) {
+        throw new Error("Pagination footer elements are missing")
+      }
+
+      const footerRect = footer.getBoundingClientRect()
+      const selectorRect = selector.getBoundingClientRect()
+      const navigationRect = navigation.getBoundingClientRect()
+      const controlsRect = controls.getBoundingClientRect()
+      const summaryRect = summary.getBoundingClientRect()
+      const dimensions = (element: HTMLElement | SVGSVGElement) => {
+        const { width, height } = element.getBoundingClientRect()
+        return [Math.round(width), Math.round(height)]
+      }
+
+      return {
+        footerGap: getComputedStyle(footer).gap,
+        footerPadding: [
+          getComputedStyle(footer).paddingTop,
+          getComputedStyle(footer).paddingRight,
+          getComputedStyle(footer).paddingBottom,
+          getComputedStyle(footer).paddingLeft,
+        ],
+        selectorPadding: [
+          getComputedStyle(selector).paddingLeft,
+          getComputedStyle(selector).paddingRight,
+        ],
+        labelSelectorGap: getComputedStyle(sizeGroup).gap,
+        selectorNavigationGap: getComputedStyle(controls).gap,
+        navigationGap: getComputedStyle(navigationContent).gap,
+        selectorSize: dimensions(selector),
+        buttonSize: dimensions(button),
+        iconSize: dimensions(icon),
+        countOnLeft: summaryRect.right < controlsRect.left,
+        controlsOnRight:
+          controlsRect.left > footerRect.left + footerRect.width / 2 &&
+          controlsRect.right < footerRect.right,
+        selectorBeforeNavigation: selectorRect.right < navigationRect.left,
+      }
+    })
+    expect(spacing).toEqual({
+      footerGap: "16px",
+      footerPadding: ["12px", "16px", "12px", "16px"],
+      selectorPadding: ["8px", "8px"],
+      labelSelectorGap: "8px",
+      selectorNavigationGap: "16px",
+      navigationGap: "4px",
+      selectorSize: [64, 32],
+      buttonSize: [32, 32],
+      iconSize: [16, 16],
+      countOnLeft: true,
+      controlsOnRight: true,
+      selectorBeforeNavigation: true,
+    })
+    await testInfo.attach("SIGN-462-m07-footer-dark-1440x1024.png", {
+      body: await paginationFooter.screenshot(),
+      contentType: "image/png",
+    })
+
+    const pageSizeTrigger = paginationFooter.getByRole("combobox", {
+      name: en.pagination.pageSize,
+    })
+    await pageSizeTrigger.press("Enter")
+    await expect(page.getByRole("listbox")).toBeVisible()
+    await page.keyboard.press("Escape")
+    await expect(pageSizeTrigger).toBeFocused()
+
+    for (const viewport of responsiveViewports) {
+      await page.setViewportSize(viewport)
+      await expect(page.getByText("3 tasks", { exact: true })).toBeVisible()
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= window.innerWidth
+        )
+      ).toBe(true)
+
+      if (viewport.width === 390) {
+        const usageCount = page.getByText("3 tasks", { exact: true })
+        await usageCount.scrollIntoViewIfNeeded()
+        expect(
+          await page
+            .locator('[data-slot="table-container"]')
+            .evaluate((table) => table.scrollLeft)
+        ).toBeGreaterThan(0)
+        await expect(usageCount).toBeVisible()
+        await testInfo.attach("ai-connections-list-en-390x844.png", {
+          body: await page.screenshot({ fullPage: false }),
+          contentType: "image/png",
+        })
+        await page
+          .locator('[data-slot="table-container"]')
+          .evaluate((table) => (table.scrollLeft = 0))
+      }
+    }
+    await page.setViewportSize({ width: 1520, height: 1024 })
 
     const axe = await new AxeBuilder({ page })
       .withTags(["wcag2a", "wcag2aa"])
@@ -125,10 +384,9 @@ test.describe("P0 AI connections", () => {
     await expect(page.getByText(/3 tác vụ/)).toBeVisible()
     await expect(page.getByText("gsk-...legacy", { exact: true })).toBeVisible()
     await expect(
-      page.getByText(
-        vi.aiTaskConfigurations.taskNames.NEWS_EVENT_EXTRACTION,
-        { exact: true }
-      )
+      page.getByText(vi.aiTaskConfigurations.taskNames.NEWS_EVENT_EXTRACTION, {
+        exact: true,
+      })
     ).toBeVisible()
     await expect(
       page.getByText("deepseek-v4-flash", { exact: true })
@@ -154,13 +412,484 @@ test.describe("P0 AI connections", () => {
         path: "/ai-provider-configs",
         query: "?page=0&size=10&sort=id%2Cdesc",
       },
+      { method: "GET", path: "/ai-provider-configs/12" },
       {
         method: "GET",
         path: "/ai-provider-configs",
         query: "?page=0&size=10&sort=id%2Cdesc",
       },
       { method: "GET", path: "/ai-provider-configs/12" },
+      { method: "GET", path: "/ai-provider-configs/12" },
     ])
+  })
+
+  test("recovers a confirmed positive out-of-range page to the last page", async ({
+    page,
+    fixture,
+  }, testInfo) => {
+    await fixture.setPermissions(["ai-provider-config:read"])
+    await page.emulateMedia({ colorScheme: "dark" })
+    await page.setViewportSize({ width: 1520, height: 1024 })
+
+    const previousUrl = "/vi/ai-provider-configs?page=1&size=10&sort=id_asc"
+    await page.goto(previousUrl)
+    await expect(
+      page.getByRole("link", { name: "Groq #12", exact: true })
+    ).toBeVisible()
+
+    await fixture.setScenario(
+      "/ai-provider-configs",
+      "positive-out-of-range",
+      "GET"
+    )
+    const requestsBefore = (await fixture.state()).requests.length
+    await page.goto("/vi/ai-provider-configs?page=134&size=10&sort=id_asc")
+
+    await expect(page).toHaveURL(
+      (url) =>
+        `${url.pathname}${url.search}` ===
+        "/vi/ai-provider-configs?page=2&size=10&sort=id_asc"
+    )
+    await expect(
+      page.getByRole("link", { name: "OpenAI #11", exact: true })
+    ).toBeVisible()
+    await expect(page.getByText("Hiển thị 11-11 trên 11 kết quả")).toBeVisible()
+    await expect(
+      page.getByRole("combobox", { name: vi.pagination.pageSize })
+    ).toContainText("10")
+    await expect(
+      page
+        .getByRole("navigation", { name: vi.pagination.navigationLabel })
+        .getByRole("button", { name: "Đi tới trang 2" })
+    ).toHaveAttribute("aria-current", "page")
+
+    const listRequests = (await fixture.state()).requests
+      .slice(requestsBefore)
+      .filter(
+        (request) =>
+          request.method === "GET" && request.path === "/ai-provider-configs"
+      )
+    expect(listRequests.map((request) => request.query)).toEqual([
+      "?page=133&size=10&sort=id%2Casc",
+      "?page=1&size=10&sort=id%2Casc",
+    ])
+
+    await testInfo.attach("ai-connections-recovered-page-2-vi-1520x1024.png", {
+      body: await page.screenshot({
+        fullPage: false,
+        style: "nextjs-portal { display: none !important; }",
+      }),
+      contentType: "image/png",
+    })
+
+    await page.setViewportSize({ width: 375, height: 844 })
+    await expect(
+      page.getByRole("link", { name: "OpenAI #11", exact: true })
+    ).toBeVisible()
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth
+      )
+    ).toBe(true)
+    await testInfo.attach("ai-connections-recovered-page-2-vi-375x844.png", {
+      body: await page.screenshot({ fullPage: false }),
+      contentType: "image/png",
+    })
+
+    await page.goBack()
+    await expect(page).toHaveURL(
+      (url) => `${url.pathname}${url.search}` === previousUrl
+    )
+    await expect(
+      page.getByRole("link", { name: "OpenAI #1", exact: true })
+    ).toBeVisible()
+  })
+
+  test("TC-06a normalizes a successful zero-result page without showing navigation", async ({
+    page,
+    fixture,
+  }) => {
+    await fixture.setPermissions(["ai-provider-config:read"])
+    await page.setViewportSize({ width: 1520, height: 1024 })
+
+    await fixture.setScenario("/ai-provider-configs", "empty", "GET")
+    await page.goto("/vi/ai-provider-configs?page=134&size=10&sort=id_asc")
+    await expect(page).toHaveURL(
+      (url) =>
+        `${url.pathname}${url.search}` ===
+        "/vi/ai-provider-configs?page=1&size=10&sort=id_asc"
+    )
+    await expect(
+      page.getByText(vi.aiProviderConfigs.emptyTitle, { exact: true })
+    ).toBeVisible()
+    await expect(
+      page.getByRole("combobox", { name: vi.pagination.pageSize })
+    ).toBeVisible()
+    await expect(
+      page.getByRole("navigation", { name: vi.pagination.navigationLabel })
+    ).toHaveCount(0)
+  })
+
+  test("TC-12a keeps failed list reads distinct and recovers after retry", async ({
+    page,
+    fixture,
+  }) => {
+    await fixture.setPermissions(["ai-provider-config:read"])
+    await page.setViewportSize({ width: 1520, height: 1024 })
+
+    await fixture.setScenario(
+      "/ai-provider-configs",
+      "positive-out-of-range",
+      "GET"
+    )
+    await page.goto("/vi/ai-provider-configs?page=1&size=10&sort=id_asc")
+    await expect(
+      page.getByRole("link", { name: "OpenAI #1", exact: true })
+    ).toBeVisible()
+    await expect(page.getByText("Hiển thị 1-10 trên 11 kết quả")).toBeVisible()
+    await expect(
+      page
+        .getByRole("navigation", { name: vi.pagination.navigationLabel })
+        .getByRole("button", { name: "Đi tới trang 1" })
+    ).toHaveAttribute("aria-current", "page")
+
+    await fixture.setScenario("/ai-provider-configs", "outage", "GET")
+    const requestsBeforeFailure = (await fixture.state()).requests.length
+    await page.goto("/vi/ai-provider-configs?page=134&size=10&sort=id_asc")
+    await expect(page).toHaveURL(
+      (url) =>
+        `${url.pathname}${url.search}` ===
+        "/vi/ai-provider-configs?page=134&size=10&sort=id_asc"
+    )
+    await expect(
+      page
+        .locator('[data-slot="empty-title"]')
+        .filter({ hasText: vi.aiProviderConfigs.errorTitle })
+    ).toBeVisible()
+    await expect(
+      page.getByText(vi.aiProviderConfigs.emptyTitle, { exact: true })
+    ).toHaveCount(0)
+
+    const failedListRequests = (await fixture.state()).requests
+      .slice(requestsBeforeFailure)
+      .filter(
+        (request) =>
+          request.method === "GET" &&
+          request.path === "/ai-provider-configs" &&
+          request.query === "?page=133&size=10&sort=id%2Casc"
+      )
+    expect(failedListRequests).toHaveLength(1)
+
+    await fixture.setScenario(
+      "/ai-provider-configs",
+      "positive-out-of-range",
+      "GET"
+    )
+    await page.reload()
+    await expect(page).toHaveURL(
+      (url) =>
+        `${url.pathname}${url.search}` ===
+        "/vi/ai-provider-configs?page=2&size=10&sort=id_asc"
+    )
+    await expect(
+      page.getByRole("link", { name: "OpenAI #11", exact: true })
+    ).toBeVisible()
+    await expect(page.getByText("Hiển thị 11-11 trên 11 kết quả")).toBeVisible()
+    await expect(
+      page
+        .locator('[data-slot="empty-title"]')
+        .filter({ hasText: vi.aiProviderConfigs.errorTitle })
+    ).toHaveCount(0)
+  })
+
+  test.describe("server-rendered pagination recovery", () => {
+    test.use({ javaScriptEnabled: false })
+
+    test("recovers a confirmed positive out-of-range page without hydration", async ({
+      page,
+      fixture,
+    }) => {
+      await fixture.setPermissions(["ai-provider-config:read"])
+      await fixture.setScenario(
+        "/ai-provider-configs",
+        "positive-out-of-range",
+        "GET"
+      )
+
+      await page.goto("/vi/ai-provider-configs?page=134&size=10&sort=id_asc")
+
+      await expect(page).toHaveURL(
+        (url) =>
+          `${url.pathname}${url.search}` ===
+          "/vi/ai-provider-configs?page=2&size=10&sort=id_asc"
+      )
+
+      const listRequests = (await fixture.state()).requests.filter(
+        (request) =>
+          request.method === "GET" && request.path === "/ai-provider-configs"
+      )
+      expect(listRequests.map((request) => request.query)).toEqual([
+        "?page=133&size=10&sort=id%2Casc",
+        "?page=1&size=10&sort=id%2Casc",
+      ])
+    })
+  })
+
+  test("normalizes invalid page values on the route and replaces browser history", async ({
+    page,
+    fixture,
+  }, testInfo) => {
+    await fixture.setPermissions([
+      "ai-provider-config:read",
+      "ai-task-configuration:read",
+    ])
+    await page.emulateMedia({ colorScheme: "dark" })
+    await page.setViewportSize({ width: 1520, height: 1024 })
+
+    const previousUrl = "/vi/ai-provider-configs?size=20&sort=id_asc"
+    await page.goto(previousUrl)
+    await expect(page.getByRole("link", { name: "Groq #12" })).toBeVisible()
+
+    for (const invalidPage of ["0", "-1", "1.5", "not-a-number"]) {
+      const requestsBefore = (await fixture.state()).requests.length
+      const invalidUrl = `/vi/ai-provider-configs?page=${encodeURIComponent(invalidPage)}&size=10&sort=id_asc`
+
+      await page.goto(invalidUrl)
+      await expect(page).toHaveURL(
+        (url) =>
+          `${url.pathname}${url.search}` ===
+          "/vi/ai-provider-configs?page=1&size=10&sort=id_asc"
+      )
+      await expect(page.getByRole("link", { name: "Groq #12" })).toBeVisible()
+      await expect(
+        page.getByRole("combobox", { name: vi.pagination.pageSize })
+      ).toContainText("10")
+      await expect(
+        page
+          .getByRole("navigation", {
+            name: vi.pagination.navigationLabel,
+          })
+          .locator('[aria-current="page"]')
+      ).toHaveText("1")
+
+      const requests = (await fixture.state()).requests
+        .slice(requestsBefore)
+        .filter(
+          (request) =>
+            request.method === "GET" && request.path === "/ai-provider-configs"
+        )
+      expect(requests).toContainEqual(
+        expect.objectContaining({
+          method: "GET",
+          path: "/ai-provider-configs",
+          query: "?page=0&size=10&sort=id%2Casc",
+        })
+      )
+
+      if (invalidPage === "0") {
+        await testInfo.attach(
+          "ai-connections-page-zero-normalized-vi-1520x1024.png",
+          {
+            body: await page.screenshot({
+              fullPage: false,
+              style: "nextjs-portal { display: none !important; }",
+            }),
+            contentType: "image/png",
+          }
+        )
+      }
+
+      await page.goBack()
+      await expect(page).toHaveURL(
+        (url) => `${url.pathname}${url.search}` === previousUrl
+      )
+      await expect(page.getByRole("link", { name: "Groq #12" })).toBeVisible()
+    }
+  })
+
+  test("normalizes unsupported page sizes and replaces browser history", async ({
+    page,
+    fixture,
+  }, testInfo) => {
+    await fixture.setPermissions([
+      "ai-provider-config:read",
+      "ai-task-configuration:read",
+    ])
+    await page.emulateMedia({ colorScheme: "dark" })
+    await page.setViewportSize({ width: 1520, height: 1024 })
+
+    const previousUrl = "/vi/ai-provider-configs?size=20&sort=id_asc"
+    await page.goto(previousUrl)
+    await expect(page.getByRole("link", { name: "Groq #12" })).toBeVisible()
+
+    let normalizedRequests = 0
+    for (const pageValue of ["2", "0"]) {
+      await page.goto(
+        `/vi/ai-provider-configs?page=${pageValue}&size=25&sort=id_asc`
+      )
+      await expect(page).toHaveURL(
+        (url) =>
+          `${url.pathname}${url.search}` ===
+          "/vi/ai-provider-configs?page=1&size=10&sort=id_asc"
+      )
+      await expect(page.getByRole("link", { name: "Groq #12" })).toBeVisible()
+      await expect(
+        page.getByRole("combobox", { name: vi.pagination.pageSize })
+      ).toContainText("10")
+      await expect(
+        page
+          .getByRole("navigation", {
+            name: vi.pagination.navigationLabel,
+          })
+          .locator('[aria-current="page"]')
+      ).toHaveText("1")
+
+      const requests = (await fixture.state()).requests.filter(
+        (request) =>
+          request.method === "GET" &&
+          request.path === "/ai-provider-configs" &&
+          request.query === "?page=0&size=10&sort=id%2Casc"
+      )
+      expect(requests.length).toBeGreaterThan(normalizedRequests)
+      normalizedRequests = requests.length
+
+      if (pageValue === "0") {
+        await testInfo.attach(
+          "ai-connections-page-zero-unsupported-size-normalized-vi-1520x1024.png",
+          {
+            body: await page.screenshot({
+              fullPage: false,
+              style: "nextjs-portal { display: none !important; }",
+            }),
+            contentType: "image/png",
+          }
+        )
+      }
+
+      await page.goBack()
+      await expect(page).toHaveURL(
+        (url) => `${url.pathname}${url.search}` === previousUrl
+      )
+      await expect(page.getByRole("link", { name: "Groq #12" })).toBeVisible()
+    }
+  })
+
+  test("enables Add and Replace inputs after hydration before accepting drafts", async ({
+    page,
+    fixture,
+  }) => {
+    await fixture.setPermissions([
+      "ai-provider-config:read",
+      "ai-provider-config:create",
+      "ai-provider-config:update",
+    ])
+
+    let resumeScripts = () => {}
+    const scriptsHeld = new Promise<void>((resolve) => {
+      resumeScripts = resolve
+    })
+    await page.route("**/_next/static/**/*.js*", async (route) => {
+      await scriptsHeld
+      await route.continue()
+    })
+
+    try {
+      await page.goto("/en/ai-provider-configs/12", { waitUntil: "commit" })
+
+      const newKeyInput = page.getByLabel("New key", { exact: true })
+      const replacementInput = page.getByLabel("Replacement key", {
+        exact: true,
+      })
+      const addButton = page.getByRole("button", { name: "Add key" })
+      const replaceButton = page.getByRole("button", { name: "Replace key" })
+
+      await expect(newKeyInput).toBeVisible({ timeout: 60_000 })
+      await expect(replacementInput).toBeVisible()
+      await expect(newKeyInput).toBeDisabled()
+      await expect(replacementInput).toBeDisabled()
+
+      resumeScripts()
+
+      await expect(newKeyInput).toBeEnabled()
+      await expect(replacementInput).toBeEnabled()
+      await newKeyInput.fill("probe")
+      await replacementInput.fill("probe")
+      await expect(newKeyInput).toHaveValue("probe")
+      await expect(replacementInput).toHaveValue("probe")
+      await expect(addButton).toBeEnabled()
+      await expect(replaceButton).toBeEnabled()
+    } finally {
+      resumeScripts()
+    }
+  })
+
+  test("keeps connection edits disabled until hydration, then accepts a description-only draft", async ({
+    page,
+    fixture,
+  }, testInfo) => {
+    await fixture.setPermissions([
+      "ai-provider-config:read",
+      "ai-provider-config:update",
+    ])
+
+    let resumeScripts = () => {}
+    const scriptsHeld = new Promise<void>((resolve) => {
+      resumeScripts = resolve
+    })
+    await page.route("**/_next/static/**/*.js*", async (route) => {
+      await scriptsHeld
+      await route.continue()
+    })
+
+    try {
+      await page.emulateMedia({ colorScheme: "dark" })
+      await page.setViewportSize({ width: 1520, height: 1600 })
+      await page.context().addCookies([
+        {
+          name: "sidebar_state",
+          value: "true",
+          url: "http://127.0.0.1:3100/",
+        },
+      ])
+      await page.goto("/en/ai-provider-configs/12", { waitUntil: "commit" })
+
+      const endpoint = page.getByLabel(en.aiProviderConfigs.endpoint)
+      const description = page.getByLabel(en.aiProviderConfigs.description)
+      const replacementKey = page.getByLabel(
+        en.aiProviderConfigs.replacementKey,
+        { exact: true }
+      )
+      const save = page.getByRole("button", {
+        name: en.aiProviderConfigs.saveConnection,
+      })
+      await expect(description).toBeVisible({ timeout: 60_000 })
+      await expect(endpoint).toBeDisabled()
+      await expect(description).toBeDisabled()
+      await expect(replacementKey).toBeDisabled()
+      await expect(save).toBeDisabled()
+
+      resumeScripts()
+      await expect(endpoint).toBeEnabled()
+      await expect(description).toBeEnabled()
+      await expect(replacementKey).toBeEnabled()
+      await expect(replacementKey).toBeEmpty()
+
+      await description.fill("Description-only hydration regression")
+      await expect(description).toHaveValue(
+        "Description-only hydration regression"
+      )
+      await expect(save).toBeEnabled()
+
+      await testInfo.attach("ai-connection-description-draft-1520x1600.png", {
+        body: await page.screenshot({
+          fullPage: false,
+          style: "nextjs-portal { display: none !important; }",
+        }),
+        contentType: "image/png",
+      })
+    } finally {
+      resumeScripts()
+    }
   })
 
   test("matches the approved edit design at 1520x1600 and stays usable on mobile", async ({
@@ -260,7 +989,9 @@ test.describe("P0 AI connections", () => {
     await page
       .getByRole("button", { name: en.aiProviderConfigs.discardChanges })
       .click()
-    await expect(page).toHaveURL(/\/en\/ai-provider-configs$/)
+    await expect(page).toHaveURL(/\/en\/ai-provider-configs$/, {
+      timeout: 30_000,
+    })
 
     for (const viewport of responsiveViewports) {
       await page.setViewportSize(viewport)

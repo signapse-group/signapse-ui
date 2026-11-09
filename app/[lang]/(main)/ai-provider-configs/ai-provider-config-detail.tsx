@@ -2,7 +2,7 @@
 
 import { ArrowLeft, ArrowRight, Plus, Trash2 } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useSyncExternalStore } from "react"
 import { toast } from "sonner"
 
 import {
@@ -56,6 +56,10 @@ type PendingDelete =
   | { kind: "connection" }
   | null
 
+const subscribeClientReady = () => () => {}
+const getClientReadySnapshot = () => true
+const getServerReadySnapshot = () => false
+
 export function AiProviderConfigDetail({
   provider,
 }: {
@@ -101,6 +105,11 @@ function AiProviderConfigDetailContent({
   const [pendingDelete, setPendingDelete] = useState<PendingDelete>(null)
   const [deleteError, setDeleteError] = useState("")
   const [discardDialogOpen, setDiscardDialogOpen] = useState(false)
+  const isClientReady = useSyncExternalStore(
+    subscribeClientReady,
+    getClientReadySnapshot,
+    getServerReadySnapshot
+  )
 
   const endpointChanged = endpoint !== (savedProvider.baseUrl ?? "")
   const descriptionChanged = description !== (savedProvider.description ?? "")
@@ -373,7 +382,7 @@ function AiProviderConfigDetailContent({
                     }}
                     placeholder={t.endpointPlaceholder}
                     autoComplete="url"
-                    disabled={pendingOperation !== null}
+                    disabled={!isClientReady || pendingOperation !== null}
                   />
                   <FieldDescription>
                     <span className="hidden sm:inline">
@@ -398,7 +407,7 @@ function AiProviderConfigDetailContent({
                       updateDraft({ description: value })
                     }}
                     placeholder={t.descriptionPlaceholder}
-                    disabled={pendingOperation !== null}
+                    disabled={!isClientReady || pendingOperation !== null}
                   />
                 </Field>
               </div>
@@ -509,7 +518,11 @@ function AiProviderConfigDetailContent({
                           setDeleteError("")
                           setPendingDelete({ kind: "credential", credential })
                         }}
-                        disabled={isLastCredential || pendingOperation !== null}
+                        disabled={
+                          !isClientReady ||
+                          isLastCredential ||
+                          pendingOperation !== null
+                        }
                         aria-label={formatMessage(t.removeKey, {
                           index: formatNumber(index + 1),
                         })}
@@ -554,7 +567,7 @@ function AiProviderConfigDetailContent({
                             updateReplacement(credential.id, event.target.value)
                           }
                           placeholder={t.replacementKeyPlaceholder}
-                          disabled={pendingOperation !== null}
+                          disabled={!isClientReady || pendingOperation !== null}
                         />
                         <FieldDescription>
                           {t.replacementKeyDescription}
@@ -602,7 +615,7 @@ function AiProviderConfigDetailContent({
                   updateDraft({ newKey: value })
                 }}
                 placeholder={t.newKeyPlaceholder}
-                disabled={pendingOperation !== null}
+                disabled={!isClientReady || pendingOperation !== null}
               />
               <FieldDescription>
                 <span className="hidden sm:inline">

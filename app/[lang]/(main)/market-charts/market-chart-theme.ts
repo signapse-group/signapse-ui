@@ -1,4 +1,11 @@
-import type { LineType, PolygonType } from "klinecharts"
+import type {
+  CandleTooltipLegendsCustomCallback,
+  KLineData,
+  LineType,
+  PolygonType,
+} from "klinecharts"
+
+import type { MarketChartTimeframe } from "@/app/lib/market-charts/definitions"
 
 import {
   resolveMarketChartDrawingColor,
@@ -104,10 +111,20 @@ export interface CreateChartStylesResult {
     priceMark: {
       high: { show: boolean }
       low: { show: boolean }
-      last: { line: { size: number }; text: { family: string; size: number } }
+      last: {
+        downColor: string
+        line: { size: number }
+        noChangeColor: string
+        text: { family: string; size: number }
+        upColor: string
+      }
     }
     tooltip: {
-      legend: { family: string }
+      legend: {
+        defaultValue: string
+        family: string
+        template: CandleTooltipLegendsCustomCallback
+      }
       title: { family: string; show: boolean }
     }
   }
@@ -137,10 +154,146 @@ export interface CreateChartStylesResult {
   overlay: { text: { family: string; size: number } }
 }
 
+export interface MarketChartLegendFormatters {
+  formatDateTime: (
+    value: number,
+    options?: Intl.DateTimeFormatOptions,
+    fallback?: string
+  ) => string
+  formatNumber: (value: number, options?: Intl.NumberFormatOptions) => string
+  notAvailable: string
+  pricePrecision: number
+  timeframe: MarketChartTimeframe
+  getReadoutCandle?: (crosshairCandle: KLineData | null) => KLineData | null
+}
+
+export function formatMarketChartPrice(
+  value: number,
+  pricePrecision: number | null | undefined,
+  formatNumber: MarketChartLegendFormatters["formatNumber"]
+) {
+  const precision = pricePrecision ?? 4
+
+  return formatNumber(value, {
+    minimumFractionDigits: precision,
+    maximumFractionDigits: precision,
+  })
+}
+
+function getCandleTimeFormatOptions(
+  timeframe: MarketChartTimeframe
+): Intl.DateTimeFormatOptions {
+  if (timeframe === "1mo") {
+    return { year: "numeric", month: "long" }
+  }
+
+  if (timeframe === "1d" || timeframe === "1w") {
+    return { year: "numeric", month: "long", day: "numeric" }
+  }
+
+  return {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }
+}
+
+export function formatMarketChartVolume(
+  value: number,
+  formatNumber: MarketChartLegendFormatters["formatNumber"]
+) {
+  let divisor = 1
+  let suffix = ""
+
+  if (value > 1_000_000_000) {
+    divisor = 1_000_000_000
+    suffix = "B"
+  } else if (value > 1_000_000) {
+    divisor = 1_000_000
+    suffix = "M"
+  } else if (value > 1_000) {
+    divisor = 1_000
+    suffix = "K"
+  }
+
+  const formatted = formatNumber(value / divisor, {
+    minimumFractionDigits: suffix ? 0 : 2,
+    maximumFractionDigits: suffix ? 3 : 2,
+  })
+
+  return `${formatted}${suffix}`
+}
+
 export function createChartStyles(
-  palette: MarketChartThemePalette
+  palette: MarketChartThemePalette,
+  legendFormatters: MarketChartLegendFormatters,
+  neutralizeLastPrice = false
 ): CreateChartStylesResult {
   const fontFamily = getCssTextVariable("--font-sans", "Geist, sans-serif")
+  const timeOptions = getCandleTimeFormatOptions(legendFormatters.timeframe)
+
+  const candleLegendTemplate: CandleTooltipLegendsCustomCallback = ({
+    current,
+  }) => {
+    const candle =
+      legendFormatters.getReadoutCandle?.(current ?? null) ?? current
+    if (!candle) return []
+
+    return [
+      {
+        title: "time",
+        value: legendFormatters.formatDateTime(
+          candle.timestamp,
+          timeOptions,
+          legendFormatters.notAvailable
+        ),
+      },
+      {
+        title: "open",
+        value: formatMarketChartPrice(
+          candle.open,
+          legendFormatters.pricePrecision,
+          legendFormatters.formatNumber
+        ),
+      },
+      {
+        title: "high",
+        value: formatMarketChartPrice(
+          candle.high,
+          legendFormatters.pricePrecision,
+          legendFormatters.formatNumber
+        ),
+      },
+      {
+        title: "low",
+        value: formatMarketChartPrice(
+          candle.low,
+          legendFormatters.pricePrecision,
+          legendFormatters.formatNumber
+        ),
+      },
+      {
+        title: "close",
+        value: formatMarketChartPrice(
+          candle.close,
+          legendFormatters.pricePrecision,
+          legendFormatters.formatNumber
+        ),
+      },
+      {
+        title: "volume",
+        value:
+          typeof candle.volume === "number" && Number.isFinite(candle.volume)
+            ? formatMarketChartVolume(
+                candle.volume,
+                legendFormatters.formatNumber
+              )
+            : legendFormatters.notAvailable,
+      },
+    ]
+  }
 
   return {
     grid: {
@@ -176,12 +329,19 @@ export function createChartStyles(
         high: { show: false },
         low: { show: false },
         last: {
+          downColor: neutralizeLastPrice ? palette.axis : palette.down,
           line: { size: 1 },
+          noChangeColor: neutralizeLastPrice ? palette.axis : palette.noChange,
           text: { family: fontFamily, size: 10 },
+          upColor: neutralizeLastPrice ? palette.axis : palette.up,
         },
       },
       tooltip: {
-        legend: { family: fontFamily },
+        legend: {
+          defaultValue: legendFormatters.notAvailable,
+          family: fontFamily,
+          template: candleLegendTemplate,
+        },
         title: { family: fontFamily, show: false },
       },
     },

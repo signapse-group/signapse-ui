@@ -6,7 +6,9 @@ import type { Dictionary } from "@/app/lib/i18n/dictionary-types"
 import {
   getGraphViewRelationLabel,
   type GraphViewEdge,
+  type GraphViewEdgeRelationType,
   type GraphViewEdgeKind,
+  type GraphViewAssetType,
   type GraphViewNode,
   type GraphViewNodeKind,
   type GraphViewNodeMetadata,
@@ -33,7 +35,7 @@ export type GraphViewDemoNodeAttributes = {
   fixed: boolean
   kind: GraphViewNodeKind
   label: string
-  metadata: GraphViewNodeMetadata | null
+  metadata: GraphViewNodeMetadata
   secondaryLabel: string | null
   size: number
   x: number
@@ -47,8 +49,9 @@ export type GraphViewDemoEdgeAttributes = {
   kind: GraphViewEdgeKind
   label: string
   note: string | null
-  relationType: string
+  relationType: GraphViewEdgeRelationType
   size: number
+  type: "arrow"
   sourceNodeId: string
   targetNodeId: string
   weight: number | null
@@ -93,17 +96,19 @@ const GRAPH_VIEW_DEMO_EDGE_BLUEPRINTS = [
   },
 ] as const satisfies ReadonlyArray<{
   edgeKind: GraphViewEdgeKind
-  relationTypes: readonly string[]
+  relationTypes: readonly GraphViewEdgeRelationType[]
   sourceKind: GraphViewNodeKind
   targetKind: GraphViewNodeKind
 }>
 
 const GRAPH_VIEW_DEMO_ASSET_TYPES = [
+  "EQUITY",
+  "ETF",
   "CRYPTO",
   "FX",
   "INDEX",
   "COMMODITY",
-] as const
+] as const satisfies readonly GraphViewAssetType[]
 
 function localized(locale: AppLocale, vietnamese: string, english: string) {
   return locale === "vi" ? vietnamese : english
@@ -126,6 +131,24 @@ function getDemoTimestamp(index: number) {
   return new Date(Date.UTC(2026, 0, 1 + index)).toISOString()
 }
 
+function emptyDemoMetadata(): GraphViewNodeMetadata {
+  return {
+    slug: null,
+    canonicalKey: null,
+    symbol: null,
+    assetType: null,
+    sourceName: null,
+    url: null,
+    occurredAt: null,
+    publishedAt: null,
+    status: null,
+    narrativeStatus: null,
+    confidence: null,
+    thesis: null,
+    themes: null,
+  }
+}
+
 function createDemoNode(
   kind: GraphViewNodeKind,
   index: number,
@@ -146,6 +169,7 @@ function createDemoNode(
       ),
       secondaryLabel: `EVENT-${String(entityId).padStart(3, "0")}`,
       metadata: {
+        ...emptyDemoMetadata(),
         canonicalKey: `DEMO-EVENT-${sequence}`,
         occurredAt: timestamp,
         status: "ENRICHED",
@@ -170,6 +194,7 @@ function createDemoNode(
       label: localized(locale, `Tài sản ${sequence}`, `Asset ${sequence}`),
       secondaryLabel: `ASSET-${String(entityId).padStart(3, "0")}`,
       metadata: {
+        ...emptyDemoMetadata(),
         assetType,
         symbol: `DEMO${String(entityId).padStart(3, "0")}`,
       },
@@ -187,9 +212,9 @@ function createDemoNode(
       ),
       secondaryLabel: `ARTICLE-${String(entityId).padStart(3, "0")}`,
       metadata: {
+        ...emptyDemoMetadata(),
         publishedAt: timestamp,
         sourceName: "Signapse Fixture",
-        status: "EVENT_RESOLVED",
         confidence: 0.58 + (index % 9) / 22,
       },
     }
@@ -205,6 +230,7 @@ function createDemoNode(
     ),
     secondaryLabel: `NARRATIVE-${String(entityId).padStart(3, "0")}`,
     metadata: {
+      ...emptyDemoMetadata(),
       confidence: 0.64 + (index % 7) / 20,
       narrativeStatus: "ACTIVE",
       thesis: localized(
@@ -355,8 +381,8 @@ export function createGraphViewDemoGraph({
       fixed: false,
       kind: node.kind,
       label: node.label,
-      metadata: node.metadata ?? null,
-      secondaryLabel: node.secondaryLabel ?? null,
+      metadata: node.metadata,
+      secondaryLabel: node.secondaryLabel,
       // Sigma sizes are radii in CSS pixels at zoom 1.
       size: visual.size / 2,
       x: position.x,
@@ -369,15 +395,16 @@ export function createGraphViewDemoGraph({
 
     graph.addEdgeWithKey(edge.id, edge.sourceNodeId, edge.targetNodeId, {
       color: visual.color,
-      confidence: edge.confidence ?? null,
+      confidence: edge.confidence,
       kind: edge.kind,
       label: getGraphViewRelationLabel(edge.relationType, dictionary),
-      note: edge.note ?? null,
+      note: edge.note,
       relationType: edge.relationType,
       size: visual.size,
+      type: "arrow",
       sourceNodeId: edge.sourceNodeId,
       targetNodeId: edge.targetNodeId,
-      weight: edge.weight ?? null,
+      weight: edge.weight,
     })
   }
 

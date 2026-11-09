@@ -445,6 +445,9 @@ export const vi = {
       "Tài khoản hiện tại cần quyền đọc không gian làm việc để xem tổng quan và các dữ liệu theo phạm vi không gian làm việc.",
     workspaceLoadError: "Không thể tải không gian làm việc.",
     overviewLoadErrorTitle: "Không thể tải tổng quan không gian làm việc",
+    scopeChangedTitle: "Không gian làm việc đã thay đổi khi tải",
+    scopeChangedDescription:
+      "Không gian làm việc đã thay đổi trong lúc tải tổng quan. Hãy tải lại để xem dữ liệu của không gian đang hoạt động.",
     noActiveTitle: "Chưa có không gian làm việc đang hoạt động",
     noActiveDescription:
       "Hãy tạo hoặc chọn một không gian làm việc để bắt đầu theo dõi tài sản, truy vấn thị trường và khám phá dữ liệu theo đúng phạm vi.",
@@ -485,9 +488,12 @@ export const vi = {
     eventTimeline: {
       title: "Dòng sự kiện",
       description:
-        "Các sự kiện thị trường gần đây trong phạm vi theo dõi hiện tại.",
+        "Năm sự kiện đủ điều kiện đầu tiên theo thứ tự từ hệ thống, thuộc watchlist của không gian làm việc hiện tại.",
+      workspaceRequiredDescription:
+        "Hãy chọn không gian làm việc đang hoạt động để tải sự kiện theo tài sản được theo dõi.",
       viewAll: "Xem tất cả sự kiện",
       openEvent: "Mở sự kiện",
+      untitledEvent: "Chưa có tiêu đề",
       themes: "Chủ đề",
       affectedAssets: "Tài sản ảnh hưởng",
       confidence: "Độ tin cậy",
@@ -504,7 +510,7 @@ export const vi = {
     assetsInFocus: {
       title: "Tài sản cần chú ý",
       description:
-        "Các tài sản được xếp hạng cùng bối cảnh thị trường mới nhất trong phạm vi này.",
+        "Tài sản được ưu tiên theo bối cảnh sự kiện hoặc luận điểm phù hợp trong phạm vi này.",
       graphView: "Mở Graph View",
       marketCharts: "Mở biểu đồ thị trường",
       emptyTitle: "Chưa có tài sản cần chú ý",
@@ -528,7 +534,7 @@ export const vi = {
     marketNarratives: {
       title: "Luận điểm thị trường",
       description:
-        "Các luận điểm được xếp hạng trong phạm vi theo dõi của không gian làm việc.",
+        "Tối đa ba luận điểm được xếp hạng trong bảy ngày qua theo phạm vi hiện tại.",
       graphView: "Mở Graph View",
       theme: "Chủ đề",
       affectedAssets: "Tài sản liên quan",
@@ -553,13 +559,18 @@ export const vi = {
     },
     latestNews: {
       title: "Tin tức mới nhất",
-      description: "Các bài viết tin tức mới nhất trên Signapse.",
+      globalScope: "Toàn hệ thống",
+      description:
+        "Năm bài viết mới nhất trên toàn Signapse, độc lập với không gian làm việc hiện tại.",
       viewAll: "Xem tất cả tin tức",
       openArticle: "Mở bài viết",
       emptyTitle: "Chưa có tin tức mới",
       emptyDescription: "Tin tức mới nhất sẽ hiển thị tại đây khi có bài viết.",
       errorTitle: "Không thể tải tin tức mới nhất",
       errorDescription: "Tin tức mới nhất hiện không khả dụng.",
+      deniedTitle: "Chưa có quyền xem tin tức mới nhất",
+      deniedDescription:
+        "Tài khoản cần quyền đọc bài viết tin tức để xem module này.",
       invalidDate: "Thời gian không hợp lệ",
     },
     tradingSnapshot: {
@@ -568,7 +579,8 @@ export const vi = {
       events: "Sự kiện thị trường",
       eventsWindow: "mới trong 24 giờ",
       narratives: "Luận điểm thị trường",
-      narrativesWindow: "đang hoạt động hoặc mới hình thành",
+      narrativesScope:
+        "Tổng số luận điểm đang hoạt động hoặc mới hình thành; không giới hạn 7 ngày.",
       news: "Tin tức mới",
       newsWindow: "xuất bản trong 6 giờ gần nhất",
       noData: "Chưa có dữ liệu",
@@ -774,9 +786,9 @@ export const vi = {
     unexpectedError: "Đã có lỗi không mong muốn xảy ra. Vui lòng thử lại.",
   },
   newsOutlets: {
+    listTitle: "Nguồn tin",
     readDenied: "Bạn không có quyền xem khu vực quản lý nguồn tin.",
     createDenied: "Bạn không có quyền tạo nguồn tin mới.",
-    updateDenied: "Bạn không có quyền cập nhật nguồn tin.",
     createAction: "Thêm nguồn tin",
     searchLabel: "Tìm nguồn tin",
     searchPending: "Đang tìm kiếm",
@@ -807,9 +819,9 @@ export const vi = {
     toggleAria: "{action} nguồn tin {name}",
     toggleError: "Không thể cập nhật trạng thái nguồn tin",
     delete: "Xóa nguồn tin",
-    deleteTitle: "Bạn có chắc chắn muốn xóa?",
+    deleteTitle: 'Xóa nguồn tin "{name}"?',
     deleteDescription:
-      "Hành động này không thể hoàn tác. Nguồn tin {name} sẽ bị xóa vĩnh viễn khỏi hệ thống.",
+      "Không thể hoàn tác thao tác này. {name} sẽ không được chọn trong các lần thu thập tiếp theo. Bài viết đã thu thập vẫn giữ nguyên nội dung, đường dẫn và tên nhà xuất bản đã ghi nhận.",
     deletePending: "Đang xóa...",
     deleted: 'Đã xóa nguồn tin "{name}".',
     deleteError: "Không thể xóa nguồn tin",
@@ -819,6 +831,7 @@ export const vi = {
     createSuccess: "Đã tạo nguồn tin thành công.",
     createPending: "Đang tạo...",
     createError: "Không thể tạo nguồn tin mới",
+    detailTitle: "Chi tiết nguồn tin",
     updateTitle: "Chỉnh sửa nguồn tin",
     updateDescription:
       "Cập nhật thông tin nhận diện và trạng thái sử dụng của nguồn tin.",
@@ -830,16 +843,14 @@ export const vi = {
     nameLabel: "Tên nguồn tin",
     namePlaceholder: "Ví dụ: Investing VN News",
     nameRequired: "Tên nguồn tin là bắt buộc",
-    nameTooLong: "Tên nguồn tin không được vượt quá 255 ký tự",
     homepageLabel: "URL trang chủ",
+    homepagePlaceholder: "example.com",
     homepageRequired: "URL trang chủ là bắt buộc",
-    homepageInvalid: "URL trang chủ không hợp lệ",
     rssLabel: "URL RSS",
-    rssInvalid: "URL RSS không hợp lệ",
+    rssPlaceholder: "example.com/feed.xml",
     rssDescription: "Để trống nếu nguồn tin không cung cấp RSS.",
     descriptionLabel: "Mô tả",
     descriptionPlaceholder: "Mô tả ngắn về phạm vi và vai trò của nguồn tin.",
-    descriptionTooLong: "Mô tả không được vượt quá 1000 ký tự",
     statusLabel: "Trạng thái",
     activeLabel: "Kích hoạt nguồn tin",
     activeDescription:
@@ -857,7 +868,6 @@ export const vi = {
     newest: "Mới nhất",
     oldest: "Cũ nhất",
     createdDateSort: "Ngày tạo",
-    titleAsc: "Tiêu đề A-Z",
     articleColumn: "Bài viết",
     outletColumn: "Nguồn tin",
     timeColumn: "Thời gian",
@@ -865,9 +875,32 @@ export const vi = {
     actionsColumn: "Thao tác",
     searchLabel: "Tìm bài viết tin tức",
     searchPending: "Đang tìm kiếm",
-    searchPlaceholder: "Tìm theo tiêu đề bài viết...",
-    noDescription: "Chưa có mô tả ngắn.",
+    searchPlaceholder: "Tìm theo tiêu đề hoặc mô tả...",
+    titleUnavailable: "Tiêu đề không có trong ngôn ngữ này",
+    descriptionUnavailable: "Mô tả không có trong ngôn ngữ này",
+    noDescription: "Chưa có mô tả.",
     noOutlet: "Chưa có nguồn tin",
+    sourceUrlUnavailable: "Chưa có URL nguồn gốc của bài viết.",
+    statusFilterLabel: "Trạng thái",
+    allStatuses: "Tất cả trạng thái",
+    publisherFilterLabel: "Nhà xuất bản",
+    allPublishers: "Tất cả nhà xuất bản",
+    publisherSearch: "Tìm nhà xuất bản...",
+    publisherOptionsLoading: "Đang tải nhà xuất bản...",
+    publisherOptionsEmpty: "Không tìm thấy nhà xuất bản phù hợp.",
+    publisherOptionsError: "Không thể tải danh sách nhà xuất bản.",
+    publisherOptionsRetry: "Thử lại",
+    filtersLabel: "Bộ lọc",
+    clearFilters: "Xóa bộ lọc",
+    startDateLabel: "Ngày bắt đầu",
+    endDateLabel: "Ngày kết thúc",
+    clearStartDate: "Bỏ ngày bắt đầu",
+    clearEndDate: "Bỏ ngày kết thúc",
+    dateRangeSeparator: "đến",
+    dateRangeInvalid: "Ngày kết thúc phải cùng hoặc sau ngày bắt đầu.",
+    publishedDatesTimeZone: "Ngày xuất bản theo múi giờ {timeZone}",
+    activeFiltersEmpty: "Chưa áp dụng bộ lọc nào.",
+    removeFilter: "Bỏ bộ lọc {value}",
     createdAtPrefix: "Tạo lúc {time}",
     viewDetail: "Xem chi tiết",
     openOriginalLink: "Mở liên kết gốc",
@@ -897,13 +930,31 @@ export const vi = {
     descriptionTitle: "Mô tả",
     imageTitle: "Hình ảnh bài viết",
     linkedEventsEmptyTitle: "Chưa có sự kiện liên kết",
-    contentEmpty: "Chưa có nội dung chi tiết.",
+    contentEmpty: "Nội dung bài viết không có trong ngôn ngữ này.",
+    contentUnavailable: "Bài viết chưa có nội dung.",
+    contentProcessingFailed: "Không thể xử lý nội dung bài viết.",
     technicalInfo: "Thông tin kỹ thuật",
     sourceUrl: "URL gốc",
     createdAt: "Tạo lúc",
     updatedAt: "Cập nhật",
     errorTitle: "Đã có lỗi xảy ra",
     errorDescription: "Không thể tải dữ liệu bài viết tin tức lúc này.",
+    queryErrorTitle: "Không thể áp dụng điều kiện tra cứu",
+    queryErrorDescription:
+      "Hãy kiểm tra từ khóa, bộ lọc và cách sắp xếp, sau đó thử lại.",
+    loadErrorTitle: "Không thể tải danh sách bài viết",
+    loadErrorDescription: "Danh sách chưa tải được. Hãy thử tải lại trang.",
+    relatedEventsTitle: "Sự kiện liên kết",
+    relatedEventUnavailable: "Không có tiêu đề sự kiện",
+    notFoundTitle: "Không tìm thấy bài viết tin tức",
+    notFoundDescription: "Bài viết có thể đã bị xóa hoặc hiện không khả dụng.",
+    openEvent: "Mở sự kiện",
+    evidenceRoleLabels: {
+      PRIMARY: "Bằng chứng chính",
+      SUPPORTING: "Bằng chứng hỗ trợ",
+      UPDATE: "Cập nhật",
+      CONTRADICTING: "Bằng chứng trái chiều",
+    },
     statusLabels: {
       INGESTED: "Đã nạp",
       DERIVATION_PENDING: "Chờ suy diễn",
@@ -1280,6 +1331,7 @@ export const vi = {
       "Quản lý kết nối và key tại đây. Chọn kết nối, model và giới hạn token đầu ra riêng trong phần cấu hình tác vụ AI.",
     openTaskConfiguration: "Mở cấu hình tác vụ AI",
     referencesNotProvided: "API chưa cung cấp",
+    referencesLoadError: "Không thể tải tham chiếu",
     noKeys: "Chưa có API key",
     emptyTitle: "Chưa có kết nối AI",
     emptyDescription: "Thêm kết nối để cung cấp nhà cung cấp AI được hỗ trợ.",
@@ -1305,7 +1357,8 @@ export const vi = {
       "Sẽ kiểm tra mọi key và model đang dùng trước khi lưu.",
     saveConnection: "Lưu kết nối",
     saveConnectionPending: "Đang lưu kết nối...",
-    connectionSettingsPersisted: "Cài đặt kết nối được lưu sau khi khởi động lại.",
+    connectionSettingsPersisted:
+      "Cài đặt kết nối được lưu sau khi khởi động lại.",
     updateSuccess: "Đã cập nhật kết nối AI.",
     updateError:
       "Không thể lưu kết nối. Hãy kiểm tra endpoint và mô tả rồi thử lại.",
@@ -1338,8 +1391,7 @@ export const vi = {
     addKeyError: "Không thể thêm API key. Hãy kiểm tra key rồi thử lại.",
     removeKey: "Xóa API key {index}",
     removeKeyAction: "Xóa key",
-    lastKeyRemovalBlocked:
-      "Đây là key cuối. Hãy thêm key khác trước khi xóa.",
+    lastKeyRemovalBlocked: "Đây là key cuối. Hãy thêm key khác trước khi xóa.",
     lastKeyRemovalBlockedMobile: "Key cuối. Hãy thêm key khác trước khi xóa.",
     deleteKeyTitle: "Xóa API key này?",
     deleteKeyDescription:
@@ -1840,7 +1892,7 @@ export const vi = {
       assetLabel: "Tài sản watchlist",
       assetPlaceholder: "Chọn tài sản",
       timeframeLabel: "Khung thời gian",
-      timezoneLabel: "Múi giờ trình duyệt",
+      moreActions: "Thao tác khác",
       annotationsLabel: "Sự kiện",
       annotationsAria: "Hiển thị sự kiện trên biểu đồ",
       calendarLabel: "Lịch kinh tế",
@@ -1872,6 +1924,13 @@ export const vi = {
       exitFullscreenAria: "Thoát toàn màn hình",
       fullscreenUnavailable: "Trình duyệt chưa hỗ trợ toàn màn hình.",
       fullscreenFailed: "Chưa thể chuyển chế độ toàn màn hình.",
+    },
+    inspection: {
+      chartLabel: "Biểu đồ giá",
+      keyboardInstructions:
+        "Dùng phím mũi tên trái và phải để xem nến. Nhấn Escape để trở về nến mới nhất.",
+      candleReadout:
+        "Thời gian {time}; mở cửa {open}; cao nhất {high}; thấp nhất {low}; đóng cửa {close}; khối lượng {volume}.",
     },
     indicators: {
       title: "Tùy chỉnh chỉ báo",
@@ -2011,6 +2070,7 @@ export const vi = {
       warmEpisodePeriodStart: "Bắt đầu giai đoạn: {time}",
       warmEpisodeSummaryTitle: "Tóm tắt giai đoạn",
       warmEpisodeEventsTitle: "Sự kiện trong giai đoạn",
+      warmEpisodeEventReasoningTitle: "Lý giải",
       episodeOutcomeTitle: "Kết quả giai đoạn",
       openMany: "Mở {count} sự kiện tại {time}",
       openOne: "Mở sự kiện {title}",
@@ -2034,12 +2094,9 @@ export const vi = {
     },
     calendar: {
       actual: "Thực tế",
-      awaitingPublication: "Chờ công bố",
-      awaitingPublicationDescription:
-        "Sự kiện đã đến giờ dự kiến nhưng chưa có kết quả công bố.",
-      countdownHours: "Còn {hours} giờ {minutes} phút",
-      countdownHoursOnly: "Còn {hours} giờ",
-      countdownMinutes: "Còn {minutes} phút",
+      countdownHoursValue: "{hours} giờ {minutes} phút",
+      countdownHoursOnlyValue: "{hours} giờ",
+      countdownMinutesValue: "{minutes} phút",
       eventFallback: "Sự kiện lịch kinh tế",
       eventMarkers: "{count} sự kiện lịch kinh tế",
       forecast: "Dự báo",
@@ -2049,8 +2106,9 @@ export const vi = {
       noEvents: "Chưa có sự kiện lịch kinh tế trong khoảng hiện tại.",
       noSelectedImpacts: "Hãy chọn ít nhất một mức ảnh hưởng.",
       nextEvent: "Sự kiện tiếp theo",
-      noNextEvent: "Chưa có sự kiện sắp diễn ra trong khoảng đã chọn.",
-      openUpcoming: "Mở lịch sắp diễn ra",
+      noNextEvent:
+        "Chưa có sự kiện phù hợp trong dữ liệu lịch đã đồng bộ trong 7 ngày tới.",
+      remainingLabel: "Còn lại",
       openMany: "Mở {count} sự kiện lịch kinh tế",
       openOne: "Mở sự kiện lịch kinh tế {title}",
       previous: "Trước đó",
@@ -2063,18 +2121,14 @@ export const vi = {
         AVAILABLE: "Đã công bố",
         PENDING: "Đang chờ",
       },
-      upcoming24Hours: "24 giờ tới",
-      upcoming7Days: "7 ngày tới",
-      upcomingTitle: "Lịch sắp diễn ra",
-      viewFullCalendar: "Mở Lịch kinh tế đầy đủ",
     },
     history: {
       loading: "Đang tải lịch sử...",
       errorFallback: "Chưa tải được lịch sử. Kéo lại để thử.",
     },
     live: {
+      accessibleQuote: "Quote gần nhất: {price}",
       connecting: "Đang kết nối giá trực tiếp",
-      currentPrice: "Giá hiện tại: {price}",
       live: "Giá trực tiếp",
       marketClosed: "Thị trường đã đóng",
       reconnecting: "Đang kết nối lại",
@@ -2132,10 +2186,10 @@ export const vi = {
       narrative: "Luận điểm",
     },
     edgeKinds: {
-      "event-asset": "Sự kiện - tài sản",
-      "news-article-event": "Bằng chứng - sự kiện",
-      "narrative-event": "Luận điểm - sự kiện",
-      "narrative-asset": "Luận điểm - tài sản",
+      "event-asset": "Sự kiện → tài sản",
+      "news-article-event": "Bằng chứng → sự kiện",
+      "narrative-event": "Luận điểm → sự kiện",
+      "narrative-asset": "Luận điểm → tài sản",
     },
     relationTypes: {
       DRIVER: "Sự kiện góp phần hình thành luận điểm",
@@ -2189,12 +2243,21 @@ export const vi = {
       closeRelationshipChoices: "Đóng danh sách quan hệ",
       interactionHint:
         "Kéo để di chuyển · Chọn nút hoặc đường nối để xem chi tiết",
+      liveInteractionHint:
+        "Kéo để di chuyển biểu đồ · Chọn nút để xem thông tin",
       relationshipInterpretation:
         "Kết nối thể hiện mối liên hệ được ghi nhận, không khẳng định quan hệ nhân quả.",
       sourceUnavailable: "Chưa có liên kết đến bài báo gốc.",
       workspaceRequired: "Chọn workspace",
       workspaceRequiredDescription:
         "Tạo hoặc chọn workspace trong menu workspace để khám phá graph.",
+      chooseWorkspace: "Chọn hoặc tạo workspace",
+      workspaceReadDenied:
+        "Bạn cần quyền workspace để chọn workspace cho graph này.",
+      watchlistReadDenied:
+        "Bạn cần quyền watchlist để xác định workspace này có tài sản đang theo dõi hay không.",
+      watchlistResponseInvalid:
+        "Backend trả về dữ liệu watchlist của workspace không đúng định dạng mong đợi.",
       workspaceChanged:
         "Workspace đã đổi trong lúc tải. Hãy tải lại graph để tiếp tục.",
       emptyWatchlist: "Watchlist chưa có tài sản",

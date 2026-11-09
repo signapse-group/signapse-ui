@@ -7,9 +7,12 @@ import { useEffect, useRef, useState, useTransition } from "react"
 
 import type { SystemPromptContentResponse } from "@/app/lib/system-prompts/definitions"
 import { getSystemPromptWorkflowGroup } from "@/app/lib/system-prompts/definitions"
+import { parsePaginationQuery } from "@/app/lib/pagination/query"
 import { useLocalization } from "@/app/lib/i18n/provider"
 import { SYSTEM_PROMPT_UPDATE_PERMISSIONS } from "@/app/lib/system-prompts/permissions"
 import { AppTimeMetadata } from "@/components/app-time-metadata"
+import { getVisibleItemRange } from "@/components/app-pagination-utils"
+import { AppPaginationFooter } from "@/components/app-pagination-controls"
 import {
   AppListTable,
   AppListTableEmptyState,
@@ -18,6 +21,7 @@ import {
 } from "@/components/app-list-table"
 import { LocalizedLink as Link } from "@/components/localized-link"
 import { useHasAnyPermission } from "@/components/permission-provider"
+import { useAppPaginationQuery } from "@/components/use-app-pagination-query"
 import { buttonVariants } from "@/components/ui/button"
 import {
   EmptyDescription,
@@ -61,7 +65,7 @@ export function SystemPromptList({ prompts }: SystemPromptListProps) {
   const currentSearch = searchParams.get(SEARCH_PARAM_KEY) ?? ""
   const [search, setSearch] = useState(currentSearch)
   const previousSearch = useRef(currentSearch)
-  const [isPending, startTransition] = useTransition()
+  const [isSearchPending, startTransition] = useTransition()
   const canUpdate = useHasAnyPermission(SYSTEM_PROMPT_UPDATE_PERMISSIONS)
   const { dictionary, formatDateTime, formatMessage, formatNumber, locale } =
     useLocalization()
@@ -75,6 +79,7 @@ export function SystemPromptList({ prompts }: SystemPromptListProps) {
     } else {
       params.delete(SEARCH_PARAM_KEY)
     }
+    params.set("page", "1")
 
     const query = params.toString()
     startTransition(() => {
@@ -100,6 +105,32 @@ export function SystemPromptList({ prompts }: SystemPromptListProps) {
           .includes(normalizedSearch)
       )
     : prompts
+  const requestedPageSize = parsePaginationQuery(searchParams).size
+  const totalPages = Math.ceil(filteredPrompts.length / requestedPageSize)
+  const pagination = useAppPaginationQuery({
+    normalizeMissingParams: true,
+    totalPages,
+  })
+  const currentPage = Math.min(pagination.currentPage, Math.max(totalPages, 1))
+  const startIndex = (currentPage - 1) * pagination.pageSize
+  const pagePrompts = filteredPrompts.slice(
+    startIndex,
+    startIndex + pagination.pageSize
+  )
+  const visibleItems = getVisibleItemRange({
+    currentItemCount: pagePrompts.length,
+    currentPage,
+    itemsPerPage: pagination.pageSize,
+    totalElements: filteredPrompts.length,
+  })
+  const paginationSummary =
+    filteredPrompts.length > 0
+      ? formatMessage(dictionary.pagination.displayedResults, {
+          from: formatNumber(visibleItems.start),
+          to: formatNumber(visibleItems.end),
+          total: formatNumber(filteredPrompts.length),
+        })
+      : dictionary.pagination.noResults
 
   return (
     <div className="flex w-full flex-col gap-6">
@@ -107,7 +138,7 @@ export function SystemPromptList({ prompts }: SystemPromptListProps) {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
         <SystemPromptSearch
           value={search}
-          isPending={isPending}
+          isPending={isSearchPending}
           onValueChange={(value) => {
             setSearch(value)
             updateSearch(value)
@@ -126,105 +157,120 @@ export function SystemPromptList({ prompts }: SystemPromptListProps) {
 
       <SystemPromptLifecycleWarning />
 
-      <AppListTable className="mt-0">
-        <Table>
-          <TableHeader>
-            <AppListTableHeaderRow>
-              <AppListTableHead className="w-[50%]">
-                {t.typeColumn}
-              </AppListTableHead>
-              <AppListTableHead>{t.workflowColumn}</AppListTableHead>
-              <AppListTableHead>{t.updatedColumn}</AppListTableHead>
-              <AppListTableHead className="text-right">
-                <span className="sr-only">{t.editContent}</span>
-              </AppListTableHead>
-            </AppListTableHeaderRow>
-          </TableHeader>
-          <TableBody>
-            {filteredPrompts.length > 0 ? (
-              filteredPrompts.map((prompt) => (
-                <TableRow
-                  key={prompt.promptType}
-                  className="border-border transition-colors hover:bg-muted/50"
-                >
-                  <TableCell className="py-3 align-top whitespace-normal">
-                    <div className="flex min-w-0 flex-col gap-1">
-                      <Link
-                        href={getPromptHref(prompt.promptType)}
-                        className="font-medium break-words text-foreground hover:underline"
-                      >
-                        {prompt.name}
-                      </Link>
-                      <span className="font-mono text-xs break-all text-muted-foreground">
-                        {prompt.promptType}
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="py-3">
-                    {getSystemPromptWorkflowGroup(
-                      prompt.promptType,
-                      dictionary
-                    )}
-                  </TableCell>
-                  <TableCell className="py-3">
-                    {prompt.lastModifiedDate ? (
-                      <time dateTime={prompt.lastModifiedDate}>
-                        <AppTimeMetadata
-                          className="whitespace-nowrap"
-                          icon={Clock}
+      <div className="flex flex-col gap-4">
+        <AppListTable className="mt-0">
+          <Table>
+            <TableHeader>
+              <AppListTableHeaderRow>
+                <AppListTableHead className="w-[50%]">
+                  {t.typeColumn}
+                </AppListTableHead>
+                <AppListTableHead>{t.workflowColumn}</AppListTableHead>
+                <AppListTableHead>{t.updatedColumn}</AppListTableHead>
+                <AppListTableHead className="text-right">
+                  <span className="sr-only">{t.editContent}</span>
+                </AppListTableHead>
+              </AppListTableHeaderRow>
+            </TableHeader>
+            <TableBody>
+              {filteredPrompts.length > 0 ? (
+                pagePrompts.map((prompt) => (
+                  <TableRow
+                    key={prompt.promptType}
+                    className="border-border transition-colors hover:bg-muted/50"
+                  >
+                    <TableCell className="py-3 align-top whitespace-normal">
+                      <div className="flex min-w-0 flex-col gap-1">
+                        <Link
+                          href={getPromptHref(prompt.promptType)}
+                          className="font-medium break-words text-foreground hover:underline"
                         >
-                          {formatDateTime(
-                            prompt.lastModifiedDate,
-                            UPDATED_DATE_OPTIONS
-                          )}
-                        </AppTimeMetadata>
-                      </time>
-                    ) : (
-                      <span
-                        className="text-xs text-muted-foreground tabular-nums"
-                        title={t.updatedUnavailable}
-                        aria-label={t.updatedUnavailable}
-                      >
-                        —
-                      </span>
-                    )}
-                  </TableCell>
-                  <TableCell className="py-3 text-right">
-                    {canUpdate ? (
-                      <Link
-                        href={getPromptHref(prompt.promptType)}
-                        className={buttonVariants({
-                          variant: "secondary",
-                          size: "sm",
-                        })}
-                      >
-                        <Pencil data-icon="inline-start" />
-                        {t.editContent}
-                      </Link>
-                    ) : null}
-                  </TableCell>
-                </TableRow>
-              ))
-            ) : (
-              <AppListTableEmptyState colSpan={4}>
-                <EmptyHeader>
-                  <EmptyMedia variant="icon">
-                    <Pencil className="text-muted-foreground" />
-                  </EmptyMedia>
-                  <EmptyTitle>
-                    {prompts.length === 0 ? t.noPromptsTitle : t.noResultsTitle}
-                  </EmptyTitle>
-                  <EmptyDescription>
-                    {prompts.length === 0
-                      ? t.noPromptsDescription
-                      : t.noResultsDescription}
-                  </EmptyDescription>
-                </EmptyHeader>
-              </AppListTableEmptyState>
-            )}
-          </TableBody>
-        </Table>
-      </AppListTable>
+                          {prompt.name}
+                        </Link>
+                        <span className="font-mono text-xs break-all text-muted-foreground">
+                          {prompt.promptType}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="py-3">
+                      {getSystemPromptWorkflowGroup(
+                        prompt.promptType,
+                        dictionary
+                      )}
+                    </TableCell>
+                    <TableCell className="py-3">
+                      {prompt.lastModifiedDate ? (
+                        <time dateTime={prompt.lastModifiedDate}>
+                          <AppTimeMetadata
+                            className="whitespace-nowrap"
+                            icon={Clock}
+                          >
+                            {formatDateTime(
+                              prompt.lastModifiedDate,
+                              UPDATED_DATE_OPTIONS
+                            )}
+                          </AppTimeMetadata>
+                        </time>
+                      ) : (
+                        <span
+                          className="text-xs text-muted-foreground tabular-nums"
+                          title={t.updatedUnavailable}
+                          aria-label={t.updatedUnavailable}
+                        >
+                          —
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell className="py-3 text-right">
+                      {canUpdate ? (
+                        <Link
+                          href={getPromptHref(prompt.promptType)}
+                          className={buttonVariants({
+                            variant: "secondary",
+                            size: "sm",
+                          })}
+                        >
+                          <Pencil data-icon="inline-start" />
+                          {t.editContent}
+                        </Link>
+                      ) : null}
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <AppListTableEmptyState colSpan={4}>
+                  <EmptyHeader>
+                    <EmptyMedia variant="icon">
+                      <Pencil className="text-muted-foreground" />
+                    </EmptyMedia>
+                    <EmptyTitle>
+                      {prompts.length === 0
+                        ? t.noPromptsTitle
+                        : t.noResultsTitle}
+                    </EmptyTitle>
+                    <EmptyDescription>
+                      {prompts.length === 0
+                        ? t.noPromptsDescription
+                        : t.noResultsDescription}
+                    </EmptyDescription>
+                  </EmptyHeader>
+                </AppListTableEmptyState>
+              )}
+            </TableBody>
+          </Table>
+        </AppListTable>
+        <AppPaginationFooter
+          className="[&_[data-slot=pagination-content]]:gap-1 [&_[data-slot=select-trigger]]:px-2"
+          currentPage={currentPage}
+          isPending={pagination.isPending}
+          onPageChange={pagination.setPage}
+          onPageSizeChange={pagination.setPageSize}
+          pageSize={pagination.pageSize}
+          summary={paginationSummary}
+          totalElements={filteredPrompts.length}
+          totalPages={totalPages}
+        />
+      </div>
     </div>
   )
 }

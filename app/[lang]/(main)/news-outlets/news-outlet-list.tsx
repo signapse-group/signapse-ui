@@ -50,6 +50,7 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
+  AlertDialogMedia,
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
@@ -74,6 +75,7 @@ import { TooltipContentInOverlay } from "@/components/ui/tooltip-content-in-over
 import { cn } from "@/lib/utils"
 
 import { NewsOutletSearch } from "./news-outlet-search"
+import { NewsOutletDateTime } from "./news-outlet-date-time"
 
 interface NewsOutletListProps {
   newsOutletPage: Page<NewsOutletListResponse>
@@ -82,6 +84,10 @@ interface NewsOutletListProps {
 function formatUrlIdentity(value: string) {
   try {
     const url = new URL(value)
+    if (url.protocol !== "http:" && url.protocol !== "https:") {
+      return value
+    }
+
     const host = url.hostname.replace(/^www\./, "")
     const pathParts = url.pathname.split("/").filter(Boolean)
 
@@ -98,8 +104,17 @@ function formatUrlIdentity(value: string) {
   }
 }
 
+function getSafeHttpHref(value: string) {
+  try {
+    const protocol = new URL(value).protocol
+    return protocol === "http:" || protocol === "https:" ? value : undefined
+  } catch {
+    return undefined
+  }
+}
+
 export function NewsOutletListPage({ newsOutletPage }: NewsOutletListProps) {
-  const { dictionary, formatDateTime, formatMessage } = useLocalization()
+  const { dictionary, formatMessage } = useLocalization()
   const newsOutlets = newsOutletPage.content ?? []
   const canCreateNewsOutlet = useHasPermission(NEWS_OUTLET_CREATE_PERMISSION)
   const canUpdateNewsOutlet = useHasPermission(NEWS_OUTLET_UPDATE_PERMISSION)
@@ -107,6 +122,7 @@ export function NewsOutletListPage({ newsOutletPage }: NewsOutletListProps) {
 
   return (
     <div className="w-full">
+      <h1 className="sr-only">{dictionary.newsOutlets.listTitle}</h1>
       <AppListToolbar>
         <AppListToolbarLeading>
           {canCreateNewsOutlet ? (
@@ -166,66 +182,81 @@ export function NewsOutletListPage({ newsOutletPage }: NewsOutletListProps) {
                         {newsOutlet.name}
                       </Link>
 
-                      <a
-                        href={newsOutlet.homepageUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        title={newsOutlet.homepageUrl}
-                        aria-label={formatMessage(
-                          dictionary.newsOutlets.homepageAria,
-                          {
-                            name: newsOutlet.name,
-                            url: newsOutlet.homepageUrl,
-                          }
-                        )}
-                        className="flex min-w-0 items-center gap-1 text-xs text-muted-foreground hover:text-primary"
-                      >
-                        <Globe className="h-3 w-3 shrink-0" />
-                        <span className="truncate">
-                          {dictionary.newsOutlets.homepagePrefix}:{" "}
-                          {formatUrlIdentity(newsOutlet.homepageUrl)}
-                        </span>
-                        <ExternalLink className="h-2 w-2 shrink-0" />
-                      </a>
-
-                      {newsOutlet.rssUrl ? (
+                      {getSafeHttpHref(newsOutlet.homepageUrl) ? (
                         <a
-                          href={newsOutlet.rssUrl}
+                          href={getSafeHttpHref(newsOutlet.homepageUrl)}
                           target="_blank"
                           rel="noopener noreferrer"
-                          title={newsOutlet.rssUrl}
+                          title={newsOutlet.homepageUrl}
                           aria-label={formatMessage(
-                            dictionary.newsOutlets.rssAria,
+                            dictionary.newsOutlets.homepageAria,
                             {
                               name: newsOutlet.name,
-                              url: newsOutlet.rssUrl,
+                              url: newsOutlet.homepageUrl,
                             }
                           )}
                           className="flex min-w-0 items-center gap-1 text-xs text-muted-foreground hover:text-primary"
                         >
-                          <Rss className="h-3 w-3 shrink-0" />
+                          <Globe className="h-3 w-3 shrink-0" />
                           <span className="truncate">
-                            {dictionary.newsOutlets.rssConfigured}
+                            {dictionary.newsOutlets.homepagePrefix}:{" "}
+                            {formatUrlIdentity(newsOutlet.homepageUrl)}
                           </span>
                           <ExternalLink className="h-2 w-2 shrink-0" />
                         </a>
+                      ) : (
+                        <span
+                          title={newsOutlet.homepageUrl}
+                          className="flex min-w-0 items-center gap-1 text-xs text-muted-foreground"
+                        >
+                          <Globe className="h-3 w-3 shrink-0" />
+                          <span className="truncate">
+                            {dictionary.newsOutlets.homepagePrefix}:{" "}
+                            {formatUrlIdentity(newsOutlet.homepageUrl)}
+                          </span>
+                        </span>
+                      )}
+
+                      {newsOutlet.rssUrl ? (
+                        getSafeHttpHref(newsOutlet.rssUrl) ? (
+                          <a
+                            href={getSafeHttpHref(newsOutlet.rssUrl)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title={newsOutlet.rssUrl}
+                            aria-label={formatMessage(
+                              dictionary.newsOutlets.rssAria,
+                              {
+                                name: newsOutlet.name,
+                                url: newsOutlet.rssUrl,
+                              }
+                            )}
+                            className="flex min-w-0 items-center gap-1 text-xs text-muted-foreground hover:text-primary"
+                          >
+                            <Rss className="h-3 w-3 shrink-0" />
+                            <span className="truncate">
+                              {dictionary.newsOutlets.rssConfigured}
+                            </span>
+                            <ExternalLink className="h-2 w-2 shrink-0" />
+                          </a>
+                        ) : (
+                          <span
+                            title={newsOutlet.rssUrl}
+                            className="flex min-w-0 items-center gap-1 text-xs text-muted-foreground"
+                          >
+                            <Rss className="h-3 w-3 shrink-0" />
+                            <span className="truncate">
+                              {dictionary.newsOutlets.rssConfigured}
+                            </span>
+                          </span>
+                        )
                       ) : null}
                     </div>
                   </TableCell>
 
                   <TableCell className="w-40">
                     <AppTimeMetadata icon={Clock3}>
-                      {formatDateTime(
-                        newsOutlet.createdDate,
-                        {
-                          year: "numeric",
-                          month: "2-digit",
-                          day: "2-digit",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        },
-                        dictionary.common.notAvailable
-                      )}
+                      <NewsOutletDateTime value={newsOutlet.createdDate} />
                     </AppTimeMetadata>
                   </TableCell>
 
@@ -394,13 +425,7 @@ function DeleteNewsOutletButton({ id, name }: { id: number; name: string }) {
         <TooltipTrigger
           render={
             <AlertDialogTrigger
-              render={
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                />
-              }
+              render={<Button variant="destructive" size="icon-sm" />}
             />
           }
         >
@@ -411,17 +436,20 @@ function DeleteNewsOutletButton({ id, name }: { id: number; name: string }) {
           {dictionary.newsOutlets.delete}
         </TooltipContentInOverlay>
       </Tooltip>
-      <AlertDialogContent>
+      <AlertDialogContent size="sm">
         <AlertDialogHeader>
+          <AlertDialogMedia className="bg-destructive/10 text-destructive">
+            <Trash2 />
+          </AlertDialogMedia>
           <AlertDialogTitle>
-            {dictionary.newsOutlets.deleteTitle}
+            {formatMessage(dictionary.newsOutlets.deleteTitle, { name })}
           </AlertDialogTitle>
           <AlertDialogDescription>
             {formatMessage(dictionary.newsOutlets.deleteDescription, { name })}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={isPending}>
+          <AlertDialogCancel disabled={isPending} variant="outline">
             {dictionary.common.cancel}
           </AlertDialogCancel>
           <AlertDialogAction
@@ -430,7 +458,7 @@ function DeleteNewsOutletButton({ id, name }: { id: number; name: string }) {
               handleDelete()
             }}
             disabled={isPending}
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            variant="destructive"
           >
             {isPending ? (
               <>

@@ -34,11 +34,15 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 
 export function TradingSnapshot({
+  canReadMarketEvents = true,
+  canReadNews = true,
   dictionary,
   error,
   locale,
   summary,
 }: {
+  canReadMarketEvents?: boolean
+  canReadNews?: boolean
   dictionary: Dictionary
   error: string | null
   locale: AppLocale
@@ -64,30 +68,36 @@ export function TradingSnapshot({
           </EmptyHeader>
         </Empty>
       ) : (
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-12">
+        <div className="grid grid-cols-2 gap-3 min-[1440px]:grid-cols-12">
           <SnapshotCard
-            className="md:col-span-2 xl:col-span-5"
+            className="min-[1440px]:col-span-5"
             description={getNextEventDescription(summary, dictionary, locale)}
             icon={ZapIcon}
             title={t.nextEvent}
             value={getNextEventValue(summary, t)}
           />
           <SnapshotCard
-            className="xl:col-span-2"
+            className="min-[1440px]:col-span-2"
             description={getMetricDescription(
-              summary.marketEvents24h.state,
+              canReadMarketEvents ? summary.marketEvents24h.state : "DENIED",
               t.eventsWindow,
               t
             )}
             icon={ActivityIcon}
             title={t.events}
-            value={getCountValue(summary.marketEvents24h, locale, t)}
+            value={getCountValue(
+              canReadMarketEvents
+                ? summary.marketEvents24h
+                : { ...summary.marketEvents24h, state: "DENIED", count: null },
+              locale,
+              t
+            )}
           />
           <SnapshotCard
-            className="xl:col-span-3"
+            className="min-[1440px]:col-span-3"
             description={getMetricDescription(
               summary.activeNarratives.state,
-              t.narrativesWindow,
+              t.narrativesScope,
               t
             )}
             icon={RadarIcon}
@@ -95,15 +105,21 @@ export function TradingSnapshot({
             value={getCountValue(summary.activeNarratives, locale, t)}
           />
           <SnapshotCard
-            className="xl:col-span-2"
+            className="min-[1440px]:col-span-2"
             description={getMetricDescription(
-              summary.latestNews6h.state,
+              canReadNews ? summary.latestNews6h.state : "DENIED",
               t.newsWindow,
               t
             )}
             icon={NewspaperIcon}
             title={t.news}
-            value={getCountValue(summary.latestNews6h, locale, t)}
+            value={getCountValue(
+              canReadNews
+                ? summary.latestNews6h
+                : { ...summary.latestNews6h, state: "DENIED", count: null },
+              locale,
+              t
+            )}
           />
         </div>
       )}
@@ -114,12 +130,12 @@ export function TradingSnapshot({
 export function TradingSnapshotSkeleton() {
   return (
     <section aria-hidden="true">
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-12">
+      <div className="grid grid-cols-2 gap-3 min-[1440px]:grid-cols-12">
         {[
-          "md:col-span-2 xl:col-span-5",
-          "xl:col-span-2",
-          "xl:col-span-3",
-          "xl:col-span-2",
+          "min-[1440px]:col-span-5",
+          "min-[1440px]:col-span-2",
+          "min-[1440px]:col-span-3",
+          "min-[1440px]:col-span-2",
         ].map((className, index) => (
           <Card
             key={`snapshot-skeleton-${index}`}

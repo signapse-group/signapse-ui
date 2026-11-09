@@ -20,6 +20,7 @@ import {
 } from "@/app/lib/i18n/routing"
 import { formatMessage } from "@/app/lib/i18n/messages"
 import { hasAnyPermission, hasPermission } from "@/app/lib/permissions"
+import { canReadNewsArticles } from "@/app/lib/news-articles/permissions"
 import {
   buildFilterQuery,
   buildSortQuery,
@@ -42,6 +43,13 @@ describe("permission boundaries", () => {
       hasAnyPermission(["news:read"], ["market-query:execute", "news:read"])
     ).toBe(true)
     expect(hasAnyPermission([], ["market-query:execute"])).toBe(false)
+  })
+
+  it("requires only the canonical Article read permission", () => {
+    expect(canReadNewsArticles(["news-article:read"])).toBe(true)
+    expect(canReadNewsArticles(["news-outlet:read"])).toBe(false)
+    expect(canReadNewsArticles(["source-document:read"])).toBe(false)
+    expect(canReadNewsArticles(["USER", "ADMIN"])).toBe(false)
   })
 })
 
