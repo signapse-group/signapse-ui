@@ -13,7 +13,6 @@ import {
 } from "@/components/ui/empty"
 
 export default function Error({
-  error,
   reset,
 }: {
   error: Error & { digest?: string }
@@ -23,7 +22,7 @@ export default function Error({
 
   return (
     <div className="flex h-[400px] w-full items-center justify-center">
-      <Empty>
+      <Empty role="alert">
         <EmptyHeader>
           <EmptyMedia
             variant="icon"
@@ -33,7 +32,7 @@ export default function Error({
           </EmptyMedia>
           <EmptyTitle>{dictionary.cronjobs.errorTitle}</EmptyTitle>
           <EmptyDescription>
-            {error.message || dictionary.cronjobs.errorDescription}
+            {dictionary.cronjobs.errorDescription}
           </EmptyDescription>
         </EmptyHeader>
         <div className="mt-4 flex justify-center">
