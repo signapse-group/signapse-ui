@@ -40,6 +40,7 @@ type FixtureController = {
       | "legacy-saved-provider-selection"
       | "legacy-provider-options"
       | "empty"
+      | "missing-content"
       | "invalid-schema"
       | "short"
       | "short-then-empty"
