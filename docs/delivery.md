@@ -1,12 +1,12 @@
 # CI and Vercel reference
 
-This reference owns CI/Vercel integration facts, operator setup and verifier behavior. Assigned phase permissions, merge, delivery recovery and handoff enter through [WORKFLOW.md](../WORKFLOW.md); shared check standards are in [CONTRIBUTING.md](../CONTRIBUTING.md#verification). Local configuration does not establish hosting or worker activation. Vercel Production is this project's product dev environment, tracking the dev branch. Main is reserved for a future product production release; no product production environment is provisioned yet.
+This reference owns CI/Vercel integration facts, operator setup and verifier behavior. Assigned phase permissions, merge, delivery recovery and handoff enter through [WORKFLOW.md](../WORKFLOW.md). Shared check standards are in [CONTRIBUTING.md](../CONTRIBUTING.md#verification). The Vercel project `signapse-ui` tracks `dev` for `dev-dashboard.signapse.cloud`. The project `signapse-prod` tracks `main` for `dashboard.signapse.cloud` and uses production Clerk and API inputs.
 
 ## CI and Vercel setup
 
 [Verify](../.github/workflows/verify.yml) runs `check` on PRs into dev/main and pushes to dev/main. Feature-branch pushes do not duplicate PR runs. Manual dispatch on dev/main reruns quality checks; it does not deploy. Deployment confirmation runs in the reviewer's workspace under the [Review runbook](runbooks/review-and-delivery.md#verify-the-delivered-build), without a waiting GitHub Actions job.
 
-[vercel.json](../vercel.json) disables automatic Git deployments from main. Vercel builds Preview from feature branches and Production from dev using the existing dev hosting inputs; Production rebuilds merged source. Dev/main push concurrency groups include SHA so queued runs for different merges are retained; PR runs still cancel obsolete heads. Keep GitHub's default branch main and explicitly select dev for feature/fix branches, PRs and worker policy sources.
+[vercel.json](../vercel.json) skips builds of `main` when Vercel classifies them as Preview. A push to `main` builds Production in `signapse-prod`. Feature and fix PRs target `dev`, which remains the source for worker policy and the dev dashboard. Dev/main push concurrency groups include the commit SHA so queued runs for different merges are retained. PR runs still cancel obsolete heads.
 
 Before publication/cutover the operator verifies:
 - Correct canonical repo/project/dev, Node 24.x, frozen pnpm install, `pnpm build`, existing dev Clerk/API inputs and automatic assignment of `dev-dashboard.signapse.cloud`.
