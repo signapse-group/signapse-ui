@@ -5,7 +5,6 @@ import {
   type EconomicCalendarImpactLevel,
 } from "@/app/lib/economic-calendar/definitions"
 import type { Dictionary } from "@/app/lib/i18n/dictionary-types"
-import { isMarketChartCandleBoundary } from "./candle-boundaries"
 
 export const MARKET_CHART_TIMEFRAMES = [
   "1m",
@@ -303,23 +302,19 @@ export function getMarketChartCandleRequestSchema(dictionary: Dictionary) {
         .string()
         .trim()
         .min(1, dictionary.marketCharts.toRequired)
-        .refine(isValidDateTime, dictionary.marketCharts.toInvalid),
+        .pipe(
+          z.iso.datetime({
+            offset: true,
+            error: dictionary.marketCharts.toInvalid,
+          })
+        ),
       countBack: z
         .number({ message: dictionary.marketCharts.validationInvalid })
         .int(dictionary.marketCharts.validationInvalid)
         .min(1, dictionary.marketCharts.validationInvalid)
         .max(1000, dictionary.marketCharts.validationInvalid),
     })
-    .strict()
-    .superRefine((value, context) => {
-      if (!isMarketChartCandleBoundary(value.timeframe, value.to)) {
-        context.addIssue({
-          code: "custom",
-          path: ["to"],
-          message: dictionary.marketCharts.toInvalid,
-        })
-      }
-    }) satisfies z.ZodType<MarketChartCandleRequest>
+    .strict() satisfies z.ZodType<MarketChartCandleRequest>
 }
 
 export function getMarketChartAnnotationRequestSchema(dictionary: Dictionary) {

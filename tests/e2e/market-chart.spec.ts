@@ -2107,6 +2107,92 @@ test.describe("P0 market chart workbench", () => {
     ).toBeVisible()
   })
 
+  test("retries the failed daily history page in place", async ({
+    page,
+    fixture,
+  }, testInfo) => {
+    await page.clock.setFixedTime(new Date(MARKET_CHART_FIXTURE_NOW))
+    await page.setViewportSize({ width: 1520, height: 1024 })
+    await page.addInitScript(() => localStorage.setItem("theme", "dark"))
+    await fixture.setScenario(
+      "/market-charts/candles",
+      "daily-history-retry",
+      "GET"
+    )
+    await fixture.setScenario(
+      "/market-charts/live",
+      "daily-history-retry",
+      "GET"
+    )
+    await page.goto("/vi/market-charts?assetId=102&timeframe=1d")
+
+    const chart = page.getByRole("application", { name: "Biểu đồ giá" })
+    const retry = page.getByRole("button", { name: "Thử lại", exact: true })
+    const anchors = async () =>
+      (await fixture.state()).requests
+        .filter((request) => request.path === "/market-charts/candles")
+        .map((request) => new URLSearchParams(String(request.query)).get("to"))
+    const panLeft = async () => {
+      const bounds = await chart.locator("canvas").first().boundingBox()
+      if (!bounds) throw new Error("Chart canvas was not laid out")
+      await page.mouse.move(
+        bounds.x + bounds.width * 0.25,
+        bounds.y + bounds.height * 0.5
+      )
+      await page.mouse.down()
+      await page.mouse.move(
+        bounds.x + bounds.width * 0.9,
+        bounds.y + bounds.height * 0.5,
+        { steps: 10 }
+      )
+      await page.mouse.up()
+    }
+
+    await expect(chart).toBeVisible()
+    if (!(await retry.isVisible())) await panLeft()
+    await expect(retry).toBeVisible()
+    const [initial, failed] = await anchors()
+    expect(failed).toMatch(/T22:00:00/)
+    await expect(chart).toHaveAccessibleDescription(/Quote gần nhất:/)
+    const quote = chart.getByText(/^Quote gần nhất:/)
+    const previousQuote = await quote.textContent()
+    await expect.poll(() => quote.textContent()).not.toBe(previousQuote)
+    await expect(retry).toBeVisible()
+    await panLeft()
+    expect(await anchors()).toEqual([initial, failed])
+
+    await testInfo.attach("sign-575-history-retry-wide", {
+      body: await page.screenshot(),
+      contentType: "image/png",
+    })
+    await page.setViewportSize({ width: 390, height: 844 })
+    await expectNoHorizontalOverflow(page)
+    await expect(retry).toBeInViewport()
+    await testInfo.attach("sign-575-history-retry-mobile", {
+      body: await page.screenshot(),
+      contentType: "image/png",
+    })
+    await page.setViewportSize({ width: 1520, height: 1024 })
+    await retry.focus()
+    await page.keyboard.press("Enter")
+    await page.keyboard.press("Enter")
+    await expect(retry).toHaveAttribute("aria-disabled", "false")
+    expect(await anchors()).toEqual([initial, failed, failed])
+
+    await retry.click({ timeout: 5000 })
+    await expect(retry).toBeHidden()
+    await expect
+      .poll(async () => (await anchors()).slice(0, 4))
+      .toEqual([initial, failed, failed, failed])
+    await panLeft()
+    await expect.poll(async () => (await anchors()).length).toBe(5)
+    const last = (await anchors()).at(-1)
+    expect(Date.parse(last ?? "")).toBeLessThan(Date.parse(failed ?? ""))
+    await panLeft()
+    await expect(retry).toBeHidden()
+    expect(await anchors()).toHaveLength(5)
+  })
+
   test("loads historical calendar markers when older candles load with markers hidden", async ({
     page,
     fixture,
