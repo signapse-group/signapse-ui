@@ -2144,7 +2144,7 @@ export const en: Dictionary = {
     },
     history: {
       loading: "Loading history...",
-      errorFallback: "Could not load history. Pull again to retry.",
+      errorFallback: "Could not load history.",
     },
     live: {
       accessibleQuote: "Latest quote: {price}",

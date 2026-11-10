@@ -1606,7 +1606,7 @@ function marketChartEconomicCalendarEvents(url, scenario) {
     }))
 }
 
-function candles(url) {
+function candles(url, dailyHistory = false) {
   const timeframe = url.searchParams.get("timeframe") ?? "1h"
   const assetId = Number(url.searchParams.get("assetId") ?? 101)
   const countBack = Math.max(1, Number(url.searchParams.get("countBack") ?? 4))
@@ -1645,7 +1645,13 @@ function candles(url) {
       ).toISOString()
     }
 
-    return new Date(anchorTimestamp - offset * intervalMs).toISOString()
+    const dailyOpenOffset =
+      dailyHistory && new Date(anchorTimestamp).getUTCHours() === 0
+        ? 22 * 60 * 60 * 1000
+        : 0
+    return new Date(
+      anchorTimestamp - offset * intervalMs + dailyOpenOffset
+    ).toISOString()
   })
   const from = times[0] ?? to
 
@@ -1664,13 +1670,14 @@ function candles(url) {
     to,
     candles: times.map((time, index) => {
       const value = values[index % values.length]
+      const priceOffset = dailyHistory ? 2395 : 0
 
       return {
         time,
-        open: value[0],
-        high: value[1],
-        low: value[2],
-        close: value[3],
+        open: value[0] + priceOffset,
+        high: value[1] + priceOffset,
+        low: value[2] + priceOffset,
+        close: value[3] + priceOffset,
         volume: 1000 + index,
         partial: index === times.length - 1,
       }
@@ -1788,6 +1795,14 @@ async function streamLive(response, state, url, scenario) {
   writeSse(response, "snapshot", snapshot)
   if (snapshot.quote && !snapshot.quote.stale) {
     writeSse(response, "price", snapshot.quote)
+    if (scenario === "daily-history-retry") {
+      const quote = { ...snapshot.quote }
+      const timer = setInterval(() => {
+        quote.price += 0.25
+        writeSse(response, "price", quote)
+      }, 350)
+      response.once("close", () => clearInterval(timer))
+    }
   }
   if (
     [
@@ -3471,7 +3486,10 @@ function responseForRoute(state, method, pathname, url, body, locale = "en") {
   }
 
   if (method === "GET" && pathname === "/market-charts/candles")
-    return candles(url)
+    return candles(
+      url,
+      getScenario(state, method, pathname) === "daily-history-retry"
+    )
   if (method === "GET" && pathname === "/market-charts/annotations") {
     return marketChartAnnotations(url, getScenario(state, method, pathname))
   }
@@ -3946,6 +3964,26 @@ const server = createServer(async (request, response) => {
     response.end(result.__binary)
     return
   }
+  if (scenario === "daily-history-retry" && Array.isArray(result?.candles)) {
+    const requests = state.requests.filter(
+      (request) => request.path === "/market-charts/candles"
+    )
+    if (requests.length === 2 || requests.length === 3) {
+      if (requests.length === 3)
+        await new Promise((resolve) => setTimeout(resolve, 500))
+      sendJson(
+        response,
+        503,
+        errorPayload("Fixture backend is unavailable", "FIXTURE_OUTAGE")
+      )
+      return
+    }
+    if (requests.length >= 5) {
+      sendJson(response, 200, { ...result, from: result.to, candles: [] })
+      return
+    }
+  }
+
   if (scenario === "empty" && method === "GET") {
     if (Array.isArray(result)) {
       sendJson(response, 200, [])
