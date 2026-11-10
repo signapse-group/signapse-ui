@@ -2124,7 +2124,7 @@ export const vi = {
     },
     history: {
       loading: "Đang tải lịch sử...",
-      errorFallback: "Chưa tải được lịch sử. Kéo lại để thử.",
+      errorFallback: "Chưa tải được lịch sử.",
     },
     live: {
       accessibleQuote: "Quote gần nhất: {price}",

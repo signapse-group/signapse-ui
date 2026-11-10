@@ -45,6 +45,7 @@ import type {
 } from "@/app/lib/market-charts/definitions"
 import { AppTimeMetadata } from "@/components/app-time-metadata"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Popover, PopoverTrigger } from "@/components/ui/popover"
 import { PopoverContentInOverlay } from "@/components/ui/popover-content-in-overlay"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -910,6 +911,7 @@ export const MarketChartCanvas = forwardRef<
   >(null)
   const liveCandleSubscriberLoadIdRef = useRef<number | null>(null)
   const historyExhaustedRef = useRef(false)
+  const retryHistoryRef = useRef<(() => Promise<void>) | "loading" | null>(null)
   const onDrawingSelectionChangeRef = useRef(onDrawingSelectionChange)
   const onDrawingToolCompleteRef = useRef(onDrawingToolComplete)
   const onLoadedDataChangeRef = useRef(onLoadedDataChange)
@@ -940,6 +942,7 @@ export const MarketChartCanvas = forwardRef<
   const neutralizeLastPrice = Boolean(liveQuote && !liveQuoteIsLive)
   const historyState =
     historyFeedback.loadId === chartLoadId ? historyFeedback.state : "idle"
+  const [historyRetryAvailable, setHistoryRetryAvailable] = useState(false)
   const historyError =
     historyFeedback.loadId === chartLoadId ? historyFeedback.error : null
 
@@ -1913,6 +1916,8 @@ export const MarketChartCanvas = forwardRef<
     chartLoadIdRef.current = loadId
     setChartLoadId(loadId)
     historyExhaustedRef.current = false
+    retryHistoryRef.current = null
+    setHistoryRetryAvailable(false)
     clearDrawingSelection()
     loadedAnnotationsRef.current = annotationLayerEnabledRef.current
       ? annotationsRef.current
@@ -1978,7 +1983,7 @@ export const MarketChartCanvas = forwardRef<
         return
       }
 
-      if (historyExhaustedRef.current) {
+      if (historyExhaustedRef.current || retryHistoryRef.current) {
         callback([], { backward: false, forward: false })
         return
       }
@@ -1996,71 +2001,91 @@ export const MarketChartCanvas = forwardRef<
           loadId,
           state: "error",
         })
-        callback([], { backward: false, forward: true })
-        return
-      }
-
-      setHistoryFeedback({ error: null, loadId, state: "loading" })
-      const result = await onLoadOlderCandlesRef.current(request)
-
-      if (chartLoadIdRef.current !== loadId) return
-
-      if (!result.success) {
-        setHistoryFeedback({ error: result.error, loadId, state: "error" })
-        callback([], { backward: false, forward: true })
-        return
-      }
-
-      if (result.data.candles.length === 0) {
-        historyExhaustedRef.current = true
-        setHistoryFeedback({ error: null, loadId, state: "idle" })
         callback([], { backward: false, forward: false })
         return
       }
 
-      const olderCandles = getNewOlderCandles(
-        loadedCandlesRef.current,
-        result.data.candles,
-        oldestTimestamp
-      )
-      const olderData = createKLineData(olderCandles)
+      // Pause engine pagination on failure and reuse its prepend callback for retry.
+      const fetchHistory = async () => {
+        retryHistoryRef.current = "loading"
+        setHistoryFeedback({ error: null, loadId, state: "loading" })
+        const result = await onLoadOlderCandlesRef
+          .current(request)
+          .catch(() => ({
+            success: false as const,
+            error: null,
+          }))
 
-      if (!olderData.length) {
-        setHistoryFeedback({
-          error: dictionary.marketCharts.responseInvalid,
-          loadId,
-          state: "error",
-        })
-        callback([], { backward: false, forward: true })
-        return
-      }
+        if (chartLoadIdRef.current !== loadId) return
 
-      loadedCandlesRef.current = mergeCandleItems(
-        loadedCandlesRef.current,
-        olderCandles
-      )
+        if (!result.success) {
+          setHistoryFeedback({ error: result.error, loadId, state: "error" })
+          retryHistoryRef.current = fetchHistory
+          setHistoryRetryAvailable(true)
+          callback([], { backward: false, forward: false })
+          return
+        }
 
-      if (annotationLayerEnabledRef.current) {
-        loadedAnnotationsRef.current = mergeMarketChartAnnotations(
-          loadedAnnotationsRef.current,
-          result.data.annotations
+        if (result.data.candles.length === 0) {
+          historyExhaustedRef.current = true
+          retryHistoryRef.current = null
+          setHistoryRetryAvailable(false)
+          setHistoryFeedback({ error: null, loadId, state: "idle" })
+          callback([], { backward: false, forward: false })
+          return
+        }
+
+        const olderCandles = getNewOlderCandles(
+          loadedCandlesRef.current,
+          result.data.candles,
+          oldestTimestamp
         )
+        const olderData = createKLineData(olderCandles)
+
+        if (!olderData.length) {
+          setHistoryFeedback({
+            error: dictionary.marketCharts.responseInvalid,
+            loadId,
+            state: "error",
+          })
+          retryHistoryRef.current = fetchHistory
+          setHistoryRetryAvailable(true)
+          callback([], { backward: false, forward: false })
+          return
+        }
+
+        loadedCandlesRef.current = mergeCandleItems(
+          loadedCandlesRef.current,
+          olderCandles
+        )
+
+        if (annotationLayerEnabledRef.current) {
+          loadedAnnotationsRef.current = mergeMarketChartAnnotations(
+            loadedAnnotationsRef.current,
+            result.data.annotations
+          )
+        }
+
+        loadedCalendarEventsRef.current =
+          mergeMarketChartEconomicCalendarEvents(
+            loadedCalendarEventsRef.current,
+            result.data.economicCalendarEvents
+          )
+
+        onLoadedDataChangeRef.current?.({
+          annotations: loadedAnnotationsRef.current,
+          candles: loadedCandlesRef.current,
+          economicCalendarEvents: loadedCalendarEventsRef.current,
+          from: loadedCandlesRef.current[0]?.time ?? result.data.from,
+        })
+        setHistoryRetryAvailable(false)
+        setHistoryFeedback({ error: null, loadId, state: "idle" })
+        retryHistoryRef.current = null
+        callback(olderData, { backward: false, forward: true })
+        scheduleMarkerPositionUpdateRef.current()
       }
 
-      loadedCalendarEventsRef.current = mergeMarketChartEconomicCalendarEvents(
-        loadedCalendarEventsRef.current,
-        result.data.economicCalendarEvents
-      )
-
-      onLoadedDataChangeRef.current?.({
-        annotations: loadedAnnotationsRef.current,
-        candles: loadedCandlesRef.current,
-        economicCalendarEvents: loadedCalendarEventsRef.current,
-        from: loadedCandlesRef.current[0]?.time ?? result.data.from,
-      })
-      setHistoryFeedback({ error: null, loadId, state: "idle" })
-      callback(olderData, { backward: false, forward: true })
-      scheduleMarkerPositionUpdateRef.current()
+      await fetchHistory()
     }
 
     chart.setDataLoader({
@@ -2355,8 +2380,7 @@ export const MarketChartCanvas = forwardRef<
       {historyState !== "idle" ? (
         <div
           className={cn(
-            "pointer-events-none absolute left-3 z-20 flex max-w-[calc(100%-1.5rem)] items-center gap-2 rounded-full border bg-background/95 px-3 py-1.5 text-xs font-medium shadow-sm backdrop-blur",
-            showCalendarLane ? "bottom-10" : "bottom-3",
+            "pointer-events-none absolute top-16 left-3 z-20 flex max-w-[calc(100%-1.5rem)] flex-wrap items-center gap-2 rounded-lg border bg-background/95 px-3 py-1.5 text-xs font-medium shadow-sm backdrop-blur",
             historyState === "error"
               ? "border-destructive/30 text-destructive"
               : "text-muted-foreground"
@@ -2365,13 +2389,28 @@ export const MarketChartCanvas = forwardRef<
           {historyState === "loading" ? (
             <>
               <Spinner className="size-3" />
-              <span>{dictionary.marketCharts.history.loading}</span>
+              <div role="status">{dictionary.marketCharts.history.loading}</div>
             </>
           ) : (
-            <span>
+            <div role="status">
               {historyError || dictionary.marketCharts.history.errorFallback}
-            </span>
+            </div>
           )}
+          {historyRetryAvailable ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="xs"
+              className="pointer-events-auto"
+              aria-disabled={historyState === "loading"}
+              onClick={() => {
+                const retry = retryHistoryRef.current
+                if (typeof retry === "function") void retry()
+              }}
+            >
+              {dictionary.common.retry}
+            </Button>
+          ) : null}
         </div>
       ) : null}
       {markerPositions.map(({ group, x, y }) => {

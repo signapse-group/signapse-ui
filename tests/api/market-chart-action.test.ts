@@ -164,6 +164,37 @@ describe("market chart candle action", () => {
     )
   })
 
+  it.each(["21", "22"])(
+    "preserves a D1 candle anchor at %s:00 UTC",
+    async (hour) => {
+      const to = "2026-08-19T" + hour + ":00:00.000Z"
+      vi.mocked(fetchAuthenticated).mockResolvedValue({
+        ...response,
+        timeframe: "1d",
+        from: to,
+        to,
+        candles: [],
+      })
+
+      await expect(
+        getMarketChartCandles({ ...request, timeframe: "1d", to })
+      ).resolves.toMatchObject({ success: true })
+
+      expect(fetchAuthenticated).toHaveBeenCalledWith(
+        "/market-charts/candles?assetId=7&timeframe=1d&to=" +
+          encodeURIComponent(to) +
+          "&countBack=300"
+      )
+    }
+  )
+
+  it("rejects a date without an ISO-8601 time before transport", async () => {
+    await expect(
+      getMarketChartCandles({ ...request, to: "2026-08-19" })
+    ).resolves.toMatchObject({ success: false })
+    expect(fetchAuthenticated).not.toHaveBeenCalled()
+  })
+
   it("rejects legacy from and out-of-range countBack before transport", async () => {
     const legacyRequest = {
       ...request,

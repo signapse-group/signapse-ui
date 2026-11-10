@@ -50,6 +50,7 @@ type FixtureController = {
       | "delayed"
       | "delayed-old-workspace"
       | "delayed-outage"
+      | "daily-history-retry"
       | "workspace-not-selected"
       | "outage"
       | "mutation-failure"
