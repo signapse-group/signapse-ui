@@ -83,7 +83,7 @@ Light mode và dark mode phải là hai biến thể của cùng một direction
 
 ## Theme And Component Chrome
 
-- Feature/shared code dùng default chrome của preset `radix-nova` qua wrappers trong `@/components/ui/`.
+- Feature/shared code dùng default chrome của preset khai báo tại `style` trong [components.json](../../components.json) qua wrappers trong `@/components/ui/`.
 - `className` trên shadcn primitives chỉ dùng cho layout như width, max-width, flex/grid, gap, alignment, max-height, overflow, truncate hoặc responsive constraints.
 - Không thêm `h-*`, `min-h-*`, `rounded-*`, padding, foreground/background, border, ring, shadow hoặc typography classes chỉ để đổi height, radius, color, border hay density mặc định của primitive.
 - Khi cần control compact, ưu tiên variant/size sẵn có; chỉ hard-code height/radius khi không có option phù hợp và có product reason rõ.
@@ -93,7 +93,7 @@ Light mode và dark mode phải là hai biến thể của cùng một direction
 
 ### Semantic Tokens
 
-- `app/globals.css` và `tailwind.baseColor` trong `components.json` giữ neutral default của `radix-nova`.
+- Giữ neutral default của preset theo `tailwind.baseColor` trong [components.json](../../components.json) và các token tương ứng trong [globals.css](../../app/globals.css).
 - Không đổi `--primary`, `--accent`, `--sidebar-*`, `--chart-*`, radius hoặc wrapper chrome để sửa một vấn đề cục bộ.
 - Màu feature đi qua semantic tokens hoặc shared app-level surfaces; không dùng raw palette tùy ý.
 - Light và dark mode là hai biến thể của cùng một system, có contrast và hierarchy tương đương.
@@ -320,9 +320,10 @@ Signapse entity quick detail là local, modal reading overlay cho một entity �
 
 #### Profiles And Content
 
-- **Event inspection** là scan surface: title, status, concise description, key facts, tối đa bốn evidence và bốn related assets. Không biến nó thành reader/lịch sử đầy đủ; canonical Event page là nơi xem sâu hơn.
+- **Event inspection** là scan surface với tiêu đề, mô tả hoặc summary ngắn, thời gian chính, confidence nếu có, tối đa bốn evidence và bốn related assets. Canonical Event page là nơi xem sâu hơn. Bỏ enrichment status khỏi nội dung, kể cả badge, nhãn và phần giải thích. Trạng thái tải, lỗi, không tìm thấy và thiếu quyền theo [Interaction, State And Accessibility](#interaction-state-and-accessibility).
 - **Article reader** hiển thị toàn bộ bài theo thứ tự đọc: title, provenance, publication metadata, original-source link, optional feature image và safe Markdown. Không thêm linked-event review, operational panel hay page shell.
 - Article prose luôn dùng readable measure `max-width: 72ch`, dù outer sheet rộng hơn. Image/media có thể rộng theo reader panel; table, code và content intrinsically wide chỉ scroll trong surface chủ đích, không tạo page overflow.
+- Với cùng bản ghi và quyền truy cập, Wide, Compact và Mobile giữ đủ thông tin, section và hành động của profile. Viewport quyết định bố cục, xuống dòng và vùng cuộn.
 - Khi Event inspection nằm trong bottom sheet, cụm facts/evidence/asset có `max-width: 64rem` và căn giữa. Cross-entity evidence action đi tới canonical News route trong cùng tab, không mở Article reader lồng bên trong Event inspection.
 - Canonical “Open full event/article” là action internal cùng tab trong sticky header. Original source là action provenance thứ cấp trong Article reader, không thay thế canonical action.
 
@@ -351,7 +352,7 @@ Signapse entity quick detail là local, modal reading overlay cho một entity �
 - Mỗi screen chỉ hiển thị text giúp người dùng ra quyết định hoặc hoàn thành task; không lặp ý nghĩa của breadcrumb, control hoặc metric.
 - Tránh decorative badge, body heading lặp page identity, hero copy, `CardDescription`, placeholder panel hoặc implementation-detail copy không có decision value.
 - Dense data screen ưu tiên controls và primary data; long copy, roadmap/future notes và legal/vendor notes chuyển sang tooltip, help text, footer legal area hoặc docs.
-- User-facing copy phải được localization và tiếng Việt phải tự nhiên, đúng dấu; technical instructions chịu trách nhiệm quy định helper cụ thể.
+- Copy hướng người dùng lấy từ dictionary và hiển thị theo locale hiện tại. [Cấu hình locale](../../app/lib/i18n/config.ts) hỗ trợ tiếng Việt và tiếng Anh, mặc định tiếng Việt. Bản tiếng Việt phải tự nhiên, đúng dấu. Dùng helper theo [chuẩn localization](../../CONTRIBUTING.md#locale-validation-and-api-contracts).
 - Vendor/license attribution phải ở vị trí người dùng truy cập được khi rời main surface.
 
 ## UI Design Gate
@@ -393,7 +394,7 @@ This is the complete FE execution contract for dashboard layout and verification
 ### Design And Verification Coverage
 
 - Feature mới hoặc layout đổi đáng kể dùng nguồn đại diện hoặc pattern hiện có đủ định hướng theo UI Design Gate. FE tự hoàn thiện responsive theo shared rules; chỉ yêu cầu thêm reference khi còn quyết định quan trọng ngoài quyền FE. Không bắt có mockup Wide/Mobile/Compact riêng trước implementation.
-- Khi implement/review thay đổi layout, kiểm tra surface bị ảnh hưởng tại ba frame đại diện và chiều rộng `360px`; kiểm điểm chuyển `767/768px` và `1439/1440px` khi hành vi tại mốc đó bị ảnh hưởng, cùng browser zoom `200%`. Giữ các kiểm tra desktop rộng/sidebar hiện có khi thay đổi shell/content width; không coi frame 1520px là giới hạn trên.
+- Khi implement/review thay đổi layout, chọn viewport và state bị ảnh hưởng từ các frame đại diện, chiều rộng `360px` và browser zoom `200%`. Ghi phạm vi và lý do chọn. Thay đổi nhỏ trên component kiểm vùng liên quan. Thay đổi shell, content width hoặc responsive dùng chung phải bao phủ các nhóm bị ảnh hưởng, gồm desktop rộng hơn frame `1520px` và các chế độ sidebar liên quan. Kiểm điểm chuyển `767/768px` và `1439/1440px` khi hành vi tại mốc đó bị ảnh hưởng.
 - Bằng chứng bàn giao ghi viewport/zoom, state, sidebar mode đã kiểm, kết quả và giới hạn chưa kiểm. Không báo responsive đạt chỉ từ một screenshot desktop hoặc việc tồn tại responsive classes.
 - Handoff dùng rule execution tại đây và ngoại lệ feature đã được chấp nhận. Thiếu mobile reference không tự chặn implementation; nêu và giữ phần phụ thuộc khi có mâu thuẫn hoặc quyết định quan trọng ngoài quyền FE.
 
@@ -416,6 +417,7 @@ This is the complete FE execution contract for dashboard layout and verification
 
 Khi implement hoặc review UI, kiểm tra các state và breakpoint liên quan:
 
+- Khi thay đổi wrapper, token hoặc badge semantic, đối chiếu component thực tế, màu đã resolve và contrast ở theme áp dụng. Kiểm các nơi dùng bị ảnh hưởng theo [Theme And Component Chrome](#theme-and-component-chrome) và [Badge Semantics](#badge-semantics).
 - Light mode và dark mode.
 - Sidebar mở rộng và collapsed.
 - Content-width mode khớp primary task của route: `bounded` chỉ cho overview/decision surface, `fluid` cho list/table/data surface và `canvas` cho interactive workbench.
@@ -423,6 +425,8 @@ Khi implement hoặc review UI, kiểm tra các state và breakpoint liên quan:
 - Entity quick detail: resolver `event`/`news-article`, approved owner, một modal duy nhất, canonical URL không đổi khi mở/đóng, đúng profile content và không nested/back-stack.
 - Entity quick detail placement tại `767px`, `768px`, `1439px`, `1440px`, desktop rộng và zoom `200%`; mọi owner dùng side sheet chung từ `1440px`, bottom-sheet fallback dưới ngưỡng và fullscreen giữ portal cục bộ.
 - Entity quick detail accessibility: sticky header có entity/state title/Close/canonical action, không có profile prefix hoặc generic header description, body là scroll region duy nhất, focus vào Close rồi quay về trigger, dismissal keyboard/pointer/touch, state busy/error/denied được công bố và reduced motion không replay opening animation.
+- Với Event inspection, dùng event có trạng thái `ENRICHED` để kiểm nội dung theo [Profiles And Content](#profiles-and-content). Đối soát trạng thái loading, error, missing và access-denied theo [quy tắc tương tác](#interaction-state-and-accessibility).
+- Khi đổi hành vi responsive của form hoặc overlay, quan sát thao tác resize hoặc zoom trong lúc surface đang mở và kiểm ngữ cảnh theo [Responsive Contract](#responsive-contract). Với quick detail, kiểm đủ thông tin và hành động qua các mode liên quan theo [Profiles And Content](#profiles-and-content).
 - List normal state.
 - List empty state.
 - Loading skeleton.
@@ -433,6 +437,7 @@ Khi implement hoặc review UI, kiểm tra các state và breakpoint liên quan:
 - Delete confirmation.
 - Workbench idle/loading/success/error.
 - Chart loading/empty/error, keyboard interaction, text/table alternative và responsive behavior.
+- Khi đổi cách hiển thị dữ liệu chart, đối chiếu axis, legend hoặc tooltip bị ảnh hưởng với fixture đại diện theo [Data Visualization And Financial Data](#data-visualization-and-financial-data).
 - Realtime current value, last-updated, stale state, pause/freeze và reduced motion.
 - Semantic heading, skip link, route-change focus, focus ring và keyboard navigation.
 - Contrast light/dark, non-color status cues, target size và zoom `200%`.
@@ -440,6 +445,6 @@ Khi implement hoặc review UI, kiểm tra các state và breakpoint liên quan:
 - Bounded content giữ cap và căn giữa; fluid/canvas không bị page-level cap; loading, empty, error và permission-denied state mirror mode của content thật.
 - Horizontal overflow chỉ xuất hiện bên trong surface chủ đích.
 - Không có mojibake.
-- Không có UI copy tiếng Anh mới hướng người dùng, trừ tên riêng hoặc thuật ngữ kỹ thuật cần thiết.
+- Kiểm nguồn dictionary và copy hiển thị theo locale áp dụng, gồm bản tiếng Việt tự nhiên và đúng dấu theo [Content And Language](#content-and-language).
 
 Ưu tiên finding theo các UI drift category: shadcn chrome, toolbar/table spacing, main-card shell, form shell, table/chart surface, skeleton mismatch, URL/search state, accessibility regression, stale-data ambiguity, recovery gap, UI copy noise và non-Vietnamese UI copy. Nếu visual direction làm giảm readability hoặc data density cần thiết, ưu tiên readability và decision path.
