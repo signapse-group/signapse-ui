@@ -1,0 +1,9 @@
+# Checklist Code
+
+Dùng [chuẩn review](../../../../CONTRIBUTING.md#review-standards), [chuẩn kiểm chứng](../../../../CONTRIBUTING.md#verification) và hướng dẫn theo thư mục liên quan. Đánh giá các mục thuộc trục được giao.
+
+| Mục | Trục | Khi áp dụng | Điều kiện đạt | Bằng chứng cần xem |
+| --- | --- | --- | --- | --- |
+| Logic, dữ liệu và lỗi | Tính đúng đắn và tuân thủ chuẩn | Có thay đổi hành vi trong code. Kiểm lỗi giữa chừng, retry và cập nhật đồng thời khi liên quan tới ghi dữ liệu hoặc xử lý bất đồng bộ. | Luồng chính, ngoại lệ và thao tác lặp có kết quả đúng. Trạng thái và dữ liệu nhất quán khi lỗi hoặc chạy lại. | Code cuối cùng, nơi gọi và phép kiểm ở nhánh liên quan, kể cả code ngoài diff khi quyết định hành vi. |
+| API, validation và quyền | Tính đúng đắn và tuân thủ chuẩn | Thay đổi tích hợp API, ranh giới dữ liệu hoặc phân quyền. | Kiểm tra đầu vào tại ranh giới phù hợp và từ chối khi thiếu quyền. Khi chạm API, schema phía FE, xác thực, status/lỗi, kiểu nội dung, giao thức và ngữ nghĩa nghiệp vụ khớp hợp đồng của bên cung cấp. Xác định phạm vi bộ lọc từ hợp đồng. Báo sai lệch cho bên sở hữu. | [Chuẩn tích hợp API](../../../../docs/api-consumer.md), hợp đồng và bản công bố đúng môi trường, code xác thực/phân quyền, phép kiểm local liên quan. Guard cấu trúc hoặc P0 chỉ chứng minh phần đã kiểm. |
+| Chuẩn repo và kiểm chứng | Tính đúng đắn và tuân thủ chuẩn | Mọi đầu ra, theo loại thay đổi. | Tuân thủ chuẩn repo và thư mục, có giải trình cho `any` nếu phát sinh. Phép kiểm tập trung bao phủ hành vi bị ảnh hưởng và bằng chứng còn hiệu lực cho đúng phiên bản đang review. | Hướng dẫn theo thư mục, diff và đầu ra cuối, lựa chọn phép kiểm và kết quả theo [quy tắc kiểm thử](../../../../CONTRIBUTING.md#test-ownership-and-selection). QA hoặc coordinator phụ trách kiểm thử tính năng live. |
