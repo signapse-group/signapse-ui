@@ -284,6 +284,20 @@ test("read denial, detail errors, and a valid empty list stay distinct", async (
   })
 })
 
+test("cronjob table no-match feedback is announced", async ({
+  page,
+  fixture,
+}) => {
+  await fixture.setPermissions(["cronjob:read"])
+  await page.setViewportSize({ width: 1024, height: 768 })
+  await page.goto("/vi/cronjobs?jobName%5BcontainsIgnoreCase%5D=unmatched")
+
+  const tableStatus = page.getByRole("table").getByRole("status")
+  await expect(tableStatus).toBeVisible()
+  await expect(tableStatus).toHaveAttribute("aria-live", "polite")
+  await expect(tableStatus).toContainText("Không tìm thấy tác vụ phù hợp")
+})
+
 test("cronjob loading state is announced while the list request is pending", async ({
   page,
   fixture,

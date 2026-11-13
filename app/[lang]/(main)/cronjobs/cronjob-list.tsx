@@ -245,7 +245,7 @@ export function CronjobListPage({ cronjobPage }: CronjobListProps) {
                 ))
               ) : (
                 <AppListTableEmptyState colSpan={8}>
-                  <EmptyHeader>
+                  <EmptyHeader role="status" aria-live="polite">
                     <EmptyMedia variant="icon">
                       <FileClock aria-hidden="true" />
                     </EmptyMedia>
