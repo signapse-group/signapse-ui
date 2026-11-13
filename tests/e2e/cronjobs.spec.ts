@@ -2,7 +2,7 @@ import AxeBuilder from "@axe-core/playwright"
 
 import { expect, test } from "./fixtures"
 
-test("cronjob read permission renders responsive list and in-context detail", async ({
+test("cronjob read permission renders the responsive list and retains the detail URL", async ({
   page,
   fixture,
 }, testInfo) => {
@@ -99,7 +99,8 @@ test("cronjob read permission renders responsive list and in-context detail", as
   })
 
   await page.setViewportSize({ width: 390, height: 844 })
-  await pausedCard.getByRole("link", { name: "Xem chi tiết" }).click()
+  await expect(page.getByRole("link", { name: "Xem chi tiết" })).toHaveCount(0)
+  await page.goto("/vi/cronjobs?detail=2")
   await expect(page).toHaveURL(/detail=2/)
   const detail = page.locator("#cronjob-detail-panel")
   await expect(
@@ -127,6 +128,98 @@ test("cronjob read permission renders responsive list and in-context detail", as
   })
 })
 
+test("cronjob wide and mobile renders preserve the approved list composition", async ({
+  page,
+  fixture,
+}, testInfo) => {
+  await fixture.setPermissions([
+    "cronjob:read",
+    "cronjob:update",
+    "cronjob:start",
+    "cronjob:pause",
+    "cronjob:resume",
+  ])
+  await page.emulateMedia({ colorScheme: "dark" })
+  await page.setViewportSize({ width: 1520, height: 1024 })
+  await page.goto("/en/cronjobs")
+
+  const wideTable = page.getByRole("table")
+  await expect(
+    wideTable.getByRole("columnheader", { name: "Schedule" })
+  ).toBeVisible()
+  await expect(
+    wideTable.getByRole("columnheader", { name: "Execution" })
+  ).toBeVisible()
+  await expect(
+    wideTable.getByRole("columnheader", { name: "Latest result" })
+  ).toBeVisible()
+  await expect(
+    page.getByRole("button", { name: "Edit cron expression" }).first()
+  ).toBeVisible()
+  await expect(
+    wideTable.getByText("0 15,30 4,10 * JAN,MAR,SEP MON-FRI 2026/2", {
+      exact: true,
+    })
+  ).toBeVisible()
+  await testInfo.attach("Cronjobs-candidate-Wide-1520x1024.png", {
+    body: await page.screenshot(),
+    contentType: "image/png",
+  })
+
+  await page.setViewportSize({ width: 390, height: 1024 })
+  await fixture.setScenario("/cronjobs", "short")
+  await page.goto("/vi/cronjobs")
+
+  const firstCard = page.getByRole("article", {
+    name: "RefreshPendingNarrativesJob",
+  })
+  await expect(firstCard).toBeVisible()
+  await expect(firstCard.getByText("Lịch", { exact: true })).toBeVisible()
+  await expect(firstCard.getByText("Thực thi", { exact: true })).toBeVisible()
+  await expect(
+    firstCard.getByText("Kết quả gần nhất", { exact: true })
+  ).toBeVisible()
+  await expect(
+    page.locator('[data-slot="app-pagination-footer"]')
+  ).toBeVisible()
+  const resultSummary = page.getByText("Hiển thị 1-2 trên 2 kết quả", {
+    exact: true,
+  })
+  const pageSize = page.getByRole("combobox", { name: "Số hàng mỗi trang" })
+  const nextPage = page.getByRole("button", { name: "Đi tới trang sau" })
+  await expect(resultSummary).toBeVisible()
+  await expect(pageSize).toBeVisible()
+  await expect(nextPage).toBeVisible()
+  const [summaryBox, pageSizeBox] = await Promise.all([
+    resultSummary.boundingBox(),
+    pageSize.boundingBox(),
+  ])
+  expect(summaryBox).not.toBeNull()
+  expect(pageSizeBox).not.toBeNull()
+  expect(summaryBox!.y).toBeLessThan(pageSizeBox!.y)
+  expect(pageSizeBox!.y + pageSizeBox!.height).toBeLessThanOrEqual(1024)
+  const nextPageBox = await nextPage.boundingBox()
+  expect(nextPageBox).not.toBeNull()
+  expect(nextPageBox!.y + nextPageBox!.height).toBeLessThanOrEqual(1024)
+  await expect(
+    firstCard.getByText("0 */30 * * * ?", {
+      exact: true,
+    })
+  ).toBeVisible()
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth
+    )
+  ).toBe(true)
+  await expect(
+    firstCard.getByRole("button", { name: "Chỉnh sửa biểu thức cron" })
+  ).toBeVisible()
+  await testInfo.attach("Cronjobs-candidate-Mobile-vi-390x1024.png", {
+    body: await page.screenshot(),
+    contentType: "image/png",
+  })
+})
+
 test("read denial, detail errors, and a valid empty list stay distinct", async ({
   page,
   fixture,
@@ -148,6 +241,17 @@ test("read denial, detail errors, and a valid empty list stay distinct", async (
       .last()
   ).toBeVisible()
   await expect(page.getByRole("article")).toHaveCount(0)
+
+  await page.goto("/vi/cronjobs?jobName%5BcontainsIgnoreCase%5D=unmatched")
+  await expect(
+    page
+      .locator('#cronjob-list [data-slot="empty-title"]')
+      .filter({ hasText: "Không tìm thấy tác vụ phù hợp" })
+      .last()
+  ).toBeVisible()
+  await expect(
+    page.getByText("Chưa có tác vụ định kỳ", { exact: true })
+  ).toHaveCount(0)
 
   await page.goto("/vi/cronjobs?detail=999")
   await expect(
@@ -178,6 +282,57 @@ test("read denial, detail errors, and a valid empty list stay distinct", async (
     body: await page.screenshot({ fullPage: true }),
     contentType: "image/png",
   })
+})
+
+test("cronjob loading state is announced while the list request is pending", async ({
+  page,
+  fixture,
+}, testInfo) => {
+  await fixture.setPermissions(["cronjob:read"])
+  await fixture.setScenario("/cronjobs", "delayed")
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.emulateMedia({ colorScheme: "dark" })
+
+  const navigation = page.goto("/vi/cronjobs")
+  const loading = page.getByRole("status", {
+    name: "Đang tải danh sách tác vụ định kỳ",
+  })
+
+  try {
+    await expect(loading).toBeVisible()
+    await expect(loading).toHaveAttribute("aria-busy", "true")
+    await testInfo.attach("cronjobs-read-loading-mobile-390x844.png", {
+      body: await page.screenshot({ fullPage: true }),
+      contentType: "image/png",
+    })
+  } finally {
+    await fixture.setScenario("/cronjobs", "success")
+    await navigation
+  }
+
+  await expect(page.getByRole("article").first()).toBeVisible()
+})
+
+test("cronjob search matches partial names without case and resets the page", async ({
+  page,
+  fixture,
+}) => {
+  await fixture.setPermissions(["cronjob:read"])
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto("/vi/cronjobs?page=2&size=1")
+
+  const search = page.getByRole("searchbox", { name: "Tìm tác vụ định kỳ" })
+  await search.fill("aNd")
+
+  await expect(page).toHaveURL(/page=1/)
+  await expect(page).toHaveURL(/jobName%5BcontainsIgnoreCase%5D=aNd/)
+  await expect(
+    page.getByRole("article", { name: "Scheduled and running" })
+  ).toBeVisible()
+  await expect(page.getByRole("article")).toHaveCount(1)
+  await expect(
+    page.getByRole("article").getByText("Đang chạy", { exact: true })
+  ).toBeVisible()
 })
 
 test("cronjob controls remain permission-specific for queued and paused work", async ({
