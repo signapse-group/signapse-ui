@@ -59,7 +59,13 @@ import {
   X,
 } from "lucide-react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { type FormEvent, useState, useTransition } from "react"
+import {
+  type FormEvent,
+  useEffect,
+  useRef,
+  useState,
+  useTransition,
+} from "react"
 import { toast } from "sonner"
 
 import { CronjobStatusFields } from "./cronjob-status-fields"
@@ -386,7 +392,6 @@ function CronjobCard({
       </dl>
 
       <div className="mt-4 flex flex-wrap items-center justify-start gap-1 border-t border-border pt-3">
-        <span className="sr-only">{t.actionsColumn}</span>
         <StatusActions
           id={cronjob.id}
           scheduleStatus={cronjob.scheduleStatus}
@@ -604,8 +609,13 @@ function StatusActions({
   const canResumeCronjob = useHasPermission("cronjob:resume")
   const [isPending, startTransition] = useTransition()
   const router = useRouter()
+  const actionsRef = useRef<HTMLDivElement>(null)
+  const startButtonRef = useRef<HTMLButtonElement>(null)
+  const shouldFocusActions = useRef(false)
 
   const handleStart = () => {
+    shouldFocusActions.current =
+      startButtonRef.current === document.activeElement
     onStartPendingChange(id, true)
     startTransition(async () => {
       try {
@@ -662,13 +672,28 @@ function StatusActions({
   const canPause = scheduleStatus === "SCHEDULED"
   const canResume = scheduleStatus === "PAUSED"
 
+  useEffect(() => {
+    if (!canStart && shouldFocusActions.current) {
+      actionsRef.current?.focus()
+      shouldFocusActions.current = false
+    }
+  }, [canStart])
+
   return (
-    <>
+    <div
+      ref={actionsRef}
+      role="group"
+      aria-label={dictionary.cronjobs.actionsColumn}
+      tabIndex={-1}
+      className="flex flex-wrap items-center justify-center gap-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+    >
       {canStart && canStartCronjob ? (
         <Button
+          ref={startButtonRef}
           type="button"
           variant="default"
           size="lg"
+          className="bg-positive-action text-positive-action-foreground hover:bg-positive-action/90"
           title={
             isStartPending
               ? dictionary.cronjobs.starting
@@ -730,6 +755,6 @@ function StatusActions({
           {dictionary.cronjobs.startReadError}
         </span>
       ) : null}
-    </>
+    </div>
   )
 }

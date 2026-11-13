@@ -65,6 +65,11 @@ export async function updateCronjob(
 }
 
 export async function startCronjob(id: number): Promise<ActionResult<void>> {
+  if (!Number.isSafeInteger(id) || id <= 0) {
+    const dictionary = await getDictionary(await getRequestLocale())
+    return { success: false, error: dictionary.cronjobs.startError }
+  }
+
   try {
     await fetchAuthenticated<unknown>(`/cronjobs/${id}/start`, {
       method: "POST",

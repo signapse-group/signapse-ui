@@ -141,6 +141,21 @@ describe("cronjob API actions", () => {
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/cronjobs")
   })
 
+  it.each([
+    0,
+    -1,
+    1.5,
+    Number.NaN,
+    Number.POSITIVE_INFINITY,
+    Number.MAX_SAFE_INTEGER + 1,
+  ])("rejects invalid start ID %s before sending a request", async (id) => {
+    await expect(startCronjob(id)).resolves.toEqual({
+      success: false,
+      error: "Could not start cronjob.",
+    })
+    expect(mocks.fetchAuthenticated).not.toHaveBeenCalled()
+  })
+
   it("returns a localized backend refusal when the start request fails", async () => {
     const backendError = Object.assign(
       new Error("Cronjob 42 is already running."),

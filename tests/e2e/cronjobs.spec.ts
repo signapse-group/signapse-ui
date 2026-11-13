@@ -229,9 +229,19 @@ test("Start actions stay available across responsive breakpoints", async ({
   await page.setViewportSize({ width: 1520, height: 1024 })
   await page.goto("/en/cronjobs")
 
-  // 760 CSS px is the effective width used for the 200% zoom check.
-  for (const width of [360, 390, 760, 767, 768, 1024, 1439, 1440, 1520]) {
-    await page.setViewportSize({ width, height: 1024 })
+  // 760×512 CSS px is the effective viewport at 200% zoom from 1520×1024.
+  for (const [width, height] of [
+    [360, 800],
+    [390, 844],
+    [760, 512],
+    [767, 844],
+    [768, 768],
+    [1024, 768],
+    [1439, 900],
+    [1440, 1024],
+    [1520, 1024],
+  ]) {
+    await page.setViewportSize({ width, height })
 
     const actionSurface =
       width < 768
@@ -254,19 +264,28 @@ test("Start actions stay available across responsive breakpoints", async ({
     }
   }
 
-  await page.setViewportSize({ width: 390, height: 1024 })
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.emulateMedia({ colorScheme: "light" })
   await page.goto("/vi/cronjobs")
   const mobileStart = page
     .getByRole("article", { name: "Immediate trigger not started" })
     .getByRole("button", { name: "Khởi chạy" })
   await expect(mobileStart).toBeVisible()
-  await testInfo.attach("cronjobs-actions-mobile-vi-390x1024.png", {
+  await expect(page.locator("html")).not.toHaveClass(/\bdark\b/)
+  await testInfo.attach("cronjobs-actions-mobile-light-vi-390x844.png", {
+    body: await page.locator("#cronjob-list").screenshot(),
+    contentType: "image/png",
+  })
+
+  await page.emulateMedia({ colorScheme: "dark" })
+  await expect(page.locator("html")).toHaveClass(/\bdark\b/)
+  await testInfo.attach("cronjobs-actions-mobile-vi-390x844.png", {
     body: await page.locator("#cronjob-list").screenshot(),
     contentType: "image/png",
   })
   await mobileStart.focus()
   await expect(mobileStart).toBeFocused()
-  await testInfo.attach("cronjobs-actions-mobile-focus-vi-390x1024.png", {
+  await testInfo.attach("cronjobs-actions-mobile-focus-vi-390x844.png", {
     body: await page.locator("#cronjob-list").screenshot(),
     contentType: "image/png",
   })

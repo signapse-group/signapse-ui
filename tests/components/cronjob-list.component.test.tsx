@@ -244,6 +244,7 @@ describe("CronjobListPage", () => {
     })
     const start = within(card).getByRole("button", { name: "Start" })
     expect(start).toHaveTextContent("Start")
+    expect(start).toHaveClass("bg-positive-action")
     start.focus()
     await user.keyboard("{Enter}")
 
@@ -251,6 +252,7 @@ describe("CronjobListPage", () => {
       expect(mocks.startCronjob).toHaveBeenCalledWith(4)
       expect(mocks.getCronjobById).toHaveBeenCalledWith(4)
       expect(within(card).queryByRole("button", { name: "Start" })).toBeNull()
+      expect(within(card).getByRole("group", { name: "Actions" })).toHaveFocus()
     })
     expect(
       within(
