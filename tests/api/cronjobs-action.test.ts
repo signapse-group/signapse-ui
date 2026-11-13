@@ -124,8 +124,39 @@ describe("cronjob API actions", () => {
     expect(mocks.revalidatePath).not.toHaveBeenCalled()
   })
 
-  it("returns localized fallback copy when a mutation response fails validation", async () => {
-    mocks.fetchAuthenticated.mockResolvedValue({ invalid: true })
+  it("treats POST success as acceptance without relying on its execution state", async () => {
+    mocks.fetchAuthenticated.mockResolvedValue({
+      ...cronjob,
+      executionStatus: "NOT_RUNNING",
+    })
+
+    await expect(startCronjob(42)).resolves.toEqual({
+      success: true,
+      data: undefined,
+    })
+    expect(mocks.fetchAuthenticated).toHaveBeenCalledWith(
+      "/cronjobs/42/start",
+      { method: "POST" }
+    )
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/cronjobs")
+  })
+
+  it("returns a localized backend refusal when the start request fails", async () => {
+    const backendError = Object.assign(
+      new Error("Cronjob 42 is already running."),
+      { status: 409 }
+    )
+    mocks.fetchAuthenticated.mockRejectedValue(backendError)
+
+    await expect(startCronjob(42)).resolves.toEqual({
+      success: false,
+      error: "Cronjob 42 is already running.",
+    })
+    expect(mocks.revalidatePath).not.toHaveBeenCalled()
+  })
+
+  it("uses localized fallback copy for transport failures", async () => {
+    mocks.fetchAuthenticated.mockRejectedValue(new Error("fetch failed"))
 
     await expect(startCronjob(42)).resolves.toEqual({
       success: false,

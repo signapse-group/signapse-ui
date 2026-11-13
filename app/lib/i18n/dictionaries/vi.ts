@@ -2881,8 +2881,11 @@ export const vi = {
     saveCron: "Lưu biểu thức cron",
     cancelEdit: "Hủy chỉnh sửa",
     start: "Khởi chạy",
-    started: "Đã khởi chạy cronjob.",
+    starting: "Đang gửi yêu cầu…",
+    startAccepted: "Đã tiếp nhận yêu cầu chạy ngay.",
     startError: "Không thể khởi chạy cronjob.",
+    startReadError:
+      "Không thể tải trạng thái tác vụ mới nhất. Thông tin đang hiển thị có thể đã cũ.",
     pause: "Tạm dừng",
     paused: "Đã tạm dừng cronjob.",
     pauseError: "Không thể tạm dừng cronjob.",

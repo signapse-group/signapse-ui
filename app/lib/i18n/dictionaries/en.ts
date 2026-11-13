@@ -2900,8 +2900,11 @@ export const en: Dictionary = {
     saveCron: "Save cron expression",
     cancelEdit: "Cancel edit",
     start: "Start",
-    started: "Cronjob started.",
+    starting: "Starting…",
+    startAccepted: "Start request accepted.",
     startError: "Could not start cronjob.",
+    startReadError:
+      "Could not load the latest cronjob status. Displayed values may be outdated.",
     pause: "Pause",
     paused: "Cronjob paused.",
     pauseError: "Could not pause cronjob.",

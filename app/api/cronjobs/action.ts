@@ -1,6 +1,6 @@
 "use server"
 
-import { fetchAuthenticated } from "@/app/api/auth/action"
+import { fetchAuthenticated, type BackendApiError } from "@/app/api/auth/action"
 import type { ActionResult, SearchParams } from "@/app/lib/definitions"
 import { getDictionary } from "@/app/lib/i18n/dictionaries"
 import { getRequestLocale } from "@/app/lib/i18n/server"
@@ -64,20 +64,22 @@ export async function updateCronjob(
   }
 }
 
-export async function startCronjob(
-  id: number
-): Promise<ActionResult<CronjobResponse>> {
+export async function startCronjob(id: number): Promise<ActionResult<void>> {
   try {
-    const cronjob = await fetchCronjob(`/cronjobs/${id}/start`, {
+    await fetchAuthenticated<unknown>(`/cronjobs/${id}/start`, {
       method: "POST",
     })
     revalidatePath("/cronjobs")
-    return { success: true, data: cronjob }
-  } catch {
+    return { success: true, data: undefined }
+  } catch (error: unknown) {
     const dictionary = await getDictionary(await getRequestLocale())
     return {
       success: false,
-      error: dictionary.cronjobs.startError,
+      error:
+        error instanceof Error &&
+        typeof (error as BackendApiError).status === "number"
+          ? error.message
+          : dictionary.cronjobs.startError,
     }
   }
 }

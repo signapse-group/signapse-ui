@@ -219,3 +219,55 @@ test("cronjob controls remain permission-specific for queued and paused work", a
       .getByRole("button", { name: "Khởi chạy" })
   ).toHaveCount(0)
 })
+
+test("Start actions stay available across responsive breakpoints", async ({
+  page,
+  fixture,
+}, testInfo) => {
+  await fixture.setPermissions(["cronjob:read", "cronjob:start"])
+  await page.emulateMedia({ colorScheme: "dark" })
+  await page.setViewportSize({ width: 1520, height: 1024 })
+  await page.goto("/en/cronjobs")
+
+  // 760 CSS px is the effective width used for the 200% zoom check.
+  for (const width of [360, 390, 760, 767, 768, 1024, 1439, 1440, 1520]) {
+    await page.setViewportSize({ width, height: 1024 })
+
+    const actionSurface =
+      width < 768
+        ? page.getByRole("article", { name: "Immediate trigger not started" })
+        : page.getByRole("row", { name: /Immediate trigger not started/ })
+    await expect(
+      actionSurface.getByRole("button", { name: "Start" })
+    ).toBeVisible()
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth
+      )
+    ).toBe(true)
+
+    if (width === 1520) {
+      await testInfo.attach("cronjobs-actions-wide-en-1520x1024.png", {
+        body: await page.locator("#cronjob-list").screenshot(),
+        contentType: "image/png",
+      })
+    }
+  }
+
+  await page.setViewportSize({ width: 390, height: 1024 })
+  await page.goto("/vi/cronjobs")
+  const mobileStart = page
+    .getByRole("article", { name: "Immediate trigger not started" })
+    .getByRole("button", { name: "Khởi chạy" })
+  await expect(mobileStart).toBeVisible()
+  await testInfo.attach("cronjobs-actions-mobile-vi-390x1024.png", {
+    body: await page.locator("#cronjob-list").screenshot(),
+    contentType: "image/png",
+  })
+  await mobileStart.focus()
+  await expect(mobileStart).toBeFocused()
+  await testInfo.attach("cronjobs-actions-mobile-focus-vi-390x1024.png", {
+    body: await page.locator("#cronjob-list").screenshot(),
+    contentType: "image/png",
+  })
+})
