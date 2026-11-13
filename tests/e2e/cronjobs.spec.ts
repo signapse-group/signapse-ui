@@ -90,6 +90,13 @@ test("cronjob read permission renders the responsive list and retains the detail
       ),
       `page should not overflow at ${width}px`
     ).toBe(true)
+
+    if (width === 760) {
+      await testInfo.attach("cronjobs-effective-760x512-200pct.png", {
+        body: await page.screenshot({ fullPage: true }),
+        contentType: "image/png",
+      })
+    }
   }
 
   await page.setViewportSize({ width: 1520, height: 1024 })

@@ -2869,7 +2869,7 @@ export const vi = {
     descriptionLabel: "Mô tả",
     scheduleLabel: "Lịch",
     executionLabel: "Thực thi",
-    executionIdleStatus: "Chưa chạy",
+    executionIdleStatus: "Không chạy",
     latestResultLabel: "Kết quả gần nhất",
     lastExecutedTimeLabel: "Lần thực thi gần nhất (UTC)",
     nextRunListColumn: "Lần chạy kế tiếp",

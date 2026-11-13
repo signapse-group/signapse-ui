@@ -41,6 +41,7 @@ vi.mock("@/app/api/cronjobs/action", () => ({
 }))
 
 import { en } from "@/app/lib/i18n/dictionaries/en"
+import { vi as viDictionary } from "@/app/lib/i18n/dictionaries/vi"
 import type { CronjobResponse } from "@/app/lib/cronjobs/definitions"
 import { LocalizationProvider } from "@/app/lib/i18n/provider"
 import { CronjobListPage } from "@/app/[lang]/(main)/cronjobs/cronjob-list"
@@ -109,10 +110,14 @@ const page = {
 
 function renderCronjobList(
   permissions: string[],
-  cronjobPage: ComponentProps<typeof CronjobListPage>["cronjobPage"] = page
+  cronjobPage: ComponentProps<typeof CronjobListPage>["cronjobPage"] = page,
+  locale: "en" | "vi" = "en"
 ) {
   return render(
-    <LocalizationProvider locale="en" dictionary={en}>
+    <LocalizationProvider
+      locale={locale}
+      dictionary={locale === "vi" ? viDictionary : en}
+    >
       <PermissionProvider permissions={permissions}>
         <CronjobListPage cronjobPage={cronjobPage} />
       </PermissionProvider>
@@ -201,6 +206,22 @@ describe("CronjobListPage", () => {
     expect(
       screen.queryByRole("link", { name: "View details" })
     ).not.toBeInTheDocument()
+  })
+
+  it("distinguishes idle execution from a job with no previous result in Vietnamese", () => {
+    renderCronjobList(["cronjob:read"], page, "vi")
+
+    const completedJob = screen.getByRole("article", {
+      name: "Paused after execution",
+    })
+    expect(within(completedJob).getByText("Không chạy")).toBeVisible()
+    expect(within(completedJob).getByText("Thất bại")).toBeVisible()
+
+    const notStartedJob = screen.getByRole("article", {
+      name: "Immediate trigger not started",
+    })
+    expect(within(notStartedJob).getByText("Không chạy")).toBeVisible()
+    expect(within(notStartedJob).getByText("Chưa có kết quả")).toBeVisible()
   })
 
   it("shows only individually permitted controls and respects paused execution", () => {

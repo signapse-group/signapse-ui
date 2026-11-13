@@ -75,6 +75,7 @@ export function CronjobStatusField({
   const t = dictionary.cronjobs
   const presentation = getStatusPresentation(field, cronjob, t)
   const Icon = presentation.icon
+  const isDestructive = presentation.variant === "destructive"
 
   return (
     <dl
@@ -85,16 +86,18 @@ export function CronjobStatusField({
       >
         {presentation.label}
       </dt>
-      <dd className="max-w-full min-w-0">
-        <Badge
-          variant={presentation.variant}
-          className={`h-auto max-w-full gap-0.5 overflow-visible px-1 text-left whitespace-normal ${
-            presentation.variant === "destructive" ? "text-foreground" : ""
-          }`}
-        >
+      <dd
+        className={`max-w-full min-w-0 ${isDestructive ? "flex items-center gap-1" : ""}`}
+      >
+        <Badge variant={presentation.variant} aria-hidden={isDestructive}>
           {Icon ? <Icon aria-hidden="true" data-icon="inline-start" /> : null}
-          <span className="break-words">{presentation.value}</span>
+          {isDestructive ? null : (
+            <span className="break-words">{presentation.value}</span>
+          )}
         </Badge>
+        {isDestructive ? (
+          <span className="break-words">{presentation.value}</span>
+        ) : null}
       </dd>
     </dl>
   )
