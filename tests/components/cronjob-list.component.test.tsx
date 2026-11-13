@@ -377,6 +377,64 @@ describe("CronjobListPage", () => {
     expect(mocks.toastSuccess).toHaveBeenCalledWith("Start request accepted.")
   })
 
+  it("does not restore previous-page readbacks after a Start readback fails", async () => {
+    const user = userEvent.setup()
+    const secondCronjob: CronjobResponse = {
+      ...cronjobs[3],
+      id: 5,
+      jobName: "Second immediate trigger",
+    }
+    const initialPage = {
+      ...page,
+      content: [cronjobs[3], secondCronjob],
+      numberOfElements: 2,
+      totalElements: 2,
+    }
+    const refreshedPage = {
+      ...initialPage,
+      content: [
+        { ...cronjobs[3], executionStatus: "NOT_RUNNING" as const },
+        secondCronjob,
+      ],
+    }
+    mocks.getCronjobById
+      .mockResolvedValueOnce({ ...cronjobs[3], executionStatus: "RUNNING" })
+      .mockRejectedValueOnce(new Error("HTTP 500"))
+    const view = renderCronjobList(
+      ["cronjob:read", "cronjob:start"],
+      initialPage
+    )
+
+    const firstRow = screen.getByRole("row", {
+      name: /Immediate trigger not started/,
+    })
+    await user.click(within(firstRow).getByRole("button", { name: "Start" }))
+    await waitFor(() =>
+      expect(
+        within(firstRow).queryByRole("button", { name: "Start" })
+      ).toBeNull()
+    )
+
+    view.rerender(
+      <LocalizationProvider locale="en" dictionary={en}>
+        <PermissionProvider permissions={["cronjob:read", "cronjob:start"]}>
+          <CronjobListPage cronjobPage={refreshedPage} />
+        </PermissionProvider>
+      </LocalizationProvider>
+    )
+
+    const secondRow = screen.getByRole("row", {
+      name: /Second immediate trigger/,
+    })
+    await user.click(within(secondRow).getByRole("button", { name: "Start" }))
+    await within(secondRow).findByRole("alert")
+
+    expect(within(firstRow).getByText("Not running")).toBeVisible()
+    expect(
+      within(firstRow).getByRole("button", { name: "Start" })
+    ).toBeEnabled()
+  })
+
   it("keeps loaded rows visible and labels missing pagination metadata", () => {
     renderCronjobList(["cronjob:read"], { content: [cronjobs[0]] })
 

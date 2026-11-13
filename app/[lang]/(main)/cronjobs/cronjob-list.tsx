@@ -126,6 +126,7 @@ export function CronjobListPage({ cronjobPage }: CronjobListProps) {
 
   const handleStartReadError = (id: number) => {
     setReadbackPage(cronjobPage)
+    setCronjobReadbacks((current) => (hasCurrentReadbacks ? current : {}))
     setStartReadErrorIds((current) => {
       const readErrors = hasCurrentReadbacks ? current : []
       return readErrors.includes(id) ? readErrors : [...readErrors, id]
