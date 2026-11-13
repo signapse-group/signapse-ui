@@ -349,6 +349,36 @@ test("cronjob search matches partial names without case and resets the page", as
   ).toBeVisible()
 })
 
+test("cronjob search and sort are keyboard operable", async ({
+  page,
+  fixture,
+}) => {
+  await fixture.setPermissions(["cronjob:read"])
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto("/vi/cronjobs")
+
+  const search = page.getByRole("searchbox", { name: "Tìm tác vụ định kỳ" })
+  await search.focus()
+  await page.keyboard.type("aNd", { delay: 50 })
+  await expect(page).toHaveURL(/jobName%5BcontainsIgnoreCase%5D=aNd/)
+  await expect(
+    page.getByRole("article", { name: "Scheduled and running" })
+  ).toBeVisible()
+  await expect(search).toBeFocused()
+
+  await page.keyboard.press("Tab")
+  const sort = page.getByRole("combobox").first()
+  await expect(sort).toBeFocused()
+  expect(
+    await sort.evaluate((element) => element.matches(":focus-visible"))
+  ).toBe(true)
+  await page.keyboard.press("Enter")
+  await expect(page.getByRole("option", { name: "Cũ hơn" })).toBeVisible()
+  await page.keyboard.press("ArrowDown")
+  await page.keyboard.press("Enter")
+  await expect(page).toHaveURL(/sort=id_asc/)
+})
+
 test("cronjob controls remain permission-specific for queued and paused work", async ({
   page,
   fixture,
