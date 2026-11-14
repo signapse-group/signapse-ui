@@ -20,6 +20,13 @@ import {
 } from "@/components/app-list-table"
 import { AppPaginationSkeleton } from "@/components/app-pagination-controls"
 import { Skeleton } from "@/components/ui/skeleton"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 
 import { CronjobDetailContent, CronjobDetailSkeleton } from "./cronjob-detail"
 import { CronjobListPage } from "./cronjob-list"
@@ -192,38 +199,96 @@ function CronjobListSkeleton({ label }: { label: string }) {
           >
             <Skeleton className="h-4 w-2/3" />
             <Skeleton className="mt-2 h-3 w-4/5" />
-            <Skeleton className="mt-4 h-20 w-full" />
-            <Skeleton className="mt-4 h-8 w-full" />
+            <Skeleton className="mt-4 h-3 w-28" />
+            <Skeleton className="mt-2 h-8 w-full" />
+            <div className="mt-4 grid grid-cols-3 gap-2">
+              {Array.from({ length: 3 }).map((_, fieldIndex) => (
+                <div key={fieldIndex} className="min-w-0">
+                  <Skeleton className="h-3 w-4/5" />
+                  <Skeleton className="mt-2 h-5 w-full" />
+                </div>
+              ))}
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              <Skeleton className="h-8 w-full" />
+              <Skeleton className="h-8 w-full" />
+            </div>
+            <div className="mt-4 flex justify-end gap-1">
+              <Skeleton className="size-10" />
+              <Skeleton className="size-10" />
+            </div>
           </div>
         ))}
       </div>
 
       <div className="hidden md:block">
         <AppListTable className="mt-4">
-          <table className="min-w-[76rem] table-fixed">
-            <thead>
+          <Table className="min-w-[76rem] table-fixed">
+            <TableHeader>
               <AppListTableHeaderRow>
-                <AppListTableHead className="w-[26%]">
+                <AppListTableHead className="w-[24%]">
                   <Skeleton className="h-4 w-32" />
                 </AppListTableHead>
-                <AppListTableHead className="w-32 text-center">
+                <AppListTableHead className="w-[11%]">
                   <Skeleton className="mx-auto h-4 w-20" />
                 </AppListTableHead>
-                <AppListTableHead className="w-60">
+                <AppListTableHead className="w-[8%] text-center">
                   <Skeleton className="h-4 w-24" />
                 </AppListTableHead>
-                <AppListTableHead className="w-52 text-center">
+                <AppListTableHead className="w-[8%] text-center">
                   <Skeleton className="mx-auto h-4 w-32" />
                 </AppListTableHead>
-                <AppListTableHead className="w-48 text-center">
+                <AppListTableHead className="w-[12%] text-center">
                   <Skeleton className="mx-auto h-4 w-32" />
                 </AppListTableHead>
-                <AppListTableHead className="w-28 text-center">
+                <AppListTableHead className="w-[14%]">
+                  <Skeleton className="h-4 w-32" />
+                </AppListTableHead>
+                <AppListTableHead className="w-[11%]">
                   <Skeleton className="ml-auto h-4 w-20" />
                 </AppListTableHead>
+                <AppListTableHead className="w-[12%] text-center">
+                  <Skeleton className="mx-auto h-4 w-20" />
+                </AppListTableHead>
               </AppListTableHeaderRow>
-            </thead>
-          </table>
+            </TableHeader>
+            <TableBody>
+              {Array.from({ length: 3 }).map((_, index) => (
+                <TableRow key={index}>
+                  <TableCell className="align-top">
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="mt-2 h-3 w-full" />
+                    <Skeleton className="mt-1 h-3 w-4/5" />
+                  </TableCell>
+                  <TableCell className="align-top">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="mt-1 h-4 w-3/4" />
+                  </TableCell>
+                  <TableCell className="align-top">
+                    <Skeleton className="mx-auto h-5 w-20" />
+                  </TableCell>
+                  <TableCell className="align-top">
+                    <Skeleton className="mx-auto h-5 w-20" />
+                  </TableCell>
+                  <TableCell className="align-top">
+                    <Skeleton className="mx-auto h-5 w-20" />
+                  </TableCell>
+                  <TableCell className="align-top">
+                    <Skeleton className="h-5 w-full" />
+                  </TableCell>
+                  <TableCell className="align-top">
+                    <Skeleton className="h-4 w-full" />
+                  </TableCell>
+                  <TableCell className="align-top">
+                    <div className="flex justify-center gap-1">
+                      <Skeleton className="size-10" />
+                      <Skeleton className="size-10" />
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </AppListTable>
       </div>
 
