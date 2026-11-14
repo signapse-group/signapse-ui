@@ -425,3 +425,74 @@ test("cronjob controls remain permission-specific for queued and paused work", a
       .getByRole("button", { name: "Khởi chạy" })
   ).toHaveCount(0)
 })
+
+test("Start actions stay available across responsive breakpoints", async ({
+  page,
+  fixture,
+}, testInfo) => {
+  await fixture.setPermissions(["cronjob:read", "cronjob:start"])
+  await page.emulateMedia({ colorScheme: "dark" })
+  await page.setViewportSize({ width: 1520, height: 1024 })
+  await page.goto("/en/cronjobs")
+
+  // 760×512 CSS px is the effective viewport at 200% zoom from 1520×1024.
+  for (const [width, height] of [
+    [360, 800],
+    [390, 844],
+    [760, 512],
+    [767, 844],
+    [768, 768],
+    [1024, 768],
+    [1439, 900],
+    [1440, 1024],
+    [1520, 1024],
+  ]) {
+    await page.setViewportSize({ width, height })
+
+    const actionSurface =
+      width < 768
+        ? page.getByRole("article", { name: "Immediate trigger not started" })
+        : page.getByRole("row", { name: /Immediate trigger not started/ })
+    await expect(
+      actionSurface.getByRole("button", { name: "Start" })
+    ).toBeVisible()
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth
+      )
+    ).toBe(true)
+
+    if (width === 1520) {
+      await testInfo.attach("cronjobs-actions-wide-en-1520x1024.png", {
+        body: await page.locator("#cronjob-list").screenshot(),
+        contentType: "image/png",
+      })
+    }
+  }
+
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.emulateMedia({ colorScheme: "light" })
+  await page.goto("/vi/cronjobs")
+  const mobileStart = page
+    .getByRole("article", { name: "Immediate trigger not started" })
+    .getByRole("button", { name: "Khởi chạy" })
+  await expect(mobileStart).toBeVisible()
+  await expect(page.locator("html")).not.toHaveClass(/\bdark\b/)
+  await testInfo.attach("cronjobs-actions-mobile-light-vi-390x844.png", {
+    body: await page.locator("#cronjob-list").screenshot(),
+    contentType: "image/png",
+  })
+
+  await page.emulateMedia({ colorScheme: "dark" })
+  await expect(page.locator("html")).toHaveClass(/\bdark\b/)
+  await testInfo.attach("cronjobs-actions-mobile-vi-390x844.png", {
+    body: await page.locator("#cronjob-list").screenshot(),
+    contentType: "image/png",
+  })
+  await mobileStart.focus()
+  await expect(mobileStart).toBeFocused()
+  await testInfo.attach("cronjobs-actions-mobile-focus-vi-390x844.png", {
+    body: await page.locator("#cronjob-list").screenshot(),
+    contentType: "image/png",
+  })
+})

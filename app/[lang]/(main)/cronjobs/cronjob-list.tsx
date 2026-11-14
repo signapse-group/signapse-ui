@@ -1,6 +1,7 @@
 "use client"
 
 import {
+  getCronjobById,
   pauseCronjob,
   resumeCronjob,
   startCronjob,
@@ -56,7 +57,14 @@ import {
   X,
 } from "lucide-react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { type FormEvent, useId, useState, useTransition } from "react"
+import {
+  type FormEvent,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  useTransition,
+} from "react"
 import { toast } from "sonner"
 
 import { CronjobStatusField } from "./cronjob-status-fields"
@@ -98,6 +106,52 @@ export function CronjobListPage({ cronjobPage }: CronjobListProps) {
   const cronjobs = cronjobPage.content
   const canUpdateCronjob = useHasPermission("cronjob:update")
   const isSearchResult = Boolean(searchParams.get(SEARCH_PARAM_KEY)?.trim())
+  const [readbackPage, setReadbackPage] = useState(cronjobPage)
+  const [cronjobReadbacks, setCronjobReadbacks] = useState<
+    Record<number, CronjobResponse>
+  >({})
+  const [pendingStartIds, setPendingStartIds] = useState<Set<number>>(
+    () => new Set()
+  )
+  const [startReadErrorTimes, setStartReadErrorTimes] = useState<
+    Record<number, number>
+  >({})
+  const hasCurrentReadbacks = readbackPage === cronjobPage
+  const displayedCronjobs = cronjobs.map(
+    (cronjob) =>
+      (hasCurrentReadbacks && cronjobReadbacks[cronjob.id]) || cronjob
+  )
+
+  const handleCronjobRead = (cronjob: CronjobResponse) => {
+    setReadbackPage(cronjobPage)
+    setCronjobReadbacks((current) => ({
+      ...(hasCurrentReadbacks ? current : {}),
+      [cronjob.id]: cronjob,
+    }))
+    setStartReadErrorTimes((current) => {
+      const next = hasCurrentReadbacks ? { ...current } : {}
+      delete next[cronjob.id]
+      return next
+    })
+  }
+
+  const handleStartPendingChange = (id: number, isPending: boolean) => {
+    setPendingStartIds((current) => {
+      const next = new Set(current)
+      if (isPending) next.add(id)
+      else next.delete(id)
+      return next
+    })
+  }
+
+  const handleStartReadError = (id: number) => {
+    setReadbackPage(cronjobPage)
+    setCronjobReadbacks((current) => (hasCurrentReadbacks ? current : {}))
+    setStartReadErrorTimes((current) => ({
+      ...(hasCurrentReadbacks ? current : {}),
+      [id]: Date.now(),
+    }))
+  }
 
   return (
     <div id="cronjob-list" className="w-full">
@@ -122,11 +176,20 @@ export function CronjobListPage({ cronjobPage }: CronjobListProps) {
 
       <div className="mt-4 grid gap-3 md:hidden">
         {cronjobs.length > 0 ? (
-          cronjobs.map((cronjob) => (
+          displayedCronjobs.map((cronjob) => (
             <CronjobCard
               key={cronjob.id}
               cronjob={cronjob}
               canUpdate={canUpdateCronjob}
+              onCronjobRead={handleCronjobRead}
+              isStartPending={pendingStartIds.has(cronjob.id)}
+              startReadErrorAt={
+                hasCurrentReadbacks
+                  ? startReadErrorTimes[cronjob.id]
+                  : undefined
+              }
+              onStartPendingChange={handleStartPendingChange}
+              onStartReadError={handleStartReadError}
             />
           ))
         ) : (
@@ -167,7 +230,7 @@ export function CronjobListPage({ cronjobPage }: CronjobListProps) {
             </TableHeader>
             <TableBody>
               {cronjobs.length > 0 ? (
-                cronjobs.map((cronjob) => (
+                displayedCronjobs.map((cronjob) => (
                   <TableRow
                     key={cronjob.id}
                     className="border-border transition-colors hover:bg-muted/50"
@@ -233,11 +296,20 @@ export function CronjobListPage({ cronjobPage }: CronjobListProps) {
                       )}
                     </TableCell>
                     <TableCell className="text-center">
-                      <div className="flex items-center justify-center gap-1">
+                      <div className="flex flex-wrap items-center justify-center gap-1">
                         <StatusActions
                           id={cronjob.id}
                           scheduleStatus={cronjob.scheduleStatus}
                           executionStatus={cronjob.executionStatus}
+                          onCronjobRead={handleCronjobRead}
+                          isStartPending={pendingStartIds.has(cronjob.id)}
+                          startReadErrorAt={
+                            hasCurrentReadbacks
+                              ? startReadErrorTimes[cronjob.id]
+                              : undefined
+                          }
+                          onStartPendingChange={handleStartPendingChange}
+                          onStartReadError={handleStartReadError}
                         />
                       </div>
                     </TableCell>
@@ -281,9 +353,19 @@ export function CronjobListPage({ cronjobPage }: CronjobListProps) {
 function CronjobCard({
   cronjob,
   canUpdate,
+  onCronjobRead,
+  isStartPending,
+  startReadErrorAt,
+  onStartPendingChange,
+  onStartReadError,
 }: {
   cronjob: CronjobResponse
   canUpdate: boolean
+  onCronjobRead: (cronjob: CronjobResponse) => void
+  isStartPending: boolean
+  startReadErrorAt?: number
+  onStartPendingChange: (id: number, isPending: boolean) => void
+  onStartReadError: (id: number) => void
 }) {
   const { dictionary, formatDateTime } = useLocalization()
   const t = dictionary.cronjobs
@@ -369,12 +451,16 @@ function CronjobCard({
         </div>
       </div>
 
-      <div className="mt-4 flex items-center justify-end gap-1 border-t border-border pt-3">
-        <span className="sr-only">{t.actionsColumn}</span>
+      <div className="mt-4 flex flex-wrap items-center justify-start gap-1 border-t border-border pt-3">
         <StatusActions
           id={cronjob.id}
           scheduleStatus={cronjob.scheduleStatus}
           executionStatus={cronjob.executionStatus}
+          onCronjobRead={onCronjobRead}
+          isStartPending={isStartPending}
+          startReadErrorAt={startReadErrorAt}
+          onStartPendingChange={onStartPendingChange}
+          onStartReadError={onStartReadError}
         />
       </div>
     </article>
@@ -544,26 +630,55 @@ function StatusActions({
   id,
   scheduleStatus,
   executionStatus,
+  onCronjobRead,
+  isStartPending,
+  startReadErrorAt,
+  onStartPendingChange,
+  onStartReadError,
 }: {
   id: number
   scheduleStatus: CronjobResponse["scheduleStatus"]
   executionStatus: CronjobResponse["executionStatus"]
+  onCronjobRead: (cronjob: CronjobResponse) => void
+  isStartPending: boolean
+  startReadErrorAt?: number
+  onStartPendingChange: (id: number, isPending: boolean) => void
+  onStartReadError: (id: number) => void
 }) {
-  const { dictionary } = useLocalization()
+  const { dictionary, formatDateTime } = useLocalization()
+  const canReadCronjob = useHasPermission("cronjob:read")
   const canStartCronjob = useHasPermission("cronjob:start")
   const canPauseCronjob = useHasPermission("cronjob:pause")
   const canResumeCronjob = useHasPermission("cronjob:resume")
   const [isPending, startTransition] = useTransition()
   const router = useRouter()
+  const actionsRef = useRef<HTMLDivElement>(null)
+  const startButtonRef = useRef<HTMLButtonElement>(null)
+  const shouldFocusActions = useRef(false)
 
   const handleStart = () => {
+    shouldFocusActions.current =
+      startButtonRef.current === document.activeElement
+    onStartPendingChange(id, true)
     startTransition(async () => {
-      const result = await startCronjob(id)
-      if (result.success) {
-        toast.success(dictionary.cronjobs.started)
-        router.refresh()
-      } else {
-        toast.error(result.error || dictionary.cronjobs.startError)
+      try {
+        const result = await startCronjob(id)
+        if (result.success) {
+          toast.success(dictionary.cronjobs.startAccepted)
+        } else {
+          toast.error(result.error || dictionary.cronjobs.startError)
+        }
+      } catch {
+        toast.error(dictionary.cronjobs.startError)
+      } finally {
+        try {
+          const cronjob = await getCronjobById(id)
+          onCronjobRead(cronjob)
+        } catch {
+          onStartReadError(id)
+        } finally {
+          onStartPendingChange(id, false)
+        }
       }
     })
   }
@@ -594,27 +709,57 @@ function StatusActions({
 
   const isNotRunning = executionStatus === "NOT_RUNNING"
   const canStart =
+    canReadCronjob &&
     isNotRunning &&
     (scheduleStatus === "SCHEDULED" || scheduleStatus === "UNSCHEDULED")
   const canPause = scheduleStatus === "SCHEDULED"
   const canResume = scheduleStatus === "PAUSED"
+  const hasStartReadError = startReadErrorAt !== undefined
+
+  useEffect(() => {
+    if (!isStartPending && shouldFocusActions.current) {
+      if (canStart && !hasStartReadError) {
+        startButtonRef.current?.focus()
+      } else {
+        actionsRef.current?.focus()
+      }
+      shouldFocusActions.current = false
+    }
+  }, [canStart, hasStartReadError, isStartPending])
 
   return (
-    <>
+    <div
+      ref={actionsRef}
+      role="group"
+      aria-label={dictionary.cronjobs.actionsColumn}
+      tabIndex={-1}
+      className="flex flex-wrap items-center justify-center gap-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+    >
       {canStart && canStartCronjob ? (
         <Button
-          variant="ghost"
-          size="icon"
-          title={dictionary.cronjobs.start}
-          disabled={isPending}
+          ref={startButtonRef}
+          type="button"
+          variant="positive"
+          size="lg"
+          title={
+            isStartPending
+              ? dictionary.cronjobs.starting
+              : dictionary.cronjobs.start
+          }
+          disabled={isPending || isStartPending || hasStartReadError}
+          aria-busy={isStartPending}
           onClick={handleStart}
         >
-          {isPending ? (
-            <Spinner data-icon="inline-start" />
+          {isStartPending ? (
+            <Spinner aria-hidden="true" data-icon="inline-start" />
           ) : (
             <Play data-icon="inline-start" />
           )}
-          <span className="sr-only">{dictionary.cronjobs.start}</span>
+          <span aria-live="polite">
+            {isStartPending
+              ? dictionary.cronjobs.starting
+              : dictionary.cronjobs.start}
+          </span>
         </Button>
       ) : null}
       {canPause && canPauseCronjob ? (
@@ -622,7 +767,7 @@ function StatusActions({
           variant="ghost"
           size="icon"
           title={dictionary.cronjobs.pause}
-          disabled={isPending}
+          disabled={isPending || isStartPending || hasStartReadError}
           onClick={handlePause}
         >
           {isPending ? (
@@ -638,7 +783,7 @@ function StatusActions({
           variant="ghost"
           size="icon"
           title={dictionary.cronjobs.resume}
-          disabled={isPending}
+          disabled={isPending || isStartPending || hasStartReadError}
           onClick={handleResume}
         >
           {isPending ? (
@@ -649,6 +794,25 @@ function StatusActions({
           <span className="sr-only">{dictionary.cronjobs.resume}</span>
         </Button>
       ) : null}
-    </>
+      {hasStartReadError ? (
+        <span
+          role="alert"
+          className="basis-full text-left text-xs text-destructive"
+        >
+          {dictionary.cronjobs.startReadError.replace(
+            "{time}",
+            formatDateTime(startReadErrorAt, {
+              year: "numeric",
+              month: "short",
+              day: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+              timeZone: "UTC",
+              timeZoneName: "short",
+            })
+          )}
+        </span>
+      ) : null}
+    </div>
   )
 }
