@@ -2883,6 +2883,7 @@ export const vi = {
     cronTooLong: "Biểu thức cron quá dài.",
     cronUpdated: "Đã cập nhật lịch chạy cronjob.",
     cronUpdateError: "Không thể cập nhật lịch chạy cronjob.",
+    invalidCronjobId: "Mã cronjob không hợp lệ.",
     editCron: "Chỉnh sửa biểu thức cron",
     saveCron: "Lưu biểu thức cron",
     cancelEdit: "Hủy chỉnh sửa",
@@ -2891,7 +2892,7 @@ export const vi = {
     startAccepted: "Đã tiếp nhận yêu cầu chạy ngay.",
     startError: "Không thể khởi chạy cronjob.",
     startReadError:
-      "Không thể tải trạng thái tác vụ mới nhất. Thông tin đang hiển thị có thể đã cũ.",
+      "Chưa xác nhận được trạng thái hiện tại. Lần đọc thất bại lúc {time}; thông tin đang hiển thị có thể đã cũ. Hãy tải lại trang để kiểm tra.",
     pause: "Tạm dừng",
     paused: "Đã tạm dừng cronjob.",
     pauseError: "Không thể tạm dừng cronjob.",

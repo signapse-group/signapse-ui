@@ -25,6 +25,10 @@ async function fetchCronjob(
   return CronjobResponseSchema.parse(response)
 }
 
+function isValidCronjobId(id: unknown): id is number {
+  return typeof id === "number" && Number.isSafeInteger(id) && id > 0
+}
+
 export async function getCronjobs(
   searchParams: SearchParams
 ): Promise<CronjobPageResponse> {
@@ -35,6 +39,11 @@ export async function getCronjobs(
 }
 
 export async function getCronjobById(id: number): Promise<CronjobResponse> {
+  if (!isValidCronjobId(id)) {
+    const dictionary = await getDictionary(await getRequestLocale())
+    throw new Error(dictionary.cronjobs.invalidCronjobId)
+  }
+
   return fetchCronjob(`/cronjobs/${id}`)
 }
 
@@ -65,7 +74,7 @@ export async function updateCronjob(
 }
 
 export async function startCronjob(id: number): Promise<ActionResult<void>> {
-  if (!Number.isSafeInteger(id) || id <= 0) {
+  if (!isValidCronjobId(id)) {
     const dictionary = await getDictionary(await getRequestLocale())
     return { success: false, error: dictionary.cronjobs.startError }
   }

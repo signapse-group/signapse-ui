@@ -2902,6 +2902,7 @@ export const en: Dictionary = {
     cronTooLong: "Cron expression is too long.",
     cronUpdated: "Cron schedule updated.",
     cronUpdateError: "Could not update the cron schedule.",
+    invalidCronjobId: "Invalid cronjob ID.",
     editCron: "Edit cron expression",
     saveCron: "Save cron expression",
     cancelEdit: "Cancel edit",
@@ -2910,7 +2911,7 @@ export const en: Dictionary = {
     startAccepted: "Start request accepted.",
     startError: "Could not start cronjob.",
     startReadError:
-      "Could not load the latest cronjob status. Displayed values may be outdated.",
+      "Current status is unknown. The latest read failed at {time}; displayed values may be outdated. Refresh the page to verify.",
     pause: "Pause",
     paused: "Cronjob paused.",
     pauseError: "Could not pause cronjob.",

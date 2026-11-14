@@ -371,7 +371,9 @@ describe("CronjobListPage", () => {
     const card = screen.getByRole("article", {
       name: "Immediate trigger not started",
     })
-    await user.click(within(card).getByRole("button", { name: "Start" }))
+    const startButton = within(card).getByRole("button", { name: "Start" })
+    startButton.focus()
+    await user.keyboard("{Enter}")
 
     await waitFor(() => {
       expect(mocks.getCronjobById).toHaveBeenCalledWith(4)
@@ -408,7 +410,7 @@ describe("CronjobListPage", () => {
     await waitFor(() => expect(mocks.getCronjobById).toHaveBeenCalledWith(4))
   })
 
-  it("announces a readback failure and marks displayed mobile data as outdated", async () => {
+  it("announces an unknown status with the read failure time and disables Start", async () => {
     const user = userEvent.setup()
     mocks.getCronjobById.mockRejectedValue(new Error("HTTP 500"))
     renderCronjobList(["cronjob:read", "cronjob:start"])
@@ -419,17 +421,78 @@ describe("CronjobListPage", () => {
     const row = screen.getByRole("row", {
       name: /Immediate trigger not started/,
     })
-    await user.click(within(card).getByRole("button", { name: "Start" }))
+    const startButton = within(card).getByRole("button", { name: "Start" })
+    startButton.focus()
+    await user.keyboard("{Enter}")
 
     const readError = await within(card).findByRole("alert")
     expect(readError).toHaveTextContent(
-      "Could not load the latest cronjob status. Displayed values may be outdated."
+      "Current status is unknown. The latest read failed at"
     )
+    expect(readError).toHaveTextContent("UTC")
+    expect(readError).toHaveTextContent("displayed values may be outdated.")
     expect(within(row).getByRole("alert")).toHaveTextContent(
-      "Could not load the latest cronjob status. Displayed values may be outdated."
+      "Current status is unknown. The latest read failed at"
     )
     expect(within(card).getByText("Idle")).toBeVisible()
+    expect(within(card).getByRole("button", { name: "Start" })).toBeDisabled()
+    expect(within(card).getByRole("group", { name: "Actions" })).toHaveFocus()
     expect(mocks.toastSuccess).toHaveBeenCalledWith("Start request accepted.")
+  })
+
+  it("localizes the unknown status and timestamp after a mobile readback failure", async () => {
+    const user = userEvent.setup()
+    mocks.getCronjobById.mockRejectedValue(new Error("HTTP 500"))
+    renderCronjobList(["cronjob:read", "cronjob:start"], page, "vi")
+
+    const card = screen.getByRole("article", {
+      name: "Immediate trigger not started",
+    })
+    const row = screen.getByRole("row", {
+      name: /Immediate trigger not started/,
+    })
+    await user.click(within(card).getByRole("button", { name: "Khởi chạy" }))
+
+    const readError = await within(card).findByRole("alert")
+    expect(readError).toHaveTextContent(
+      "Chưa xác nhận được trạng thái hiện tại."
+    )
+    expect(readError).toHaveTextContent("Lần đọc thất bại lúc")
+    expect(readError).toHaveTextContent("UTC")
+    expect(within(row).getByRole("alert")).toHaveTextContent(
+      "Chưa xác nhận được trạng thái hiện tại."
+    )
+    expect(
+      within(card).getByRole("button", { name: "Khởi chạy" })
+    ).toBeDisabled()
+  })
+
+  it("marks an earlier readback stale and disables status actions after a later read fails", async () => {
+    const user = userEvent.setup()
+    const previouslyRead: CronjobResponse = {
+      ...cronjobs[3],
+      scheduleStatus: "SCHEDULED",
+      latestResult: "FAILED",
+      lastExecutedTime: "2026-11-14T12:00:00Z",
+    }
+    mocks.getCronjobById
+      .mockResolvedValueOnce(previouslyRead)
+      .mockRejectedValueOnce(new Error("HTTP 500"))
+    renderCronjobList(["cronjob:read", "cronjob:start", "cronjob:pause"])
+
+    const card = screen.getByRole("article", {
+      name: "Immediate trigger not started",
+    })
+    await user.click(within(card).getByRole("button", { name: "Start" }))
+    await waitFor(() => expect(within(card).getByText("Failed")).toBeVisible())
+
+    await user.click(within(card).getByRole("button", { name: "Start" }))
+
+    const readError = await within(card).findByRole("alert")
+    expect(readError).toHaveTextContent("Current status is unknown.")
+    expect(within(card).getByText("Failed")).toBeVisible()
+    expect(within(card).getByRole("button", { name: "Start" })).toBeDisabled()
+    expect(within(card).getByRole("button", { name: "Pause" })).toBeDisabled()
   })
 
   it("does not restore previous-page readbacks after a Start readback fails", async () => {

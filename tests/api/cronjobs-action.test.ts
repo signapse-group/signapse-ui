@@ -65,6 +65,7 @@ beforeEach(() => {
     cronjobs: {
       cronRequired: "Cron expression is required.",
       cronUpdateError: "Could not update the cron schedule.",
+      invalidCronjobId: "Invalid cronjob ID.",
       startError: "Could not start cronjob.",
       pauseError: "Could not pause cronjob.",
     },
@@ -91,6 +92,21 @@ describe("cronjob API actions", () => {
       "/cronjobs/42",
       undefined
     )
+  })
+
+  it.each([
+    0,
+    -1,
+    1.5,
+    Number.NaN,
+    Number.POSITIVE_INFINITY,
+    Number.MAX_SAFE_INTEGER + 1,
+    "42",
+  ])("rejects invalid detail ID %s before sending a request", async (id) => {
+    await expect(getCronjobById(id as number)).rejects.toThrow(
+      "Invalid cronjob ID."
+    )
+    expect(mocks.fetchAuthenticated).not.toHaveBeenCalled()
   })
 
   it("accepts an API page with omitted optional pagination metadata", async () => {

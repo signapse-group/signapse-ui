@@ -90,6 +90,7 @@ Light mode và dark mode phải là hai biến thể của cùng một direction
 - Wrapper trong `components/ui` có thể được bảo trì theo shadcn workflow, nhưng không nhận feature-specific visual customization.
 - Wrapper shadcn mặc định phải giữ contract variant, size và chrome từ registry item của preset hiện tại.
 - Không thêm variant, size hoặc chrome vào wrapper chỉ để phục vụ một feature, prototype hoặc trạng thái cục bộ. Ngoại lệ phải là quyết định design-system có nhu cầu dùng chung rõ ràng và được ghi nhận trong tài liệu này trước khi triển khai.
+- Dùng Button variant positive cho affirmative action khi hướng thiết kế đã duyệt yêu cầu treatment xanh; variant dùng token shared positive-action và positive-action-foreground. Không đổi màu Button qua className. Start trên Cronjobs là reference đã duyệt tại SIGN-28, được áp dụng cho Start trong SIGN-579.
 
 ### Semantic Tokens
 
