@@ -19,11 +19,11 @@ initial content supplied by each feature.
 
 Jira [Signapse](https://signapse-group.atlassian.net/) project `SIGN` holds assigned
 contracts and lifecycle state. [Planning's execution workflow](https://github.com/signapse-group/signapse-planing/blob/main/workflow/project-execution-workflow.md)
-defines hierarchy, routing and human acceptance. This repository's
-[WORKFLOW.md](WORKFLOW.md) configures its Symphony worker for native Subtasks with
-`route-frontend`; GitHub hosts code, PRs and CI.
+defines hierarchy, routing and human acceptance. The Symphony runtime profile routes
+native Subtasks with `route-frontend`. GitHub hosts code, PRs and CI.
 
-[WORKFLOW.md](WORKFLOW.md) is the execution entrypoint for assigned phases.
+[WORKFLOW.md](WORKFLOW.md) is the prompt for assigned phases. Symphony reads it from
+the task checkout.
 [CONTRIBUTING.md](CONTRIBUTING.md) owns shared implementation, verification and review
 standards. Technical skills under `.agents/skills` are available after clone,
 independently of Symphony releases, and are selected when the task needs them.
