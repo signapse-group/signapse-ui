@@ -1,24 +1,26 @@
 import ExUnit.Assertions
 
-alias SymphonyElixir.{Config, PromptBuilder, Workflow}
+alias SymphonyElixir.{Config, Instructions, Workflow}
 alias SymphonyElixir.Config.Schema
 alias SymphonyElixir.Jira.Client
 alias SymphonyElixir.Tracker.Issue
 
-# Run from the Symphony Elixir project with mix run --no-start and a workflow path.
+# Run from Symphony Elixir with mix run --no-start, a profile path, and a checkout prompt path.
 assert Process.whereis(SymphonyElixir.Supervisor) == nil
-[workflow_path] = System.argv()
+[profile_path, workflow_path] = System.argv()
+root = Path.dirname(Path.expand(workflow_path))
+workflow = Path.basename(workflow_path)
 
 System.put_env(%{
   "JIRA_BASE_URL" => "https://jira.invalid",
   "JIRA_EMAIL" => "fixture@example.invalid",
   "JIRA_API_TOKEN" => "offline-fixture",
+  "CONTROL_DB" => Path.join(System.tmp_dir!(), "fe-workflow-offline.sqlite3"),
   "SYMPHONY_WORKSPACE_ROOT" => Path.join(System.tmp_dir!(), "ui-workflow-offline")
 })
 
-Application.put_env(:symphony_elixir, :workflow_file_path, Path.expand(workflow_path))
-{:ok, workflow} = Workflow.load(workflow_path)
-{:ok, settings} = Schema.parse(workflow.config)
+{:ok, %{config: config}} = Workflow.load(profile_path)
+{:ok, settings} = Schema.parse(config)
 assert :ok == Config.validate_settings(settings)
 assert settings.tracker.kind == "jira"
 assert settings.tracker.provider["project_key"] == "SIGN"
@@ -108,7 +110,7 @@ runbooks = %{
 }
 
 for path <- Map.values(runbooks) do
-  assert File.regular?(Path.join(Path.dirname(Path.expand(workflow_path)), path))
+  assert File.regular?(Path.join(root, path))
 end
 
 fixtures =
@@ -117,7 +119,10 @@ fixtures =
       description <- [nil, "", "Offline accepted contract"],
       native_ref <- [nil, %{issue_type: nil, parent: nil}, issue.native_ref] do
     candidate = %{issue | state: state, description: description, native_ref: native_ref}
-    rendered = PromptBuilder.build_prompt(candidate, attempt: attempt)
+
+    assert {:ok, %{prompt: rendered}} =
+             Instructions.checkout_prompt(root, workflow, candidate, settings, attempt)
+
     assert String.contains?(rendered, issue.identifier)
     assert String.contains?(rendered, issue.id)
     if native_ref && native_ref.parent, do: assert(String.contains?(rendered, "SIGN-90000"))
@@ -143,8 +148,12 @@ fixtures =
 
 assert String.contains?(settings.hooks.after_create, "clone --depth 1 --branch dev ")
 assert String.contains?(settings.hooks.before_run, "refs/heads/dev:refs/remotes/origin/dev")
-assert String.contains?(workflow.prompt_template, "git show origin/dev:<path>")
-root = Path.dirname(Path.expand(workflow_path))
+assert {:ok, %{template: template}} = Instructions.checkout_template(root, workflow)
+assert template =~ "from this checkout"
+refute template =~ "git show origin/dev"
+review_skill = ".agents/skills/code-review/SKILL.md"
+assert File.regular?(Path.join(root, review_skill))
+
 for path <- ["AGENTS.md", "components/AGENTS.override.md"] ++ Map.values(runbooks) do
   source = File.read!(Path.join(root, path))
   refute String.contains?(source, "signapse-planing/blob/main/workflow/project-execution-workflow.md#ui-design-gate")
@@ -164,7 +173,9 @@ for {state, phase} <- [
       {"Waiting", "Stop"},
       {"", "Stop"}
     ] do
-  rendered = PromptBuilder.build_prompt(%{issue | state: state})
+  assert {:ok, %{prompt: rendered}} =
+           Instructions.checkout_prompt(root, workflow, %{issue | state: state}, settings)
+
   assert String.contains?(rendered, "## Phase: #{phase}")
   for {name, path} <- runbooks do
     assert String.contains?(rendered, "](#{path})") == (phase == name)
