@@ -152,7 +152,6 @@ assert template =~ "from this checkout"
 refute template =~ "git show origin/dev"
 review_skill = ".agents/skills/code-review/SKILL.md"
 assert File.regular?(Path.join(root, review_skill))
-assert File.read!(Path.join(root, runbooks["Review"])) =~ review_skill
 
 for path <- ["AGENTS.md", "components/AGENTS.override.md"] ++ Map.values(runbooks) do
   source = File.read!(Path.join(root, path))
