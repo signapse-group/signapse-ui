@@ -1,14 +1,24 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen, within } from "@testing-library/react"
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react"
 import type { ComponentProps } from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import userEvent from "@testing-library/user-event"
 
 const mocks = vi.hoisted(() => ({
   pauseCronjob: vi.fn(),
   resumeCronjob: vi.fn(),
   startCronjob: vi.fn(),
+  getCronjobById: vi.fn(),
   updateCronjob: vi.fn(),
+  toastError: vi.fn(),
+  toastSuccess: vi.fn(),
   routerPush: vi.fn(),
   routerReplace: vi.fn(),
   routerRefresh: vi.fn(),
@@ -34,10 +44,14 @@ vi.mock("next/link", () => ({
   ),
 }))
 vi.mock("@/app/api/cronjobs/action", () => ({
+  getCronjobById: mocks.getCronjobById,
   pauseCronjob: mocks.pauseCronjob,
   resumeCronjob: mocks.resumeCronjob,
   startCronjob: mocks.startCronjob,
   updateCronjob: mocks.updateCronjob,
+}))
+vi.mock("sonner", () => ({
+  toast: { error: mocks.toastError, success: mocks.toastSuccess },
 }))
 
 import { en } from "@/app/lib/i18n/dictionaries/en"
@@ -130,6 +144,8 @@ describe("CronjobListPage", () => {
     mocks.searchParams = new URLSearchParams(
       "page=2&size=20&jobName%5BcontainsIgnoreCase%5D=market"
     )
+    mocks.startCronjob.mockResolvedValue({ success: true, data: undefined })
+    mocks.getCronjobById.mockResolvedValue(cronjobs[3])
   })
 
   afterEach(() => {
@@ -225,7 +241,12 @@ describe("CronjobListPage", () => {
   })
 
   it("shows only individually permitted controls and respects paused execution", () => {
-    renderCronjobList(["cronjob:pause", "cronjob:resume", "cronjob:start"])
+    renderCronjobList([
+      "cronjob:read",
+      "cronjob:pause",
+      "cronjob:resume",
+      "cronjob:start",
+    ])
 
     const pausedRunning = screen.getByRole("article", {
       name: "Paused during execution",
@@ -254,6 +275,282 @@ describe("CronjobListPage", () => {
     ).toBeNull()
     expect(within(queued).getByRole("button", { name: "Start" })).toBeEnabled()
     expect(within(queued).queryByRole("button", { name: "Pause" })).toBeNull()
+  })
+
+  it("requires read permission before exposing Start", () => {
+    renderCronjobList(["cronjob:start"])
+
+    expect(screen.queryByRole("button", { name: "Start" })).toBeNull()
+  })
+
+  it("announces acceptance and updates the mobile card from the readback after keyboard activation", async () => {
+    const user = userEvent.setup()
+    const readback: CronjobResponse = {
+      ...cronjobs[3],
+      executionStatus: "RUNNING",
+    }
+    mocks.getCronjobById.mockResolvedValue(readback)
+    renderCronjobList(["cronjob:read", "cronjob:start"])
+
+    const card = screen.getByRole("article", {
+      name: "Immediate trigger not started",
+    })
+    const start = within(card).getByRole("button", { name: "Start" })
+    expect(start).toHaveTextContent("Start")
+    expect(start).toHaveClass("bg-positive-action")
+    start.focus()
+    await user.keyboard("{Enter}")
+
+    await waitFor(() => {
+      expect(mocks.startCronjob).toHaveBeenCalledWith(4)
+      expect(mocks.getCronjobById).toHaveBeenCalledWith(4)
+      expect(within(card).queryByRole("button", { name: "Start" })).toBeNull()
+      expect(within(card).getByRole("group", { name: "Actions" })).toHaveFocus()
+    })
+    expect(
+      within(
+        screen.getByRole("row", { name: /Immediate trigger not started/ })
+      ).queryByRole("button", { name: "Start" })
+    ).toBeNull()
+    expect(mocks.toastSuccess).toHaveBeenCalledWith("Start request accepted.")
+    expect(within(card).getByText("Running")).toBeVisible()
+    expect(within(card).getByText("Unscheduled")).toBeVisible()
+    expect(within(card).getByText("No next run", { exact: true })).toBeVisible()
+  })
+
+  it("localizes the accepted feedback on the mobile card", async () => {
+    const user = userEvent.setup()
+    renderCronjobList(["cronjob:read", "cronjob:start"], page, "vi")
+
+    const card = screen.getByRole("article", {
+      name: "Immediate trigger not started",
+    })
+    await user.click(within(card).getByRole("button", { name: "Khởi chạy" }))
+
+    await waitFor(() => expect(mocks.getCronjobById).toHaveBeenCalledWith(4))
+    expect(mocks.toastSuccess).toHaveBeenCalledWith(
+      "Đã tiếp nhận yêu cầu chạy ngay."
+    )
+  })
+
+  it("reports a rejected start and still applies the wide row readback", async () => {
+    const user = userEvent.setup()
+    mocks.startCronjob.mockResolvedValue({
+      success: false,
+      error: "Cronjob 4 is already running.",
+    })
+    mocks.getCronjobById.mockResolvedValue({
+      ...cronjobs[3],
+      executionStatus: "RUNNING",
+    })
+    renderCronjobList(["cronjob:read", "cronjob:start"])
+
+    const row = screen.getByRole("row", {
+      name: /Immediate trigger not started/,
+    })
+    await user.click(within(row).getByRole("button", { name: "Start" }))
+
+    await waitFor(() => {
+      expect(within(row).queryByRole("button", { name: "Start" })).toBeNull()
+      expect(within(row).getByText("Running")).toBeVisible()
+    })
+    expect(mocks.toastError).toHaveBeenCalledWith(
+      "Cronjob 4 is already running."
+    )
+  })
+
+  it("reads the latest state if the Start action call rejects", async () => {
+    const user = userEvent.setup()
+    mocks.startCronjob.mockRejectedValue(new Error("Network error"))
+    mocks.getCronjobById.mockResolvedValue({
+      ...cronjobs[3],
+      executionStatus: "RUNNING",
+    })
+    renderCronjobList(["cronjob:read", "cronjob:start"])
+
+    const card = screen.getByRole("article", {
+      name: "Immediate trigger not started",
+    })
+    const startButton = within(card).getByRole("button", { name: "Start" })
+    startButton.focus()
+    await user.keyboard("{Enter}")
+
+    await waitFor(() => {
+      expect(mocks.getCronjobById).toHaveBeenCalledWith(4)
+      expect(within(card).queryByRole("button", { name: "Start" })).toBeNull()
+    })
+    expect(mocks.toastError).toHaveBeenCalledWith("Could not start cronjob.")
+  })
+
+  it("locks Start while sending the request", async () => {
+    const user = userEvent.setup()
+    let resolveStart!: (result: { success: true; data: undefined }) => void
+    mocks.startCronjob.mockReturnValue(
+      new Promise((resolve) => {
+        resolveStart = resolve
+      })
+    )
+    renderCronjobList(["cronjob:read", "cronjob:start"])
+
+    const card = screen.getByRole("article", {
+      name: "Immediate trigger not started",
+    })
+    const row = screen.getByRole("row", {
+      name: /Immediate trigger not started/,
+    })
+    const start = within(card).getByRole("button", { name: "Start" })
+    await user.click(start)
+
+    expect(start).toBeDisabled()
+    expect(start).toHaveTextContent("Starting…")
+    expect(
+      within(row).getByRole("button", { name: "Starting…" })
+    ).toBeDisabled()
+    resolveStart({ success: true, data: undefined })
+    await waitFor(() => expect(mocks.getCronjobById).toHaveBeenCalledWith(4))
+  })
+
+  it("announces an unknown status with the read failure time and disables Start", async () => {
+    const user = userEvent.setup()
+    mocks.getCronjobById.mockRejectedValue(new Error("HTTP 500"))
+    renderCronjobList(["cronjob:read", "cronjob:start"])
+
+    const card = screen.getByRole("article", {
+      name: "Immediate trigger not started",
+    })
+    const row = screen.getByRole("row", {
+      name: /Immediate trigger not started/,
+    })
+    const startButton = within(card).getByRole("button", { name: "Start" })
+    startButton.focus()
+    await user.keyboard("{Enter}")
+
+    const readError = await within(card).findByRole("alert")
+    expect(readError).toHaveTextContent(
+      "Current status is unknown. The latest read failed at"
+    )
+    expect(readError).toHaveTextContent("UTC")
+    expect(readError).toHaveTextContent("displayed values may be outdated.")
+    expect(within(row).getByRole("alert")).toHaveTextContent(
+      "Current status is unknown. The latest read failed at"
+    )
+    expect(within(card).getByText("Idle")).toBeVisible()
+    expect(within(card).getByRole("button", { name: "Start" })).toBeDisabled()
+    expect(within(card).getByRole("group", { name: "Actions" })).toHaveFocus()
+    expect(mocks.toastSuccess).toHaveBeenCalledWith("Start request accepted.")
+  })
+
+  it("localizes the unknown status and timestamp after a mobile readback failure", async () => {
+    const user = userEvent.setup()
+    mocks.getCronjobById.mockRejectedValue(new Error("HTTP 500"))
+    renderCronjobList(["cronjob:read", "cronjob:start"], page, "vi")
+
+    const card = screen.getByRole("article", {
+      name: "Immediate trigger not started",
+    })
+    const row = screen.getByRole("row", {
+      name: /Immediate trigger not started/,
+    })
+    await user.click(within(card).getByRole("button", { name: "Khởi chạy" }))
+
+    const readError = await within(card).findByRole("alert")
+    expect(readError).toHaveTextContent(
+      "Chưa xác nhận được trạng thái hiện tại."
+    )
+    expect(readError).toHaveTextContent("Lần đọc thất bại lúc")
+    expect(readError).toHaveTextContent("UTC")
+    expect(within(row).getByRole("alert")).toHaveTextContent(
+      "Chưa xác nhận được trạng thái hiện tại."
+    )
+    expect(
+      within(card).getByRole("button", { name: "Khởi chạy" })
+    ).toBeDisabled()
+  })
+
+  it("marks an earlier readback stale and disables status actions after a later read fails", async () => {
+    const user = userEvent.setup()
+    const previouslyRead: CronjobResponse = {
+      ...cronjobs[3],
+      scheduleStatus: "SCHEDULED",
+      latestResult: "FAILED",
+      lastExecutedTime: "2026-11-14T12:00:00Z",
+    }
+    mocks.getCronjobById
+      .mockResolvedValueOnce(previouslyRead)
+      .mockRejectedValueOnce(new Error("HTTP 500"))
+    renderCronjobList(["cronjob:read", "cronjob:start", "cronjob:pause"])
+
+    const card = screen.getByRole("article", {
+      name: "Immediate trigger not started",
+    })
+    await user.click(within(card).getByRole("button", { name: "Start" }))
+    await waitFor(() => expect(within(card).getByText("Failed")).toBeVisible())
+
+    await user.click(within(card).getByRole("button", { name: "Start" }))
+
+    const readError = await within(card).findByRole("alert")
+    expect(readError).toHaveTextContent("Current status is unknown.")
+    expect(within(card).getByText("Failed")).toBeVisible()
+    expect(within(card).getByRole("button", { name: "Start" })).toBeDisabled()
+    expect(within(card).getByRole("button", { name: "Pause" })).toBeDisabled()
+  })
+
+  it("does not restore previous-page readbacks after a Start readback fails", async () => {
+    const user = userEvent.setup()
+    const secondCronjob: CronjobResponse = {
+      ...cronjobs[3],
+      id: 5,
+      jobName: "Second immediate trigger",
+    }
+    const initialPage = {
+      ...page,
+      content: [cronjobs[3], secondCronjob],
+      numberOfElements: 2,
+      totalElements: 2,
+    }
+    const refreshedPage = {
+      ...initialPage,
+      content: [
+        { ...cronjobs[3], executionStatus: "NOT_RUNNING" as const },
+        secondCronjob,
+      ],
+    }
+    mocks.getCronjobById
+      .mockResolvedValueOnce({ ...cronjobs[3], executionStatus: "RUNNING" })
+      .mockRejectedValueOnce(new Error("HTTP 500"))
+    const view = renderCronjobList(
+      ["cronjob:read", "cronjob:start"],
+      initialPage
+    )
+
+    const firstRow = screen.getByRole("row", {
+      name: /Immediate trigger not started/,
+    })
+    await user.click(within(firstRow).getByRole("button", { name: "Start" }))
+    await waitFor(() =>
+      expect(
+        within(firstRow).queryByRole("button", { name: "Start" })
+      ).toBeNull()
+    )
+
+    view.rerender(
+      <LocalizationProvider locale="en" dictionary={en}>
+        <PermissionProvider permissions={["cronjob:read", "cronjob:start"]}>
+          <CronjobListPage cronjobPage={refreshedPage} />
+        </PermissionProvider>
+      </LocalizationProvider>
+    )
+
+    const secondRow = screen.getByRole("row", {
+      name: /Second immediate trigger/,
+    })
+    await user.click(within(secondRow).getByRole("button", { name: "Start" }))
+    await within(secondRow).findByRole("alert")
+
+    expect(within(firstRow).getByText("Idle")).toBeVisible()
+    expect(
+      within(firstRow).getByRole("button", { name: "Start" })
+    ).toBeEnabled()
   })
 
   it("keeps loaded rows visible and labels missing pagination metadata", () => {

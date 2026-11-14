@@ -65,6 +65,7 @@ beforeEach(() => {
     cronjobs: {
       cronRequired: "Cron expression is required.",
       cronUpdateError: "Could not update the cron schedule.",
+      invalidCronjobId: "Invalid cronjob ID.",
       startError: "Could not start cronjob.",
       pauseError: "Could not pause cronjob.",
     },
@@ -91,6 +92,21 @@ describe("cronjob API actions", () => {
       "/cronjobs/42",
       undefined
     )
+  })
+
+  it.each([
+    0,
+    -1,
+    1.5,
+    Number.NaN,
+    Number.POSITIVE_INFINITY,
+    Number.MAX_SAFE_INTEGER + 1,
+    "42",
+  ])("rejects invalid detail ID %s before sending a request", async (id) => {
+    await expect(getCronjobById(id as number)).rejects.toThrow(
+      "Invalid cronjob ID."
+    )
+    expect(mocks.fetchAuthenticated).not.toHaveBeenCalled()
   })
 
   it("accepts an API page with omitted optional pagination metadata", async () => {
@@ -124,8 +140,54 @@ describe("cronjob API actions", () => {
     expect(mocks.revalidatePath).not.toHaveBeenCalled()
   })
 
-  it("returns localized fallback copy when a mutation response fails validation", async () => {
-    mocks.fetchAuthenticated.mockResolvedValue({ invalid: true })
+  it("treats POST success as acceptance without relying on its execution state", async () => {
+    mocks.fetchAuthenticated.mockResolvedValue({
+      ...cronjob,
+      executionStatus: "NOT_RUNNING",
+    })
+
+    await expect(startCronjob(42)).resolves.toEqual({
+      success: true,
+      data: undefined,
+    })
+    expect(mocks.fetchAuthenticated).toHaveBeenCalledWith(
+      "/cronjobs/42/start",
+      { method: "POST" }
+    )
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/cronjobs")
+  })
+
+  it.each([
+    0,
+    -1,
+    1.5,
+    Number.NaN,
+    Number.POSITIVE_INFINITY,
+    Number.MAX_SAFE_INTEGER + 1,
+  ])("rejects invalid start ID %s before sending a request", async (id) => {
+    await expect(startCronjob(id)).resolves.toEqual({
+      success: false,
+      error: "Could not start cronjob.",
+    })
+    expect(mocks.fetchAuthenticated).not.toHaveBeenCalled()
+  })
+
+  it("returns a localized backend refusal when the start request fails", async () => {
+    const backendError = Object.assign(
+      new Error("Cronjob 42 is already running."),
+      { status: 409 }
+    )
+    mocks.fetchAuthenticated.mockRejectedValue(backendError)
+
+    await expect(startCronjob(42)).resolves.toEqual({
+      success: false,
+      error: "Cronjob 42 is already running.",
+    })
+    expect(mocks.revalidatePath).not.toHaveBeenCalled()
+  })
+
+  it("uses localized fallback copy for transport failures", async () => {
+    mocks.fetchAuthenticated.mockRejectedValue(new Error("fetch failed"))
 
     await expect(startCronjob(42)).resolves.toEqual({
       success: false,

@@ -1,6 +1,6 @@
 "use server"
 
-import { fetchAuthenticated } from "@/app/api/auth/action"
+import { fetchAuthenticated, type BackendApiError } from "@/app/api/auth/action"
 import type { ActionResult, SearchParams } from "@/app/lib/definitions"
 import { getDictionary } from "@/app/lib/i18n/dictionaries"
 import { getRequestLocale } from "@/app/lib/i18n/server"
@@ -25,6 +25,10 @@ async function fetchCronjob(
   return CronjobResponseSchema.parse(response)
 }
 
+function isValidCronjobId(id: unknown): id is number {
+  return typeof id === "number" && Number.isSafeInteger(id) && id > 0
+}
+
 export async function getCronjobs(
   searchParams: SearchParams
 ): Promise<CronjobPageResponse> {
@@ -35,6 +39,11 @@ export async function getCronjobs(
 }
 
 export async function getCronjobById(id: number): Promise<CronjobResponse> {
+  if (!isValidCronjobId(id)) {
+    const dictionary = await getDictionary(await getRequestLocale())
+    throw new Error(dictionary.cronjobs.invalidCronjobId)
+  }
+
   return fetchCronjob(`/cronjobs/${id}`)
 }
 
@@ -64,20 +73,27 @@ export async function updateCronjob(
   }
 }
 
-export async function startCronjob(
-  id: number
-): Promise<ActionResult<CronjobResponse>> {
+export async function startCronjob(id: number): Promise<ActionResult<void>> {
+  if (!isValidCronjobId(id)) {
+    const dictionary = await getDictionary(await getRequestLocale())
+    return { success: false, error: dictionary.cronjobs.startError }
+  }
+
   try {
-    const cronjob = await fetchCronjob(`/cronjobs/${id}/start`, {
+    await fetchAuthenticated<unknown>(`/cronjobs/${id}/start`, {
       method: "POST",
     })
     revalidatePath("/cronjobs")
-    return { success: true, data: cronjob }
-  } catch {
+    return { success: true, data: undefined }
+  } catch (error: unknown) {
     const dictionary = await getDictionary(await getRequestLocale())
     return {
       success: false,
-      error: dictionary.cronjobs.startError,
+      error:
+        error instanceof Error &&
+        typeof (error as BackendApiError).status === "number"
+          ? error.message
+          : dictionary.cronjobs.startError,
     }
   }
 }
