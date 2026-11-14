@@ -15,6 +15,7 @@ System.put_env(%{
   "JIRA_BASE_URL" => "https://jira.invalid",
   "JIRA_EMAIL" => "fixture@example.invalid",
   "JIRA_API_TOKEN" => "offline-fixture",
+  "CONTROL_DB" => Path.join(System.tmp_dir!(), "fe-workflow-offline.sqlite3"),
   "SYMPHONY_WORKSPACE_ROOT" => Path.join(System.tmp_dir!(), "ui-workflow-offline")
 })
 
