@@ -33,6 +33,10 @@ type PauseCronjobActionResult =
   | { success: true; data: CronjobResponse }
   | { success: false; error: string; ambiguous: boolean }
 
+type ResumeCronjobActionResult =
+  | { success: true; data: CronjobResponse }
+  | { success: false; error: string; ambiguous: boolean }
+
 export async function getCronjobs(
   searchParams: SearchParams
 ): Promise<CronjobPageResponse> {
@@ -131,7 +135,7 @@ export async function pauseCronjob(
       message = dictionary.cronjobs.pauseNotFound
     } else if (status === 409) {
       if (backendError?.code === "USER_PROVISIONING_REJECTED") {
-        message = dictionary.cronjobs.pauseProvisioningRejected
+        message = dictionary.cronjobs.provisioningRejected
       }
     }
     return {
@@ -144,18 +148,50 @@ export async function pauseCronjob(
 
 export async function resumeCronjob(
   id: number
-): Promise<ActionResult<CronjobResponse>> {
+): Promise<ResumeCronjobActionResult> {
+  if (!isValidCronjobId(id)) {
+    const dictionary = await getDictionary(await getRequestLocale())
+    return {
+      success: false,
+      error: dictionary.cronjobs.invalidCronjobId,
+      ambiguous: false,
+    }
+  }
+
   try {
     const cronjob = await fetchCronjob(`/cronjobs/${id}/resume`, {
       method: "POST",
     })
     revalidatePath("/cronjobs")
     return { success: true, data: cronjob }
-  } catch {
+  } catch (error: unknown) {
     const dictionary = await getDictionary(await getRequestLocale())
+    const status =
+      error instanceof Error ? (error as BackendApiError).status : undefined
     return {
       success: false,
-      error: dictionary.cronjobs.resumeError,
+      error: getResumeError(error, dictionary.cronjobs),
+      ambiguous: status === undefined || status >= 500,
     }
   }
+}
+
+function getResumeError(
+  error: unknown,
+  messages: Awaited<ReturnType<typeof getDictionary>>["cronjobs"]
+): string {
+  if (!(error instanceof Error)) return messages.resumeError
+
+  const status = (error as BackendApiError).status
+  if (status === 401 || status === 403) {
+    return messages.resumePermissionError
+  }
+  if (status === 404) return messages.resumeMissingError
+  if (status === 409) {
+    return (error as BackendApiError).code === "USER_PROVISIONING_REJECTED"
+      ? messages.provisioningRejected
+      : messages.resumeConflictError
+  }
+
+  return messages.resumeError
 }
