@@ -277,10 +277,244 @@ describe("CronjobListPage", () => {
     expect(within(queued).queryByRole("button", { name: "Pause" })).toBeNull()
   })
 
-  it("requires read permission before exposing Start", () => {
-    renderCronjobList(["cronjob:start"])
+  it("requires read permission before exposing Pause or Start", () => {
+    renderCronjobList(["cronjob:start", "cronjob:pause"])
 
     expect(screen.queryByRole("button", { name: "Start" })).toBeNull()
+    expect(screen.queryByRole("button", { name: "Pause" })).toBeNull()
+  })
+
+  it("hides Pause without pause permission while keeping other permitted actions", () => {
+    renderCronjobList(["cronjob:read", "cronjob:start"])
+
+    const scheduled = screen.getByRole("article", {
+      name: "Scheduled and running",
+    })
+    const unscheduled = screen.getByRole("article", {
+      name: "Immediate trigger not started",
+    })
+    expect(
+      within(scheduled).queryByRole("button", { name: "Pause" })
+    ).toBeNull()
+    expect(within(scheduled).getByRole("status")).toHaveTextContent(
+      "You do not have permission to pause this cronjob."
+    )
+    expect(
+      within(unscheduled).getByRole("button", { name: "Start" })
+    ).toBeEnabled()
+  })
+
+  it("localizes the missing Pause permission explanation", () => {
+    renderCronjobList(["cronjob:read"], page, "vi")
+
+    const scheduled = screen.getByRole("article", {
+      name: "Scheduled and running",
+    })
+    expect(within(scheduled).getByRole("status")).toHaveTextContent(
+      "Bạn không có quyền tạm dừng cronjob này."
+    )
+    expect(
+      within(scheduled).queryByRole("button", { name: "Tạm dừng" })
+    ).toBeNull()
+  })
+
+  it("locks Pause while pending, reads back a paused running job, and focuses Resume", async () => {
+    const user = userEvent.setup()
+    const pausedRunning: CronjobResponse = {
+      ...cronjobs[0],
+      scheduleStatus: "PAUSED",
+      executionStatus: "RUNNING",
+      nextTriggeredTime: null,
+    }
+    let resolvePause!: (result: {
+      success: true
+      data: CronjobResponse
+    }) => void
+    mocks.pauseCronjob.mockReturnValue(
+      new Promise((resolve) => {
+        resolvePause = resolve
+      })
+    )
+    mocks.getCronjobById.mockResolvedValue(pausedRunning)
+    renderCronjobList(["cronjob:read", "cronjob:pause", "cronjob:resume"])
+
+    const card = screen.getByRole("article", { name: "Scheduled and running" })
+    const pause = within(card).getByRole("button", { name: "Pause" })
+    pause.focus()
+    await user.keyboard("{Enter}")
+
+    expect(pause).toBeDisabled()
+    expect(pause).toHaveAccessibleName("Pausing…")
+    expect(mocks.getCronjobById).not.toHaveBeenCalled()
+
+    resolvePause({ success: true, data: pausedRunning })
+
+    const resume = await within(card).findByRole("button", { name: "Resume" })
+    await waitFor(() => expect(mocks.getCronjobById).toHaveBeenCalledWith(1))
+    expect(within(card).getByText("Paused")).toBeVisible()
+    expect(within(card).getByText("Running")).toBeVisible()
+    expect(within(card).getByText("Succeeded")).toBeVisible()
+    expect(within(card).getByText("No next run")).toBeVisible()
+    expect(resume).toHaveFocus()
+    expect(mocks.toastSuccess).toHaveBeenCalledWith("Cronjob paused.")
+  })
+
+  it("keeps the completed result separate and focuses the updated schedule without Resume permission", async () => {
+    const user = userEvent.setup()
+    const pausedAfterExecution: CronjobResponse = {
+      ...cronjobs[0],
+      scheduleStatus: "PAUSED",
+      executionStatus: "NOT_RUNNING",
+      latestResult: "FAILED",
+      lastExecutedTime: "2026-11-14T12:00:00Z",
+      nextTriggeredTime: null,
+    }
+    mocks.pauseCronjob.mockResolvedValue({
+      success: true,
+      data: pausedAfterExecution,
+    })
+    mocks.getCronjobById.mockResolvedValue(pausedAfterExecution)
+    renderCronjobList(["cronjob:read", "cronjob:pause"])
+
+    const card = screen.getByRole("article", { name: "Scheduled and running" })
+    const pause = within(card).getByRole("button", { name: "Pause" })
+    pause.focus()
+    await user.keyboard("{Enter}")
+
+    const updatedSchedule =
+      await within(card).findByLabelText("Schedule: Paused")
+    await waitFor(() => expect(mocks.getCronjobById).toHaveBeenCalledWith(1))
+    expect(within(card).getByText("Idle")).toBeVisible()
+    expect(within(card).getByText("Failed")).toBeVisible()
+    expect(within(card).getByText("No next run")).toBeVisible()
+    expect(updatedSchedule).toHaveFocus()
+    expect(within(card).queryByRole("button", { name: "Resume" })).toBeNull()
+  })
+
+  it("shows the pause refusal and uses the successful readback after a failed request", async () => {
+    const user = userEvent.setup()
+    mocks.pauseCronjob.mockResolvedValue({
+      success: false,
+      error: "Cronjob schedule is not active.",
+      ambiguous: false,
+    })
+    mocks.getCronjobById.mockResolvedValue(cronjobs[0])
+    renderCronjobList(["cronjob:read", "cronjob:pause"])
+
+    const card = screen.getByRole("article", { name: "Scheduled and running" })
+    await user.click(within(card).getByRole("button", { name: "Pause" }))
+
+    await waitFor(() => expect(mocks.getCronjobById).toHaveBeenCalledWith(1))
+    expect(mocks.toastError).toHaveBeenCalledWith(
+      "Cronjob schedule is not active."
+    )
+    expect(within(card).getByText("Scheduled")).toBeVisible()
+    expect(within(card).getByText("Running")).toBeVisible()
+    expect(within(card).queryByText("No next run")).toBeNull()
+    expect(within(card).getByRole("button", { name: "Pause" })).toBeEnabled()
+  })
+
+  it("reports success when a fresh read confirms Pause after an ambiguous request failure", async () => {
+    const user = userEvent.setup()
+    const pausedRunning: CronjobResponse = {
+      ...cronjobs[0],
+      scheduleStatus: "PAUSED",
+      nextTriggeredTime: null,
+    }
+    mocks.pauseCronjob.mockResolvedValue({
+      success: false,
+      error: "Could not pause cronjob.",
+      ambiguous: true,
+    })
+    mocks.getCronjobById.mockResolvedValue(pausedRunning)
+    renderCronjobList(["cronjob:read", "cronjob:pause", "cronjob:resume"])
+
+    const card = screen.getByRole("article", { name: "Scheduled and running" })
+    await user.click(within(card).getByRole("button", { name: "Pause" }))
+
+    expect(
+      await within(card).findByRole("button", { name: "Resume" })
+    ).toBeVisible()
+    await waitFor(() => expect(mocks.getCronjobById).toHaveBeenCalledWith(1))
+    expect(within(card).getByText("Paused")).toBeVisible()
+    expect(within(card).getByText("Running")).toBeVisible()
+    expect(within(card).getByText("Succeeded")).toBeVisible()
+    expect(within(card).getByText("No next run")).toBeVisible()
+    expect(mocks.toastSuccess).toHaveBeenCalledWith("Cronjob paused.")
+    expect(mocks.toastError).not.toHaveBeenCalled()
+  })
+
+  it("preserves a known pause refusal when the fresh read shows a concurrent pause", async () => {
+    const user = userEvent.setup()
+    const pausedRunning: CronjobResponse = {
+      ...cronjobs[0],
+      scheduleStatus: "PAUSED",
+      nextTriggeredTime: null,
+    }
+    mocks.pauseCronjob.mockResolvedValue({
+      success: false,
+      error: "Your account is not provisioned for this action.",
+      ambiguous: false,
+    })
+    mocks.getCronjobById.mockResolvedValue(pausedRunning)
+    renderCronjobList(["cronjob:read", "cronjob:pause", "cronjob:resume"])
+
+    const card = screen.getByRole("article", { name: "Scheduled and running" })
+    await user.click(within(card).getByRole("button", { name: "Pause" }))
+
+    expect(
+      await within(card).findByRole("button", { name: "Resume" })
+    ).toBeVisible()
+    await waitFor(() => expect(mocks.getCronjobById).toHaveBeenCalledWith(1))
+    expect(within(card).getByText("Paused")).toBeVisible()
+    expect(within(card).getByText("Running")).toBeVisible()
+    expect(within(card).getByText("Succeeded")).toBeVisible()
+    expect(within(card).getByText("No next run")).toBeVisible()
+    expect(mocks.toastError).toHaveBeenCalledWith(
+      "Your account is not provisioned for this action."
+    )
+    expect(mocks.toastSuccess).not.toHaveBeenCalled()
+  })
+
+  it("marks the previous values unverified when the pause readback fails", async () => {
+    const user = userEvent.setup()
+    mocks.pauseCronjob.mockResolvedValue({
+      success: true,
+      data: { ...cronjobs[0], scheduleStatus: "PAUSED" },
+    })
+    mocks.getCronjobById.mockRejectedValue(new Error("HTTP 500"))
+    renderCronjobList(["cronjob:read", "cronjob:pause"])
+
+    const card = screen.getByRole("article", { name: "Scheduled and running" })
+    await user.click(within(card).getByRole("button", { name: "Pause" }))
+
+    const readError = await within(card).findByRole("alert")
+    expect(readError).toHaveTextContent("Current status is unknown.")
+    expect(readError).toHaveTextContent("displayed values may be outdated.")
+    expect(within(card).getByText("Scheduled")).toBeVisible()
+    expect(within(card).getByRole("button", { name: "Pause" })).toBeDisabled()
+    expect(mocks.toastSuccess).not.toHaveBeenCalled()
+    expect(within(card).getByRole("alert")).toHaveFocus()
+  })
+
+  it("localizes Pause readback failure feedback in Vietnamese", async () => {
+    const user = userEvent.setup()
+    mocks.pauseCronjob.mockResolvedValue({
+      success: true,
+      data: { ...cronjobs[0], scheduleStatus: "PAUSED" },
+    })
+    mocks.getCronjobById.mockRejectedValue(new Error("HTTP 500"))
+    renderCronjobList(["cronjob:read", "cronjob:pause"], page, "vi")
+
+    const card = screen.getByRole("article", { name: "Scheduled and running" })
+    await user.click(within(card).getByRole("button", { name: "Tạm dừng" }))
+
+    const readError = await within(card).findByRole("alert")
+    expect(readError).toHaveTextContent(
+      "Chưa xác nhận được trạng thái hiện tại."
+    )
+    expect(readError).toHaveTextContent("thông tin đang hiển thị có thể đã cũ.")
+    expect(readError).toHaveTextContent("UTC")
   })
 
   it("announces acceptance and updates the mobile card from the readback after keyboard activation", async () => {
@@ -559,9 +793,9 @@ describe("CronjobListPage", () => {
     expect(
       screen.getByRole("article", { name: "Scheduled and running" })
     ).toBeVisible()
-    expect(screen.getByRole("status")).toHaveTextContent(
-      "Pagination details are unavailable"
-    )
+    expect(
+      screen.getByText("Pagination details are unavailable.")
+    ).toBeVisible()
     expect(
       document.querySelector('[data-slot="app-pagination-footer"]')
     ).not.toBeInTheDocument()

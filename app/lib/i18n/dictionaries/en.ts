@@ -2913,8 +2913,17 @@ export const en: Dictionary = {
     startReadError:
       "Current status is unknown. The latest read failed at {time}; displayed values may be outdated. Refresh the page to verify.",
     pause: "Pause",
+    pausing: "Pausing…",
     paused: "Cronjob paused.",
+    pausePermissionDenied: "You do not have permission to pause this cronjob.",
+    pauseProvisioningRejected:
+      "Your account is not provisioned for this action. Contact an administrator.",
+    pauseNotFound: "This cronjob no longer exists.",
     pauseError: "Could not pause cronjob.",
+    pauseNotConfirmed:
+      "Pause was not confirmed. The latest schedule status is shown.",
+    pauseReadError:
+      "Current status is unknown. The latest read after pausing failed at {time}; displayed values may be outdated. Refresh the page to verify.",
     resume: "Resume",
     resumed: "Cronjob resumed.",
     resumeError: "Could not resume cronjob.",

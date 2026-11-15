@@ -29,6 +29,10 @@ function isValidCronjobId(id: unknown): id is number {
   return typeof id === "number" && Number.isSafeInteger(id) && id > 0
 }
 
+type PauseCronjobActionResult =
+  | { success: true; data: CronjobResponse }
+  | { success: false; error: string; ambiguous: boolean }
+
 export async function getCronjobs(
   searchParams: SearchParams
 ): Promise<CronjobPageResponse> {
@@ -100,18 +104,40 @@ export async function startCronjob(id: number): Promise<ActionResult<void>> {
 
 export async function pauseCronjob(
   id: number
-): Promise<ActionResult<CronjobResponse>> {
+): Promise<PauseCronjobActionResult> {
+  if (!isValidCronjobId(id)) {
+    const dictionary = await getDictionary(await getRequestLocale())
+    return {
+      success: false,
+      error: dictionary.cronjobs.invalidCronjobId,
+      ambiguous: false,
+    }
+  }
+
   try {
     const cronjob = await fetchCronjob(`/cronjobs/${id}/pause`, {
       method: "POST",
     })
-    revalidatePath("/cronjobs")
     return { success: true, data: cronjob }
-  } catch {
+  } catch (error: unknown) {
     const dictionary = await getDictionary(await getRequestLocale())
+    const backendError =
+      error instanceof Error ? (error as BackendApiError) : undefined
+    const status = backendError?.status
+    let message = dictionary.cronjobs.pauseError
+    if (status === 403) {
+      message = dictionary.cronjobs.pausePermissionDenied
+    } else if (status === 404) {
+      message = dictionary.cronjobs.pauseNotFound
+    } else if (status === 409) {
+      if (backendError?.code === "USER_PROVISIONING_REJECTED") {
+        message = dictionary.cronjobs.pauseProvisioningRejected
+      }
+    }
     return {
       success: false,
-      error: dictionary.cronjobs.pauseError,
+      error: message,
+      ambiguous: status === undefined || status >= 500,
     }
   }
 }

@@ -14,6 +14,9 @@ test("cronjob read permission renders the responsive list and retains the detail
   const pausedCard = page.getByRole("article", {
     name: "Paused during execution",
   })
+  const scheduledCard = page.getByRole("article", {
+    name: "Scheduled and running",
+  })
   await expect(pausedCard).toBeVisible()
   await expect(pausedCard.getByText("Tạm dừng")).toBeVisible()
   await expect(pausedCard.getByText("Đang chạy")).toBeVisible()
@@ -21,6 +24,9 @@ test("cronjob read permission renders the responsive list and retains the detail
   await expect(pausedCard.getByText("Không có lần chạy kế tiếp")).toBeVisible()
   await expect(page.getByRole("button", { name: "Khởi chạy" })).toHaveCount(0)
   await expect(page.getByRole("button", { name: "Tạm dừng" })).toHaveCount(0)
+  await expect(scheduledCard.getByRole("status")).toHaveText(
+    "Bạn không có quyền tạm dừng cronjob này."
+  )
   await expect(page.getByRole("button", { name: "Tiếp tục" })).toHaveCount(0)
   await expect(
     page
@@ -426,11 +432,15 @@ test("cronjob controls remain permission-specific for queued and paused work", a
   ).toHaveCount(0)
 })
 
-test("Start actions stay available across responsive breakpoints", async ({
+test("Pause and Start actions stay available across responsive breakpoints", async ({
   page,
   fixture,
 }, testInfo) => {
-  await fixture.setPermissions(["cronjob:read", "cronjob:start"])
+  await fixture.setPermissions([
+    "cronjob:read",
+    "cronjob:start",
+    "cronjob:pause",
+  ])
   await page.emulateMedia({ colorScheme: "dark" })
   await page.setViewportSize({ width: 1520, height: 1024 })
   await page.goto("/en/cronjobs")
@@ -453,8 +463,15 @@ test("Start actions stay available across responsive breakpoints", async ({
       width < 768
         ? page.getByRole("article", { name: "Immediate trigger not started" })
         : page.getByRole("row", { name: /Immediate trigger not started/ })
+    const pauseSurface =
+      width < 768
+        ? page.getByRole("article", { name: "Scheduled and running" })
+        : page.getByRole("row", { name: /Scheduled and running/ })
     await expect(
       actionSurface.getByRole("button", { name: "Start" })
+    ).toBeVisible()
+    await expect(
+      pauseSurface.getByRole("button", { name: "Pause" })
     ).toBeVisible()
     expect(
       await page.evaluate(
@@ -489,10 +506,98 @@ test("Start actions stay available across responsive breakpoints", async ({
     body: await page.locator("#cronjob-list").screenshot(),
     contentType: "image/png",
   })
-  await mobileStart.focus()
-  await expect(mobileStart).toBeFocused()
+  const mobilePause = page
+    .getByRole("article", { name: "Scheduled and running" })
+    .getByRole("button", { name: "Tạm dừng" })
+  await mobilePause.focus()
+  await expect(mobilePause).toBeFocused()
   await testInfo.attach("cronjobs-actions-mobile-focus-vi-390x844.png", {
     body: await page.locator("#cronjob-list").screenshot(),
     contentType: "image/png",
   })
+})
+
+test("Pause pending and readback-error states reflow and retain focus", async ({
+  page,
+  fixture,
+}, testInfo) => {
+  const viewports = [
+    { width: 360, height: 800, locale: "vi" as const },
+    { width: 760, height: 512, locale: "vi" as const },
+    { width: 1520, height: 1024, locale: "en" as const },
+  ]
+
+  for (const { width, height, locale } of viewports) {
+    await fixture.reset()
+    await fixture.setPermissions(["cronjob:read", "cronjob:pause"])
+    await fixture.setScenario("/cronjobs/1", "outage", "GET")
+    await fixture.setScenario("/cronjobs/1/pause", "delayed", "POST")
+    await page.emulateMedia({ colorScheme: "dark" })
+    await page.setViewportSize({ width, height })
+    await page.goto(`/${locale}/cronjobs`)
+
+    const surface =
+      width < 768
+        ? page.getByRole("article", { name: "Scheduled and running" })
+        : page.getByRole("row", { name: /Scheduled and running/ })
+    const pauseLabel = locale === "vi" ? "Tạm dừng" : "Pause"
+    const pausingLabel = locale === "vi" ? "Đang tạm dừng…" : "Pausing…"
+    const pause = surface.getByRole("button", { name: pauseLabel })
+    await pause.focus()
+    await page.keyboard.press("Enter")
+
+    const pendingPause = surface.getByRole("button", { name: pausingLabel })
+    await expect(pendingPause).toBeVisible()
+    await expect(pendingPause).toBeDisabled()
+    await expect(pendingPause).toHaveAttribute("aria-busy", "true")
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth
+      ),
+      `pending Pause should not overflow at ${width}px`
+    ).toBe(true)
+    await testInfo.attach(`cronjobs-pause-pending-${width}.png`, {
+      body: await page.locator("#cronjob-list").screenshot(),
+      contentType: "image/png",
+    })
+
+    await fixture.setScenario("/cronjobs/1/pause", "success", "POST")
+    const readError = surface.getByRole("alert")
+    await expect(readError).toBeVisible()
+    await expect(readError).toBeFocused()
+    await expect(readError).toContainText(
+      locale === "vi"
+        ? "Chưa xác nhận được trạng thái hiện tại."
+        : "Current status is unknown."
+    )
+    const readErrorLines = await readError.evaluate((element) => {
+      const range = document.createRange()
+      range.selectNodeContents(element)
+      return range.getClientRects().length
+    })
+    expect(readErrorLines).toBeGreaterThan(1)
+    await expect(
+      surface.getByRole("button", { name: pauseLabel })
+    ).toBeDisabled()
+    const pauseStateAxe = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa"])
+      .exclude(".bar")
+      .analyze()
+    expect(
+      pauseStateAxe.violations.filter(
+        (violation) =>
+          violation.impact === "serious" || violation.impact === "critical"
+      )
+    ).toEqual([])
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth
+      ),
+      `readback-error state should not overflow at ${width}px`
+    ).toBe(true)
+    await testInfo.attach(`cronjobs-pause-readback-error-${width}.png`, {
+      body: await page.locator("#cronjob-list").screenshot(),
+      contentType: "image/png",
+    })
+  }
 })

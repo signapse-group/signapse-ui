@@ -68,6 +68,9 @@ beforeEach(() => {
       invalidCronjobId: "Invalid cronjob ID.",
       startError: "Could not start cronjob.",
       pauseError: "Could not pause cronjob.",
+      pausePermissionDenied: "No permission to pause cronjob.",
+      pauseProvisioningRejected: "Account is not provisioned for this action.",
+      pauseNotFound: "Cronjob no longer exists.",
     },
   })
 })
@@ -117,7 +120,7 @@ describe("cronjob API actions", () => {
     ).resolves.toEqual({ content: [cronjob] })
   })
 
-  it("validates mutation responses against the same DTO while keeping callers intact", async () => {
+  it("returns the validated Pause response without refreshing before readback", async () => {
     mocks.fetchAuthenticated.mockResolvedValue(cronjob)
 
     await expect(pauseCronjob(42)).resolves.toEqual({
@@ -128,7 +131,135 @@ describe("cronjob API actions", () => {
       "/cronjobs/42/pause",
       { method: "POST" }
     )
-    expect(mocks.revalidatePath).toHaveBeenCalledWith("/cronjobs")
+    expect(mocks.revalidatePath).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    0,
+    -1,
+    1.5,
+    Number.NaN,
+    Number.POSITIVE_INFINITY,
+    Number.MAX_SAFE_INTEGER + 1,
+  ])("rejects invalid pause ID %s before sending a request", async (id) => {
+    await expect(pauseCronjob(id)).resolves.toEqual({
+      success: false,
+      error: "Invalid cronjob ID.",
+      ambiguous: false,
+    })
+    expect(mocks.fetchAuthenticated).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    {
+      status: 403,
+      backendMessage: "Cronjob pause permission denied.",
+      expected: "No permission to pause cronjob.",
+    },
+    {
+      status: 404,
+      backendMessage: "Cronjob not found.",
+      expected: "Cronjob no longer exists.",
+    },
+    {
+      status: 409,
+      backendMessage: "Cronjob schedule is not active.",
+      expected: "Could not pause cronjob.",
+    },
+    {
+      status: 409,
+      backendMessage: "Quartz did not pause schedule for cronjob sample.",
+      expected: "Could not pause cronjob.",
+    },
+    {
+      status: 409,
+      backendCode: "USER_PROVISIONING_REJECTED",
+      backendMessage: "Provisioning was rejected.",
+      expected: "Account is not provisioned for this action.",
+    },
+    {
+      status: 409,
+      backendCode: "UNEXPECTED_CONFLICT",
+      backendMessage: "Unexpected conflict.",
+      expected: "Could not pause cronjob.",
+    },
+  ])(
+    "returns localized API refusal for pause status $status",
+    async ({ status, backendCode, backendMessage, expected }) => {
+      const backendError = Object.assign(new Error(backendMessage), {
+        status,
+        code: backendCode,
+      })
+      mocks.fetchAuthenticated.mockRejectedValue(backendError)
+
+      await expect(pauseCronjob(42)).resolves.toEqual({
+        success: false,
+        error: expected,
+        ambiguous: false,
+      })
+    }
+  )
+
+  it("maps permission refusals through the active Vietnamese dictionary", async () => {
+    mocks.getRequestLocale.mockResolvedValue("vi")
+    mocks.getDictionary.mockResolvedValue({
+      cronjobs: {
+        pausePermissionDenied: "Bạn không có quyền tạm dừng cronjob này.",
+      },
+    })
+    mocks.fetchAuthenticated.mockRejectedValue(
+      Object.assign(new Error("Forbidden"), { status: 403 })
+    )
+
+    await expect(pauseCronjob(42)).resolves.toEqual({
+      success: false,
+      error: "Bạn không có quyền tạm dừng cronjob này.",
+      ambiguous: false,
+    })
+  })
+
+  it("localizes a provisioning rejection in Vietnamese", async () => {
+    mocks.getRequestLocale.mockResolvedValue("vi")
+    mocks.getDictionary.mockResolvedValue({
+      cronjobs: {
+        pauseProvisioningRejected:
+          "Tài khoản chưa được cấp cấu hình cho thao tác này.",
+      },
+    })
+    mocks.fetchAuthenticated.mockRejectedValue(
+      Object.assign(new Error("Provisioning rejected."), {
+        status: 409,
+        code: "USER_PROVISIONING_REJECTED",
+      })
+    )
+
+    await expect(pauseCronjob(42)).resolves.toEqual({
+      success: false,
+      error: "Tài khoản chưa được cấp cấu hình cho thao tác này.",
+      ambiguous: false,
+    })
+  })
+
+  it("uses the localized fallback when the pause transport fails", async () => {
+    mocks.fetchAuthenticated.mockRejectedValue(new Error("fetch failed"))
+
+    await expect(pauseCronjob(42)).resolves.toEqual({
+      success: false,
+      error: "Could not pause cronjob.",
+      ambiguous: true,
+    })
+  })
+
+  it("marks HTTP 500 pause failures as ambiguous because the API may have applied the pause", async () => {
+    mocks.fetchAuthenticated.mockRejectedValue(
+      Object.assign(new Error("Scheduler readback failed."), { status: 500 })
+    )
+
+    await expect(pauseCronjob(42)).resolves.toEqual({
+      success: false,
+      error: "Could not pause cronjob.",
+      ambiguous: true,
+    })
   })
 
   it("rejects blank schedule updates before sending a request", async () => {
