@@ -2910,7 +2910,7 @@ export const en: Dictionary = {
     starting: "Starting…",
     startAccepted: "Start request accepted.",
     startError: "Could not start cronjob.",
-    startReadError:
+    statusReadError:
       "Current status is unknown. The latest read failed at {time}; displayed values may be outdated. Refresh the page to verify.",
     pause: "Pause",
     pausing: "Pausing…",
@@ -2925,8 +2925,12 @@ export const en: Dictionary = {
     pauseReadError:
       "Current status is unknown. The latest read after pausing failed at {time}; displayed values may be outdated. Refresh the page to verify.",
     resume: "Resume",
+    resuming: "Resuming…",
     resumed: "Cronjob resumed.",
     resumeError: "Could not resume cronjob.",
+    resumePermissionError: "You do not have permission to resume this cronjob.",
+    resumeMissingError: "This cronjob no longer exists.",
+    resumeConflictError: "The cronjob changed before Resume could complete.",
     errorTitle: "Something went wrong",
     errorDescription: "Could not load cronjob data right now.",
     scheduleStatuses: {

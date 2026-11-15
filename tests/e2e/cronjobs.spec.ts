@@ -166,6 +166,12 @@ test("cronjob wide and mobile renders preserve the approved list composition", a
   await expect(
     wideTable.getByRole("columnheader", { name: "Latest result" })
   ).toBeVisible()
+  const pausedRunningRow = page.getByRole("row", {
+    name: /Paused during execution/,
+  })
+  await expect(
+    pausedRunningRow.getByRole("button", { name: "Resume" })
+  ).toBeVisible()
   await expect(
     page.getByRole("button", { name: "Edit cron expression" }).first()
   ).toBeVisible()
@@ -178,6 +184,15 @@ test("cronjob wide and mobile renders preserve the approved list composition", a
     body: await page.screenshot(),
     contentType: "image/png",
   })
+  await page.emulateMedia({ colorScheme: "light" })
+  await expect(
+    pausedRunningRow.getByRole("button", { name: "Resume" })
+  ).toBeVisible()
+  await testInfo.attach("Cronjobs-candidate-Wide-light-1520x1024.png", {
+    body: await page.screenshot(),
+    contentType: "image/png",
+  })
+  await page.emulateMedia({ colorScheme: "dark" })
 
   await page.setViewportSize({ width: 390, height: 1024 })
   await fixture.setScenario("/cronjobs", "short")
@@ -186,7 +201,13 @@ test("cronjob wide and mobile renders preserve the approved list composition", a
   const firstCard = page.getByRole("article", {
     name: "RefreshPendingNarrativesJob",
   })
+  const pausedCard = page.getByRole("article", {
+    name: "Paused after failed run",
+  })
   await expect(firstCard).toBeVisible()
+  await expect(
+    pausedCard.getByRole("button", { name: "Tiếp tục" })
+  ).toBeVisible()
   await expect(firstCard.getByText("Lịch", { exact: true })).toBeVisible()
   await expect(firstCard.getByText("Thực thi", { exact: true })).toBeVisible()
   await expect(
@@ -231,6 +252,64 @@ test("cronjob wide and mobile renders preserve the approved list composition", a
     body: await page.screenshot(),
     contentType: "image/png",
   })
+  await page.emulateMedia({ colorScheme: "light" })
+  await expect(
+    pausedCard.getByRole("button", { name: "Tiếp tục" })
+  ).toBeVisible()
+  await testInfo.attach("Cronjobs-candidate-Mobile-light-vi-390x1024.png", {
+    body: await page.screenshot(),
+    contentType: "image/png",
+  })
+  await page.emulateMedia({ colorScheme: "dark" })
+
+  for (const [width, height] of [
+    [360, 800],
+    [760, 512], // effective CSS viewport at 200% zoom from 1520×1024
+    [767, 800],
+    [768, 800],
+    [1024, 768],
+    [1439, 900],
+    [1440, 900],
+    [1520, 1024],
+  ]) {
+    await page.setViewportSize({ width, height })
+    const isMobileLayout = width < 768
+    const resume = isMobileLayout
+      ? pausedCard.getByRole("button", { name: "Tiếp tục" })
+      : page
+          .getByRole("row", { name: /Paused after failed run/ })
+          .getByRole("button", { name: "Tiếp tục" })
+    if (isMobileLayout) {
+      await expect(pausedCard).toBeVisible()
+      await expect(page.locator("#cronjob-list table")).toBeHidden()
+    } else {
+      await expect(
+        page.getByRole("row", { name: /Paused after failed run/ })
+      ).toBeVisible()
+      await expect(page.locator("#cronjob-list table")).toBeVisible()
+    }
+    await expect(resume).toBeVisible()
+    const bounds = await resume.boundingBox()
+    expect(bounds).not.toBeNull()
+    expect(bounds!.width).toBeGreaterThanOrEqual(24)
+    expect(bounds!.height).toBeGreaterThanOrEqual(24)
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth
+      )
+    ).toBe(true)
+    if (width === 360 || width === 760) {
+      await testInfo.attach(
+        width === 360
+          ? "Cronjobs-candidate-Mobile-vi-360x800.png"
+          : "Cronjobs-candidate-Mobile-vi-effective-760x512-200pct.png",
+        {
+          body: await page.screenshot({ fullPage: true }),
+          contentType: "image/png",
+        }
+      )
+    }
+  }
 })
 
 test("read denial, detail errors, and a valid empty list stay distinct", async ({

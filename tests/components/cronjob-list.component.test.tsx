@@ -145,6 +145,10 @@ describe("CronjobListPage", () => {
       "page=2&size=20&jobName%5BcontainsIgnoreCase%5D=market"
     )
     mocks.startCronjob.mockResolvedValue({ success: true, data: undefined })
+    mocks.resumeCronjob.mockResolvedValue({
+      success: true,
+      data: cronjobs[1],
+    })
     mocks.getCronjobById.mockResolvedValue(cronjobs[3])
   })
 
@@ -273,8 +277,12 @@ describe("CronjobListPage", () => {
     expect(
       within(scheduledRunning).queryByRole("button", { name: "Start" })
     ).toBeNull()
+    expect(
+      within(scheduledRunning).queryByRole("button", { name: "Resume" })
+    ).toBeNull()
     expect(within(queued).getByRole("button", { name: "Start" })).toBeEnabled()
     expect(within(queued).queryByRole("button", { name: "Pause" })).toBeNull()
+    expect(within(queued).queryByRole("button", { name: "Resume" })).toBeNull()
   })
 
   it("requires read permission before exposing Pause or Start", () => {
@@ -515,6 +523,188 @@ describe("CronjobListPage", () => {
     )
     expect(readError).toHaveTextContent("thông tin đang hiển thị có thể đã cũ.")
     expect(readError).toHaveTextContent("UTC")
+  })
+
+  it.each([["cronjob:resume"], ["cronjob:read"]])(
+    "requires both read and resume permission before exposing Resume",
+    (permission) => {
+      renderCronjobList([permission])
+
+      expect(screen.queryByRole("button", { name: "Resume" })).toBeNull()
+    }
+  )
+
+  it("updates the wide row and mobile card from the effective Resume response", async () => {
+    const user = userEvent.setup()
+    const resumed: CronjobResponse = {
+      ...cronjobs[1],
+      scheduleStatus: "SCHEDULED",
+      executionStatus: "RUNNING",
+      latestResult: "FAILED",
+      cronExpression: "0 10 * * * ?",
+      nextTriggeredTime: "2026-11-17T00:10:00Z",
+    }
+    let resolveResume!: (result: {
+      success: true
+      data: CronjobResponse
+    }) => void
+    mocks.resumeCronjob.mockReturnValue(
+      new Promise((resolve) => {
+        resolveResume = resolve
+      })
+    )
+    renderCronjobList(["cronjob:read", "cronjob:resume"])
+
+    const card = screen.getByRole("article", {
+      name: "Paused during execution",
+    })
+    const row = screen.getByRole("row", {
+      name: /Paused during execution/,
+    })
+    const resume = within(card).getByRole("button", { name: "Resume" })
+    resume.focus()
+    await user.keyboard("{Enter}")
+
+    expect(mocks.resumeCronjob).toHaveBeenCalledWith(2)
+    expect(resume).toBeDisabled()
+    expect(resume).toHaveAttribute("aria-busy", "true")
+    expect(resume).toHaveAccessibleName("Resuming…")
+    expect(
+      within(row).getByRole("button", { name: "Resuming…" })
+    ).toBeDisabled()
+
+    resolveResume({ success: true, data: resumed })
+    await waitFor(() => {
+      expect(within(card).queryByRole("button", { name: "Resume" })).toBeNull()
+      expect(within(card).getByRole("group", { name: "Actions" })).toHaveFocus()
+    })
+
+    expect(within(card).getByText("Scheduled")).toBeVisible()
+    expect(within(card).getByText("Running")).toBeVisible()
+    expect(within(card).getByText("Failed")).toBeVisible()
+    expect(within(card).getByText("0 10 * * * ?")).toBeVisible()
+    expect(card.querySelector("time")).toHaveAttribute(
+      "dateTime",
+      "2026-11-17T00:10:00Z"
+    )
+    expect(within(row).getByText("Scheduled")).toBeVisible()
+    expect(within(row).getByText("Running")).toBeVisible()
+    expect(within(row).getByText("Failed")).toBeVisible()
+    expect(within(row).getByText("0 10 * * * ?")).toBeVisible()
+    expect(row.querySelector("time")).toHaveAttribute(
+      "dateTime",
+      "2026-11-17T00:10:00Z"
+    )
+    expect(mocks.getCronjobById).not.toHaveBeenCalled()
+    expect(mocks.toastSuccess).toHaveBeenCalledWith("Cronjob resumed.")
+  })
+
+  it("localizes Resume pending and success feedback", async () => {
+    const user = userEvent.setup()
+    const resumed: CronjobResponse = {
+      ...cronjobs[2],
+      scheduleStatus: "SCHEDULED",
+      nextTriggeredTime: "2026-11-18T00:00:00Z",
+    }
+    let resolveResume!: (result: {
+      success: true
+      data: CronjobResponse
+    }) => void
+    mocks.resumeCronjob.mockReturnValue(
+      new Promise((resolve) => {
+        resolveResume = resolve
+      })
+    )
+    renderCronjobList(["cronjob:read", "cronjob:resume"], page, "vi")
+
+    const card = screen.getByRole("article", {
+      name: "Paused after execution",
+    })
+    const resume = within(card).getByRole("button", { name: "Tiếp tục" })
+    await user.click(resume)
+
+    expect(resume).toBeDisabled()
+    expect(resume).toHaveAttribute("aria-busy", "true")
+    expect(resume).toHaveAccessibleName("Đang tiếp tục…")
+    resolveResume({ success: true, data: resumed })
+    await waitFor(() =>
+      expect(
+        within(card).queryByRole("button", { name: "Tiếp tục" })
+      ).toBeNull()
+    )
+    expect(within(card).getByText("Đã lên lịch")).toBeVisible()
+    expect(mocks.toastSuccess).toHaveBeenCalledWith("Đã tiếp tục cronjob.")
+  })
+
+  it.each([403, 404, 409, 500])(
+    "reads the actual state after Resume fails with HTTP %i",
+    async (status) => {
+      const user = userEvent.setup()
+      const readback: CronjobResponse = {
+        ...cronjobs[1],
+        scheduleStatus: "SCHEDULED",
+        executionStatus: "RUNNING",
+        cronExpression: `0 ${status} * * * ?`,
+        nextTriggeredTime: "2026-11-19T00:00:00Z",
+      }
+      mocks.resumeCronjob.mockResolvedValue({
+        success: false,
+        error: `Resume refused (${status}).`,
+      })
+      mocks.getCronjobById.mockResolvedValue(readback)
+      renderCronjobList(["cronjob:read", "cronjob:resume"])
+
+      const card = screen.getByRole("article", {
+        name: "Paused during execution",
+      })
+      const row = screen.getByRole("row", {
+        name: /Paused during execution/,
+      })
+      await user.click(within(card).getByRole("button", { name: "Resume" }))
+
+      await waitFor(() => {
+        expect(within(card).getByText(`0 ${status} * * * ?`)).toBeVisible()
+        expect(within(card).getByText("Scheduled")).toBeVisible()
+      })
+      expect(mocks.resumeCronjob).toHaveBeenCalledWith(2)
+      expect(mocks.getCronjobById).toHaveBeenCalledWith(2)
+      expect(within(card).getByText("Running")).toBeVisible()
+      expect(within(row).getByText(`0 ${status} * * * ?`)).toBeVisible()
+      expect(within(row).getByText("Scheduled")).toBeVisible()
+      expect(mocks.toastError).toHaveBeenCalledWith(
+        `Resume refused (${status}).`
+      )
+      expect(mocks.toastSuccess).not.toHaveBeenCalled()
+    }
+  )
+
+  it("marks Resume state unverified and locks actions when readback fails", async () => {
+    const user = userEvent.setup()
+    mocks.resumeCronjob.mockRejectedValue(new Error("Network error"))
+    mocks.getCronjobById.mockRejectedValue(new Error("HTTP 500"))
+    renderCronjobList(["cronjob:read", "cronjob:resume"], page, "vi")
+
+    const card = screen.getByRole("article", {
+      name: "Paused during execution",
+    })
+    const row = screen.getByRole("row", {
+      name: /Paused during execution/,
+    })
+    await user.click(within(card).getByRole("button", { name: "Tiếp tục" }))
+
+    const alert = await within(card).findByRole("alert")
+    expect(alert).toHaveTextContent("Chưa xác nhận được trạng thái hiện tại.")
+    expect(alert).toHaveTextContent("thông tin đang hiển thị có thể đã cũ.")
+    expect(within(card).getByText("Tạm dừng")).toBeVisible()
+    expect(within(card).getByText("0 0/5 * * * ?")).toBeVisible()
+    expect(
+      within(card).getByRole("button", { name: "Tiếp tục" })
+    ).toBeDisabled()
+    expect(within(row).getByRole("alert")).toHaveTextContent(
+      "Chưa xác nhận được trạng thái hiện tại."
+    )
+    expect(mocks.toastError).toHaveBeenCalledWith("Không thể tiếp tục cronjob.")
+    expect(mocks.toastSuccess).not.toHaveBeenCalled()
   })
 
   it("announces acceptance and updates the mobile card from the readback after keyboard activation", async () => {

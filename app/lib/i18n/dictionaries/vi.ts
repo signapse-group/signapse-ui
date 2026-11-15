@@ -2891,7 +2891,7 @@ export const vi = {
     starting: "Đang gửi yêu cầu…",
     startAccepted: "Đã tiếp nhận yêu cầu chạy ngay.",
     startError: "Không thể khởi chạy cronjob.",
-    startReadError:
+    statusReadError:
       "Chưa xác nhận được trạng thái hiện tại. Lần đọc thất bại lúc {time}; thông tin đang hiển thị có thể đã cũ. Hãy tải lại trang để kiểm tra.",
     pause: "Tạm dừng",
     pausing: "Đang tạm dừng…",
@@ -2906,8 +2906,13 @@ export const vi = {
     pauseReadError:
       "Chưa xác nhận được trạng thái hiện tại. Lần đọc sau yêu cầu tạm dừng thất bại lúc {time}; thông tin đang hiển thị có thể đã cũ. Hãy tải lại trang để kiểm tra.",
     resume: "Tiếp tục",
+    resuming: "Đang tiếp tục…",
     resumed: "Đã tiếp tục cronjob.",
     resumeError: "Không thể tiếp tục cronjob.",
+    resumePermissionError: "Bạn không có quyền tiếp tục cronjob này.",
+    resumeMissingError: "Cronjob này không còn tồn tại.",
+    resumeConflictError:
+      "Trạng thái cronjob đã thay đổi trước khi hoàn tất thao tác tiếp tục.",
     errorTitle: "Đã có lỗi xảy ra",
     errorDescription: "Không thể tải dữ liệu tác vụ định kỳ lúc này.",
     scheduleStatuses: {

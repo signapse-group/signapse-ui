@@ -151,11 +151,27 @@ export async function resumeCronjob(
     })
     revalidatePath("/cronjobs")
     return { success: true, data: cronjob }
-  } catch {
+  } catch (error: unknown) {
     const dictionary = await getDictionary(await getRequestLocale())
     return {
       success: false,
-      error: dictionary.cronjobs.resumeError,
+      error: getResumeError(error, dictionary.cronjobs),
     }
   }
+}
+
+function getResumeError(
+  error: unknown,
+  messages: Awaited<ReturnType<typeof getDictionary>>["cronjobs"]
+): string {
+  if (!(error instanceof Error)) return messages.resumeError
+
+  const status = (error as BackendApiError).status
+  if (status === 401 || status === 403) {
+    return messages.resumePermissionError
+  }
+  if (status === 404) return messages.resumeMissingError
+  if (status === 409) return messages.resumeConflictError
+
+  return messages.resumeError
 }
