@@ -379,6 +379,7 @@ describe("CronjobListPage", () => {
     mocks.pauseCronjob.mockResolvedValue({
       success: false,
       error: "Cronjob schedule is not active.",
+      ambiguous: false,
     })
     mocks.getCronjobById.mockResolvedValue(cronjobs[0])
     renderCronjobList(["cronjob:read", "cronjob:pause"])
@@ -406,6 +407,7 @@ describe("CronjobListPage", () => {
     mocks.pauseCronjob.mockResolvedValue({
       success: false,
       error: "Could not pause cronjob.",
+      ambiguous: true,
     })
     mocks.getCronjobById.mockResolvedValue(pausedRunning)
     renderCronjobList(["cronjob:read", "cronjob:pause", "cronjob:resume"])
@@ -423,6 +425,40 @@ describe("CronjobListPage", () => {
     expect(within(card).getByText("No next run")).toBeVisible()
     expect(mocks.toastSuccess).toHaveBeenCalledWith("Cronjob paused.")
     expect(mocks.toastError).not.toHaveBeenCalled()
+  })
+
+  it("preserves a known pause refusal when the fresh read shows a concurrent pause", async () => {
+    const user = userEvent.setup()
+    const pausedRunning: CronjobResponse = {
+      ...cronjobs[0],
+      scheduleStatus: "PAUSED",
+      nextTriggeredTime: null,
+    }
+    mocks.pauseCronjob.mockResolvedValue({
+      success: false,
+      error: "Your account is not provisioned for this action.",
+      ambiguous: false,
+    })
+    mocks.getCronjobById.mockResolvedValue(pausedRunning)
+    renderCronjobList([
+      "cronjob:read",
+      "cronjob:pause",
+      "cronjob:resume",
+    ])
+
+    const card = screen.getByRole("article", { name: "Scheduled and running" })
+    await user.click(within(card).getByRole("button", { name: "Pause" }))
+
+    expect(await within(card).findByRole("button", { name: "Resume" })).toBeVisible()
+    await waitFor(() => expect(mocks.getCronjobById).toHaveBeenCalledWith(1))
+    expect(within(card).getByText("Paused")).toBeVisible()
+    expect(within(card).getByText("Running")).toBeVisible()
+    expect(within(card).getByText("Succeeded")).toBeVisible()
+    expect(within(card).getByText("No next run")).toBeVisible()
+    expect(mocks.toastError).toHaveBeenCalledWith(
+      "Your account is not provisioned for this action."
+    )
+    expect(mocks.toastSuccess).not.toHaveBeenCalled()
   })
 
   it("marks the previous values unverified when the pause readback fails", async () => {

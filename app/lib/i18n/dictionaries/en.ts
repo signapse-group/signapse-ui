@@ -2916,6 +2916,8 @@ export const en: Dictionary = {
     pausing: "Pausing…",
     paused: "Cronjob paused.",
     pausePermissionDenied: "You do not have permission to pause this cronjob.",
+    pauseProvisioningRejected:
+      "Your account is not provisioned for this action. Contact an administrator.",
     pauseNotFound: "This cronjob no longer exists.",
     pauseIneligible: "This cronjob is not eligible for pausing.",
     pauseError: "Could not pause cronjob.",

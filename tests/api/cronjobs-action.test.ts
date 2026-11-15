@@ -69,6 +69,8 @@ beforeEach(() => {
       startError: "Could not start cronjob.",
       pauseError: "Could not pause cronjob.",
       pausePermissionDenied: "No permission to pause cronjob.",
+      pauseProvisioningRejected:
+        "Account is not provisioned for this action.",
       pauseNotFound: "Cronjob no longer exists.",
       pauseIneligible: "Cronjob is not eligible for pausing.",
     },
@@ -145,6 +147,7 @@ describe("cronjob API actions", () => {
     await expect(pauseCronjob(id)).resolves.toEqual({
       success: false,
       error: "Invalid cronjob ID.",
+      ambiguous: false,
     })
     expect(mocks.fetchAuthenticated).not.toHaveBeenCalled()
   })
@@ -165,15 +168,31 @@ describe("cronjob API actions", () => {
       backendMessage: "Cronjob schedule is not active.",
       expected: "Cronjob is not eligible for pausing.",
     },
+    {
+      status: 409,
+      backendCode: "USER_PROVISIONING_REJECTED",
+      backendMessage: "Provisioning was rejected.",
+      expected: "Account is not provisioned for this action.",
+    },
+    {
+      status: 409,
+      backendCode: "UNEXPECTED_CONFLICT",
+      backendMessage: "Unexpected conflict.",
+      expected: "Could not pause cronjob.",
+    },
   ])(
     "returns localized API refusal for pause status $status",
-    async ({ status, backendMessage, expected }) => {
-      const backendError = Object.assign(new Error(backendMessage), { status })
+    async ({ status, backendCode, backendMessage, expected }) => {
+      const backendError = Object.assign(new Error(backendMessage), {
+        status,
+        code: backendCode,
+      })
       mocks.fetchAuthenticated.mockRejectedValue(backendError)
 
       await expect(pauseCronjob(42)).resolves.toEqual({
         success: false,
         error: expected,
+        ambiguous: false,
       })
     }
   )
@@ -192,6 +211,29 @@ describe("cronjob API actions", () => {
     await expect(pauseCronjob(42)).resolves.toEqual({
       success: false,
       error: "Bạn không có quyền tạm dừng cronjob này.",
+      ambiguous: false,
+    })
+  })
+
+  it("localizes a provisioning rejection in Vietnamese", async () => {
+    mocks.getRequestLocale.mockResolvedValue("vi")
+    mocks.getDictionary.mockResolvedValue({
+      cronjobs: {
+        pauseProvisioningRejected:
+          "Tài khoản chưa được cấp cấu hình cho thao tác này.",
+      },
+    })
+    mocks.fetchAuthenticated.mockRejectedValue(
+      Object.assign(new Error("Provisioning rejected."), {
+        status: 409,
+        code: "USER_PROVISIONING_REJECTED",
+      })
+    )
+
+    await expect(pauseCronjob(42)).resolves.toEqual({
+      success: false,
+      error: "Tài khoản chưa được cấp cấu hình cho thao tác này.",
+      ambiguous: false,
     })
   })
 
@@ -201,6 +243,19 @@ describe("cronjob API actions", () => {
     await expect(pauseCronjob(42)).resolves.toEqual({
       success: false,
       error: "Could not pause cronjob.",
+      ambiguous: true,
+    })
+  })
+
+  it("marks HTTP 500 pause failures as ambiguous because the API may have applied the pause", async () => {
+    mocks.fetchAuthenticated.mockRejectedValue(
+      Object.assign(new Error("Scheduler readback failed."), { status: 500 })
+    )
+
+    await expect(pauseCronjob(42)).resolves.toEqual({
+      success: false,
+      error: "Could not pause cronjob.",
+      ambiguous: true,
     })
   })
 

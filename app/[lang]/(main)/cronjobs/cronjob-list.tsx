@@ -766,10 +766,12 @@ function StatusActions({
     onPausePendingChange(id, true)
     startTransition(async () => {
       let pauseError: string | undefined
+      let pauseFailureIsKnown = false
       try {
         const result = await pauseCronjob(id)
         if (!result.success) {
           pauseError = result.error || dictionary.cronjobs.pauseError
+          pauseFailureIsKnown = !result.ambiguous
         }
       } catch {
         pauseError = dictionary.cronjobs.pauseError
@@ -779,7 +781,9 @@ function StatusActions({
         const cronjob = await getCronjobById(id)
         onCronjobRead(cronjob)
         setPauseReadbackStatus(cronjob.scheduleStatus)
-        if (cronjob.scheduleStatus === "PAUSED") {
+        if (pauseFailureIsKnown) {
+          toast.error(pauseError || dictionary.cronjobs.pauseError)
+        } else if (cronjob.scheduleStatus === "PAUSED") {
           toast.success(dictionary.cronjobs.paused)
         } else if (pauseError) {
           toast.error(pauseError)
