@@ -18,7 +18,7 @@ The coordinator retains scope/priority, new tickets, Open → Ready, Blocked res
 2. Verify native `is blocked by` dependencies before dependent execution. Jira status category `done` satisfies admission; `Resolved` in an active category does not. Unreadable/ambiguous dependencies remain unsatisfied. Parent readiness, assignee and title prefix do not replace Subtask admission.
 3. Trace affected code, callers/consumers, reusable patterns, necessary changes and verification seams. Existing code shows current behavior, not expected behavior. For API work, read [API consumer standards](../api-consumer.md) and affected producer contract/publication evidence. For UI work, apply the [UI design gate](../design/DESIGN.md#ui-design-gate) to verify the accepted source, fixed constraints and scope FE can complete before handing off to Implement.
 4. For a fix under a Bug, read accepted expected/basis and the latest relevant QA report: case/version, actual result, tested build/environment and assigned regression. A FAIL summary may also contain Blocked/Not Run or a different deviation; survey the assigned fix only.
-5. Run existing checks only to answer a concrete question on isolated local data, using [test ownership and selection](../../CONTRIBUTING.md#test-ownership-and-selection). Reconcile legacy live-test requirements with the coordinator; missing QA accounts/results alone do not block Survey. No full-green baseline is required when an in-scope failure is grounded for Implement. A baseline does not prove future implementation satisfies AC.
+5. Run existing checks only to answer a concrete question on isolated local data, using [test ownership and selection](../../CONTRIBUTING.md#test-ownership-and-selection). Apply the [unfinished-ticket wording rule](../../CONTRIBUTING.md#blockers-and-resume) for legacy verification; missing QA accounts/results alone do not block Survey. No full-green baseline is required when an in-scope failure is grounded for Implement. A baseline does not prove future implementation satisfies AC.
 6. Identify the smallest implementation approach and focused acceptance/regression checks. Apply [decision standards](../../CONTRIBUTING.md#decisions-and-evidence) when an edge-case fix would materially change the user experience. Investigate discoverable facts before escalating unresolved requirements or material decisions to the coordinator. Continue meaningful independent survey while only dependent work waits.
 
 ## Record only useful handoff information
@@ -42,13 +42,4 @@ Before handoff, reread live contract/status/routing/dependencies. Ready → Prog
 
 ## Blocker and resume
 
-Use Blocked only for required external input/access/decision/dependency when no meaningful independent survey remains. Keep an in-scope diagnosed baseline failure for Implement rather than making it an external blocker. A mutation of synthetic data during an explicitly assigned test-environment integration is not, by itself, external input or a blocker; record the test-data effect and continue the assigned work when implementation and required evidence remain assessable. Before transition, save/read back a separate owned blocker record:
-
-```text
-Blocked — <vướng mắc và output/AC/check bị chặn>.
-Cần <owner>: <hành động hoặc quyết định cụ thể>.
-Tiếp tục tại <live status trước Blocked> khi <điều kiện kiểm chứng được>.
-Bằng chứng: <link kết quả kiểm tra liên quan — chỉ khi cần>.
-```
-
-Take the previous status from the live issue. Preserve human content and prior evidence; reuse the owned blocker record rather than duplicating it. Resolve/read back Ready → Blocked and stop. Missing ownership/write/readback means report the unconfirmed step; never claim it succeeded. The coordinator owns resolution/resume; verify the resolution condition on the next assigned session, since status alone is not proof. Open/Blocked/Done and changed phase/route/ownership stop autonomous work; do not self-resume or reopen Done.
+Apply the [shared blocker gate](../../CONTRIBUTING.md#blockers-and-resume) for required Survey inputs after completing independent work. A diagnosed in-scope baseline failure goes to Implement rather than becoming an external point. When the gate is met, save/read back the consolidated record, resolve/read back Ready → Blocked and end the session. The coordinator owns resume.
