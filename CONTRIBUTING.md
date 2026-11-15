@@ -43,12 +43,12 @@ Use the repository's pnpm scripts (or equivalent slash commands when available);
 
 Use the [change-scope matrix](docs/testing/browser-tests.md#selecting-checks-by-change-scope) and applicable selectors under the ownership rules below. CI owns the full lightweight `pnpm test:quality` gate; local work runs focused checks without repeating all CI checks. Use `pnpm test:full` only for explicitly requested full fixture regression or when affected coverage cannot be narrowed; explain why broader coverage is needed.
 
-For documentation-only work, verify rule/exception preservation, links/anchors, formatting and encoding. Moving/deleting documents also requires checking current references and preserving reachable historical evidence. A `WORKFLOW.md` prompt change requires offline rendering with Symphony's actual parser/template engine: every supported phase, unsupported states, missing optional context and resume/attempt. For organization-only changes, compare YAML before/after and verify that each phase selects only its runbook. Skill changes require valid frontmatter/metadata and preserved invocation policies.
+For documentation-only work, verify rule/exception preservation, links/anchors, formatting and encoding. Moving/deleting documents also requires checking current references and preserving reachable historical evidence. A `WORKFLOW.md` prompt change requires offline rendering with Symphony's actual parser/template engine: every supported phase, unsupported states, missing optional context and resume/attempt. For organization-only changes, verify that each phase selects only its runbook. If runtime configuration moves, compare the effective profile YAML against its baseline. Skill changes require valid frontmatter/metadata and preserved invocation policies.
 
-From a compatible Symphony Elixir checkout, run the [offline consumer check](scripts/check-symphony-workflow.exs) with absolute UI paths:
+From a compatible Symphony Elixir checkout, run the [offline consumer check](scripts/check-symphony-workflow.exs) with the absolute worker profile path followed by the checkout prompt path:
 
 ```sh
-mix run --no-start /path/to/signapse-ui/scripts/check-symphony-workflow.exs /path/to/signapse-ui/WORKFLOW.md
+mix run --no-start /path/to/signapse-ui/scripts/check-symphony-workflow.exs /path/to/grouped/workflows/fe.md /path/to/signapse-ui/WORKFLOW.md
 ```
 
 The check uses fixture credentials and the actual config, Jira normalization and strict Liquid implementation; it refuses a started application. Do not start polling, clone hooks or live tracker writes to validate the workflow.

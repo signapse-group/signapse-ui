@@ -370,11 +370,12 @@ function cronjobRecords() {
     {
       id: 1,
       jobName: "Scheduled and running",
-      jobGroup: "market",
+      jobGroup: "MarketIntelligencePipelineJobGroupWithLongMetadata",
       scheduleStatus: "SCHEDULED",
       executionStatus: "RUNNING",
-      cronExpression: "0 0/5 * * * ?",
-      description: "A recurring market refresh.",
+      cronExpression: "0 15,30 4,10 * JAN,MAR,SEP MON-FRI 2026/2",
+      description:
+        "This description contains the full operational context, recovery behavior, and source system information for the scheduled job.",
       latestResult: "SUCCESS",
       lastExecutedTime: "2026-11-05T07:00:00Z",
       nextTriggeredTime: "2026-11-05T07:05:00Z",
@@ -389,7 +390,7 @@ function cronjobRecords() {
       description: null,
       latestResult: null,
       lastExecutedTime: "2026-11-05T07:00:00Z",
-      nextTriggeredTime: null,
+      nextTriggeredTime: "2026-11-05T08:00:00Z",
     },
     {
       id: 3,
@@ -413,6 +414,32 @@ function cronjobRecords() {
       description: null,
       latestResult: null,
       lastExecutedTime: null,
+      nextTriggeredTime: null,
+    },
+  ]
+}
+
+function shortCronjobDesignRecords(cronjobs) {
+  return [
+    {
+      ...cronjobs[0],
+      jobName: "RefreshPendingNarrativesJob",
+      jobGroup: "MarketIntelligencePipelineJobGroup",
+      scheduleStatus: "SCHEDULED",
+      executionStatus: "NOT_RUNNING",
+      cronExpression: "0 */30 * * * ?",
+      description: "Refresh pending narratives from market data",
+      latestResult: "SUCCESS",
+    },
+    {
+      ...cronjobs[1],
+      jobName: "Paused after failed run",
+      jobGroup: "market",
+      scheduleStatus: "PAUSED",
+      executionStatus: "NOT_RUNNING",
+      cronExpression: "0 7/15 * * * ?",
+      description: "The last attempt failed.",
+      latestResult: "FAILED",
       nextTriggeredTime: null,
     },
   ]
@@ -2625,6 +2652,10 @@ function responseForRoute(state, method, pathname, url, body, locale = "en") {
 
     if (getScenario(state, method, pathname) === "missing-content") {
       return {}
+    }
+
+    if (getScenario(state, method, pathname) === "short") {
+      return slicePage(shortCronjobDesignRecords(state.cronjobs), url)
     }
 
     return slicePage(state.cronjobs, url)

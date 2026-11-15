@@ -1,37 +1,31 @@
 ---
 name: code-review
-description: Review requirement adherence and correctness against repository standards, including relevant committed and working changes.
+description: Rà soát thay đổi FE trong phiên Review được giao hoặc theo yêu cầu trực tiếp. Đánh giá độc lập mức độ đáp ứng yêu cầu và tính đúng đắn, kể cả UI bị ảnh hưởng.
 ---
 
-# Code Review
+# Rà soát mã nguồn
 
-Read repository instructions and [review standards](../../../CONTRIBUTING.md#review-standards), reusing current context. Assigned execution follows [WORKFLOW.md](../../../WORKFLOW.md); this technique adds no permissions, lifecycle gates or reviewer role. A standalone review is read-only unless the user assigns additional actions. Return **Requirement adherence** and **Correctness & Standards** separately.
+Đọc hướng dẫn repo và [chuẩn review](../../../CONTRIBUTING.md#review-standards). Với việc được giao theo workflow, dùng quyền và điều kiện chuyển pha của [WORKFLOW.md](../../../WORKFLOW.md). Review trực tiếp mặc định chỉ đọc.
 
-## Establish Sources and Scope
+## Chốt đầu vào
 
-Accept the issue/contract and resolved base from the caller. For a PR, resolve its actual base branch; honor an explicit user-specified base. Ask only if the intended base or source cannot be discovered unambiguously. Resolve refs to commit SHAs before reviewing.
+Xác định ticket hoặc yêu cầu đã chốt, base và SHA của `HEAD`. Với PR, dùng nhánh đích thực tế, hoặc base do người dùng chỉ định. Chỉ hỏi khi không thể xác định rõ base hoặc nguồn yêu cầu.
 
-Read the live Jira Subtask and native parent, accepted decision comments and references directly. Assess the contribution against parent AC or Bug expected behavior and its own scope/Verification. A local accepted contract is valid for explicitly assigned work without an issue. In ad hoc review without a requirement source, disclose that adherence cannot be assessed; never convert missing required input into a full contribution handoff pass.
+Với Jira, đọc Subtask, parent, quyết định đã chốt và tài liệu tham chiếu hiện hành. Với review trực tiếp, dùng yêu cầu được giao. Xác định phạm vi từ diff đã commit giữa base hoặc merge-base đã xác định và `HEAD`, diff đã stage và chưa stage, cùng đầu ra liên quan chưa được Git theo dõi. Chỉ loại thay đổi khi có căn cứ rõ về phạm vi sở hữu. Ghi đầu vào còn thiếu hoặc phần việc chưa xác định được trước khi đánh giá.
 
-For API work, read the [API consumer standards](../../../docs/api-consumer.md)
-and current producer contract for the relevant environment. Requirement adherence
-uses accepted requirements; Correctness & Standards checks consumer schema, auth,
-status/error/media/protocol and business semantics against that contract. Verify
-applicable producer publication/revision and local consumer evidence under
-[test ownership and selection](../../../CONTRIBUTING.md#test-ownership-and-selection);
-live feature evidence belongs to QA/coordinator, not FE review gates.
-A structural guard or P0 pass does not prove full integration.
-Raise discrepancies to the owner instead of changing expected behavior or inferring
-filter scope from generic runtime fields.
+## Giao hai trục song song
 
-Inspect the contribution's committed diff from the resolved base/merge-base to HEAD, staged and unstaged diffs, and relevant untracked output. An empty committed diff is not an empty review if uncommitted work exists. Inspect relevant final code beyond changed lines to understand behavior and callers; for read-only deliverables, inspect the report and source evidence. Record base, HEAD and which working changes/output were inspected.
+Khởi tạo hai subagent chỉ đọc trước khi chờ kết quả. Giao một trục cho mỗi subagent:
 
-Exclude unrelated changes only with clear ownership evidence. Report ambiguous scope and whether it prevents a reliable conclusion. Do not silently ignore ambiguous files or assign all worktree changes to this Task.
+- **Đáp ứng yêu cầu** (Requirement adherence). Dùng [checklist Requirement](references/requirement-checklist.md).
+- **Tính đúng đắn và tuân thủ chuẩn** (Correctness & Standards). Dùng [checklist Code](references/code-checklist.md). Khi thay đổi có thể ảnh hưởng giao diện, kể cả qua mã dùng chung, dùng thêm [checklist UI](references/ui-checklist.md).
 
-## Review independence
+Gửi cùng nguồn yêu cầu, base, `HEAD`, phạm vi thay đổi, bằng chứng sẵn có và đường dẫn checklist tương ứng. Yêu cầu mỗi subagent đọc hướng dẫn repo và đánh giá các mục thuộc trục được giao từ bằng chứng gốc. Giới hạn subagent ở việc khảo sát và trả kết quả cho reviewer chính trong phiên này.
 
-When independence is required, assess raw contract/code/check evidence directly without a predetermined verdict. The assignment supplies the reviewer role; this skill does not require another reviewer. If independence is unavailable, disclose the unmet requirement rather than calling self-review independent.
+Mỗi subagent trả một dòng cho mỗi mục thuộc trục được giao, gồm tên mục, trạng thái `Đạt`, `Không đạt`, `Thiếu bằng chứng` hoặc `Không áp dụng`, và đường dẫn tới bằng chứng hoặc lý do. Dùng `Không áp dụng` cho mục nằm ngoài phạm vi có căn cứ. Dùng `Thiếu bằng chứng` cho mục trong phạm vi chưa đủ căn cứ kết luận. Với phát hiện cần sửa, nêu vị trí, tác động và kết quả tối thiểu cần đạt. Nếu công cụ subagent không khả dụng hoặc một lượt trả kết quả không đủ, reviewer chính trực tiếp hoàn tất phần còn thiếu theo cùng checklist.
 
-## Assess and report
+## Đối chiếu và kết luận
 
-Apply [review standards](../../../CONTRIBUTING.md#review-standards) for the two verdicts, finding severity and completion, and [verification standards](../../../CONTRIBUTING.md#verification) for applicable evidence. Return the assessment in the requested PR/artifact/session under the assignment's boundary.
+Reviewer chính trong phiên Review đọc trực tiếp các nguồn cần thiết để xác nhận kết luận của cả hai trục, xử lý kết quả mâu thuẫn và bổ sung phép kiểm local phù hợp khi còn thiếu bằng chứng. Nêu rõ nếu điều kiện review độc lập chưa được đáp ứng.
+
+Báo cáo riêng kết luận của hai trục, kèm base, `HEAD`, phần đầu ra đã kiểm tra, phát hiện chặn bàn giao, góp ý tùy chọn và bằng chứng còn thiếu. Mục bắt buộc `Không đạt` hoặc `Thiếu bằng chứng` khiến trục tương ứng chưa thể đạt. Áp dụng [chuẩn review](../../../CONTRIBUTING.md#review-standards) để phân loại phát hiện và trả kết quả tại PR, tài liệu bàn giao hoặc phiên làm việc theo phạm vi được giao.

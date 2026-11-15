@@ -3,7 +3,7 @@
 import { Search } from "lucide-react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useDebouncedCallback } from "use-debounce"
-import { useOptimistic, useTransition } from "react"
+import { useEffect, useState, useTransition } from "react"
 
 import { useLocalization } from "@/app/lib/i18n/provider"
 import {
@@ -23,12 +23,16 @@ export function CronjobSearch() {
   const { dictionary } = useLocalization()
   const [isPending, startTransition] = useTransition()
   const currentSearch = searchParams.get(SEARCH_PARAM_KEY)?.toString() || ""
-  const [value, setValue] = useOptimistic(currentSearch)
+  const [value, setValue] = useState(currentSearch)
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Sync the draft with URL navigation, including Back and Forward.
+    setValue(currentSearch)
+  }, [currentSearch])
 
   const handleSearch = useDebouncedCallback((term: string) => {
     const trimmedTerm = term.trim()
     const params = new URLSearchParams(searchParams)
-    setValue(trimmedTerm)
 
     if (trimmedTerm) {
       params.set(SEARCH_PARAM_KEY, trimmedTerm)

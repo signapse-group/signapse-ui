@@ -1,61 +1,8 @@
----
-tracker:
-  kind: jira
-  provider:
-    base_url: $JIRA_BASE_URL
-    email: $JIRA_EMAIL
-    api_token: $JIRA_API_TOKEN
-    project_key: SIGN
-    issue_types: [Subtask]
-    routing_labels:
-      - route-backend
-      - route-frontend
-      - route-quality-assurance
-      - route-mdg
-      - route-landing
-  required_labels: [route-frontend]
-  dispatch_states: [Ready, Progress, In Review]
-  active_states: [Ready, Progress, In Review]
-  review_state: In Review
-  session_boundary_states: [Ready]
-  terminal_states: [Done]
-polling:
-  interval_ms: 10000
-runtime_control:
-  enabled: true
-  path: /opt/apps/symphony/runtime/state/runtime-control.sqlite3
-  id: fe
-  members: [be, fe, landing]
-  quota_check_timeout_ms: 15000
-  heartbeat_interval_ms: 1000
-  heartbeat_timeout_ms: 10000
-workspace:
-  root: $SYMPHONY_WORKSPACE_ROOT
-hooks:
-  after_create: |
-    git -c credential.helper=/opt/apps/symphony/runtime/git-credential-github clone --depth 1 --branch dev https://github.com/signapse-group/signapse-ui.git .
-    git config credential.helper /opt/apps/symphony/runtime/git-credential-github
-    pnpm install --frozen-lockfile
-  before_run: |
-    git fetch --no-tags origin +refs/heads/dev:refs/remotes/origin/dev
-    /opt/apps/symphony/runtime/prepare-fe-workspace
-  timeout_ms: 900000
-agent:
-  max_concurrent_agents: 1
-  max_turns: 20
-codex:
-  command: codex --config shell_environment_policy.inherit=all --config 'model="gpt-6-luna"' --config model_reasoning_effort=max app-server
-  approval_policy: never
-  thread_sandbox: workspace-write
-  turn_sandbox_policy:
-    type: dangerFullAccess
----
-
 {% assign state = issue.state | strip | downcase %}
 
 You are executing Jira Subtask `{{ issue.identifier }}` in `signapse-group/signapse-ui`.
 Feature/fix work starts from current origin/dev and targets dev. Promotion to main and product production deployment are outside this worker profile.
-Read `AGENTS.md`, `CONTRIBUTING.md` and applicable scoped instructions from the current `origin/dev` policy revision using `git show origin/dev:<path>`. Resolve relative policy links at that same revision, including the phase runbook selected below. The before_run fetch updates policy refs without changing the task branch or working output.
+Read [AGENTS.md](AGENTS.md), [CONTRIBUTING.md](CONTRIBUTING.md), applicable scoped instructions and the selected runbook from this checkout. Resolve local links here and use the repository skills under `.agents/skills` when the task needs them.
 
 - Immutable ID: {{ issue.id }}
 - Identifier: {{ issue.identifier }}
@@ -82,7 +29,7 @@ Description:
 Description not provided in the snapshot.
 {% endif %}
 
-Retain the live Jira `dependencies` envelope and apply the [dependency contract](https://github.com/signapse-group/signapse-symphony/blob/main/elixir/README.md#jira-dependency-contract). Use the current origin/dev instruction/runbook sources specified above. Planning policy links are maintainer provenance, not execution prerequisites; live assignment design/ADR/API references remain required when relevant. Do not fetch Planning policy to manufacture an additional admission gate. If a required local source is missing, report deployment drift and stop the affected phase instead of searching legacy checkouts or backups for substitute policy.
+Retain the live Jira `dependencies` envelope and apply the [dependency contract](https://github.com/signapse-group/signapse-symphony/blob/main/elixir/README.md#jira-dependency-contract). Planning policy links are maintainer provenance, not execution prerequisites; live assignment design/ADR/API references remain required when relevant. Do not fetch Planning policy to manufacture an additional admission gate. If a required local source is missing, report deployment drift and stop the affected phase instead of searching legacy checkouts or backups for substitute policy.
 
 {% if state == "ready" %}
 ## Phase: Survey
