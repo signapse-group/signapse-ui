@@ -74,18 +74,9 @@ Docs-only output uses artifact location/version, review and applicable checks ra
 
 ## Recovery and external blockers
 
-Pending delivery within budget stays In Review. Reread runs/deployments before retries; reuse existing runs and read back ambiguous writes to avoid duplicates. In-scope code/build/check defects return Progress with saved actionable feedback. Temporary infrastructure failure permits at most two reruns, with reasons/counters saved and the original deadline retained. No autonomous infrastructure repair or rollback is granted.
+Pending delivery within budget stays In Review. Reread the specific run/deployment before retry or when the deadline expires. In-scope code/build/check defects return Progress with saved actionable feedback. Temporary infrastructure failure permits at most two reruns, with reasons/counters saved and the original deadline retained. No autonomous infrastructure repair or rollback is granted.
 
-Use Blocked for required external input/access/decision/dependency or exhausted wait only when no meaningful independent work remains. A mutation of synthetic data during an explicitly assigned test-environment integration is not, by itself, external input or a blocker; record the test-data effect and continue review when the implementation and required evidence remain assessable. Save/read back a separate owned blocker record before resolving/readback In Review → Blocked:
-
-```text
-Blocked — <vướng mắc và output/AC/check bị chặn>.
-Cần <owner>: <hành động hoặc quyết định cụ thể>.
-Tiếp tục tại <live status trước Blocked> khi <điều kiện kiểm chứng được>.
-Bằng chứng: <link kết quả kiểm tra liên quan — chỉ khi cần>.
-```
-
-Take the previous status from the live issue. Preserve human content, review history and saved delivery state; reuse the owned blocker. If ownership/write/readback is unavailable, report the unconfirmed step. The coordinator owns resolution/resume; verify the condition on resume, since status alone is not resolution evidence. Retain deadline/retry counters and resume the actual review/delivery stage. Open/Blocked/Done or changed phase/route/ownership ends work preserving output; do not self-resume or reopen Done.
+If required evidence remains unavailable due to an external input/access/decision or exhausted recovery, apply the [shared blocker gate](../../CONTRIBUTING.md#blockers-and-resume). Expiry alone is not a blocker. When the gate is met, save/read back the consolidated record, resolve/read back In Review → Blocked and end the session. Preserve the review, deployment identity, deadline/counters and verified evidence for an authorized resume.
 
 ## Delivery handoff and Done
 
@@ -98,6 +89,6 @@ Lưu ý: <điểm ảnh hưởng trực tiếp integration/test — chỉ khi c�
 Cần <owner>: <hành động cụ thể — chỉ khi có>.
 ```
 
-Use artifact location/version for output without app deployment. Keep detailed review, commands/CI run IDs and candidate/merge/deployed-build relation in linked evidence; Jira keeps coordination/actions, not duplicate reports. For API output, distinguish FE output from producer revision/environment/publication and pending integration. For Bug fixes, connect the addressed Bug and QA run/report to the delivered source/build/environment and corrected coverage; dev checks do not close the Bug or replace QA retest.
+Use artifact location/version and verification for output without app deployment. For application delivery, state which FE checks passed and which live checks the receiving QA/coordinator owns. Keep detailed review, commands/CI run IDs and candidate/merge/deployed-build relation in linked evidence; Jira keeps coordination/actions, not duplicate reports. For API output, distinguish FE output from producer revision/environment/publication and pending integration. For Bug fixes, connect the addressed Bug and QA run/report to the delivered source/build/environment and corrected coverage; dev checks do not close the Bug or replace QA retest.
 
 Reread live contract/status/routing/dependencies and verify review, required PR checks/Preview, merge, applicable dev/deployment or artifact/activation gates, and saved/read-back handoff. Resolve live In Review → Done, transition/read back and end the session. Done confirms the contribution and its required delivery, independently of QA/product/parent acceptance. New work after Done needs a new coordinator-assigned contribution.
