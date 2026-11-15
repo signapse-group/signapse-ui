@@ -11,6 +11,7 @@ import type {
   CronjobListResponse,
   CronjobResponse,
 } from "@/app/lib/cronjobs/definitions"
+import { CRONJOB_RESUME_PERMISSION } from "@/app/lib/cronjobs/permissions"
 import type { Page } from "@/app/lib/definitions"
 import { useLocalization } from "@/app/lib/i18n/provider"
 import { AppPaginationControls } from "@/components/app-pagination-controls"
@@ -744,7 +745,7 @@ function StatusActions({
   const canReadCronjob = useHasPermission("cronjob:read")
   const canStartCronjob = useHasPermission("cronjob:start")
   const canPauseCronjob = useHasPermission("cronjob:pause")
-  const canResumeCronjob = useHasPermission("cronjob:resume")
+  const canResumeCronjob = useHasPermission(CRONJOB_RESUME_PERMISSION)
   const [isPending, startTransition] = useTransition()
   const actionsRef = useRef<HTMLDivElement>(null)
   const startButtonRef = useRef<HTMLButtonElement>(null)
