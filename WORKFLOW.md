@@ -29,7 +29,7 @@ Description:
 Description not provided in the snapshot.
 {% endif %}
 
-Retain the live Jira `dependencies` envelope and apply the [dependency contract](https://github.com/signapse-group/signapse-symphony/blob/main/elixir/README.md#jira-dependency-contract). Planning policy links are maintainer provenance, not execution prerequisites; live assignment design/ADR/API references remain required when relevant. Do not fetch Planning policy to manufacture an additional admission gate. If a required local source is missing, report deployment drift and stop the affected phase instead of searching legacy checkouts or backups for substitute policy.
+Retain the live Jira `dependencies` envelope and apply the [dependency contract](https://github.com/signapse-group/signapse-symphony/blob/main/elixir/README.md#jira-dependency-contract). Planning policy links are maintainer provenance, not execution prerequisites; live assignment design/ADR/API references remain required when relevant. Do not fetch Planning policy to manufacture an additional admission gate. If a required local source is missing, identify the affected output and report deployment drift; complete any authorized work that does not depend on it. Use the runbook and the [local blocker gate](CONTRIBUTING.md#blockers-and-resume) when deciding whether the ticket can proceed.
 
 {% if state == "ready" %}
 ## Phase: Survey

@@ -48,13 +48,4 @@ A missing mandatory check is not an exception that waives the gate. Follow [reco
 
 ## Failure, blocker and resume
 
-Implementation/check failures remain in Progress for repair. Blocked is reserved for required external input/access/decision/dependency when no meaningful independent work remains. A mutation of synthetic data during an explicitly assigned test-environment integration is not, by itself, external input or a blocker; record the test-data effect and continue the assigned work when implementation and required evidence remain assessable. Save/read back a separate owned blocker record before transition:
-
-```text
-Blocked — <vướng mắc và output/AC/check bị chặn>.
-Cần <owner>: <hành động hoặc quyết định cụ thể>.
-Tiếp tục tại <live status trước Blocked> khi <điều kiện kiểm chứng được>.
-Bằng chứng: <link kết quả kiểm tra liên quan — chỉ khi cần>.
-```
-
-Take the previous status from the live issue, retain human content/history and reuse the owned blocker. Resolve/read back Progress → Blocked and stop. If ownership/write/readback is unavailable, report the unconfirmed step. Coordinator owns resolution/resume; verify its condition on resume, not status alone. Feedback resumes existing output in Progress. Any phase/route/ownership change ends this session preserving workspace/PR/evidence; Open/Blocked/Done stops autonomous work. Do not self-resume Blocked or reopen Done.
+Fix implementation, test and required local render/check failures in Progress. Record future-phase prerequisites in the handoff. If a required Implement output is still blocked, apply the [shared blocker gate](../../CONTRIBUTING.md#blockers-and-resume); when met, save/read back the consolidated record, resolve/read back Progress → Blocked and end the session. On a fresh assigned turn, reconcile existing output and applicable feedback/resolution before continuing.
