@@ -89,7 +89,19 @@ export function CronjobStatusField({
       <dd
         className={`max-w-full min-w-0 ${isDestructive ? "flex items-center gap-1" : ""}`}
       >
-        <Badge variant={presentation.variant} aria-hidden={isDestructive}>
+        <Badge
+          variant={presentation.variant}
+          aria-hidden={isDestructive}
+          aria-label={
+            field === "schedule"
+              ? `${presentation.label}: ${presentation.value}`
+              : undefined
+          }
+          data-cronjob-schedule-status={
+            field === "schedule" ? "true" : undefined
+          }
+          tabIndex={field === "schedule" ? -1 : undefined}
+        >
           {Icon ? <Icon aria-hidden="true" data-icon="inline-start" /> : null}
           {isDestructive ? null : (
             <span className="break-words">{presentation.value}</span>

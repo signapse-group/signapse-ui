@@ -101,17 +101,35 @@ export async function startCronjob(id: number): Promise<ActionResult<void>> {
 export async function pauseCronjob(
   id: number
 ): Promise<ActionResult<CronjobResponse>> {
+  if (!isValidCronjobId(id)) {
+    const dictionary = await getDictionary(await getRequestLocale())
+    return { success: false, error: dictionary.cronjobs.invalidCronjobId }
+  }
+
   try {
     const cronjob = await fetchCronjob(`/cronjobs/${id}/pause`, {
       method: "POST",
     })
     revalidatePath("/cronjobs")
     return { success: true, data: cronjob }
-  } catch {
+  } catch (error: unknown) {
     const dictionary = await getDictionary(await getRequestLocale())
+    const status =
+      error instanceof Error &&
+      "status" in error &&
+      typeof error.status === "number"
+        ? error.status
+        : undefined
     return {
       success: false,
-      error: dictionary.cronjobs.pauseError,
+      error:
+        status === 403
+          ? dictionary.cronjobs.pausePermissionDenied
+          : status === 404
+            ? dictionary.cronjobs.pauseNotFound
+            : status === 409
+              ? dictionary.cronjobs.pauseIneligible
+              : dictionary.cronjobs.pauseError,
     }
   }
 }

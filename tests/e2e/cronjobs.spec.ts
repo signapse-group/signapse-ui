@@ -426,11 +426,15 @@ test("cronjob controls remain permission-specific for queued and paused work", a
   ).toHaveCount(0)
 })
 
-test("Start actions stay available across responsive breakpoints", async ({
+test("Pause and Start actions stay available across responsive breakpoints", async ({
   page,
   fixture,
 }, testInfo) => {
-  await fixture.setPermissions(["cronjob:read", "cronjob:start"])
+  await fixture.setPermissions([
+    "cronjob:read",
+    "cronjob:start",
+    "cronjob:pause",
+  ])
   await page.emulateMedia({ colorScheme: "dark" })
   await page.setViewportSize({ width: 1520, height: 1024 })
   await page.goto("/en/cronjobs")
@@ -453,8 +457,15 @@ test("Start actions stay available across responsive breakpoints", async ({
       width < 768
         ? page.getByRole("article", { name: "Immediate trigger not started" })
         : page.getByRole("row", { name: /Immediate trigger not started/ })
+    const pauseSurface =
+      width < 768
+        ? page.getByRole("article", { name: "Scheduled and running" })
+        : page.getByRole("row", { name: /Scheduled and running/ })
     await expect(
       actionSurface.getByRole("button", { name: "Start" })
+    ).toBeVisible()
+    await expect(
+      pauseSurface.getByRole("button", { name: "Pause" })
     ).toBeVisible()
     expect(
       await page.evaluate(
@@ -489,8 +500,11 @@ test("Start actions stay available across responsive breakpoints", async ({
     body: await page.locator("#cronjob-list").screenshot(),
     contentType: "image/png",
   })
-  await mobileStart.focus()
-  await expect(mobileStart).toBeFocused()
+  const mobilePause = page
+    .getByRole("article", { name: "Scheduled and running" })
+    .getByRole("button", { name: "Tạm dừng" })
+  await mobilePause.focus()
+  await expect(mobilePause).toBeFocused()
   await testInfo.attach("cronjobs-actions-mobile-focus-vi-390x844.png", {
     body: await page.locator("#cronjob-list").screenshot(),
     contentType: "image/png",

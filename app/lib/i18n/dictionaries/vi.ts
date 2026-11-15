@@ -2894,8 +2894,16 @@ export const vi = {
     startReadError:
       "Chưa xác nhận được trạng thái hiện tại. Lần đọc thất bại lúc {time}; thông tin đang hiển thị có thể đã cũ. Hãy tải lại trang để kiểm tra.",
     pause: "Tạm dừng",
+    pausing: "Đang tạm dừng…",
     paused: "Đã tạm dừng cronjob.",
+    pausePermissionDenied: "Bạn không có quyền tạm dừng cronjob này.",
+    pauseNotFound: "Cronjob này không còn tồn tại.",
+    pauseIneligible: "Cronjob này hiện không đủ điều kiện để tạm dừng.",
     pauseError: "Không thể tạm dừng cronjob.",
+    pauseNotConfirmed:
+      "Chưa xác nhận được thao tác tạm dừng. Trạng thái lịch mới nhất đang được hiển thị.",
+    pauseReadError:
+      "Chưa xác nhận được trạng thái hiện tại. Lần đọc sau yêu cầu tạm dừng thất bại lúc {time}; thông tin đang hiển thị có thể đã cũ. Hãy tải lại trang để kiểm tra.",
     resume: "Tiếp tục",
     resumed: "Đã tiếp tục cronjob.",
     resumeError: "Không thể tiếp tục cronjob.",
