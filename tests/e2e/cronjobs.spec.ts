@@ -22,6 +22,9 @@ test("cronjob read permission renders the responsive list and retains the detail
   await expect(pausedCard.getByText("Đang chạy")).toBeVisible()
   await expect(pausedCard.getByText("Chưa có kết quả")).toBeVisible()
   await expect(pausedCard.getByText("Không có lần chạy kế tiếp")).toBeVisible()
+  await expect(pausedCard.getByRole("status")).toHaveText(
+    "Bạn không có quyền tiếp tục cronjob này."
+  )
   await expect(page.getByRole("button", { name: "Khởi chạy" })).toHaveCount(0)
   await expect(page.getByRole("button", { name: "Tạm dừng" })).toHaveCount(0)
   await expect(scheduledCard.getByRole("status")).toHaveText(
@@ -49,7 +52,6 @@ test("cronjob read permission renders the responsive list and retains the detail
     body: await page.screenshot({ fullPage: true }),
     contentType: "image/png",
   })
-
   await page.emulateMedia({ colorScheme: "dark" })
   await expect(page.locator("html")).toHaveClass(/\bdark\b/)
   const darkListAxe = await new AxeBuilder({ page })
@@ -86,9 +88,17 @@ test("cronjob read permission renders the responsive list and retains the detail
     if (width < 768) {
       await expect(card).toBeVisible()
       await expect(table).toBeHidden()
+      await expect(card.getByRole("status")).toHaveText(
+        "Bạn không có quyền tiếp tục cronjob này."
+      )
     } else {
       await expect(card).toBeHidden()
       await expect(table).toBeVisible()
+      await expect(
+        page
+          .getByRole("row", { name: /Paused during execution/ })
+          .getByRole("status")
+      ).toHaveText("Bạn không có quyền tiếp tục cronjob này.")
     }
     expect(
       await page.evaluate(
@@ -97,15 +107,25 @@ test("cronjob read permission renders the responsive list and retains the detail
       `page should not overflow at ${width}px`
     ).toBe(true)
 
-    if (width === 760) {
-      await testInfo.attach("cronjobs-effective-760x512-200pct.png", {
-        body: await page.screenshot({ fullPage: true }),
-        contentType: "image/png",
-      })
+    if (width === 360 || width === 760) {
+      await testInfo.attach(
+        width === 360
+          ? "cronjobs-resume-denied-360x800.png"
+          : "cronjobs-resume-denied-effective-760x512-200pct.png",
+        {
+          body: await page.screenshot({ fullPage: true }),
+          contentType: "image/png",
+        }
+      )
     }
   }
 
   await page.setViewportSize({ width: 1520, height: 1024 })
+  await expect(
+    page
+      .getByRole("row", { name: /Paused during execution/ })
+      .getByRole("status")
+  ).toHaveText("Bạn không có quyền tiếp tục cronjob này.")
   await testInfo.attach("cronjobs-read-wide-1520x1024.png", {
     body: await page.screenshot({ fullPage: true }),
     contentType: "image/png",

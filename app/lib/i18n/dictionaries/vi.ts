@@ -2909,6 +2909,8 @@ export const vi = {
     resuming: "Đang tiếp tục…",
     resumed: "Đã tiếp tục cronjob.",
     resumeError: "Không thể tiếp tục cronjob.",
+    resumeNotConfirmed:
+      "Chưa xác nhận được thao tác tiếp tục. Trạng thái lịch mới nhất đang được hiển thị.",
     resumePermissionError: "Bạn không có quyền tiếp tục cronjob này.",
     resumeMissingError: "Cronjob này không còn tồn tại.",
     resumeConflictError:

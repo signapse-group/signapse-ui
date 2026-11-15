@@ -843,6 +843,8 @@ function StatusActions({
     onResumePendingChange(id, true)
     startTransition(async () => {
       try {
+        let resumeError: string | undefined
+        let resumeFailureIsKnown = false
         try {
           const result = await resumeCronjob(id)
           if (result.success) {
@@ -850,15 +852,27 @@ function StatusActions({
             toast.success(dictionary.cronjobs.resumed)
             return
           }
-          toast.error(result.error || dictionary.cronjobs.resumeError)
+          resumeError = result.error || dictionary.cronjobs.resumeError
+          resumeFailureIsKnown = !result.ambiguous
         } catch {
-          toast.error(dictionary.cronjobs.resumeError)
+          resumeError = dictionary.cronjobs.resumeError
         }
 
         try {
-          onCronjobRead(await getCronjobById(id))
+          const cronjob = await getCronjobById(id)
+          onCronjobRead(cronjob)
+          if (resumeFailureIsKnown) {
+            toast.error(resumeError || dictionary.cronjobs.resumeError)
+          } else if (cronjob.scheduleStatus === "SCHEDULED") {
+            toast.success(dictionary.cronjobs.resumed)
+          } else {
+            toast.error(dictionary.cronjobs.resumeNotConfirmed)
+          }
         } catch {
           onStatusReadError(id)
+          if (resumeFailureIsKnown) {
+            toast.error(resumeError || dictionary.cronjobs.resumeError)
+          }
         }
       } finally {
         onResumePendingChange(id, false)
@@ -1002,6 +1016,14 @@ function StatusActions({
           className="basis-full text-left text-xs text-muted-foreground"
         >
           {dictionary.cronjobs.pausePermissionDenied}
+        </span>
+      ) : null}
+      {canResume && !canResumeCronjob ? (
+        <span
+          role="status"
+          className="basis-full text-left text-xs text-muted-foreground"
+        >
+          {dictionary.cronjobs.resumePermissionError}
         </span>
       ) : null}
       {canResume && canResumeCronjob ? (

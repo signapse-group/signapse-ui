@@ -2928,6 +2928,8 @@ export const en: Dictionary = {
     resuming: "Resuming…",
     resumed: "Cronjob resumed.",
     resumeError: "Could not resume cronjob.",
+    resumeNotConfirmed:
+      "Resume was not confirmed. The latest schedule status is shown.",
     resumePermissionError: "You do not have permission to resume this cronjob.",
     resumeMissingError: "This cronjob no longer exists.",
     resumeConflictError: "The cronjob changed before Resume could complete.",

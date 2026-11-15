@@ -33,6 +33,10 @@ type PauseCronjobActionResult =
   | { success: true; data: CronjobResponse }
   | { success: false; error: string; ambiguous: boolean }
 
+type ResumeCronjobActionResult =
+  | { success: true; data: CronjobResponse }
+  | { success: false; error: string; ambiguous: boolean }
+
 export async function getCronjobs(
   searchParams: SearchParams
 ): Promise<CronjobPageResponse> {
@@ -144,10 +148,14 @@ export async function pauseCronjob(
 
 export async function resumeCronjob(
   id: number
-): Promise<ActionResult<CronjobResponse>> {
+): Promise<ResumeCronjobActionResult> {
   if (!isValidCronjobId(id)) {
     const dictionary = await getDictionary(await getRequestLocale())
-    return { success: false, error: dictionary.cronjobs.invalidCronjobId }
+    return {
+      success: false,
+      error: dictionary.cronjobs.invalidCronjobId,
+      ambiguous: false,
+    }
   }
 
   try {
@@ -158,9 +166,12 @@ export async function resumeCronjob(
     return { success: true, data: cronjob }
   } catch (error: unknown) {
     const dictionary = await getDictionary(await getRequestLocale())
+    const status =
+      error instanceof Error ? (error as BackendApiError).status : undefined
     return {
       success: false,
       error: getResumeError(error, dictionary.cronjobs),
+      ambiguous: status === undefined || status >= 500,
     }
   }
 }

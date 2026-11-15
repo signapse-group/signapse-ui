@@ -300,6 +300,7 @@ describe("cronjob API actions", () => {
     await expect(resumeCronjob(id as number)).resolves.toEqual({
       success: false,
       error: "Invalid cronjob ID.",
+      ambiguous: false,
     })
     expect(mocks.fetchAuthenticated).not.toHaveBeenCalled()
     expect(mocks.revalidatePath).not.toHaveBeenCalled()
@@ -316,25 +317,30 @@ describe("cronjob API actions", () => {
     await expect(resumeCronjob(42)).resolves.toEqual({
       success: false,
       error: "Account is not provisioned for this action.",
+      ambiguous: false,
     })
   })
 
   it.each([
-    [403, "You do not have permission to resume this cronjob."],
-    [404, "This cronjob no longer exists."],
-    [409, "The cronjob changed before Resume could complete."],
-    [500, "Could not resume cronjob."],
-  ])("localizes the Resume response for HTTP %i", async (status, message) => {
-    mocks.fetchAuthenticated.mockRejectedValue(
-      Object.assign(new Error(`Resume refused (${status}).`), { status })
-    )
+    [403, "You do not have permission to resume this cronjob.", false],
+    [404, "This cronjob no longer exists.", false],
+    [409, "The cronjob changed before Resume could complete.", false],
+    [500, "Could not resume cronjob.", true],
+  ])(
+    "localizes the Resume response for HTTP %i",
+    async (status, message, ambiguous) => {
+      mocks.fetchAuthenticated.mockRejectedValue(
+        Object.assign(new Error(`Resume refused (${status}).`), { status })
+      )
 
-    await expect(resumeCronjob(42)).resolves.toEqual({
-      success: false,
-      error: message,
-    })
-    expect(mocks.revalidatePath).not.toHaveBeenCalled()
-  })
+      await expect(resumeCronjob(42)).resolves.toEqual({
+        success: false,
+        error: message,
+        ambiguous,
+      })
+      expect(mocks.revalidatePath).not.toHaveBeenCalled()
+    }
+  )
 
   it("uses the localized Resume permission message for Vietnamese requests", async () => {
     mocks.getRequestLocale.mockResolvedValue("vi")
@@ -354,6 +360,7 @@ describe("cronjob API actions", () => {
     await expect(resumeCronjob(42)).resolves.toEqual({
       success: false,
       error: "Bạn không có quyền tiếp tục cronjob này.",
+      ambiguous: false,
     })
   })
 
@@ -376,6 +383,7 @@ describe("cronjob API actions", () => {
     await expect(resumeCronjob(42)).resolves.toEqual({
       success: false,
       error: "Tài khoản chưa được thiết lập để thực hiện thao tác này.",
+      ambiguous: false,
     })
   })
 
@@ -385,6 +393,7 @@ describe("cronjob API actions", () => {
     await expect(resumeCronjob(42)).resolves.toEqual({
       success: false,
       error: "Could not resume cronjob.",
+      ambiguous: true,
     })
   })
 
@@ -394,6 +403,7 @@ describe("cronjob API actions", () => {
     await expect(resumeCronjob(42)).resolves.toEqual({
       success: false,
       error: "Could not resume cronjob.",
+      ambiguous: true,
     })
   })
 
