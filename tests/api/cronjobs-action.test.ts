@@ -326,6 +326,7 @@ describe("cronjob API actions", () => {
     [404, "This cronjob no longer exists.", false],
     [409, "The cronjob changed before Resume could complete.", false],
     [500, "Could not resume cronjob.", true],
+    [503, "Could not resume cronjob.", true],
   ])(
     "localizes the Resume response for HTTP %i",
     async (status, message, ambiguous) => {

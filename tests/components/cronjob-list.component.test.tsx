@@ -661,7 +661,7 @@ describe("CronjobListPage", () => {
     expect(mocks.toastSuccess).toHaveBeenCalledWith("Đã tiếp tục cronjob.")
   })
 
-  it.each([403, 404, 409, 500])(
+  it.each([403, 404, 409, 500, 503])(
     "reads the actual state after Resume fails with HTTP %i",
     async (status) => {
       const user = userEvent.setup()
@@ -675,7 +675,7 @@ describe("CronjobListPage", () => {
       mocks.resumeCronjob.mockResolvedValue({
         success: false,
         error: `Resume refused (${status}).`,
-        ambiguous: status === 500,
+        ambiguous: status >= 500,
       })
       mocks.getCronjobById.mockResolvedValue(readback)
       renderCronjobList(["cronjob:read", "cronjob:resume"])
@@ -697,7 +697,7 @@ describe("CronjobListPage", () => {
       expect(within(card).getByText("Running")).toBeVisible()
       expect(within(row).getByText(`0 ${status} * * * ?`)).toBeVisible()
       expect(within(row).getByText("Scheduled")).toBeVisible()
-      if (status === 500) {
+      if (status >= 500) {
         expect(mocks.toastSuccess).toHaveBeenCalledWith("Cronjob resumed.")
         expect(mocks.toastError).not.toHaveBeenCalled()
       } else {
@@ -709,31 +709,44 @@ describe("CronjobListPage", () => {
     }
   )
 
-  it("does not report success when an ambiguous Resume readback is still paused", async () => {
-    const user = userEvent.setup()
-    const pausedReadback = { ...cronjobs[1], scheduleStatus: "PAUSED" as const }
-    mocks.resumeCronjob.mockResolvedValue({
-      success: false,
-      error: "Could not resume cronjob.",
-      ambiguous: true,
-    })
-    mocks.getCronjobById.mockResolvedValue(pausedReadback)
-    renderCronjobList(["cronjob:read", "cronjob:resume"])
+  it.each([
+    ["en", "Resume", "Paused", "Resume was not confirmed. The latest schedule status is shown."],
+    ["vi", "Tiếp tục", "Tạm dừng", "Chưa xác nhận được thao tác tiếp tục. Trạng thái lịch mới nhất đang được hiển thị."],
+  ])(
+    "does not report success when an ambiguous Resume readback is still paused in %s",
+    async (locale, resumeLabel, pausedLabel, feedback) => {
+      const user = userEvent.setup()
+      const pausedReadback = {
+        ...cronjobs[1],
+        scheduleStatus: "PAUSED" as const,
+      }
+      mocks.resumeCronjob.mockResolvedValue({
+        success: false,
+        error: "Could not resume cronjob.",
+        ambiguous: true,
+      })
+      mocks.getCronjobById.mockResolvedValue(pausedReadback)
+      renderCronjobList(
+        ["cronjob:read", "cronjob:resume"],
+        page,
+        locale as "en" | "vi"
+      )
 
-    const card = screen.getByRole("article", {
-      name: "Paused during execution",
-    })
-    await user.click(within(card).getByRole("button", { name: "Resume" }))
+      const card = screen.getByRole("article", {
+        name: "Paused during execution",
+      })
+      await user.click(
+        within(card).getByRole("button", { name: resumeLabel })
+      )
 
-    await waitFor(() =>
-      expect(mocks.getCronjobById).toHaveBeenCalledWith(pausedReadback.id)
-    )
-    expect(within(card).getByText("Paused")).toBeVisible()
-    expect(mocks.toastSuccess).not.toHaveBeenCalled()
-    expect(mocks.toastError).toHaveBeenCalledWith(
-      "Resume was not confirmed. The latest schedule status is shown."
-    )
-  })
+      await waitFor(() =>
+        expect(mocks.getCronjobById).toHaveBeenCalledWith(pausedReadback.id)
+      )
+      expect(within(card).getByText(pausedLabel)).toBeVisible()
+      expect(mocks.toastSuccess).not.toHaveBeenCalled()
+      expect(mocks.toastError).toHaveBeenCalledWith(feedback)
+    }
+  )
 
   it("waits for Resume readback before reporting an ambiguous failure", async () => {
     const user = userEvent.setup()
