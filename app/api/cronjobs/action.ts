@@ -131,7 +131,7 @@ export async function pauseCronjob(
       message = dictionary.cronjobs.pauseNotFound
     } else if (status === 409) {
       if (backendError?.code === "USER_PROVISIONING_REJECTED") {
-        message = dictionary.cronjobs.pauseProvisioningRejected
+        message = dictionary.cronjobs.provisioningRejected
       }
     }
     return {
@@ -145,6 +145,11 @@ export async function pauseCronjob(
 export async function resumeCronjob(
   id: number
 ): Promise<ActionResult<CronjobResponse>> {
+  if (!isValidCronjobId(id)) {
+    const dictionary = await getDictionary(await getRequestLocale())
+    return { success: false, error: dictionary.cronjobs.invalidCronjobId }
+  }
+
   try {
     const cronjob = await fetchCronjob(`/cronjobs/${id}/resume`, {
       method: "POST",
@@ -171,7 +176,11 @@ function getResumeError(
     return messages.resumePermissionError
   }
   if (status === 404) return messages.resumeMissingError
-  if (status === 409) return messages.resumeConflictError
+  if (status === 409) {
+    return (error as BackendApiError).code === "USER_PROVISIONING_REJECTED"
+      ? messages.provisioningRejected
+      : messages.resumeConflictError
+  }
 
   return messages.resumeError
 }

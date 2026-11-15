@@ -27,3 +27,19 @@ The Resume target remains visible and at least 24×24 CSS px at 360, 760, 767, 7
 - Targeted ESLint, `pnpm typecheck`, and `git diff --check`: passed.
 
 These are local fixture renders and checks. QA still owns live feature-flow testing; delivery still owns required PR checks and dev revision verification.
+
+## Review follow-up
+
+The follow-up fixes the two findings on PR #129: `resumeCronjob` now validates a positive safe-integer ID before building the authenticated URL, and HTTP 409 code `USER_PROVISIONING_REJECTED` returns localized provisioning feedback while other 409 responses retain the schedule-conflict message. No UI layout or component code changed.
+
+The active SIGN-28 Wide and Mobile references remain attachments 10267 and 10268, updated 2026-11-12. Jira REST exposed their content as raw PNG bytes in this session, so the visual comparison used the accepted local Cronjobs Actions pattern in [SIGN-591](../SIGN-591/cronjobs-actions-wide-en-1520x1024.png) and [SIGN-611](../SIGN-611/README.md), alongside the current SIGN-615 candidate renders above. Placement and independent schedule/execution/result/next-run fields match that direction.
+
+The dev OpenAPI was fetched at `https://dev-api.signapse.cloud/v3/api-docs` on 2026-11-15 17:21 UTC; `x-build-revision` remains `ae3c0813a3818d1bcd5cb7fb956e083586bdc642`. Resume documents `USER_PROVISIONING_REJECTED` as a possible coded 409 before the controller, confirming that it must be distinguished from schedule conflicts.
+
+Follow-up verification on the updated candidate:
+
+- `pnpm exec vitest run tests/api/cronjobs-action.test.ts tests/components/cronjob-list.component.test.tsx` — 88 passed, including invalid Resume IDs, both locales for provisioning rejection, and existing permission/readback/component behavior.
+- `pnpm typecheck`, targeted ESLint, `pnpm test:contract` (86 operations), and `git diff --check` — passed.
+- `/opt/apps/symphony/runtime/run-fe-browser "$PWD" tests/e2e/cronjobs.spec.ts --retries=0` — 10 passed. The rendered comparison covered wide/mobile light and dark, 360px, effective 760px at 200%, 767/768px, 1024px, 1439/1440px and 1520px, including Resume visibility and existing pending/readback states. No page overflow or target-size failure was reported.
+
+The render and browser checks use local fixtures. No live cronjob mutation was performed; QA retains live feature-flow testing.

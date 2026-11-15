@@ -2897,7 +2897,7 @@ export const vi = {
     pausing: "Đang tạm dừng…",
     paused: "Đã tạm dừng cronjob.",
     pausePermissionDenied: "Bạn không có quyền tạm dừng cronjob này.",
-    pauseProvisioningRejected:
+    provisioningRejected:
       "Tài khoản của bạn chưa được thiết lập để thực hiện thao tác này. Hãy liên hệ quản trị viên.",
     pauseNotFound: "Cronjob này không còn tồn tại.",
     pauseError: "Không thể tạm dừng cronjob.",

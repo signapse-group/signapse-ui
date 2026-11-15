@@ -70,7 +70,7 @@ beforeEach(() => {
       startError: "Could not start cronjob.",
       pauseError: "Could not pause cronjob.",
       pausePermissionDenied: "No permission to pause cronjob.",
-      pauseProvisioningRejected: "Account is not provisioned for this action.",
+      provisioningRejected: "Account is not provisioned for this action.",
       pauseNotFound: "Cronjob no longer exists.",
       resumeError: "Could not resume cronjob.",
       resumePermissionError:
@@ -228,7 +228,7 @@ describe("cronjob API actions", () => {
     mocks.getRequestLocale.mockResolvedValue("vi")
     mocks.getDictionary.mockResolvedValue({
       cronjobs: {
-        pauseProvisioningRejected:
+        provisioningRejected:
           "Tài khoản chưa được cấp cấu hình cho thao tác này.",
       },
     })
@@ -289,6 +289,37 @@ describe("cronjob API actions", () => {
   })
 
   it.each([
+    0,
+    -1,
+    1.5,
+    Number.NaN,
+    Number.POSITIVE_INFINITY,
+    Number.MAX_SAFE_INTEGER + 1,
+    "42/other",
+  ])("rejects invalid resume ID %s before sending a request", async (id) => {
+    await expect(resumeCronjob(id as number)).resolves.toEqual({
+      success: false,
+      error: "Invalid cronjob ID.",
+    })
+    expect(mocks.fetchAuthenticated).not.toHaveBeenCalled()
+    expect(mocks.revalidatePath).not.toHaveBeenCalled()
+  })
+
+  it("maps Resume provisioning rejection separately from schedule conflicts", async () => {
+    mocks.fetchAuthenticated.mockRejectedValue(
+      Object.assign(new Error("Provisioning rejected."), {
+        status: 409,
+        code: "USER_PROVISIONING_REJECTED",
+      })
+    )
+
+    await expect(resumeCronjob(42)).resolves.toEqual({
+      success: false,
+      error: "Account is not provisioned for this action.",
+    })
+  })
+
+  it.each([
     [403, "You do not have permission to resume this cronjob."],
     [404, "This cronjob no longer exists."],
     [409, "The cronjob changed before Resume could complete."],
@@ -323,6 +354,28 @@ describe("cronjob API actions", () => {
     await expect(resumeCronjob(42)).resolves.toEqual({
       success: false,
       error: "Bạn không có quyền tiếp tục cronjob này.",
+    })
+  })
+
+  it("localizes Resume provisioning rejection in Vietnamese", async () => {
+    mocks.getRequestLocale.mockResolvedValue("vi")
+    mocks.getDictionary.mockResolvedValue({
+      cronjobs: {
+        provisioningRejected:
+          "Tài khoản chưa được thiết lập để thực hiện thao tác này.",
+        resumeConflictError: "Trạng thái cronjob đã thay đổi.",
+      },
+    })
+    mocks.fetchAuthenticated.mockRejectedValue(
+      Object.assign(new Error("Provisioning rejected."), {
+        status: 409,
+        code: "USER_PROVISIONING_REJECTED",
+      })
+    )
+
+    await expect(resumeCronjob(42)).resolves.toEqual({
+      success: false,
+      error: "Tài khoản chưa được thiết lập để thực hiện thao tác này.",
     })
   })
 
