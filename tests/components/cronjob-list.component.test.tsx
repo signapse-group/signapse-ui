@@ -296,9 +296,26 @@ describe("CronjobListPage", () => {
     expect(
       within(scheduled).queryByRole("button", { name: "Pause" })
     ).toBeNull()
+    expect(within(scheduled).getByRole("status")).toHaveTextContent(
+      "You do not have permission to pause this cronjob."
+    )
     expect(
       within(unscheduled).getByRole("button", { name: "Start" })
     ).toBeEnabled()
+  })
+
+  it("localizes the missing Pause permission explanation", () => {
+    renderCronjobList(["cronjob:read"], page, "vi")
+
+    const scheduled = screen.getByRole("article", {
+      name: "Scheduled and running",
+    })
+    expect(within(scheduled).getByRole("status")).toHaveTextContent(
+      "Bạn không có quyền tạm dừng cronjob này."
+    )
+    expect(
+      within(scheduled).queryByRole("button", { name: "Tạm dừng" })
+    ).toBeNull()
   })
 
   it("locks Pause while pending, reads back a paused running job, and focuses Resume", async () => {
@@ -440,16 +457,14 @@ describe("CronjobListPage", () => {
       ambiguous: false,
     })
     mocks.getCronjobById.mockResolvedValue(pausedRunning)
-    renderCronjobList([
-      "cronjob:read",
-      "cronjob:pause",
-      "cronjob:resume",
-    ])
+    renderCronjobList(["cronjob:read", "cronjob:pause", "cronjob:resume"])
 
     const card = screen.getByRole("article", { name: "Scheduled and running" })
     await user.click(within(card).getByRole("button", { name: "Pause" }))
 
-    expect(await within(card).findByRole("button", { name: "Resume" })).toBeVisible()
+    expect(
+      await within(card).findByRole("button", { name: "Resume" })
+    ).toBeVisible()
     await waitFor(() => expect(mocks.getCronjobById).toHaveBeenCalledWith(1))
     expect(within(card).getByText("Paused")).toBeVisible()
     expect(within(card).getByText("Running")).toBeVisible()
@@ -778,9 +793,9 @@ describe("CronjobListPage", () => {
     expect(
       screen.getByRole("article", { name: "Scheduled and running" })
     ).toBeVisible()
-    expect(screen.getByRole("status")).toHaveTextContent(
-      "Pagination details are unavailable"
-    )
+    expect(
+      screen.getByText("Pagination details are unavailable.")
+    ).toBeVisible()
     expect(
       document.querySelector('[data-slot="app-pagination-footer"]')
     ).not.toBeInTheDocument()

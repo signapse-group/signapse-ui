@@ -118,7 +118,6 @@ export async function pauseCronjob(
     const cronjob = await fetchCronjob(`/cronjobs/${id}/pause`, {
       method: "POST",
     })
-    revalidatePath("/cronjobs")
     return { success: true, data: cronjob }
   } catch (error: unknown) {
     const dictionary = await getDictionary(await getRequestLocale())
@@ -133,8 +132,6 @@ export async function pauseCronjob(
     } else if (status === 409) {
       if (backendError?.code === "USER_PROVISIONING_REJECTED") {
         message = dictionary.cronjobs.pauseProvisioningRejected
-      } else if (!backendError?.code) {
-        message = dictionary.cronjobs.pauseIneligible
       }
     }
     return {

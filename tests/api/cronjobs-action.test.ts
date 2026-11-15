@@ -69,10 +69,8 @@ beforeEach(() => {
       startError: "Could not start cronjob.",
       pauseError: "Could not pause cronjob.",
       pausePermissionDenied: "No permission to pause cronjob.",
-      pauseProvisioningRejected:
-        "Account is not provisioned for this action.",
+      pauseProvisioningRejected: "Account is not provisioned for this action.",
       pauseNotFound: "Cronjob no longer exists.",
-      pauseIneligible: "Cronjob is not eligible for pausing.",
     },
   })
 })
@@ -122,7 +120,7 @@ describe("cronjob API actions", () => {
     ).resolves.toEqual({ content: [cronjob] })
   })
 
-  it("validates mutation responses against the same DTO while keeping callers intact", async () => {
+  it("returns the validated Pause response without refreshing before readback", async () => {
     mocks.fetchAuthenticated.mockResolvedValue(cronjob)
 
     await expect(pauseCronjob(42)).resolves.toEqual({
@@ -133,7 +131,7 @@ describe("cronjob API actions", () => {
       "/cronjobs/42/pause",
       { method: "POST" }
     )
-    expect(mocks.revalidatePath).toHaveBeenCalledWith("/cronjobs")
+    expect(mocks.revalidatePath).not.toHaveBeenCalled()
   })
 
   it.each([
@@ -166,7 +164,12 @@ describe("cronjob API actions", () => {
     {
       status: 409,
       backendMessage: "Cronjob schedule is not active.",
-      expected: "Cronjob is not eligible for pausing.",
+      expected: "Could not pause cronjob.",
+    },
+    {
+      status: 409,
+      backendMessage: "Quartz did not pause schedule for cronjob sample.",
+      expected: "Could not pause cronjob.",
     },
     {
       status: 409,

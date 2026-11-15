@@ -2900,7 +2900,6 @@ export const vi = {
     pauseProvisioningRejected:
       "Tài khoản của bạn chưa được thiết lập để thực hiện thao tác này. Hãy liên hệ quản trị viên.",
     pauseNotFound: "Cronjob này không còn tồn tại.",
-    pauseIneligible: "Cronjob này hiện không đủ điều kiện để tạm dừng.",
     pauseError: "Không thể tạm dừng cronjob.",
     pauseNotConfirmed:
       "Chưa xác nhận được thao tác tạm dừng. Trạng thái lịch mới nhất đang được hiển thị.",

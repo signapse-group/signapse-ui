@@ -2919,7 +2919,6 @@ export const en: Dictionary = {
     pauseProvisioningRejected:
       "Your account is not provisioned for this action. Contact an administrator.",
     pauseNotFound: "This cronjob no longer exists.",
-    pauseIneligible: "This cronjob is not eligible for pausing.",
     pauseError: "Could not pause cronjob.",
     pauseNotConfirmed:
       "Pause was not confirmed. The latest schedule status is shown.",

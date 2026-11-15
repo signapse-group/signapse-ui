@@ -2682,6 +2682,35 @@ function responseForRoute(state, method, pathname, url, body, locale = "en") {
     return cronjob
   }
 
+  const cronjobPauseMatch = pathname.match(/^\/cronjobs\/(\d+)\/pause$/)
+  if (method === "POST" && cronjobPauseMatch) {
+    if (!hasFixturePermission(state, "cronjob:pause")) {
+      return {
+        __status: 403,
+        payload: errorPayload("Cronjob pause permission denied", "FORBIDDEN"),
+      }
+    }
+
+    const id = Number(cronjobPauseMatch[1])
+    const cronjob = state.cronjobs.find((item) => item.id === id)
+    if (!cronjob) {
+      return {
+        __status: 404,
+        payload: errorPayload("Cronjob not found", "NOT_FOUND"),
+      }
+    }
+    if (cronjob.scheduleStatus !== "SCHEDULED") {
+      return {
+        __status: 409,
+        payload: errorPayload("Cronjob schedule is not active", "CONFLICT"),
+      }
+    }
+
+    cronjob.scheduleStatus = "PAUSED"
+    cronjob.nextTriggeredTime = null
+    return cronjob
+  }
+
   if (pathname === "/system-prompts" && method === "GET") {
     if (!hasFixturePermission(state, "system-prompt:read")) {
       return {

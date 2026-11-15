@@ -336,7 +336,7 @@ export function CronjobListPage({ cronjobPage }: CronjobListProps) {
                         </span>
                       )}
                     </TableCell>
-                    <TableCell className="text-center">
+                    <TableCell className="text-center align-top whitespace-normal">
                       <div className="flex flex-wrap items-center justify-center gap-1">
                         <StatusActions
                           id={cronjob.id}
@@ -884,7 +884,7 @@ function StatusActions({
       role="group"
       aria-label={dictionary.cronjobs.actionsColumn}
       tabIndex={-1}
-      className="flex flex-wrap items-center justify-center gap-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+      className="flex min-w-0 flex-wrap items-center justify-center gap-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
     >
       {canStart && canStartCronjob ? (
         <Button
@@ -951,6 +951,14 @@ function StatusActions({
           </span>
         </Button>
       ) : null}
+      {canPause && !canPauseCronjob ? (
+        <span
+          role="status"
+          className="basis-full text-left text-xs text-muted-foreground"
+        >
+          {dictionary.cronjobs.pausePermissionDenied}
+        </span>
+      ) : null}
       {canResume && canResumeCronjob ? (
         <Button
           ref={resumeButtonRef}
@@ -977,7 +985,7 @@ function StatusActions({
       {hasStartReadError ? (
         <span
           role="alert"
-          className="basis-full text-left text-xs text-destructive"
+          className="basis-full text-left text-xs break-words text-destructive"
         >
           {dictionary.cronjobs.startReadError.replace(
             "{time}",
@@ -998,7 +1006,7 @@ function StatusActions({
           ref={pauseReadErrorRef}
           role="alert"
           tabIndex={-1}
-          className="basis-full text-left text-xs text-destructive"
+          className="basis-full text-left text-xs break-words text-destructive"
         >
           {dictionary.cronjobs.pauseReadError.replace(
             "{time}",
