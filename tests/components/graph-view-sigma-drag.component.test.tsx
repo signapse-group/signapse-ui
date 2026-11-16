@@ -18,8 +18,10 @@ import type {
   GraphViewDemoEdgeAttributes,
 } from "@/app/lib/graph-view/demo-fixture"
 import type {
+  GraphViewEdge,
   GraphViewNode,
   GraphViewNodeMetadata,
+  GraphViewResponse,
 } from "@/app/lib/graph-view/definitions"
 import type {
   ForceCommand,
@@ -43,6 +45,7 @@ vi.mock("sigma", () => ({
 
 import { SigmaGraphView } from "@/app/[lang]/(main)/graph-view/sigma-graph-view"
 import { en } from "@/app/lib/i18n/dictionaries/en"
+import { vi as viDictionary } from "@/app/lib/i18n/dictionaries/vi"
 import { LocalizationProvider } from "@/app/lib/i18n/provider"
 
 // Only the renderer and asynchronous worker are doubled; graph, drag handlers,
@@ -171,7 +174,24 @@ function move(
   })
 }
 
-async function mountGraph(parallel = false, includeArticle = false) {
+async function mountGraph(
+  options: {
+    parallel?: boolean
+    includeArticle?: boolean
+    includeNarrative?: boolean
+    locale?: "en" | "vi"
+    edgeNote?: string | null
+    edges?: GraphViewEdge[]
+  } = {}
+) {
+  const {
+    parallel = false,
+    includeArticle = false,
+    includeNarrative = false,
+    locale = "en",
+    edgeNote = null,
+    edges: edgeOverrides,
+  } = options
   const metadata: GraphViewNodeMetadata = {
     slug: null,
     canonicalKey: null,
@@ -199,69 +219,96 @@ async function mountGraph(parallel = false, includeArticle = false) {
     secondaryLabel: null,
     metadata: nodeMetadata,
   })
-
-  render(
-    <LocalizationProvider locale="en" dictionary={en}>
-      <SigmaGraphView
-        graphView={{
-          nodes: [
-            node("event:1", "event", "Rates"),
-            node("asset:2", "asset", "Bitcoin"),
-            node("asset:3", "asset", "Gold"),
-            ...(includeArticle
-              ? [
-                  node("news-article:4", "news-article", "Article", {
-                    ...metadata,
-                    sourceName: "Fixture Wire",
-                    url: "https://example.test/article",
-                  }),
-                ]
-              : []),
-          ],
-          edges: [
+  const graphView: GraphViewResponse = {
+    nodes: [
+      node("event:1", "event", "Rates"),
+      node("asset:2", "asset", "Bitcoin"),
+      node("asset:3", "asset", "Gold"),
+      ...(includeArticle
+        ? [
+            node("news-article:4", "news-article", "Article", {
+              ...metadata,
+              sourceName: "Fixture Wire",
+              url: "https://example.test/article",
+            }),
+          ]
+        : []),
+      ...(includeNarrative
+        ? [node("narrative:5", "narrative", "Rates narrative")]
+        : []),
+    ],
+    edges: edgeOverrides ?? [
+      {
+        id: "event-asset:1",
+        kind: "event-asset",
+        sourceNodeId: "event:1",
+        targetNodeId: "asset:2",
+        relationType: "AFFECTED_ASSET",
+        weight: null,
+        confidence: null,
+        note: edgeNote,
+      },
+      ...(parallel
+        ? [
             {
-              id: "event-asset:1",
-              kind: "event-asset",
+              id: "event-asset:parallel",
+              kind: "event-asset" as const,
               sourceNodeId: "event:1",
               targetNodeId: "asset:2",
-              relationType: "AFFECTED_ASSET",
+              relationType: "REFERENCE_ASSET" as const,
               weight: null,
               confidence: null,
               note: null,
             },
-            ...(parallel
-              ? [
-                  {
-                    id: "event-asset:parallel",
-                    kind: "event-asset" as const,
-                    sourceNodeId: "event:1",
-                    targetNodeId: "asset:2",
-                    relationType: "REFERENCE_ASSET" as const,
-                    weight: null,
-                    confidence: null,
-                    note: null,
-                  },
-                ]
-              : []),
-            ...(includeArticle
-              ? [
-                  {
-                    id: "news-article-event:4",
-                    kind: "news-article-event" as const,
-                    sourceNodeId: "news-article:4",
-                    targetNodeId: "event:1",
-                    relationType: "PRIMARY" as const,
-                    weight: null,
-                    confidence: null,
-                    note: null,
-                  },
-                ]
-              : []),
-          ],
-        }}
-      />
+          ]
+        : []),
+      ...(includeArticle
+        ? [
+            {
+              id: "news-article-event:4",
+              kind: "news-article-event" as const,
+              sourceNodeId: "news-article:4",
+              targetNodeId: "event:1",
+              relationType: "PRIMARY" as const,
+              weight: null,
+              confidence: null,
+              note: null,
+            },
+          ]
+        : []),
+      ...(includeNarrative
+        ? [
+            {
+              id: "narrative-event:5",
+              kind: "narrative-event" as const,
+              sourceNodeId: "narrative:5",
+              targetNodeId: "event:1",
+              relationType: "DRIVER" as const,
+              weight: null,
+              confidence: null,
+              note: null,
+            },
+            {
+              id: "narrative-asset:5",
+              kind: "narrative-asset" as const,
+              sourceNodeId: "narrative:5",
+              targetNodeId: "asset:2",
+              relationType: "AFFECTED" as const,
+              weight: null,
+              confidence: null,
+              note: null,
+            },
+          ]
+        : []),
+    ],
+  }
+  const dictionary = locale === "vi" ? viDictionary : en
+  const renderGraph = (value: GraphViewResponse) => (
+    <LocalizationProvider locale={locale} dictionary={dictionary}>
+      <SigmaGraphView graphView={value} />
     </LocalizationProvider>
   )
+  const rendered = render(renderGraph(graphView))
   await act(async () => {
     WorkerDouble.current.settle()
     flushFrames()
@@ -274,8 +321,138 @@ async function mountGraph(parallel = false, includeArticle = false) {
   })
   expect(sigma.getNodeDisplayData("event:1").highlighted).toBe(true)
   expect(sigma.getNodeDisplayData("asset:3").color).toBe("#e4e7eb")
-  return { sigma, point }
+  return {
+    sigma,
+    point,
+    graphView,
+    rerenderGraph: (value: GraphViewResponse) =>
+      rendered.rerender(renderGraph(value)),
+  }
 }
+
+function clickGraphEdge(
+  sigma: SigmaDouble,
+  edge: GraphViewEdge,
+  touch = false
+) {
+  const sourceData = sigma.getNodeDisplayData(edge.sourceNodeId)
+  const targetData = sigma.getNodeDisplayData(edge.targetNodeId)
+  if (
+    Math.hypot(targetData.x - sourceData.x, targetData.y - sourceData.y) <
+    sourceData.size + targetData.size + 16
+  ) {
+    sigma.graph.setNodeAttribute(edge.targetNodeId, "x", sourceData.x + 160)
+    sigma.graph.setNodeAttribute(edge.targetNodeId, "y", sourceData.y + 120)
+  }
+  const source = sigma.framedGraphToViewport(
+    sigma.getNodeDisplayData(edge.sourceNodeId)
+  )
+  const target = sigma.framedGraphToViewport(
+    sigma.getNodeDisplayData(edge.targetNodeId)
+  )
+  act(() => {
+    sigma.emit("clickStage", {
+      event: {
+        x: (source.x + target.x) / 2,
+        y: (source.y + target.y) / 2,
+        original: touch ? { touches: [{}] } : {},
+      },
+      preventSigmaDefault() {},
+    })
+  })
+}
+
+const relationLabelCases = [
+  {
+    kind: "event-asset",
+    sourceNodeId: "event:1",
+    targetNodeId: "asset:2",
+    sourceLabel: "Rates",
+    targetLabel: "Bitcoin",
+    group: { en: "Event → asset", vi: "Sự kiện → tài sản" },
+    includeArticle: false,
+    includeNarrative: false,
+    relations: [
+      { type: "PRIMARY_SUBJECT", en: "Primary subject", vi: "Chủ thể chính" },
+      {
+        type: "AFFECTED_ASSET",
+        en: "Affected asset",
+        vi: "Tài sản bị ảnh hưởng",
+      },
+      {
+        type: "REFERENCE_ASSET",
+        en: "Reference asset",
+        vi: "Tài sản tham chiếu",
+      },
+    ],
+  },
+  {
+    kind: "news-article-event",
+    sourceNodeId: "news-article:4",
+    targetNodeId: "event:1",
+    sourceLabel: "Article",
+    targetLabel: "Rates",
+    group: { en: "News article → event", vi: "Bài viết → sự kiện" },
+    includeArticle: true,
+    includeNarrative: false,
+    relations: [
+      { type: "PRIMARY", en: "Primary article", vi: "Bài viết chính" },
+      { type: "SUPPORTING", en: "Supporting article", vi: "Bài viết hỗ trợ" },
+      { type: "UPDATE", en: "Event update", vi: "Cập nhật sự kiện" },
+      {
+        type: "CONTRADICTING",
+        en: "Contradicting article",
+        vi: "Bài viết mâu thuẫn",
+      },
+    ],
+  },
+  {
+    kind: "narrative-event",
+    sourceNodeId: "narrative:5",
+    targetNodeId: "event:1",
+    sourceLabel: "Rates narrative",
+    targetLabel: "Rates",
+    group: { en: "Narrative → event", vi: "Luận điểm → sự kiện" },
+    includeArticle: false,
+    includeNarrative: true,
+    relations: [
+      { type: "DRIVER", en: "Driver event", vi: "Sự kiện dẫn dắt" },
+      { type: "AFFECTED", en: "Affected event", vi: "Sự kiện chịu ảnh hưởng" },
+    ],
+  },
+  {
+    kind: "narrative-asset",
+    sourceNodeId: "narrative:5",
+    targetNodeId: "asset:2",
+    sourceLabel: "Rates narrative",
+    targetLabel: "Bitcoin",
+    group: { en: "Narrative → asset", vi: "Luận điểm → tài sản" },
+    includeArticle: false,
+    includeNarrative: true,
+    relations: [
+      { type: "DRIVER", en: "Driver asset", vi: "Tài sản dẫn dắt" },
+      { type: "AFFECTED", en: "Affected asset", vi: "Tài sản chịu ảnh hưởng" },
+    ],
+  },
+] satisfies Array<{
+  kind: GraphViewEdge["kind"]
+  sourceNodeId: string
+  targetNodeId: string
+  sourceLabel: string
+  targetLabel: string
+  group: Record<"en" | "vi", string>
+  includeArticle: boolean
+  includeNarrative: boolean
+  relations: Array<{
+    type: GraphViewEdge["relationType"]
+    en: string
+    vi: string
+  }>
+}>
+
+const localizedRelationCases = relationLabelCases.flatMap((group) =>
+  (["en", "vi"] as const).map((locale) => ({ group, locale }))
+)
 
 function startDrag(point: { x: number; y: number }, touch = false) {
   const sigma = SigmaDouble.current
@@ -322,7 +499,7 @@ afterEach(() => {
 
 describe("Sigma drag release", () => {
   it("keeps live article source actions outside the graph inspector", async () => {
-    const { sigma } = await mountGraph(false, true)
+    const { sigma } = await mountGraph({ includeArticle: true })
     act(() => {
       sigma.emit("clickNode", {
         node: "news-article:4",
@@ -543,15 +720,15 @@ describe("Sigma drag release", () => {
     expect(sigma.getNodeDisplayData("asset:3").color).toBe("#e4e7eb")
   })
 
-  it("offers overlapping relations without exposing live edge details", async () => {
-    const { sigma } = await mountGraph(true)
+  it("offers overlapping live relations and updates the selected edge", async () => {
+    const { sigma } = await mountGraph({ parallel: true })
     const a = sigma.framedGraphToViewport(sigma.getNodeDisplayData("event:1"))
     const b = sigma.framedGraphToViewport(sigma.getNodeDisplayData("asset:2"))
     const event = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, original: {} }
     act(() => {
       sigma.emit("clickStage", { event, preventSigmaDefault() {} })
     })
-    const choices = screen.getByTestId("graph-demo-edge-choices")
+    const choices = screen.getByTestId("graph-edge-choices")
     expect(
       within(choices).getByRole("button", {
         name: "Close relationship choices",
@@ -562,23 +739,171 @@ describe("Sigma drag release", () => {
     })
     expect(buttons).toHaveLength(2)
     fireEvent.click(buttons[1])
-    expect(screen.queryByTestId("graph-demo-edge-inspector")).not.toBeInTheDocument()
-    expect(
-      screen.queryByTestId("graph-demo-edge-choices")
-    ).not.toBeInTheDocument()
+    expect(screen.getByTestId("graph-edge-inspector")).toHaveTextContent(
+      "Reference asset"
+    )
+    expect(screen.queryByTestId("graph-edge-choices")).not.toBeInTheDocument()
 
     act(() => {
       sigma.emit("clickStage", { event, preventSigmaDefault() {} })
     })
-    const selectedChoices = screen.getByTestId("graph-demo-edge-choices")
+    const selectedChoices = screen.getByTestId("graph-edge-choices")
     const selectedButtons = within(selectedChoices).getAllByRole("button", {
       name: /Rates.*Bitcoin/,
     })
     expect(selectedButtons[1]).toHaveAttribute("aria-pressed", "true")
   })
 
+  it.each(localizedRelationCases)(
+    "renders localized $locale labels and direction for every edge group",
+    async ({ group, locale }) => {
+      const edges: GraphViewEdge[] = group.relations.map((relation, index) => ({
+        id: `${group.kind}:${index}`,
+        kind: group.kind,
+        sourceNodeId: group.sourceNodeId,
+        targetNodeId: group.targetNodeId,
+        relationType: relation.type,
+        weight: null,
+        confidence: null,
+        note: index === 0 ? "Source note" : null,
+      }))
+      const { sigma } = await mountGraph({
+        includeArticle: group.includeArticle,
+        includeNarrative: group.includeNarrative,
+        locale,
+        edges,
+      })
+
+      clickGraphEdge(sigma, edges[0])
+      const choices = screen.getByTestId("graph-edge-choices")
+      expect(choices).toHaveTextContent(group.group[locale])
+      expect(choices).toHaveTextContent(
+        `${locale === "en" ? "Note" : "Ghi chú"}: Source note`
+      )
+      const choiceButtons = within(choices)
+        .getAllByRole("button")
+        .filter((button) => button.hasAttribute("aria-pressed"))
+      expect(choiceButtons).toHaveLength(group.relations.length)
+      group.relations.forEach((relation, index) => {
+        expect(choiceButtons[index]).toHaveTextContent(relation[locale])
+      })
+
+      fireEvent.click(choiceButtons.at(-1)!)
+      const inspector = screen.getByTestId("graph-edge-inspector")
+      expect(inspector).toHaveTextContent(group.group[locale])
+      expect(inspector).toHaveTextContent(group.relations.at(-1)![locale])
+      expect(inspector).toHaveTextContent(group.sourceLabel)
+      expect(inspector).toHaveTextContent(group.targetLabel)
+      expect(inspector).toHaveTextContent(
+        (locale === "en" ? en : viDictionary).graphView.demo
+          .relationshipInterpretation
+      )
+      const endpointLabels = inspector.querySelectorAll("dt")
+      expect(endpointLabels[0]).toHaveTextContent(
+        locale === "en" ? "Source" : "Nguồn"
+      )
+      expect(endpointLabels[1]).toHaveTextContent(
+        locale === "en" ? "Target" : "Đích"
+      )
+      expect(inspector).not.toHaveTextContent(
+        `${locale === "en" ? "Note" : "Ghi chú"}: Source note`
+      )
+    }
+  )
+
+  it.each([
+    { input: "Producer note", expected: "Producer note" },
+    { input: "  Producer note  ", expected: "Producer note" },
+  ])(
+    "shows the trimmed live source note on touch: $input",
+    async ({ input, expected }) => {
+      const { sigma, graphView } = await mountGraph({ edgeNote: input })
+      clickGraphEdge(sigma, graphView.edges[0], true)
+
+      const inspector = screen.getByTestId("graph-edge-inspector")
+      expect(inspector).toHaveTextContent("Source · Event")
+      expect(inspector).toHaveTextContent("Target · Asset")
+      expect(inspector).toHaveTextContent("Rates")
+      expect(inspector).toHaveTextContent("Bitcoin")
+      expect(inspector).toHaveTextContent("Affected asset")
+      expect(within(inspector).getByText("Note")).toBeInTheDocument()
+      expect(within(inspector).getByText(expected)).toBeInTheDocument()
+    }
+  )
+
+  it.each([null, "  \n\t "])(
+    "omits an empty live source note (%s)",
+    async (note) => {
+      const { sigma, graphView } = await mountGraph({ edgeNote: note })
+      clickGraphEdge(sigma, graphView.edges[0])
+
+      const inspector = screen.getByTestId("graph-edge-inspector")
+      expect(inspector).toHaveTextContent("Rates")
+      expect(inspector).not.toHaveTextContent("Note")
+    }
+  )
+
+  it("updates edge content from the current graph and closes when that edge disappears", async () => {
+    const { sigma, graphView, rerenderGraph } = await mountGraph()
+    const edge = graphView.edges[0]
+    clickGraphEdge(sigma, edge)
+
+    const updatedGraph = {
+      ...graphView,
+      nodes: graphView.nodes.map((node) =>
+        node.id === edge.sourceNodeId
+          ? { ...node, label: "Current source label" }
+          : node
+      ),
+      edges: graphView.edges.map((current) => ({
+        ...current,
+        note: "Updated source note",
+      })),
+    }
+    rerenderGraph(updatedGraph)
+    await act(async () => {
+      WorkerDouble.current.settle()
+      flushFrames()
+    })
+    expect(screen.getByTestId("graph-edge-inspector")).toHaveTextContent(
+      "Current source label"
+    )
+    expect(screen.getByTestId("graph-edge-inspector")).toHaveTextContent(
+      "Updated source note"
+    )
+    expect(screen.getByTestId("graph-edge-inspector")).not.toHaveTextContent(
+      "Rates"
+    )
+
+    rerenderGraph({ ...updatedGraph, edges: [] })
+    expect(screen.queryByTestId("graph-edge-inspector")).not.toBeInTheDocument()
+  })
+
+  it("keeps the selected edge when the relationship chooser is closed", async () => {
+    const { sigma, graphView } = await mountGraph({ parallel: true })
+    const [selectedEdge] = graphView.edges
+    clickGraphEdge(sigma, selectedEdge)
+    let choices = screen.getByTestId("graph-edge-choices")
+    fireEvent.click(
+      within(choices).getByRole("button", { name: /Reference asset/ })
+    )
+    expect(screen.getByTestId("graph-edge-inspector")).toHaveTextContent(
+      "Reference asset"
+    )
+
+    clickGraphEdge(sigma, selectedEdge)
+    choices = screen.getByTestId("graph-edge-choices")
+    expect(
+      within(choices).getByRole("button", { name: /Reference asset/ })
+    ).toHaveAttribute("aria-pressed", "true")
+    fireEvent.click(screen.getByTestId("graph-close-edge-choices"))
+    expect(screen.getByTestId("graph-edge-inspector")).toHaveTextContent(
+      "Reference asset"
+    )
+  })
+
   it("keeps selection when cancelling ambiguous edge choices with Escape", async () => {
-    const { sigma } = await mountGraph(true)
+    const { sigma } = await mountGraph({ parallel: true })
     act(() => {
       sigma.emit("clickNode", { node: "asset:3", preventSigmaDefault() {} })
     })
@@ -590,7 +915,7 @@ describe("Sigma drag release", () => {
         preventSigmaDefault() {},
       })
     })
-    fireEvent.keyDown(screen.getByTestId("graph-demo-edge-choices"), {
+    fireEvent.keyDown(screen.getByTestId("graph-edge-choices"), {
       key: "Escape",
     })
     expect(screen.getByTestId("graph-demo-inspector")).toHaveTextContent("Gold")

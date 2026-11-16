@@ -2187,9 +2187,30 @@ export const vi = {
     },
     edgeKinds: {
       "event-asset": "Sự kiện → tài sản",
-      "news-article-event": "Bằng chứng → sự kiện",
+      "news-article-event": "Bài viết → sự kiện",
       "narrative-event": "Luận điểm → sự kiện",
       "narrative-asset": "Luận điểm → tài sản",
+    },
+    edgeRelationTypes: {
+      "event-asset": {
+        PRIMARY_SUBJECT: "Chủ thể chính",
+        AFFECTED_ASSET: "Tài sản bị ảnh hưởng",
+        REFERENCE_ASSET: "Tài sản tham chiếu",
+      },
+      "news-article-event": {
+        PRIMARY: "Bài viết chính",
+        SUPPORTING: "Bài viết hỗ trợ",
+        UPDATE: "Cập nhật sự kiện",
+        CONTRADICTING: "Bài viết mâu thuẫn",
+      },
+      "narrative-event": {
+        DRIVER: "Sự kiện dẫn dắt",
+        AFFECTED: "Sự kiện chịu ảnh hưởng",
+      },
+      "narrative-asset": {
+        DRIVER: "Tài sản dẫn dắt",
+        AFFECTED: "Tài sản chịu ảnh hưởng",
+      },
     },
     relationTypes: {
       DRIVER: "Sự kiện góp phần hình thành luận điểm",
@@ -2244,7 +2265,7 @@ export const vi = {
       interactionHint:
         "Kéo để di chuyển · Chọn nút hoặc đường nối để xem chi tiết",
       liveInteractionHint:
-        "Kéo để di chuyển biểu đồ · Chọn nút để xem thông tin",
+        "Kéo để di chuyển biểu đồ · Chọn nút hoặc quan hệ để xem thông tin",
       relationshipInterpretation:
         "Kết nối thể hiện mối liên hệ được ghi nhận, không khẳng định quan hệ nhân quả.",
       sourceUnavailable: "Chưa có liên kết đến bài báo gốc.",
