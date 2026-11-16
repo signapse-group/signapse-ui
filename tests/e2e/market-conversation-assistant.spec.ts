@@ -276,15 +276,18 @@ test("drops stale pending output after the user changes workspace", async ({
 
   await page.locator("#workspace-switcher-trigger").click()
   await page.getByRole("menuitem", { name: /Workspace Beta/ }).click()
-  await expect(page.locator("#workspace-switcher-trigger")).toContainText(
-    "Workspace Beta"
-  )
+  await expect(
+    page.locator("#workspace-switcher-trigger").getByRole("status")
+  ).toBeVisible()
   await fixture.setScenario(
     "/market-conversations/1/messages",
     "success",
     "POST"
   )
   await expect.poll(async () => (await fixture.state()).pendingRequests).toBe(0)
+  await expect(page.locator("#workspace-switcher-trigger")).toContainText(
+    "Workspace Beta"
+  )
 
   await openAssistant(page)
   await expect(
@@ -360,6 +363,18 @@ test("matches the approved launcher and compact, Full mode, sidebar, and mobile 
     "data-state",
     "collapsed"
   )
+  await expect(dialog).toBeHidden()
+  await openAssistant(page)
+  const expandButton = dialog.getByRole("button", {
+    name: "Mở rộng cửa sổ hội thoại",
+  })
+  if (await expandButton.isVisible()) {
+    await expandButton.click()
+  }
+  await expect(dialog).toBeVisible()
+  await expect(
+    dialog.getByRole("button", { name: "Thu gọn cửa sổ hội thoại" })
+  ).toBeVisible()
   await expect.poll(async () => (await dialog.boundingBox())?.x).toBe(64)
   await page.screenshot({
     path: "test-results/market-assistant-full-sidebar-collapsed-1520x1024.png",
