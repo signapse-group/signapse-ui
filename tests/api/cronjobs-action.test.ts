@@ -78,7 +78,9 @@ beforeEach(() => {
       cronUpdateProvisioningPending:
         "Your account is still being set up. The schedule was not changed.",
       cronUpdateUnconfirmed:
-        "Could not confirm the requested schedule. The current saved schedule is shown.",
+        "The requested schedule was not confirmed. The latest schedule readback is shown.",
+      cronUpdateReadbackUnavailable:
+        "Could not confirm whether the requested schedule took effect. The effective schedule is unverified. Reload to check its current value.",
       invalidCronjobId: "Invalid cronjob ID.",
       startError: "Could not start cronjob.",
       pauseError: "Could not pause cronjob.",
@@ -464,7 +466,7 @@ describe("cronjob API actions", () => {
     ).resolves.toEqual({
       success: false,
       error:
-        "Could not confirm the requested schedule. The current saved schedule is shown.",
+        "The requested schedule was not confirmed. The latest schedule readback is shown.",
       data: cronjob,
       ambiguous: true,
     })
@@ -579,10 +581,34 @@ describe("cronjob API actions", () => {
     ).resolves.toEqual({
       success: false,
       error:
-        "Could not confirm the requested schedule. The current saved schedule is shown.",
+        "The requested schedule was not confirmed. The latest schedule readback is shown.",
       data: cronjob,
       ambiguous: true,
     })
+  })
+
+  it("reports an unverified schedule when an uncertain PATCH cannot be read back", async () => {
+    mocks.fetchAuthenticated
+      .mockRejectedValueOnce(
+        Object.assign(new Error("failed"), { status: 500 })
+      )
+      .mockRejectedValueOnce(
+        Object.assign(new Error("readback failed"), { status: 503 })
+      )
+
+    await expect(
+      updateCronjob(42, { expression: "0 0 8 * * ?" })
+    ).resolves.toEqual({
+      success: false,
+      error:
+        "Could not confirm whether the requested schedule took effect. The effective schedule is unverified. Reload to check its current value.",
+      ambiguous: true,
+    })
+    expect(mocks.fetchAuthenticated).toHaveBeenNthCalledWith(
+      2,
+      "/cronjobs/42",
+      undefined
+    )
   })
 
   it("does not infer success from a provisioning 503 even when the expression matches", async () => {

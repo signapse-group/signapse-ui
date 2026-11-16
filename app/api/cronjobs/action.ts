@@ -156,7 +156,13 @@ export async function updateCronjob(
         }
       }
 
-      return { success: false, error: message, ambiguous }
+      return {
+        success: false,
+        error: ambiguous
+          ? dictionary.cronjobs.cronUpdateReadbackUnavailable
+          : message,
+        ambiguous,
+      }
     }
   }
 }

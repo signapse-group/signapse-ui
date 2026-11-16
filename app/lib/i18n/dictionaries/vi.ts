@@ -2915,7 +2915,11 @@ export const vi = {
     cronUpdateProvisioningPending:
       "Tài khoản đang được thiết lập. Lịch chưa bị thay đổi.",
     cronUpdateUnconfirmed:
-      "Chưa xác nhận được lịch mới. Lịch đã lưu hiện tại đang được hiển thị.",
+      "Chưa xác nhận được lịch yêu cầu. Lịch mới nhất đã đọc lại đang được hiển thị.",
+    cronUpdateReadbackUnavailable:
+      "Chưa xác nhận được lịch mới có được áp dụng hay không. Chưa xác minh được lịch đang có hiệu lực. Hãy tải lại trang để kiểm tra.",
+    lastConfirmedSchedule: "Lịch đã xác nhận gần nhất",
+    effectiveScheduleUnverified: "Chưa xác minh được lịch đang có hiệu lực.",
     savedSchedule: "Lịch đã lưu",
     cronExpressionPlaceholder: "VD: 0 0 8 * * ?",
     invalidCronjobId: "Mã cronjob không hợp lệ.",

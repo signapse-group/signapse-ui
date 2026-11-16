@@ -2936,7 +2936,11 @@ export const en: Dictionary = {
     cronUpdateProvisioningPending:
       "Your account is still being set up. The schedule was not changed.",
     cronUpdateUnconfirmed:
-      "Could not confirm the requested schedule. The current saved schedule is shown.",
+      "The requested schedule was not confirmed. The latest schedule readback is shown.",
+    cronUpdateReadbackUnavailable:
+      "Could not confirm whether the requested schedule took effect. The effective schedule is unverified. Reload to check its current value.",
+    lastConfirmedSchedule: "Last confirmed schedule",
+    effectiveScheduleUnverified: "Effective schedule unverified.",
     savedSchedule: "Saved schedule",
     cronExpressionPlaceholder: "e.g. 0 0 8 * * ?",
     invalidCronjobId: "Invalid cronjob ID.",

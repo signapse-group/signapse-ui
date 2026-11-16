@@ -358,6 +358,11 @@ test("cronjob schedule editor renders and cancels on Wide and Mobile", async ({
   await expect(wideInput).toBeVisible()
   await expect(wideInput).toBeFocused()
   await expect(wideInput).toHaveValue("0 0/5 * * * ?")
+  const wideSavedSchedule = wideRow
+    .locator("p")
+    .filter({ hasText: "Saved schedule" })
+  await expect(wideSavedSchedule).toBeVisible()
+  await expect(wideSavedSchedule).toContainText("0 0/5 * * * ?")
   const wideInputBounds = await wideInput.boundingBox()
   const wideSaveBounds = await wideRow
     .getByRole("button", { name: "Save cron expression" })
