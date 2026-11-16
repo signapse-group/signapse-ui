@@ -66,6 +66,19 @@ beforeEach(() => {
     cronjobs: {
       cronRequired: "Cron expression is required.",
       cronUpdateError: "Could not update the cron schedule.",
+      cronInvalidExpression:
+        "Enter a valid Quartz cron expression. The saved schedule was not changed.",
+      cronUpdateUnauthorized:
+        "Your session has expired. Sign in again to update this schedule.",
+      cronUpdatePermissionDenied:
+        "You do not have permission to update this schedule.",
+      cronUpdateNotFound: "This cronjob no longer exists.",
+      cronUpdateConflict:
+        "This cronjob is running. Its schedule was not changed.",
+      cronUpdateProvisioningPending:
+        "Your account is still being set up. The schedule was not changed.",
+      cronUpdateUnconfirmed:
+        "Could not confirm the requested schedule. The current saved schedule is shown.",
       invalidCronjobId: "Invalid cronjob ID.",
       startError: "Could not start cronjob.",
       pauseError: "Could not pause cronjob.",
@@ -412,9 +425,189 @@ describe("cronjob API actions", () => {
     await expect(updateCronjob(42, { expression: " " })).resolves.toEqual({
       success: false,
       error: "Cron expression is required.",
+      ambiguous: false,
     })
     expect(mocks.fetchAuthenticated).not.toHaveBeenCalled()
     expect(mocks.revalidatePath).not.toHaveBeenCalled()
+  })
+
+  it("patches a trimmed Quartz expression and returns the effective paused schedule", async () => {
+    const updated = {
+      ...cronjob,
+      executionStatus: "NOT_RUNNING" as const,
+      cronExpression: "0 0 8 * * ?",
+      scheduleStatus: "PAUSED" as const,
+    }
+    mocks.fetchAuthenticated.mockResolvedValue(updated)
+
+    await expect(
+      updateCronjob(42, { expression: "  0 0 8 * * ?  " })
+    ).resolves.toEqual({ success: true, data: updated })
+    expect(mocks.fetchAuthenticated).toHaveBeenCalledWith("/cronjobs/42", {
+      method: "PATCH",
+      body: JSON.stringify({ expression: "0 0 8 * * ?" }),
+    })
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/cronjobs")
+  })
+
+  it("does not trust a successful PATCH response that reports a different schedule", async () => {
+    const mismatched = {
+      ...cronjob,
+      cronExpression: "0 0 7 * * ?",
+    }
+    mocks.fetchAuthenticated
+      .mockResolvedValueOnce(mismatched)
+      .mockResolvedValueOnce(cronjob)
+
+    await expect(
+      updateCronjob(42, { expression: "0 0 8 * * ?" })
+    ).resolves.toEqual({
+      success: false,
+      error:
+        "Could not confirm the requested schedule. The current saved schedule is shown.",
+      data: cronjob,
+      ambiguous: true,
+    })
+    expect(mocks.fetchAuthenticated).toHaveBeenNthCalledWith(
+      2,
+      "/cronjobs/42",
+      undefined
+    )
+  })
+
+  it.each([0, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY])(
+    "rejects invalid update ID %s before sending a request",
+    async (id) => {
+      await expect(
+        updateCronjob(id, { expression: "0 0 8 * * ?" })
+      ).resolves.toEqual({
+        success: false,
+        error: "Invalid cronjob ID.",
+        ambiguous: false,
+      })
+      expect(mocks.fetchAuthenticated).not.toHaveBeenCalled()
+    }
+  )
+
+  it.each([
+    [
+      400,
+      "Enter a valid Quartz cron expression. The saved schedule was not changed.",
+    ],
+    [401, "Your session has expired. Sign in again to update this schedule."],
+    [403, "You do not have permission to update this schedule."],
+    [404, "This cronjob no longer exists."],
+    [409, "This cronjob is running. Its schedule was not changed."],
+  ])(
+    "reports PATCH %s and reads the saved schedule back",
+    async (status, error) => {
+      mocks.fetchAuthenticated
+        .mockRejectedValueOnce(Object.assign(new Error(""), { status }))
+        .mockResolvedValueOnce(cronjob)
+
+      await expect(
+        updateCronjob(42, { expression: "0 0 8 * * ?" })
+      ).resolves.toEqual({
+        success: false,
+        error,
+        data: cronjob,
+        ambiguous: false,
+      })
+      expect(mocks.fetchAuthenticated).toHaveBeenNthCalledWith(
+        1,
+        "/cronjobs/42",
+        {
+          method: "PATCH",
+          body: JSON.stringify({ expression: "0 0 8 * * ?" }),
+        }
+      )
+      expect(mocks.fetchAuthenticated).toHaveBeenNthCalledWith(
+        2,
+        "/cronjobs/42",
+        undefined
+      )
+    }
+  )
+
+  it("uses a localized producer validation message when provided", async () => {
+    const producerMessage = "Biểu thức Quartz không hợp lệ."
+    mocks.fetchAuthenticated
+      .mockRejectedValueOnce(
+        Object.assign(new Error(producerMessage), { status: 400 })
+      )
+      .mockResolvedValueOnce(cronjob)
+
+    await expect(
+      updateCronjob(42, { expression: "0 0 8 * * ?" })
+    ).resolves.toMatchObject({ success: false, error: producerMessage })
+  })
+
+  it.each([500, 503])(
+    "confirms an ambiguous %s PATCH by reading back the requested schedule",
+    async (status) => {
+      const updated = {
+        ...cronjob,
+        executionStatus: "NOT_RUNNING" as const,
+        cronExpression: "0 0 8 * * ?",
+        scheduleStatus: "PAUSED" as const,
+      }
+      mocks.fetchAuthenticated
+        .mockRejectedValueOnce(Object.assign(new Error("failed"), { status }))
+        .mockResolvedValueOnce(updated)
+
+      await expect(
+        updateCronjob(42, { expression: "0 0 8 * * ?" })
+      ).resolves.toEqual({ success: true, data: updated })
+      expect(mocks.fetchAuthenticated).toHaveBeenNthCalledWith(
+        2,
+        "/cronjobs/42",
+        undefined
+      )
+      expect(mocks.revalidatePath).toHaveBeenCalledWith("/cronjobs")
+    }
+  )
+
+  it("does not report an uncertain PATCH as successful when readback differs", async () => {
+    mocks.fetchAuthenticated
+      .mockRejectedValueOnce(
+        Object.assign(new Error("failed"), { status: 500 })
+      )
+      .mockResolvedValueOnce(cronjob)
+
+    await expect(
+      updateCronjob(42, { expression: "0 0 8 * * ?" })
+    ).resolves.toEqual({
+      success: false,
+      error:
+        "Could not confirm the requested schedule. The current saved schedule is shown.",
+      data: cronjob,
+      ambiguous: true,
+    })
+  })
+
+  it("does not infer success from a provisioning 503 even when the expression matches", async () => {
+    const existing = {
+      ...cronjob,
+      cronExpression: "0 0 8 * * ?",
+    }
+    mocks.fetchAuthenticated
+      .mockRejectedValueOnce(
+        Object.assign(new Error(""), {
+          status: 503,
+          code: "USER_PROVISIONING_PENDING",
+        })
+      )
+      .mockResolvedValueOnce(existing)
+
+    await expect(
+      updateCronjob(42, { expression: "0 0 8 * * ?" })
+    ).resolves.toEqual({
+      success: false,
+      error:
+        "Your account is still being set up. The schedule was not changed.",
+      data: existing,
+      ambiguous: false,
+    })
   })
 
   it("treats POST success as acceptance without relying on its execution state", async () => {

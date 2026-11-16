@@ -2903,9 +2903,21 @@ export const vi = {
     noLatestResult: "Chưa có kết quả",
     unknownStatus: "Chưa xác định",
     cronRequired: "Biểu thức cron là bắt buộc.",
-    cronTooLong: "Biểu thức cron quá dài.",
     cronUpdated: "Đã cập nhật lịch chạy cronjob.",
     cronUpdateError: "Không thể cập nhật lịch chạy cronjob.",
+    cronInvalidExpression:
+      "Biểu thức Quartz không hợp lệ. Lịch đã lưu chưa bị thay đổi.",
+    cronUpdateUnauthorized:
+      "Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại để cập nhật lịch này.",
+    cronUpdatePermissionDenied: "Bạn không có quyền cập nhật lịch cronjob này.",
+    cronUpdateNotFound: "Cronjob này không còn tồn tại.",
+    cronUpdateConflict: "Cronjob đang chạy nên lịch chưa được thay đổi.",
+    cronUpdateProvisioningPending:
+      "Tài khoản đang được thiết lập. Lịch chưa bị thay đổi.",
+    cronUpdateUnconfirmed:
+      "Chưa xác nhận được lịch mới. Lịch đã lưu hiện tại đang được hiển thị.",
+    savedSchedule: "Lịch đã lưu",
+    cronExpressionPlaceholder: "VD: 0 0 8 * * ?",
     invalidCronjobId: "Mã cronjob không hợp lệ.",
     editCron: "Chỉnh sửa biểu thức cron",
     saveCron: "Lưu biểu thức cron",

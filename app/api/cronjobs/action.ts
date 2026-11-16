@@ -37,6 +37,15 @@ type ResumeCronjobActionResult =
   | { success: true; data: CronjobResponse }
   | { success: false; error: string; ambiguous: boolean }
 
+type UpdateCronjobActionResult =
+  | { success: true; data: CronjobResponse }
+  | {
+      success: false
+      error: string
+      data?: CronjobResponse
+      ambiguous: boolean
+    }
+
 export async function getCronjobs(
   searchParams: SearchParams
 ): Promise<CronjobPageResponse> {
@@ -58,25 +67,96 @@ export async function getCronjobById(id: number): Promise<CronjobResponse> {
 export async function updateCronjob(
   id: number,
   request: CronjobRequest
-): Promise<ActionResult<CronjobResponse>> {
-  try {
-    const parsedRequest = CronjobRequestSchema.safeParse(request)
-    if (!parsedRequest.success) {
-      const dictionary = await getDictionary(await getRequestLocale())
-      return { success: false, error: dictionary.cronjobs.cronRequired }
-    }
-
-    const cronjob = await fetchCronjob(`/cronjobs/${id}`, {
-      method: "PATCH",
-      body: JSON.stringify(parsedRequest.data),
-    })
-    revalidatePath("/cronjobs")
-    return { success: true, data: cronjob }
-  } catch {
-    const dictionary = await getDictionary(await getRequestLocale())
+): Promise<UpdateCronjobActionResult> {
+  const dictionary = await getDictionary(await getRequestLocale())
+  if (!isValidCronjobId(id)) {
     return {
       success: false,
-      error: dictionary.cronjobs.cronUpdateError,
+      error: dictionary.cronjobs.invalidCronjobId,
+      ambiguous: false,
+    }
+  }
+
+  const parsedRequest = CronjobRequestSchema.safeParse(request)
+  if (!parsedRequest.success) {
+    return {
+      success: false,
+      error: dictionary.cronjobs.cronRequired,
+      ambiguous: false,
+    }
+  }
+
+  const expression = parsedRequest.data.expression
+  try {
+    const cronjob = await fetchCronjob(`/cronjobs/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ expression }),
+    })
+    if (cronjob.id !== id || cronjob.cronExpression !== expression) {
+      throw new Error(
+        "Cronjob update response did not confirm the requested schedule."
+      )
+    }
+    revalidatePath("/cronjobs")
+    return { success: true, data: cronjob }
+  } catch (error: unknown) {
+    const backendError =
+      error instanceof Error ? (error as BackendApiError) : undefined
+    const status = backendError?.status
+    const apiMessage = error instanceof Error ? error.message.trim() : ""
+    const provisioningPending =
+      backendError?.code === "USER_PROVISIONING_PENDING"
+
+    let message = dictionary.cronjobs.cronUpdateError
+    if (status === 400) {
+      message = apiMessage || dictionary.cronjobs.cronInvalidExpression
+    } else if (status === 401) {
+      message = apiMessage || dictionary.cronjobs.cronUpdateUnauthorized
+    } else if (status === 403) {
+      message = apiMessage || dictionary.cronjobs.cronUpdatePermissionDenied
+    } else if (status === 404) {
+      message = apiMessage || dictionary.cronjobs.cronUpdateNotFound
+    } else if (
+      status === 409 &&
+      backendError?.code === "USER_PROVISIONING_REJECTED"
+    ) {
+      message = dictionary.cronjobs.provisioningRejected
+    } else if (status === 409) {
+      message = apiMessage || dictionary.cronjobs.cronUpdateConflict
+    } else if (provisioningPending) {
+      message = apiMessage || dictionary.cronjobs.cronUpdateProvisioningPending
+    } else if (status === undefined || status >= 500) {
+      message = dictionary.cronjobs.cronUpdateUnconfirmed
+    } else {
+      message = apiMessage || dictionary.cronjobs.cronUpdateError
+    }
+
+    const ambiguous =
+      !provisioningPending && (status === undefined || status >= 500)
+
+    try {
+      const current = await getCronjobById(id)
+      revalidatePath("/cronjobs")
+
+      if (ambiguous && current.cronExpression === expression) {
+        return { success: true, data: current }
+      }
+
+      return { success: false, error: message, data: current, ambiguous }
+    } catch (readError: unknown) {
+      const readStatus =
+        readError instanceof Error
+          ? (readError as BackendApiError).status
+          : undefined
+      if (readStatus === 404) {
+        return {
+          success: false,
+          error: dictionary.cronjobs.cronUpdateNotFound,
+          ambiguous: false,
+        }
+      }
+
+      return { success: false, error: message, ambiguous }
     }
   }
 }
