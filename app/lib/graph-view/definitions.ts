@@ -215,3 +215,16 @@ export function getGraphViewRelationLabel(
   >
   return relationLabels[relationType] || relationType
 }
+
+export function getGraphViewEdgeRelationLabel(
+  edge: Pick<GraphViewEdge, "kind" | "relationType">,
+  dictionary: Dictionary
+): string {
+  const labels = dictionary.graphView.edgeRelationTypes[edge.kind] as Partial<
+    Record<GraphViewEdgeRelationType, string>
+  >
+  return (
+    labels[edge.relationType] ??
+    getGraphViewRelationLabel(edge.relationType, dictionary)
+  )
+}

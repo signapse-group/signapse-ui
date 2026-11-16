@@ -42,8 +42,8 @@ import {
   writeGraphViewDemoLayoutCache,
 } from "@/app/lib/graph-view/demo-layout-cache"
 import {
+  getGraphViewEdgeRelationLabel,
   getGraphViewNodeEntityId,
-  getGraphViewRelationLabel,
   type GraphViewEdge,
   type GraphViewNode,
   type GraphViewNodeKind,
@@ -107,7 +107,7 @@ const GRAPH_DEMO_EDGE_KIND_ORDER = [
   "narrative-event",
   "narrative-asset",
 ] as const
-const GRAPH_DEMO_INSPECTOR_CLASS_NAME =
+const GRAPH_VIEW_INSPECTOR_CLASS_NAME =
   "pointer-events-auto absolute inset-x-4 bottom-4 z-20 flex max-h-[min(60%,calc(100%_-_16rem))] flex-col overflow-hidden rounded-2xl border border-border/80 bg-popover/95 text-popover-foreground shadow-xl backdrop-blur-md min-[1440px]:inset-x-auto min-[1440px]:top-16 min-[1440px]:right-4 min-[1440px]:bottom-auto min-[1440px]:max-h-[calc(100%-5rem)] min-[1440px]:w-[22rem]"
 
 function createGraphDemoPalette(mode: GraphDemoThemeMode): GraphDemoPalette {
@@ -398,7 +398,7 @@ function DemoNodeInspector({
       aria-label={dictionary.graphView.demo.selectedNode}
       data-graph-label-obstacle
       data-graph-inspector
-      className={GRAPH_DEMO_INSPECTOR_CLASS_NAME}
+      className={GRAPH_VIEW_INSPECTOR_CLASS_NAME}
       data-testid="graph-demo-inspector"
     >
       <div className="flex items-start gap-3 border-b border-border/70 p-4">
@@ -476,7 +476,7 @@ function DemoNodeInspector({
   )
 }
 
-function DemoEdgeInspector({
+function GraphEdgeInspector({
   edge,
   edgeVisuals,
   onClose,
@@ -498,10 +498,10 @@ function DemoEdgeInspector({
     },
     {
       label: dictionary.graphView.demo.relationMeaning,
-      value: getGraphViewRelationLabel(edge.relationType, dictionary),
+      value: getGraphViewEdgeRelationLabel(edge, dictionary),
     },
     ...(edge.note?.trim()
-      ? [{ label: dictionary.graphView.demo.note, value: edge.note }]
+      ? [{ label: dictionary.graphView.demo.note, value: edge.note.trim() }]
       : []),
   ]
   return (
@@ -509,8 +509,9 @@ function DemoEdgeInspector({
       aria-label={dictionary.graphView.demo.selectedEdge}
       data-graph-label-obstacle
       data-graph-inspector
-      className={GRAPH_DEMO_INSPECTOR_CLASS_NAME}
-      data-testid="graph-demo-edge-inspector"
+      className={GRAPH_VIEW_INSPECTOR_CLASS_NAME}
+      data-testid="graph-edge-inspector"
+      aria-live="polite"
     >
       <div className="flex items-center justify-between gap-3 border-b border-border/70 p-4">
         <h2 className="text-base font-semibold">
@@ -519,7 +520,7 @@ function DemoEdgeInspector({
         <Button
           aria-label={dictionary.graphView.demo.closeRelationship}
           className="size-11 min-[1440px]:size-8"
-          data-testid="graph-demo-close-edge-inspector"
+          data-testid="graph-close-edge-inspector"
           size="icon"
           type="button"
           variant="ghost"
@@ -1653,8 +1654,8 @@ export function SigmaGraphView({
           aria-label={dictionary.graphView.demo.chooseRelationship}
           data-graph-label-obstacle
           data-graph-inspector
-          className={GRAPH_DEMO_INSPECTOR_CLASS_NAME}
-          data-testid="graph-demo-edge-choices"
+          className={GRAPH_VIEW_INSPECTOR_CLASS_NAME}
+          data-testid="graph-edge-choices"
           onKeyDown={(event) => {
             if (event.key === "Escape") {
               event.stopPropagation()
@@ -1668,9 +1669,12 @@ export function SigmaGraphView({
             </h2>
             <Button
               ref={edgeChoicesCloseRef}
-              size="icon-sm"
+              className="size-11 min-[1440px]:size-8"
+              size="icon"
               variant="ghost"
+              type="button"
               aria-label={dictionary.graphView.demo.closeRelationshipChoices}
+              data-testid="graph-close-edge-choices"
               onClick={() => setEdgeChoices([])}
             >
               <X aria-hidden="true" data-icon="inline-start" />
@@ -1700,11 +1704,11 @@ export function SigmaGraphView({
                   </span>
                   <span className="text-xs text-muted-foreground">
                     {edgeVisuals[edge.kind].label} ·{" "}
-                    {getGraphViewRelationLabel(edge.relationType, dictionary)}
+                    {getGraphViewEdgeRelationLabel(edge, dictionary)}
                   </span>
-                  {edge.note?.trim() && !liveGraphView ? (
+                  {edge.note?.trim() ? (
                     <span className="w-full text-xs font-normal break-words text-muted-foreground">
-                      {edge.note}
+                      {dictionary.graphView.demo.note}: {edge.note.trim()}
                     </span>
                   ) : null}
                 </Button>
@@ -1720,8 +1724,8 @@ export function SigmaGraphView({
           onClose={clearSelection}
           onOpenQuickDetail={handleOpenQuickDetail}
         />
-      ) : selectedEdge && !liveGraphView ? (
-        <DemoEdgeInspector
+      ) : selectedEdge ? (
+        <GraphEdgeInspector
           graphView={graphView}
           edge={selectedEdge}
           edgeVisuals={edgeVisuals}

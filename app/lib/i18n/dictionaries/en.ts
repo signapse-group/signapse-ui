@@ -2208,9 +2208,30 @@ export const en: Dictionary = {
     },
     edgeKinds: {
       "event-asset": "Event → asset",
-      "news-article-event": "Evidence → event",
+      "news-article-event": "News article → event",
       "narrative-event": "Narrative → event",
       "narrative-asset": "Narrative → asset",
+    },
+    edgeRelationTypes: {
+      "event-asset": {
+        PRIMARY_SUBJECT: "Primary subject",
+        AFFECTED_ASSET: "Affected asset",
+        REFERENCE_ASSET: "Reference asset",
+      },
+      "news-article-event": {
+        PRIMARY: "Primary article",
+        SUPPORTING: "Supporting article",
+        UPDATE: "Event update",
+        CONTRADICTING: "Contradicting article",
+      },
+      "narrative-event": {
+        DRIVER: "Driver event",
+        AFFECTED: "Affected event",
+      },
+      "narrative-asset": {
+        DRIVER: "Driver asset",
+        AFFECTED: "Affected asset",
+      },
     },
     relationTypes: {
       DRIVER: "Contributing event",
@@ -2264,7 +2285,7 @@ export const en: Dictionary = {
       closeRelationshipChoices: "Close relationship choices",
       interactionHint: "Drag to pan · Select a node or connection to inspect",
       liveInteractionHint:
-        "Drag to pan the graph · Select a node to view its information",
+        "Drag to pan the graph · Select a node or relationship to inspect",
       relationshipInterpretation:
         "A connection describes a recorded association. It does not establish causation.",
       sourceUnavailable: "No original source URL is available.",
