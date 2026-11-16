@@ -53,6 +53,17 @@ async function expectAssistantBottomRight(page: Page, dialog: Locator) {
   expect(Math.round(bounds!.y + bounds!.height)).toBe(viewport!.height - 16)
 }
 
+async function expectAssistantSize(
+  dialog: Locator,
+  width: number,
+  height: number
+) {
+  const bounds = await dialog.boundingBox()
+  expect(bounds).not.toBeNull()
+  expect(Math.round(bounds!.width)).toBe(width)
+  expect(Math.round(bounds!.height)).toBe(height)
+}
+
 async function expectNoticeBelowComposer(dialog: Locator) {
   const composerBounds = await dialog
     .getByRole("textbox", { name: "Tin nhắn", exact: true })
@@ -473,6 +484,7 @@ test("matches the approved launcher and compact, Full mode, sidebar, and mobile 
   await expect(dialog).toBeVisible()
   await expect(askButton).toBeHidden()
   await expectAssistantBottomRight(page, dialog)
+  await expectAssistantSize(dialog, 576, 596)
   await expect(askButton).toHaveAttribute("aria-hidden", "true")
   await expect(
     dialog.getByRole("textbox", { name: "Tin nhắn", exact: true })
@@ -536,6 +548,7 @@ test("matches the approved launcher and compact, Full mode, sidebar, and mobile 
   await page.setViewportSize({ width: 1024, height: 768 })
   await expectAssistantFitsViewport(page, dialog)
   await expectAssistantBottomRight(page, dialog)
+  await expectAssistantSize(dialog, 576, 596)
   await expect(dialog.getByText(notice, { exact: true })).toBeVisible()
   await expectNoticeBelowComposer(dialog)
   await expect(dialog.getByRole("textbox", { name: "Tin nhắn" })).toBeVisible()
@@ -549,6 +562,7 @@ test("matches the approved launcher and compact, Full mode, sidebar, and mobile 
   await page.setViewportSize({ width: 390, height: 844 })
   await expectAssistantFitsViewport(page, dialog)
   await expectAssistantBottomRight(page, dialog)
+  await expectAssistantSize(dialog, 358, 596)
   await expect(dialog.getByText(notice, { exact: true })).toBeVisible()
   await expectNoticeBelowComposer(dialog)
   await page.screenshot({
@@ -558,6 +572,7 @@ test("matches the approved launcher and compact, Full mode, sidebar, and mobile 
   await page.setViewportSize({ width: 360, height: 800 })
   await expectAssistantFitsViewport(page, dialog)
   await expectAssistantBottomRight(page, dialog)
+  await expectAssistantSize(dialog, 328, 596)
   await expect(dialog.getByText(notice, { exact: true })).toBeVisible()
   await expectNoticeBelowComposer(dialog)
   await page.screenshot({
