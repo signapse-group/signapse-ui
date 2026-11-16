@@ -1745,11 +1745,13 @@ export const vi = {
   },
   aiAssistant: {
     open: "Mở trợ lý AI",
+    launcher: "Ask Signapse",
     loading: "Đang tải trợ lý AI",
     error: "Không thể tải trợ lý AI.",
   },
   demoConversation: {
     title: "Cuộc trò chuyện mới",
+    aiNotice: "AI can make mistakes. Please verify important information.",
     newConversation: "Hội thoại mới",
     expandConversation: "Mở rộng cửa sổ hội thoại",
     collapseConversation: "Thu gọn cửa sổ hội thoại",

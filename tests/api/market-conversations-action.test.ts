@@ -4,9 +4,11 @@ const { testDictionary } = vi.hoisted(() => ({
   testDictionary: {
     marketConversations: {
       messageRequired: "Message is required",
+      titleRequired: "Conversation title is required",
       validationInvalid: "Conversation request is invalid",
       responseInvalid: "Conversation response is invalid",
       idempotencyKeyInvalid: "Conversation submission identity is invalid",
+      createError: "Conversation creation failed",
       submitError: "Message submission failed",
     },
   },
@@ -25,7 +27,11 @@ vi.mock("@/app/lib/i18n/server", () => ({
 }))
 
 import { fetchAuthenticated } from "@/app/api/auth/action"
-import { submitMarketConversationMessage } from "@/app/api/market-conversations/action"
+import {
+  createMarketConversation,
+  submitMarketConversationMessage,
+} from "@/app/api/market-conversations/action"
+import { marketConversationSummaryResponseSchema } from "@/app/lib/market-query/definitions"
 
 const response = {
   userMessage: {
@@ -70,6 +76,132 @@ describe("market conversation submit action", () => {
         headers: { "Idempotency-Key": "retry-key" },
       }
     )
+  })
+
+  it("accepts omitted conversation summary fields not required by OpenAPI", () => {
+    expect(
+      marketConversationSummaryResponseSchema.safeParse({ id: 42 })
+    ).toEqual({ success: true, data: { id: 42 } })
+  })
+
+  it("creates a conversation when optional summary fields are omitted", async () => {
+    vi.mocked(fetchAuthenticated).mockResolvedValue({ id: 42 })
+
+    await expect(
+      createMarketConversation({ title: "What moved gold today?" })
+    ).resolves.toEqual({ success: true, data: { id: 42 } })
+  })
+
+  it("surfaces a create response without an ID because the first message cannot be submitted", async () => {
+    vi.mocked(fetchAuthenticated).mockResolvedValue({
+      title: "What moved gold today?",
+      workspaceId: 7,
+    })
+
+    await expect(
+      createMarketConversation({ title: "What moved gold today?" })
+    ).resolves.toEqual({
+      success: false,
+      error: "Conversation response is invalid",
+    })
+  })
+
+  it("accepts omitted message timestamps not required by OpenAPI", async () => {
+    const responseWithoutTimestamps = {
+      userMessage: {
+        id: 1,
+        role: "USER" as const,
+        status: "COMPLETED" as const,
+        content: "What moved gold today?",
+        failureReason: null,
+      },
+      assistantMessage: {
+        id: 2,
+        role: "ASSISTANT" as const,
+        status: "COMPLETED" as const,
+        content: "Gold moved higher.",
+        failureReason: null,
+      },
+    }
+    vi.mocked(fetchAuthenticated).mockResolvedValue(responseWithoutTimestamps)
+
+    await expect(
+      submitMarketConversationMessage(
+        42,
+        { message: "What moved gold today?" },
+        "retry-key"
+      )
+    ).resolves.toEqual({ success: true, data: responseWithoutTimestamps })
+  })
+
+  it.each([null, ""])(
+    "rejects a COMPLETED assistant response with %s content",
+    async (content) => {
+      vi.mocked(fetchAuthenticated).mockResolvedValue({
+        ...response,
+        assistantMessage: {
+          ...response.assistantMessage,
+          content,
+        },
+      })
+
+      await expect(
+        submitMarketConversationMessage(
+          42,
+          { message: "What moved gold today?" },
+          "retry-key"
+        )
+      ).resolves.toEqual({
+        success: false,
+        error: "Conversation response is invalid",
+      })
+    }
+  )
+
+  it("rejects a FAILED assistant response that also contains content", async () => {
+    vi.mocked(fetchAuthenticated).mockResolvedValue({
+      ...response,
+      assistantMessage: {
+        ...response.assistantMessage,
+        status: "FAILED",
+        content: "This must not appear as a completed answer.",
+        failureReason: "Fixture assistant failure",
+      },
+    })
+
+    await expect(
+      submitMarketConversationMessage(
+        42,
+        { message: "What moved gold today?" },
+        "retry-key"
+      )
+    ).resolves.toEqual({
+      success: false,
+      error: "Conversation response is invalid",
+    })
+  })
+
+  it("rejects a FAILED assistant response without a failure reason", async () => {
+    vi.mocked(fetchAuthenticated).mockResolvedValue({
+      ...response,
+      assistantMessage: {
+        ...response.assistantMessage,
+        status: "FAILED",
+        content: null,
+        failureReason: null,
+      },
+    })
+
+    await expect(
+      submitMarketConversationMessage(
+        42,
+        { message: "What moved gold today?" },
+        "retry-key"
+      )
+    ).resolves.toEqual({
+      success: false,
+      error: "Conversation response is invalid",
+    })
   })
 
   it("returns a backend quota error without creating a response", async () => {

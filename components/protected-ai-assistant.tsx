@@ -59,18 +59,23 @@ function AssistantLoadingTrigger() {
   const { dictionary } = useLocalization()
 
   return (
-    <div className="fixed end-4 bottom-4">
-      <Button
-        type="button"
-        variant="default"
-        size="icon-lg"
-        className="size-11 [&_svg:not([class*='size-'])]:size-5"
-        disabled
-        aria-label={dictionary.aiAssistant.loading}
+    <Button
+      type="button"
+      variant="outline"
+      size="lg"
+      className="fixed end-4 bottom-4 h-12 w-[10.5rem] justify-start rounded-2xl px-4 text-base has-data-[icon=inline-start]:pl-4 disabled:opacity-100"
+      disabled
+      aria-label={dictionary.aiAssistant.loading}
+    >
+      <span
+        aria-hidden="true"
+        className="inline-flex size-7 shrink-0 items-center justify-center"
+        data-icon="inline-start"
       >
-        <Spinner data-icon="inline-start" />
-      </Button>
-    </div>
+        <Spinner className="size-5" />
+      </span>
+      <span>{dictionary.aiAssistant.launcher}</span>
+    </Button>
   )
 }
 

@@ -515,6 +515,9 @@ function createState() {
 
   return {
     workspaces: [primaryWorkspace, secondaryWorkspace],
+    marketConversations: [],
+    marketConversationTurns: [],
+    marketConversationAttempts: [],
     notes: [note(31, "Morning brief", "Review the fixture market brief.")],
     feedback: feedbackRecords(),
     contactRequests: contactRequestRecords(),
@@ -751,6 +754,8 @@ function createState() {
       schedule: 52,
       feedback: 13,
       newsOutlet: 8,
+      conversation: 1,
+      message: 1,
     },
   }
 }
@@ -2542,7 +2547,15 @@ function feedbackRouteResult(state, method, pathname, url, body) {
   return null
 }
 
-function responseForRoute(state, method, pathname, url, body, locale = "en") {
+function responseForRoute(
+  state,
+  method,
+  pathname,
+  url,
+  body,
+  locale = "en",
+  requestHeaders = {}
+) {
   const aiTaskResult = aiTaskConfigurationRouteResult(
     state,
     method,
@@ -2937,6 +2950,169 @@ function responseForRoute(state, method, pathname, url, body, locale = "en") {
 
   const feedbackResult = feedbackRouteResult(state, method, pathname, url, body)
   if (feedbackResult) return feedbackResult
+
+  if (method === "POST" && pathname === "/market-conversations") {
+    if (!hasFixturePermission(state, "query:execute")) {
+      return {
+        __status: 403,
+        payload: errorPayload(
+          "Market conversation permission denied",
+          "FORBIDDEN"
+        ),
+      }
+    }
+    const title = String(body?.title ?? "").trim()
+    const currentWorkspace = state.workspaces.find(
+      (item) => item.currentWorkspace
+    )
+    if (!title || !currentWorkspace) {
+      return {
+        __status: currentWorkspace ? 400 : 409,
+        payload: errorPayload(
+          currentWorkspace
+            ? "Conversation title is required"
+            : "Select a workspace first",
+          currentWorkspace ? "VALIDATION_ERROR" : "WORKSPACE_REQUIRED"
+        ),
+      }
+    }
+    const conversation = {
+      id: state.nextIds.conversation++,
+      title,
+      workspaceId: currentWorkspace.id,
+      createdDate: NOW,
+      lastModifiedDate: NOW,
+    }
+    state.marketConversations.push(conversation)
+    if (getScenario(state, method, pathname) === "conversation-without-id") {
+      return {
+        title: conversation.title,
+        workspaceId: conversation.workspaceId,
+        createdDate: conversation.createdDate,
+        lastModifiedDate: conversation.lastModifiedDate,
+      }
+    }
+    return conversation
+  }
+
+  const conversationMessageMatch = pathname.match(
+    /^\/market-conversations\/(\d+)\/messages$/
+  )
+  if (method === "POST" && conversationMessageMatch) {
+    const id = Number(conversationMessageMatch[1])
+    const conversation = state.marketConversations.find(
+      (item) => item.id === id
+    )
+    const currentWorkspace = state.workspaces.find(
+      (item) => item.currentWorkspace
+    )
+    if (!hasFixturePermission(state, "query:execute")) {
+      return {
+        __status: 403,
+        payload: errorPayload(
+          "Market conversation permission denied",
+          "FORBIDDEN"
+        ),
+      }
+    }
+    if (
+      !conversation ||
+      !currentWorkspace ||
+      conversation.workspaceId !== currentWorkspace.id
+    ) {
+      return {
+        __status: 403,
+        payload: errorPayload(
+          "Conversation workspace access denied",
+          "FORBIDDEN"
+        ),
+      }
+    }
+    const message = String(body?.message ?? "").trim()
+    const idempotencyKey = String(
+      requestHeaders["idempotency-key"] ?? ""
+    ).trim()
+    if (!message || !idempotencyKey) {
+      return {
+        __status: 400,
+        payload: errorPayload(
+          "Message and idempotency key are required",
+          "VALIDATION_ERROR"
+        ),
+      }
+    }
+
+    const existingTurn = state.marketConversationTurns.find(
+      (item) =>
+        item.conversationId === id && item.idempotencyKey === idempotencyKey
+    )
+    state.marketConversationAttempts.push({
+      conversationId: id,
+      workspaceId: currentWorkspace.id,
+      idempotencyKey,
+      replay: Boolean(existingTurn),
+    })
+    if (existingTurn) {
+      if (existingTurn.message !== message) {
+        return {
+          __status: 409,
+          payload: errorPayload(
+            "Idempotency key was reused for another message",
+            "IDEMPOTENCY_KEY_REUSED"
+          ),
+        }
+      }
+      return existingTurn.response
+    }
+
+    const userMessage = {
+      id: state.nextIds.message++,
+      role: "USER",
+      status: "COMPLETED",
+      content: message,
+      failureReason: null,
+      createdDate: NOW,
+    }
+    const scenario = getScenario(state, method, pathname)
+    const assistantMessage =
+      scenario === "assistant-failed"
+        ? {
+            id: state.nextIds.message++,
+            role: "ASSISTANT",
+            status: "FAILED",
+            content: null,
+            failureReason: "Fixture assistant failure",
+            createdDate: NOW,
+          }
+        : scenario === "completed-without-content"
+          ? {
+              id: state.nextIds.message++,
+              role: "ASSISTANT",
+              status: "COMPLETED",
+              content: null,
+              failureReason: null,
+              createdDate: NOW,
+            }
+          : {
+              id: state.nextIds.message++,
+              role: "ASSISTANT",
+              status: "COMPLETED",
+              content: `The fixture report shows BTC moved during the review period. [Market source](https://example.com/reports/btc-fixture)
+
+Which asset did you mean? The available data is limited. Add TSLA to your watchlist before continuing.`,
+              failureReason: null,
+              createdDate: NOW,
+            }
+    const response = { userMessage, assistantMessage }
+    state.marketConversationTurns.push({
+      conversationId: id,
+      workspaceId: currentWorkspace.id,
+      idempotencyKey,
+      message,
+      response,
+    })
+    return response
+  }
 
   if (method === "GET" && pathname === "/me/workspaces") {
     return slicePage(state.workspaces, url)
@@ -3765,6 +3941,16 @@ async function handleControl(request, response, url, body) {
       permissions: state.permissions,
       aiTaskConfigurations: state.aiTaskConfigurations,
       newsOutlets: state.newsOutlets,
+      marketConversations: state.marketConversations,
+      marketConversationTurns: state.marketConversationTurns.map(
+        ({ conversationId, workspaceId, idempotencyKey, response }) => ({
+          conversationId,
+          workspaceId,
+          idempotencyKey,
+          response,
+        })
+      ),
+      marketConversationAttempts: state.marketConversationAttempts,
       smtpConfiguration: smtpConfigurationResponse(state.smtpConfiguration),
       streamConnections: state.streamConnections,
       pendingRequests: state.pendingRequests.size,
@@ -3877,6 +4063,20 @@ const server = createServer(async (request, response) => {
     getScenario(state, method, url.pathname) === "delayed-old-workspace"
       ? responseForRoute(state, method, url.pathname, url, body)
       : undefined
+  const delayedMarketConversationResult =
+    method === "POST" &&
+    /^\/market-conversations\/\d+\/messages$/.test(url.pathname) &&
+    getScenario(state, method, url.pathname) === "delayed-old-workspace"
+      ? responseForRoute(
+          state,
+          method,
+          url.pathname,
+          url,
+          body,
+          String(request.headers["accept-language"] ?? "en"),
+          request.headers
+        )
+      : undefined
 
   if (isPending(state, method, url.pathname)) {
     const released = await holdResponse(state, response, method, url.pathname)
@@ -3984,6 +4184,21 @@ const server = createServer(async (request, response) => {
     )
     return
   }
+  if (
+    scenario === "quota-exceeded" &&
+    method === "POST" &&
+    /^\/market-conversations\/\d+\/messages$/.test(url.pathname)
+  ) {
+    sendJson(
+      response,
+      409,
+      errorPayload(
+        "You have exceeded the monthly AI turn allowance.",
+        "AI_MONTHLY_TURN_QUOTA_EXCEEDED"
+      )
+    )
+    return
+  }
 
   if (method === "GET" && url.pathname === "/market-charts/live") {
     await streamLive(response, state, url, scenario)
@@ -3991,6 +4206,7 @@ const server = createServer(async (request, response) => {
   }
 
   const result =
+    delayedMarketConversationResult ??
     delayedGraphResult ??
     responseForRoute(
       state,
@@ -3998,9 +4214,20 @@ const server = createServer(async (request, response) => {
       url.pathname,
       url,
       body,
-      String(request.headers["accept-language"] ?? "en")
+      String(request.headers["accept-language"] ?? "en"),
+      request.headers
     )
   const status = result?.__status ?? 200
+  if (
+    scenario === "drop-after-accepted" &&
+    method === "POST" &&
+    /^\/market-conversations\/\d+\/messages$/.test(url.pathname) &&
+    status < 400
+  ) {
+    state.scenarios[`POST ${url.pathname}`] = "success"
+    response.destroy()
+    return
+  }
   if (status === 204) {
     sendEmpty(response, 204)
     return

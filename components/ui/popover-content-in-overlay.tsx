@@ -14,9 +14,13 @@ type PopoverContentInOverlayProps = PopoverPrimitive.Popup.Props &
     | "anchor"
     | "collisionBoundary"
     | "collisionPadding"
+    | "positionMethod"
     | "side"
     | "sideOffset"
-  >
+  > & {
+    positionerClassName?: string
+    positionerStyle?: React.CSSProperties
+  }
 
 function PopoverContentInOverlay({
   className,
@@ -25,6 +29,9 @@ function PopoverContentInOverlay({
   anchor,
   collisionBoundary,
   collisionPadding,
+  positionMethod,
+  positionerClassName,
+  positionerStyle,
   side = "bottom",
   sideOffset = 4,
   ...props
@@ -39,9 +46,11 @@ function PopoverContentInOverlay({
         anchor={anchor}
         collisionBoundary={collisionBoundary}
         collisionPadding={collisionPadding}
+        positionMethod={positionMethod}
         side={side}
         sideOffset={sideOffset}
-        className="isolate z-50"
+        className={cn("isolate z-50", positionerClassName)}
+        style={positionerStyle}
       >
         <PopoverPrimitive.Popup
           data-slot="popover-content"
