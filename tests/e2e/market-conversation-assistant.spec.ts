@@ -399,6 +399,45 @@ test("hides the launcher when the app permission is absent", async ({
   await expect(launcher(page)).toHaveCount(0)
 })
 
+test("keeps the dashboard Graph View action reachable beside the launcher", async ({
+  page,
+}) => {
+  for (const viewport of [
+    { width: 1520, height: 1024 },
+    { width: 1024, height: 768 },
+  ]) {
+    await page.setViewportSize(viewport)
+    await page.goto("/vi/dashboard")
+
+    const graphViewAction = page
+      .locator('section[aria-labelledby="dashboard-market-narratives-title"]')
+      .getByRole("link", { name: "Mở Graph View", exact: true })
+    const assistantLauncher = launcher(page)
+    await expect(graphViewAction).toBeVisible()
+    await expect(assistantLauncher).toBeVisible()
+
+    const [actionBounds, launcherBounds] = await Promise.all([
+      graphViewAction.boundingBox(),
+      assistantLauncher.boundingBox(),
+    ])
+    expect(actionBounds).not.toBeNull()
+    expect(launcherBounds).not.toBeNull()
+    if (viewport.width >= 1440) {
+      expect(actionBounds!.y).toBeGreaterThanOrEqual(0)
+      expect(actionBounds!.y + actionBounds!.height).toBeLessThanOrEqual(
+        viewport.height
+      )
+    }
+    expect(
+      actionBounds!.x + actionBounds!.width <= launcherBounds!.x ||
+        launcherBounds!.x + launcherBounds!.width <= actionBounds!.x ||
+        actionBounds!.y + actionBounds!.height <= launcherBounds!.y ||
+        launcherBounds!.y + launcherBounds!.height <= actionBounds!.y
+    ).toBe(true)
+    await graphViewAction.click({ trial: true })
+  }
+})
+
 test("drops stale pending output after the user changes workspace", async ({
   page,
   fixture,
