@@ -7,11 +7,7 @@ import {
 import type { Dictionary } from "@/app/lib/i18n/dictionary-types"
 
 export type MarketQueryEvidenceRole =
-  | "PRIMARY"
-  | "SUPPORTING"
-  | "UPDATE"
-  | "CONTRADICTING"
-  | "CONTEXT"
+  "PRIMARY" | "SUPPORTING" | "UPDATE" | "CONTRADICTING" | "CONTEXT"
 
 export interface MarketQueryRequest {
   question: string
@@ -72,12 +68,15 @@ export interface CreateMarketConversationRequest {
 }
 
 export interface MarketConversationSummaryResponse {
-  id: number
-  title: string
-  workspaceId: number
-  createdDate: string
-  lastModifiedDate: string
+  id?: number
+  title?: string
+  workspaceId?: number
+  createdDate?: string
+  lastModifiedDate?: string
 }
+
+export type IdentifiedMarketConversationSummaryResponse =
+  MarketConversationSummaryResponse & { id: number }
 
 export interface MarketChatMessageResponse {
   id: number
@@ -85,7 +84,7 @@ export interface MarketChatMessageResponse {
   status: MarketChatMessageStatus
   content: string | null
   failureReason: string | null
-  createdDate: string
+  createdDate?: string
 }
 
 export interface MarketConversationDetailResponse extends MarketConversationSummaryResponse {
@@ -188,30 +187,77 @@ export function getSubmitMarketConversationMessageSchema(
 export function getSubmitMarketConversationIdempotencyKeySchema(
   dictionary: Dictionary
 ) {
-  return (
-    z
-      .string()
-      .trim()
-      .min(1, dictionary.marketConversations.idempotencyKeyInvalid)
-      .max(255, dictionary.marketConversations.idempotencyKeyInvalid)
-  ) satisfies z.ZodType<string>
+  return z
+    .string()
+    .trim()
+    .min(1, dictionary.marketConversations.idempotencyKeyInvalid)
+    .max(
+      255,
+      dictionary.marketConversations.idempotencyKeyInvalid
+    ) satisfies z.ZodType<string>
 }
 
-export const marketChatMessageResponseSchema = z.object({
-  id: z.number().int(),
-  role: z.enum(["USER", "ASSISTANT"]),
-  status: z.enum(["COMPLETED", "FAILED"]),
-  content: nullableStringSchema,
-  failureReason: nullableStringSchema,
-  createdDate: z.string(),
-}) satisfies z.ZodType<MarketChatMessageResponse>
+export const marketChatMessageResponseSchema = z
+  .object({
+    id: z.number().int(),
+    role: z.enum(["USER", "ASSISTANT"]),
+    status: z.enum(["COMPLETED", "FAILED"]),
+    content: nullableStringSchema,
+    failureReason: nullableStringSchema,
+    createdDate: z.string().optional(),
+  })
+  .superRefine((message, context) => {
+    if (message.status === "COMPLETED") {
+      if (!message.content?.trim()) {
+        context.addIssue({
+          code: "custom",
+          path: ["content"],
+          message: "Completed messages must include readable content.",
+        })
+      }
+
+      if (message.failureReason !== null) {
+        context.addIssue({
+          code: "custom",
+          path: ["failureReason"],
+          message: "Completed messages cannot include a failure reason.",
+        })
+      }
+
+      return
+    }
+
+    if (message.role !== "ASSISTANT") {
+      context.addIssue({
+        code: "custom",
+        path: ["status"],
+        message: "Only assistant messages can fail.",
+      })
+    }
+
+    if (message.content !== null) {
+      context.addIssue({
+        code: "custom",
+        path: ["content"],
+        message: "Failed messages cannot include answer content.",
+      })
+    }
+
+    if (!message.failureReason?.trim()) {
+      context.addIssue({
+        code: "custom",
+        path: ["failureReason"],
+        message: "Failed assistant messages must include a reason.",
+      })
+    }
+  }) satisfies z.ZodType<MarketChatMessageResponse>
 
 export const marketConversationSummaryResponseSchema = z.object({
-  id: z.number().int(),
-  title: z.string(),
-  workspaceId: z.number().int(),
-  createdDate: z.string(),
-  lastModifiedDate: z.string(),
+  id: z.number().int().optional(),
+  title: z.string().optional(),
+  workspaceId: z.number().int().optional(),
+  createdDate: z.string().optional(),
+  lastModifiedDate: z.string().optional(),
 }) satisfies z.ZodType<MarketConversationSummaryResponse>
 
 export const marketConversationDetailResponseSchema =

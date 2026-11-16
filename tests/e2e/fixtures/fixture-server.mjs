@@ -2984,6 +2984,14 @@ function responseForRoute(
       lastModifiedDate: NOW,
     }
     state.marketConversations.push(conversation)
+    if (getScenario(state, method, pathname) === "conversation-without-id") {
+      return {
+        title: conversation.title,
+        workspaceId: conversation.workspaceId,
+        createdDate: conversation.createdDate,
+        lastModifiedDate: conversation.lastModifiedDate,
+      }
+    }
     return conversation
   }
 
@@ -3076,16 +3084,25 @@ function responseForRoute(
             failureReason: "Fixture assistant failure",
             createdDate: NOW,
           }
-        : {
-            id: state.nextIds.message++,
-            role: "ASSISTANT",
-            status: "COMPLETED",
-            content: `The fixture report shows BTC moved during the review period. [Market source](https://example.com/reports/btc-fixture)
+        : scenario === "completed-without-content"
+          ? {
+              id: state.nextIds.message++,
+              role: "ASSISTANT",
+              status: "COMPLETED",
+              content: null,
+              failureReason: null,
+              createdDate: NOW,
+            }
+          : {
+              id: state.nextIds.message++,
+              role: "ASSISTANT",
+              status: "COMPLETED",
+              content: `The fixture report shows BTC moved during the review period. [Market source](https://example.com/reports/btc-fixture)
 
 Which asset did you mean? The available data is limited. Add TSLA to your watchlist before continuing.`,
-            failureReason: null,
-            createdDate: NOW,
-          }
+              failureReason: null,
+              createdDate: NOW,
+            }
     const response = { userMessage, assistantMessage }
     state.marketConversationTurns.push({
       conversationId: id,

@@ -52,6 +52,8 @@ type FixtureController = {
       | "delayed-outage"
       | "drop-after-accepted"
       | "assistant-failed"
+      | "conversation-without-id"
+      | "completed-without-content"
       | "quota-exceeded"
       | "daily-history-retry"
       | "workspace-not-selected"

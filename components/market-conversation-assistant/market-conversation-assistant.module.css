@@ -29,6 +29,10 @@
   transform: none !important;
 }
 
+.compactModePositioner {
+  width: min(36rem, var(--available-width)) !important;
+}
+
 .fullModePopup {
   box-sizing: border-box !important;
   width: 100% !important;

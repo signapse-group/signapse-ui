@@ -1,12 +1,14 @@
 import { expect, test } from "./fixtures"
-import type { Page } from "@playwright/test"
+import type { Locator, Page } from "@playwright/test"
 
 const launcherName = "Ask Signapse"
 const notice = "AI can make mistakes. Please verify important information."
 const sourceUrl = "https://example.com/reports/btc-fixture"
 
 function launcher(page: Page) {
-  return page.getByRole("button", { name: launcherName, exact: true })
+  return page.locator(
+    `[data-slot="popover-trigger"][aria-label="${launcherName}"]`
+  )
 }
 
 function assistantDialog(page: Page) {
@@ -19,11 +21,49 @@ function assistantMessages(page: Page) {
   return assistantDialog(page).getByRole("region", { name: "Tin nhắn" })
 }
 
+async function expectAssistantFitsViewport(page: Page, dialog: Locator) {
+  const viewport = page.viewportSize()
+  expect(viewport).not.toBeNull()
+  await expect
+    .poll(async () => {
+      const bounds = await dialog.boundingBox()
+      return (
+        bounds !== null &&
+        bounds.x >= 0 &&
+        bounds.y >= 0 &&
+        bounds.x + bounds.width <= viewport!.width &&
+        bounds.y + bounds.height <= viewport!.height
+      )
+    })
+    .toBe(true)
+  const bounds = await dialog.boundingBox()
+  expect(bounds).not.toBeNull()
+  expect(bounds!.x).toBeGreaterThanOrEqual(0)
+  expect(bounds!.y).toBeGreaterThanOrEqual(0)
+  expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(viewport!.width)
+  expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(viewport!.height)
+}
+
+async function expectNoticeBelowComposer(dialog: Locator) {
+  const composerBounds = await dialog
+    .getByRole("textbox", { name: "Tin nhắn", exact: true })
+    .boundingBox()
+  const noticeBounds = await dialog
+    .getByText(notice, { exact: true })
+    .boundingBox()
+  expect(composerBounds).not.toBeNull()
+  expect(noticeBounds).not.toBeNull()
+  expect(noticeBounds!.y).toBeGreaterThanOrEqual(
+    composerBounds!.y + composerBounds!.height
+  )
+}
+
 async function openAssistant(page: Page) {
   await launcher(page).click()
   await expect(
     page.getByRole("textbox", { name: "Tin nhắn", exact: true })
   ).toBeVisible()
+  await expect(launcher(page)).toBeHidden()
 }
 
 async function submitQuestion(page: Page, question: string) {
@@ -140,6 +180,37 @@ test("creates and submits a sourced first turn, and blocks blank questions", asy
 
   await page.keyboard.press("Escape")
   await expect(assistantDialog(page)).toBeHidden()
+  await expect(launcher(page)).toBeVisible()
+})
+
+test("keeps the question when conversation creation does not return an ID", async ({
+  page,
+  fixture,
+}) => {
+  await fixture.setScenario(
+    "/market-conversations",
+    "conversation-without-id",
+    "POST"
+  )
+  await page.goto("/vi/dashboard")
+  await openAssistant(page)
+
+  const question = "What moved gold today?"
+  const composer = await submitQuestion(page, question)
+  await expect(assistantDialog(page).getByRole("alert")).toContainText(
+    "Hệ thống trả về dữ liệu hội thoại thị trường không đúng định dạng mong đợi."
+  )
+  await expect(composer).toHaveValue(question)
+
+  const state = await fixture.state()
+  expect(state.marketConversations).toHaveLength(1)
+  expect(state.marketConversationTurns).toHaveLength(0)
+  expect(
+    state.requests
+      .filter((request) => request.method === "POST")
+      .map((request) => request.path)
+      .filter((path) => String(path).startsWith("/market-conversations"))
+  ).toEqual(["/market-conversations"])
 })
 
 test("retries a lost accepted request with the same key and uses a new key for the next turn", async ({
@@ -202,6 +273,29 @@ test("renders an assistant FAILED result as a failure", async ({
   await expect(assistantDialog(page).getByRole("alert")).toContainText(
     "Fixture assistant failure"
   )
+  await expect(page.getByRole("link", { name: "Market source" })).toHaveCount(0)
+  expect((await fixture.state()).marketConversationTurns).toHaveLength(1)
+})
+
+test("surfaces a COMPLETED response without content as an error", async ({
+  page,
+  fixture,
+}) => {
+  await fixture.setScenario(
+    "/market-conversations/1/messages",
+    "completed-without-content",
+    "POST"
+  )
+  await page.goto("/vi/dashboard")
+  await openAssistant(page)
+  await submitQuestion(page, "What moved the market?")
+
+  await expect(assistantDialog(page).getByRole("alert")).toContainText(
+    "Hệ thống trả về dữ liệu hội thoại thị trường không đúng định dạng mong đợi."
+  )
+  await expect(
+    assistantMessages(page).getByText("The fixture report")
+  ).toHaveCount(0)
   await expect(page.getByRole("link", { name: "Market source" })).toHaveCount(0)
   expect((await fixture.state()).marketConversationTurns).toHaveLength(1)
 })
@@ -365,6 +459,11 @@ test("matches the approved launcher and compact, Full mode, sidebar, and mobile 
   await page.keyboard.press("Enter")
   const dialog = assistantDialog(page)
   await expect(dialog).toBeVisible()
+  await expect(askButton).toBeHidden()
+  await expect(askButton).toHaveAttribute("aria-hidden", "true")
+  await expect(
+    dialog.getByRole("textbox", { name: "Tin nhắn", exact: true })
+  ).toBeFocused()
   await expect(dialog.getByText(notice, { exact: true })).toBeVisible()
   await page.screenshot({
     path: "test-results/market-assistant-compact-1520x1024.png",
@@ -413,33 +512,55 @@ test("matches the approved launcher and compact, Full mode, sidebar, and mobile 
   })
 
   await dialog.getByRole("button", { name: "Thu gọn cửa sổ hội thoại" }).click()
+  await expect(
+    dialog.getByRole("button", { name: "Mở rộng cửa sổ hội thoại" })
+  ).toBeVisible()
   await expect(dialog.getByText(notice, { exact: true })).toBeVisible()
-  const composerBounds = await dialog
-    .getByRole("textbox", { name: "Tin nhắn", exact: true })
-    .boundingBox()
-  const noticeBounds = await dialog
-    .getByText(notice, { exact: true })
-    .boundingBox()
-  expect(composerBounds).not.toBeNull()
-  expect(noticeBounds).not.toBeNull()
-  expect(noticeBounds!.y).toBeGreaterThanOrEqual(
-    composerBounds!.y + composerBounds!.height
-  )
+  await expectNoticeBelowComposer(dialog)
+
+  await page.setViewportSize({ width: 1024, height: 768 })
+  await expectAssistantFitsViewport(page, dialog)
+  await expect(dialog.getByText(notice, { exact: true })).toBeVisible()
+  await expectNoticeBelowComposer(dialog)
+  await expect(dialog.getByRole("textbox", { name: "Tin nhắn" })).toBeVisible()
+  await expect(
+    dialog.getByRole("button", { name: "Gửi", exact: true })
+  ).toBeVisible()
+  await page.screenshot({
+    path: "test-results/market-assistant-compact-1024x768.png",
+  })
 
   await page.setViewportSize({ width: 390, height: 844 })
+  await expectAssistantFitsViewport(page, dialog)
   await expect(dialog.getByText(notice, { exact: true })).toBeVisible()
-  const mobileComposerBounds = await dialog
-    .getByRole("textbox", { name: "Tin nhắn", exact: true })
-    .boundingBox()
-  const mobileNoticeBounds = await dialog
-    .getByText(notice, { exact: true })
-    .boundingBox()
-  expect(mobileComposerBounds).not.toBeNull()
-  expect(mobileNoticeBounds).not.toBeNull()
-  expect(mobileNoticeBounds!.y).toBeGreaterThanOrEqual(
-    mobileComposerBounds!.y + mobileComposerBounds!.height
-  )
+  await expectNoticeBelowComposer(dialog)
   await page.screenshot({
     path: "test-results/market-assistant-mobile-390x844.png",
   })
+
+  await page.setViewportSize({ width: 360, height: 800 })
+  await expectAssistantFitsViewport(page, dialog)
+  await expect(dialog.getByText(notice, { exact: true })).toBeVisible()
+  await expectNoticeBelowComposer(dialog)
+  await page.screenshot({
+    path: "test-results/market-assistant-mobile-360x800.png",
+  })
+
+  // 760×512 CSS px is the effective viewport at 200% zoom on the 1520×1024 frame.
+  await page.setViewportSize({ width: 760, height: 512 })
+  await expectAssistantFitsViewport(page, dialog)
+  await expect(dialog.getByText(notice, { exact: true })).toBeVisible()
+  await expectNoticeBelowComposer(dialog)
+  await expect(dialog.getByRole("textbox", { name: "Tin nhắn" })).toBeVisible()
+  await expect(
+    dialog.getByRole("button", { name: "Gửi", exact: true })
+  ).toBeVisible()
+  await page.screenshot({
+    path: "test-results/market-assistant-zoom-200-equivalent-760x512.png",
+  })
+
+  await page.keyboard.press("Escape")
+  await expect(dialog).toBeHidden()
+  await expect(launcher(page)).toBeVisible()
+  await expect(launcher(page)).toBeFocused()
 })
