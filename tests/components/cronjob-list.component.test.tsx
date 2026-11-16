@@ -456,6 +456,46 @@ describe("CronjobListPage", () => {
     expect(mocks.routerRefresh).toHaveBeenCalled()
   })
 
+  it("restores focus to the error when a 409 readback reports the job is running", async () => {
+    const user = userEvent.setup()
+    const actual = {
+      ...cronjobs[2],
+      cronExpression: "0 10 * * * ?",
+      executionStatus: "RUNNING" as const,
+    }
+    mocks.updateCronjob.mockResolvedValue({
+      success: false,
+      error: en.cronjobs.cronUpdateConflict,
+      data: actual,
+      ambiguous: true,
+    })
+    renderCronjobList(["cronjob:read", "cronjob:update"])
+
+    const card = screen.getByRole("article", {
+      name: "Paused after execution",
+    })
+    await user.click(
+      within(card).getByRole("button", { name: "Edit cron expression" })
+    )
+    const input = within(card).getByRole("textbox", {
+      name: "Cron expression (UTC)",
+    })
+    await user.clear(input)
+    await user.type(input, "0 0 8 * * ?")
+    await user.keyboard("{Enter}")
+
+    const error = await within(card).findByRole("alert")
+    await waitFor(() => expect(error).toHaveFocus())
+    expect(input).toBeDisabled()
+    expect(input).toHaveValue("0 0 8 * * ?")
+    expect(input).toHaveAttribute("aria-describedby", error.id)
+    expect(
+      within(card).getByText("0 10 * * * ?", { exact: true })
+    ).toBeVisible()
+    expect(within(card).getByText("Running")).toBeVisible()
+    expect(mocks.toastSuccess).not.toHaveBeenCalled()
+  })
+
   it("labels the last confirmed schedule and says when the effective schedule is unverified", async () => {
     const user = userEvent.setup()
     mocks.updateCronjob.mockResolvedValue({

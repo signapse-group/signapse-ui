@@ -96,7 +96,7 @@ const UTC_DATE_TIME_OPTIONS: Intl.DateTimeFormatOptions = {
 }
 
 type CronExpressionEditorSurface = "mobile" | "wide"
-type CronExpressionEditorFocusTarget = "input" | "edit"
+type CronExpressionEditorFocusTarget = "input" | "edit" | "error"
 
 type CronExpressionEditorState = {
   isEditing: boolean
@@ -727,9 +727,24 @@ function CronExpressionCell({
   const inputRef = useRef<HTMLInputElement>(null)
   const editButtonRef = useRef<HTMLButtonElement>(null)
   const expressionRef = useRef<HTMLSpanElement>(null)
+  const errorRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (isEditing) {
+      if (
+        focusTarget === "error" &&
+        focusSurface === surface &&
+        !isSaving &&
+        getVisibleCronExpressionSurface() === surface
+      ) {
+        errorRef.current?.focus()
+        onEditorStateChange((current) =>
+          current.focusTarget === "error" && current.focusSurface === surface
+            ? { ...current, focusTarget: null }
+            : current
+        )
+      }
+
       if (
         focusTarget === "input" &&
         focusSurface === surface &&
@@ -847,7 +862,8 @@ function CronExpressionCell({
           error: result.error || dictionary.cronjobs.cronUpdateError,
           isSaving: true,
           focusSurface: visibleSurface,
-          focusTarget: "input",
+          focusTarget:
+            result.data?.executionStatus === "RUNNING" ? "error" : "input",
           scheduleUnverified: result.data
             ? false
             : scheduleUnverified || current.scheduleUnverified,
@@ -943,7 +959,11 @@ function CronExpressionCell({
           disabled={isSaving || !canUpdate}
           className="min-w-[8rem]"
         />
-        {error ? <FieldError id={errorId}>{error}</FieldError> : null}
+        {error ? (
+          <FieldError ref={errorRef} id={errorId} tabIndex={-1}>
+            {error}
+          </FieldError>
+        ) : null}
         <p className="w-full text-xs text-muted-foreground">
           {scheduleUnverified
             ? dictionary.cronjobs.lastConfirmedSchedule
@@ -959,7 +979,7 @@ function CronExpressionCell({
       <div className="flex items-center gap-1">
         <Button
           type="submit"
-          variant="default"
+          variant="positive"
           size="sm"
           aria-label={
             isSaving ? dictionary.common.saving : dictionary.cronjobs.saveCron

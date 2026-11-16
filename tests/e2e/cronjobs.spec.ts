@@ -398,7 +398,7 @@ test("cronjob schedule editor renders and cancels on Wide and Mobile", async ({
   await fixture.setScenario("/cronjobs", "short")
   await page.goto("/vi/cronjobs")
   const mobileCard = page.getByRole("article", {
-    name: "Paused after failed run",
+    name: "RefreshPendingNarrativesJob",
   })
   const mobileEdit = mobileCard.getByRole("button", {
     name: "Chỉnh sửa biểu thức cron",
@@ -409,11 +409,11 @@ test("cronjob schedule editor renders and cancels on Wide and Mobile", async ({
     name: "Biểu thức cron (UTC)",
   })
   await expect(mobileInput).toBeFocused()
-  await expect(mobileInput).toHaveValue("0 7/15 * * * ?")
+  await expect(mobileInput).toHaveValue("0 */30 * * * ?")
   await expect(
     mobileCard.locator("p").filter({ hasText: "Lịch đã lưu" })
   ).toBeVisible()
-  await expect(mobileCard.locator("code")).toHaveText("0 7/15 * * * ?")
+  await expect(mobileCard.locator("code")).toHaveText("0 */30 * * * ?")
   const mobileEditorAxe = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa"])
     .exclude(".bar")
@@ -430,7 +430,7 @@ test("cronjob schedule editor renders and cancels on Wide and Mobile", async ({
   })
   await mobileCard.getByRole("button", { name: "Hủy chỉnh sửa" }).click()
   await expect(
-    mobileCard.getByText("0 7/15 * * * ?", { exact: true })
+    mobileCard.getByText("0 */30 * * * ?", { exact: true })
   ).toBeVisible()
   await expect(
     mobileCard.getByRole("button", { name: "Chỉnh sửa biểu thức cron" })
