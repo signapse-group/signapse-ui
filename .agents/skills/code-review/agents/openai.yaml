@@ -1,3 +1,5 @@
 interface:
   display_name: "Rà soát mã nguồn"
   short_description: "Đánh giá độc lập yêu cầu và mã nguồn"
+policy:
+  allow_implicit_invocation: false
