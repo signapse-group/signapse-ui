@@ -48,6 +48,38 @@ async function waitForCompletedTurn(page: Page, question: string) {
   ).toBeVisible()
 }
 
+for (const colorScheme of ["light", "dark"] as const) {
+  test(`keeps the approved launcher pill while the assistant module loads in ${colorScheme} mode`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1520, height: 1024 })
+    await page.emulateMedia({ colorScheme })
+    await page.route("**/_next/static/chunks/**", async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 5000))
+      await route.continue()
+    })
+    await page.goto("/vi/dashboard", { waitUntil: "commit" })
+
+    const loadingLauncher = page.getByRole("button", {
+      name: "Đang tải trợ lý AI",
+      exact: true,
+    })
+    await expect(loadingLauncher).toBeVisible()
+    await expect(loadingLauncher).toHaveText(launcherName)
+    if (colorScheme === "light") {
+      expect(await loadingLauncher.boundingBox()).toEqual({
+        x: 1336,
+        y: 960,
+        width: 168,
+        height: 48,
+      })
+    }
+    await page.screenshot({
+      path: `test-results/market-assistant-loading-${colorScheme}-1520x1024.png`,
+    })
+  })
+}
+
 test("creates and submits a sourced first turn, and blocks blank questions", async ({
   page,
   fixture,
