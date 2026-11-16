@@ -432,6 +432,75 @@ test("cronjob schedule editor renders and cancels on Wide and Mobile", async ({
   ).toBeFocused()
 })
 
+test("cronjob schedule editor retains its draft and focus across viewport groups", async ({
+  page,
+  fixture,
+}) => {
+  await fixture.setPermissions(["cronjob:read", "cronjob:update"])
+  await fixture.setScenario("/cronjobs", "short")
+
+  for (const colorScheme of ["light", "dark"] as const) {
+    await page.emulateMedia({ colorScheme })
+    await page.setViewportSize({ width: 360, height: 800 })
+    await page.goto("/vi/cronjobs")
+
+    const mobileCard = page.getByRole("article", {
+      name: "Paused after failed run",
+    })
+    await mobileCard
+      .getByRole("button", { name: "Chỉnh sửa biểu thức cron" })
+      .click()
+
+    const draft = "0 0 8 * * ?"
+    await mobileCard
+      .getByRole("textbox", { name: "Biểu thức cron (UTC)" })
+      .fill(draft)
+
+    for (const [width, height] of [
+      [360, 800],
+      [760, 512], // 1520×1024 effective CSS viewport at 200% zoom
+      [767, 844],
+      [768, 844],
+      [767, 844],
+      [360, 800],
+    ]) {
+      await page.setViewportSize({ width, height })
+      const editorSurface =
+        width < 768
+          ? page.getByRole("article", { name: "Paused after failed run" })
+          : page.getByRole("row", { name: /Paused after failed run/ })
+      const input = editorSurface.getByRole("textbox", {
+        name: "Biểu thức cron (UTC)",
+      })
+
+      await expect(input).toBeVisible()
+      await expect(input).toHaveValue(draft)
+      await expect(input).toBeFocused()
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= window.innerWidth
+        ),
+        `page should not overflow at ${width}px`
+      ).toBe(true)
+    }
+
+    const mobileCardAfterResize = page.getByRole("article", {
+      name: "Paused after failed run",
+    })
+    await mobileCardAfterResize
+      .getByRole("button", { name: "Hủy chỉnh sửa" })
+      .click()
+    await expect(
+      mobileCardAfterResize.getByText("0 7/15 * * * ?", { exact: true })
+    ).toBeVisible()
+    await expect(
+      mobileCardAfterResize.getByRole("button", {
+        name: "Chỉnh sửa biểu thức cron",
+      })
+    ).toBeFocused()
+  }
+})
+
 test("read denial, detail errors, and a valid empty list stay distinct", async ({
   page,
   fixture,
