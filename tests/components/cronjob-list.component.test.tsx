@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
 import {
+  act,
   cleanup,
   render,
   screen,
@@ -122,6 +123,54 @@ const page = {
   totalPages: 1,
 }
 
+type UpdateCronjobResult =
+  | { success: true; data: CronjobResponse }
+  | {
+      success: false
+      error: string
+      data?: CronjobResponse
+      ambiguous?: boolean
+    }
+
+function deferred<T>() {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>((resolvePromise) => {
+    resolve = resolvePromise
+  })
+  return { promise, resolve }
+}
+
+function mockCronjobBreakpoint() {
+  let isWide = false
+  const listeners = new Set<() => void>()
+  const mediaQueryList = {
+    get matches() {
+      return isWide
+    },
+    media: "(min-width: 48rem)",
+    onchange: null,
+    addEventListener: (_type: string, listener: () => void) => {
+      listeners.add(listener)
+    },
+    removeEventListener: (_type: string, listener: () => void) => {
+      listeners.delete(listener)
+    },
+    dispatchEvent: () => true,
+  } as unknown as MediaQueryList
+
+  vi.stubGlobal(
+    "matchMedia",
+    vi.fn(() => mediaQueryList)
+  )
+
+  return {
+    setWide(value: boolean) {
+      isWide = value
+      listeners.forEach((listener) => listener())
+    },
+  }
+}
+
 function renderCronjobList(
   permissions: string[],
   cronjobPage: ComponentProps<typeof CronjobListPage>["cronjobPage"] = page,
@@ -154,6 +203,7 @@ describe("CronjobListPage", () => {
 
   afterEach(() => {
     cleanup()
+    vi.unstubAllGlobals()
     vi.clearAllMocks()
   })
 
@@ -242,6 +292,421 @@ describe("CronjobListPage", () => {
     })
     expect(within(notStartedJob).getByText("Không chạy")).toBeVisible()
     expect(within(notStartedJob).getByText("Chưa có kết quả")).toBeVisible()
+  })
+
+  it("offers schedule editing only to update-permitted operators for idle jobs", () => {
+    renderCronjobList(["cronjob:read", "cronjob:update"])
+
+    const pausedIdleCard = screen.getByRole("article", {
+      name: "Paused after execution",
+    })
+    const pausedRunningCard = screen.getByRole("article", {
+      name: "Paused during execution",
+    })
+    const runningCard = screen.getByRole("article", {
+      name: "Scheduled and running",
+    })
+
+    expect(
+      within(pausedIdleCard).getByRole("button", {
+        name: "Edit cron expression",
+      })
+    ).toBeVisible()
+    expect(
+      within(pausedRunningCard).queryByRole("button", {
+        name: "Edit cron expression",
+      })
+    ).toBeNull()
+    expect(
+      within(runningCard).queryByRole("button", {
+        name: "Edit cron expression",
+      })
+    ).toBeNull()
+
+    const pausedIdleRow = screen.getByRole("row", {
+      name: /Paused after execution/,
+    })
+    const runningRow = screen.getByRole("row", {
+      name: /Scheduled and running/,
+    })
+    expect(
+      within(pausedIdleRow).getByRole("button", {
+        name: "Edit cron expression",
+      })
+    ).toBeVisible()
+    expect(
+      within(runningRow).queryByRole("button", {
+        name: "Edit cron expression",
+      })
+    ).toBeNull()
+  })
+
+  it("does not offer schedule editing without cronjob:update", () => {
+    renderCronjobList(["cronjob:read"])
+
+    expect(
+      screen.queryAllByRole("button", { name: "Edit cron expression" })
+    ).toHaveLength(0)
+  })
+
+  it("supports keyboard editing and cancels back to the saved schedule", async () => {
+    const user = userEvent.setup()
+    renderCronjobList(["cronjob:read", "cronjob:update"])
+
+    const card = screen.getByRole("article", {
+      name: "Paused after execution",
+    })
+    const edit = within(card).getByRole("button", {
+      name: "Edit cron expression",
+    })
+    edit.focus()
+    await user.keyboard("{Enter}")
+
+    const input = within(card).getByRole("textbox", {
+      name: "Cron expression (UTC)",
+    })
+    await waitFor(() => expect(input).toHaveFocus())
+    expect(input).toHaveValue("0 0/5 * * * ?")
+    expect(
+      within(card).getByText(
+        (_, element) =>
+          element?.tagName === "P" &&
+          element.textContent?.includes("Saved schedule") === true
+      )
+    ).toBeVisible()
+    expect(
+      within(card).getByText("0 0/5 * * * ?", { exact: true })
+    ).toBeVisible()
+
+    await user.clear(input)
+    await user.type(input, "0 5 * * * ?")
+    await user.tab()
+    expect(
+      within(card).getByRole("button", { name: "Save cron expression" })
+    ).toHaveFocus()
+    await user.tab()
+    const cancel = within(card).getByRole("button", { name: "Cancel edit" })
+    expect(cancel).toHaveFocus()
+    await user.keyboard("{Enter}")
+
+    await waitFor(() =>
+      expect(
+        within(card).queryByRole("textbox", { name: "Cron expression (UTC)" })
+      ).not.toBeInTheDocument()
+    )
+    expect(
+      within(card).getByText("0 0/5 * * * ?", { exact: true })
+    ).toBeVisible()
+    expect(
+      within(card).getByRole("button", { name: "Edit cron expression" })
+    ).toHaveFocus()
+    expect(mocks.updateCronjob).not.toHaveBeenCalled()
+  })
+
+  it("keeps the draft and displays the actual saved schedule after an update error", async () => {
+    const user = userEvent.setup()
+    const actual = {
+      ...cronjobs[2],
+      cronExpression: "0 10 * * * ?",
+      scheduleStatus: "PAUSED" as const,
+      executionStatus: "NOT_RUNNING" as const,
+    }
+    mocks.updateCronjob.mockResolvedValue({
+      success: false,
+      error:
+        "The requested schedule was not confirmed. The latest schedule readback is shown.",
+      data: actual,
+      ambiguous: true,
+    })
+    renderCronjobList(["cronjob:read", "cronjob:update"])
+
+    const card = screen.getByRole("article", {
+      name: "Paused after execution",
+    })
+    await user.click(
+      within(card).getByRole("button", { name: "Edit cron expression" })
+    )
+    const input = within(card).getByRole("textbox", {
+      name: "Cron expression (UTC)",
+    })
+    await user.clear(input)
+    await user.type(input, "0 0 8 * * ?")
+    await user.keyboard("{Enter}")
+
+    const error = await within(card).findByRole("alert")
+    expect(error).toHaveTextContent(
+      "The requested schedule was not confirmed. The latest schedule readback is shown."
+    )
+    expect(input).toHaveValue("0 0 8 * * ?")
+    expect(input).toHaveAttribute("aria-invalid", "true")
+    expect(input).toHaveAttribute("aria-describedby", error.id)
+    expect(input).toHaveFocus()
+    expect(
+      within(card).getByText(
+        (_, element) =>
+          element?.tagName === "P" &&
+          element.textContent?.includes("Saved schedule") === true
+      )
+    ).toBeVisible()
+    expect(
+      within(card).getByText("0 10 * * * ?", { exact: true })
+    ).toBeVisible()
+    expect(within(card).getByText("Paused")).toBeVisible()
+    expect(mocks.toastSuccess).not.toHaveBeenCalled()
+    expect(mocks.routerRefresh).toHaveBeenCalled()
+  })
+
+  it("restores focus to the error when a 409 readback reports the job is running", async () => {
+    const user = userEvent.setup()
+    const actual = {
+      ...cronjobs[2],
+      cronExpression: "0 10 * * * ?",
+      executionStatus: "RUNNING" as const,
+    }
+    mocks.updateCronjob.mockResolvedValue({
+      success: false,
+      error: en.cronjobs.cronUpdateConflict,
+      data: actual,
+      ambiguous: true,
+    })
+    renderCronjobList(["cronjob:read", "cronjob:update"])
+
+    const card = screen.getByRole("article", {
+      name: "Paused after execution",
+    })
+    await user.click(
+      within(card).getByRole("button", { name: "Edit cron expression" })
+    )
+    const input = within(card).getByRole("textbox", {
+      name: "Cron expression (UTC)",
+    })
+    await user.clear(input)
+    await user.type(input, "0 0 8 * * ?")
+    await user.keyboard("{Enter}")
+
+    const error = await within(card).findByRole("alert")
+    await waitFor(() => expect(error).toHaveFocus())
+    expect(input).toBeDisabled()
+    expect(input).toHaveValue("0 0 8 * * ?")
+    expect(input).toHaveAttribute("aria-describedby", error.id)
+    expect(
+      within(card).getByText("0 10 * * * ?", { exact: true })
+    ).toBeVisible()
+    expect(within(card).getByText("Running")).toBeVisible()
+    expect(mocks.toastSuccess).not.toHaveBeenCalled()
+  })
+
+  it("labels the last confirmed schedule and says when the effective schedule is unverified", async () => {
+    const user = userEvent.setup()
+    mocks.updateCronjob.mockResolvedValue({
+      success: false,
+      error:
+        "Could not confirm whether the requested schedule took effect. The effective schedule is unverified. Reload to check its current value.",
+      ambiguous: true,
+    })
+    renderCronjobList(["cronjob:read", "cronjob:update"])
+
+    const card = screen.getByRole("article", {
+      name: "Paused after execution",
+    })
+    await user.click(
+      within(card).getByRole("button", { name: "Edit cron expression" })
+    )
+    const input = within(card).getByRole("textbox", {
+      name: "Cron expression (UTC)",
+    })
+    await user.clear(input)
+    await user.type(input, "0 0 8 * * ?")
+    await user.keyboard("{Enter}")
+
+    expect(await within(card).findByRole("alert")).toHaveTextContent(
+      "The effective schedule is unverified."
+    )
+    expect(input).toHaveValue("0 0 8 * * ?")
+    expect(within(card).getByText(/Last confirmed schedule/)).toBeVisible()
+    expect(
+      within(card).getByText("Effective schedule unverified.")
+    ).toBeVisible()
+    expect(
+      within(card).getByText("0 0/5 * * * ?", { exact: true })
+    ).toBeVisible()
+
+    const row = screen.getByRole("row", { name: /Paused after execution/ })
+    expect(within(row).getByText(/Last confirmed schedule/)).toBeVisible()
+    expect(
+      within(row).getByText("Effective schedule unverified.")
+    ).toBeVisible()
+    expect(
+      within(row).getByText("0 0/5 * * * ?", { exact: true })
+    ).toBeVisible()
+    expect(mocks.toastSuccess).not.toHaveBeenCalled()
+  })
+
+  it.each(["success", "failure"] as const)(
+    "restores focus to the visible Wide control after a pending Mobile save (%s)",
+    async (outcome) => {
+      const user = userEvent.setup()
+      const breakpoint = mockCronjobBreakpoint()
+      const pending = deferred<UpdateCronjobResult>()
+      const updated = {
+        ...cronjobs[2],
+        cronExpression: "0 0 8 * * ?",
+        scheduleStatus: "PAUSED" as const,
+        executionStatus: "NOT_RUNNING" as const,
+      }
+      mocks.updateCronjob.mockReturnValue(pending.promise)
+      renderCronjobList(["cronjob:read", "cronjob:update"])
+
+      const card = screen.getByRole("article", {
+        name: "Paused after execution",
+      })
+      await user.click(
+        within(card).getByRole("button", { name: "Edit cron expression" })
+      )
+      const mobileInput = within(card).getByRole("textbox", {
+        name: "Cron expression (UTC)",
+      })
+      await user.clear(mobileInput)
+      await user.type(mobileInput, "0 0 8 * * ?")
+      await user.keyboard("{Enter}")
+      await waitFor(() => expect(mobileInput).toBeDisabled())
+      expect(
+        within(mobileInput.closest("form")!).getByRole("status")
+      ).toHaveTextContent("Saving")
+
+      act(() => breakpoint.setWide(true))
+
+      pending.resolve(
+        outcome === "success"
+          ? { success: true, data: updated }
+          : {
+              success: false,
+              error:
+                "The requested schedule was not confirmed. The latest schedule readback is shown.",
+              data: cronjobs[2],
+              ambiguous: true,
+            }
+      )
+
+      const row = screen.getByRole("row", { name: /Paused after execution/ })
+      if (outcome === "success") {
+        await waitFor(() =>
+          expect(
+            within(row).getByRole("button", { name: "Edit cron expression" })
+          ).toHaveFocus()
+        )
+      } else {
+        await waitFor(() =>
+          expect(
+            within(row).getByRole("textbox", {
+              name: "Cron expression (UTC)",
+            })
+          ).toHaveFocus()
+        )
+      }
+    }
+  )
+
+  it("restores focus to the input after a same-surface save failure settles", async () => {
+    const user = userEvent.setup()
+    const pending = deferred<UpdateCronjobResult>()
+    mocks.updateCronjob.mockReturnValue(pending.promise)
+    renderCronjobList(["cronjob:read", "cronjob:update"])
+
+    const card = screen.getByRole("article", {
+      name: "Paused after execution",
+    })
+    await user.click(
+      within(card).getByRole("button", { name: "Edit cron expression" })
+    )
+    const input = within(card).getByRole("textbox", {
+      name: "Cron expression (UTC)",
+    })
+    await user.clear(input)
+    await user.type(input, "0 0 8 * * ?")
+    await user.keyboard("{Enter}")
+    await waitFor(() => expect(input).toBeDisabled())
+
+    pending.resolve({
+      success: false,
+      error:
+        "The requested schedule was not confirmed. The latest schedule readback is shown.",
+      data: cronjobs[2],
+      ambiguous: true,
+    })
+
+    await waitFor(() => {
+      expect(input).toBeEnabled()
+      expect(input).toHaveFocus()
+    })
+  })
+
+  it("uses a successful PATCH response to update the expression and paused state", async () => {
+    const user = userEvent.setup()
+    const updated = {
+      ...cronjobs[2],
+      cronExpression: "0 0 8 * * ?",
+      scheduleStatus: "PAUSED" as const,
+      executionStatus: "NOT_RUNNING" as const,
+    }
+    mocks.updateCronjob.mockResolvedValue({ success: true, data: updated })
+    renderCronjobList(["cronjob:read", "cronjob:update"])
+
+    const card = screen.getByRole("article", {
+      name: "Paused after execution",
+    })
+    await user.click(
+      within(card).getByRole("button", { name: "Edit cron expression" })
+    )
+    const input = within(card).getByRole("textbox", {
+      name: "Cron expression (UTC)",
+    })
+    await user.clear(input)
+    await user.type(input, "0 0 8 * * ?")
+    await user.keyboard("{Enter}")
+
+    await waitFor(() =>
+      expect(
+        within(card).getByText("0 0 8 * * ?", { exact: true })
+      ).toBeVisible()
+    )
+    expect(within(card).getByText("Paused")).toBeVisible()
+    expect(mocks.toastSuccess).toHaveBeenCalledWith("Cron schedule updated.")
+    expect(mocks.routerRefresh).toHaveBeenCalled()
+  })
+
+  it("sends long values to the producer because the API has no max length", async () => {
+    const user = userEvent.setup()
+    mocks.updateCronjob.mockResolvedValue({
+      success: false,
+      error:
+        "Enter a valid Quartz cron expression. The saved schedule was not changed.",
+      data: cronjobs[2],
+      ambiguous: false,
+    })
+    renderCronjobList(["cronjob:read", "cronjob:update"])
+
+    const card = screen.getByRole("article", {
+      name: "Paused after execution",
+    })
+    await user.click(
+      within(card).getByRole("button", { name: "Edit cron expression" })
+    )
+    const input = within(card).getByRole("textbox", {
+      name: "Cron expression (UTC)",
+    })
+    const expression = "0".repeat(101)
+    await user.clear(input)
+    await user.type(input, expression)
+    await user.keyboard("{Enter}")
+
+    await waitFor(() =>
+      expect(mocks.updateCronjob).toHaveBeenCalledWith(3, { expression })
+    )
+    expect(input).toHaveValue(expression)
+    expect(within(card).getByRole("alert").textContent).toContain(
+      "Enter a valid Quartz cron expression."
+    )
   })
 
   it("shows only individually permitted controls and respects paused execution", () => {
@@ -710,8 +1175,18 @@ describe("CronjobListPage", () => {
   )
 
   it.each([
-    ["en", "Resume", "Paused", "Resume was not confirmed. The latest schedule status is shown."],
-    ["vi", "Tiếp tục", "Tạm dừng", "Chưa xác nhận được thao tác tiếp tục. Trạng thái lịch mới nhất đang được hiển thị."],
+    [
+      "en",
+      "Resume",
+      "Paused",
+      "Resume was not confirmed. The latest schedule status is shown.",
+    ],
+    [
+      "vi",
+      "Tiếp tục",
+      "Tạm dừng",
+      "Chưa xác nhận được thao tác tiếp tục. Trạng thái lịch mới nhất đang được hiển thị.",
+    ],
   ])(
     "does not report success when an ambiguous Resume readback is still paused in %s",
     async (locale, resumeLabel, pausedLabel, feedback) => {
@@ -735,9 +1210,7 @@ describe("CronjobListPage", () => {
       const card = screen.getByRole("article", {
         name: "Paused during execution",
       })
-      await user.click(
-        within(card).getByRole("button", { name: resumeLabel })
-      )
+      await user.click(within(card).getByRole("button", { name: resumeLabel }))
 
       await waitFor(() =>
         expect(mocks.getCronjobById).toHaveBeenCalledWith(pausedReadback.id)

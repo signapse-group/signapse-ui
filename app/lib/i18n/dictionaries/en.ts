@@ -2922,9 +2922,27 @@ export const en: Dictionary = {
     noLatestResult: "No result recorded",
     unknownStatus: "Unknown",
     cronRequired: "Cron expression is required.",
-    cronTooLong: "Cron expression is too long.",
     cronUpdated: "Cron schedule updated.",
     cronUpdateError: "Could not update the cron schedule.",
+    cronInvalidExpression:
+      "Enter a valid Quartz cron expression. The saved schedule was not changed.",
+    cronUpdateUnauthorized:
+      "Your session has expired. Sign in again to update this schedule.",
+    cronUpdatePermissionDenied:
+      "You do not have permission to update this schedule.",
+    cronUpdateNotFound: "This cronjob no longer exists.",
+    cronUpdateConflict:
+      "This cronjob is running. Its schedule was not changed.",
+    cronUpdateProvisioningPending:
+      "Your account is still being set up. The schedule was not changed.",
+    cronUpdateUnconfirmed:
+      "The requested schedule was not confirmed. The latest schedule readback is shown.",
+    cronUpdateReadbackUnavailable:
+      "Could not confirm whether the requested schedule took effect. The effective schedule is unverified. Reload to check its current value.",
+    lastConfirmedSchedule: "Last confirmed schedule",
+    effectiveScheduleUnverified: "Effective schedule unverified.",
+    savedSchedule: "Saved schedule",
+    cronExpressionPlaceholder: "e.g. 0 0 8 * * ?",
     invalidCronjobId: "Invalid cronjob ID.",
     editCron: "Edit cron expression",
     saveCron: "Save cron expression",

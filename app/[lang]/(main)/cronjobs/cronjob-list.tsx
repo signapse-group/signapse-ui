@@ -11,7 +11,10 @@ import type {
   CronjobListResponse,
   CronjobResponse,
 } from "@/app/lib/cronjobs/definitions"
-import { CRONJOB_RESUME_PERMISSION } from "@/app/lib/cronjobs/permissions"
+import {
+  CRONJOB_RESUME_PERMISSION,
+  CRONJOB_UPDATE_PERMISSION,
+} from "@/app/lib/cronjobs/permissions"
 import type { Page } from "@/app/lib/definitions"
 import { useLocalization } from "@/app/lib/i18n/provider"
 import { AppPaginationControls } from "@/components/app-pagination-controls"
@@ -81,7 +84,6 @@ interface CronjobListProps {
   }
 }
 
-const CRON_EXPRESSION_MAX_LENGTH = 100
 const SEARCH_PARAM_KEY = "jobName[containsIgnoreCase]"
 const UTC_DATE_TIME_OPTIONS: Intl.DateTimeFormatOptions = {
   year: "numeric",
@@ -93,6 +95,23 @@ const UTC_DATE_TIME_OPTIONS: Intl.DateTimeFormatOptions = {
   timeZoneName: "short",
 }
 
+type CronExpressionEditorSurface = "mobile" | "wide"
+type CronExpressionEditorFocusTarget = "input" | "edit" | "error"
+
+type CronExpressionEditorState = {
+  isEditing: boolean
+  draftExpression: string
+  error: string | null
+  isSaving: boolean
+  focusSurface: CronExpressionEditorSurface | null
+  focusTarget: CronExpressionEditorFocusTarget | null
+  scheduleUnverified: boolean
+}
+
+type CronExpressionEditorUpdate = (
+  state: CronExpressionEditorState
+) => CronExpressionEditorState
+
 function getEffectiveNextRun(
   cronjob: Pick<CronjobResponse, "scheduleStatus" | "nextTriggeredTime">
 ) {
@@ -101,11 +120,18 @@ function getEffectiveNextRun(
     : null
 }
 
+function getVisibleCronExpressionSurface(): CronExpressionEditorSurface {
+  return typeof window.matchMedia === "function" &&
+    window.matchMedia("(min-width: 48rem)").matches
+    ? "wide"
+    : "mobile"
+}
+
 export function CronjobListPage({ cronjobPage }: CronjobListProps) {
   const { dictionary, formatDateTime } = useLocalization()
   const searchParams = useSearchParams()
   const cronjobs = cronjobPage.content
-  const canUpdateCronjob = useHasPermission("cronjob:update")
+  const canUpdateCronjob = useHasPermission(CRONJOB_UPDATE_PERMISSION)
   const isSearchResult = Boolean(searchParams.get(SEARCH_PARAM_KEY)?.trim())
   const [readbackPage, setReadbackPage] = useState(cronjobPage)
   const [cronjobReadbacks, setCronjobReadbacks] = useState<
@@ -126,11 +152,55 @@ export function CronjobListPage({ cronjobPage }: CronjobListProps) {
   const [pauseReadErrorTimes, setPauseReadErrorTimes] = useState<
     Record<number, number>
   >({})
+  const [cronExpressionEditors, setCronExpressionEditors] = useState<
+    Record<number, CronExpressionEditorState>
+  >({})
+  const previousCronjobPage = useRef(cronjobPage)
+  useEffect(() => {
+    if (previousCronjobPage.current === cronjobPage) return
+
+    previousCronjobPage.current = cronjobPage
+    setCronExpressionEditors((current) => {
+      let changed = false
+      const next = { ...current }
+      for (const [id, state] of Object.entries(current)) {
+        if (!state.scheduleUnverified) continue
+        next[Number(id)] = {
+          ...state,
+          error: null,
+          scheduleUnverified: false,
+        }
+        changed = true
+      }
+      return changed ? next : current
+    })
+  }, [cronjobPage])
   const hasCurrentReadbacks = readbackPage === cronjobPage
   const displayedCronjobs = cronjobs.map(
     (cronjob) =>
       (hasCurrentReadbacks && cronjobReadbacks[cronjob.id]) || cronjob
   )
+
+  const updateCronExpressionEditor = (
+    id: number,
+    expression: string,
+    update: CronExpressionEditorUpdate
+  ) => {
+    setCronExpressionEditors((current) => ({
+      ...current,
+      [id]: update(
+        current[id] ?? {
+          isEditing: false,
+          draftExpression: expression,
+          error: null,
+          isSaving: false,
+          focusSurface: null,
+          focusTarget: null,
+          scheduleUnverified: false,
+        }
+      ),
+    }))
+  }
 
   const handleCronjobRead = (cronjob: CronjobResponse) => {
     setReadbackPage(cronjobPage)
@@ -138,6 +208,18 @@ export function CronjobListPage({ cronjobPage }: CronjobListProps) {
       ...(hasCurrentReadbacks ? current : {}),
       [cronjob.id]: cronjob,
     }))
+    setCronExpressionEditors((current) => {
+      const editor = current[cronjob.id]
+      if (!editor?.scheduleUnverified) return current
+      return {
+        ...current,
+        [cronjob.id]: {
+          ...editor,
+          error: null,
+          scheduleUnverified: false,
+        },
+      }
+    })
     setStatusReadErrorTimes((current) => {
       const next = hasCurrentReadbacks ? { ...current } : {}
       delete next[cronjob.id]
@@ -227,6 +309,14 @@ export function CronjobListPage({ cronjobPage }: CronjobListProps) {
               key={cronjob.id}
               cronjob={cronjob}
               canUpdate={canUpdateCronjob}
+              editorState={cronExpressionEditors[cronjob.id]}
+              onEditorStateChange={(update) =>
+                updateCronExpressionEditor(
+                  cronjob.id,
+                  cronjob.cronExpression,
+                  update
+                )
+              }
               onCronjobRead={handleCronjobRead}
               isStartPending={pendingStartIds.has(cronjob.id)}
               isResumePending={pendingResumeIds.has(cronjob.id)}
@@ -330,7 +420,20 @@ export function CronjobListPage({ cronjobPage }: CronjobListProps) {
                     <TableCell className="align-top whitespace-normal">
                       <CronExpressionCell
                         cronjob={cronjob}
-                        canUpdate={canUpdateCronjob}
+                        editorState={cronExpressionEditors[cronjob.id]}
+                        onEditorStateChange={(update) =>
+                          updateCronExpressionEditor(
+                            cronjob.id,
+                            cronjob.cronExpression,
+                            update
+                          )
+                        }
+                        surface="wide"
+                        canUpdate={
+                          canUpdateCronjob &&
+                          cronjob.executionStatus !== "RUNNING"
+                        }
+                        onCronjobRead={handleCronjobRead}
                         className="flex-wrap justify-center"
                       />
                     </TableCell>
@@ -419,6 +522,8 @@ export function CronjobListPage({ cronjobPage }: CronjobListProps) {
 function CronjobCard({
   cronjob,
   canUpdate,
+  editorState,
+  onEditorStateChange,
   onCronjobRead,
   isStartPending,
   isResumePending,
@@ -433,6 +538,8 @@ function CronjobCard({
 }: {
   cronjob: CronjobResponse
   canUpdate: boolean
+  editorState?: CronExpressionEditorState
+  onEditorStateChange: (update: CronExpressionEditorUpdate) => void
   onCronjobRead: (cronjob: CronjobResponse) => void
   isStartPending: boolean
   isResumePending: boolean
@@ -473,7 +580,11 @@ function CronjobCard({
           <dd className="mt-1 min-w-0">
             <CronExpressionCell
               cronjob={cronjob}
-              canUpdate={canUpdate}
+              editorState={editorState}
+              onEditorStateChange={onEditorStateChange}
+              surface="mobile"
+              canUpdate={canUpdate && cronjob.executionStatus !== "RUNNING"}
+              onCronjobRead={onCronjobRead}
               className="flex-wrap justify-start"
             />
           </dd>
@@ -576,25 +687,131 @@ function CronjobEmptyState({ isSearchResult }: { isSearchResult: boolean }) {
 
 function CronExpressionCell({
   cronjob,
+  editorState,
+  onEditorStateChange,
+  surface,
   canUpdate,
+  onCronjobRead,
   className,
 }: {
   cronjob: CronjobListResponse
+  editorState?: CronExpressionEditorState
+  onEditorStateChange: (update: CronExpressionEditorUpdate) => void
+  surface: CronExpressionEditorSurface
   canUpdate: boolean
+  onCronjobRead: (cronjob: CronjobResponse) => void
   className?: string
 }) {
   const { dictionary } = useLocalization()
   const inputId = useId()
-  const [isEditing, setIsEditing] = useState(false)
-  const [draftExpression, setDraftExpression] = useState(cronjob.cronExpression)
-  const [error, setError] = useState<string | null>(null)
-  const [isSaving, setIsSaving] = useState(false)
+  const errorId = `cron-expression-error-${inputId}`
+  const state = editorState ?? {
+    isEditing: false,
+    draftExpression: cronjob.cronExpression,
+    error: null,
+    isSaving: false,
+    focusSurface: null,
+    focusTarget: null,
+    scheduleUnverified: false,
+  }
+  const {
+    isEditing,
+    draftExpression,
+    error,
+    isSaving,
+    focusSurface,
+    focusTarget,
+    scheduleUnverified,
+  } = state
   const router = useRouter()
+  const inputRef = useRef<HTMLInputElement>(null)
+  const editButtonRef = useRef<HTMLButtonElement>(null)
+  const expressionRef = useRef<HTMLSpanElement>(null)
+  const errorRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (isEditing) {
+      if (
+        focusTarget === "error" &&
+        focusSurface === surface &&
+        !isSaving &&
+        getVisibleCronExpressionSurface() === surface
+      ) {
+        errorRef.current?.focus()
+        onEditorStateChange((current) =>
+          current.focusTarget === "error" && current.focusSurface === surface
+            ? { ...current, focusTarget: null }
+            : current
+        )
+      }
+
+      if (
+        focusTarget === "input" &&
+        focusSurface === surface &&
+        !isSaving &&
+        getVisibleCronExpressionSurface() === surface
+      ) {
+        inputRef.current?.focus()
+        onEditorStateChange((current) =>
+          current.focusTarget === "input" && current.focusSurface === surface
+            ? { ...current, focusTarget: null }
+            : current
+        )
+      }
+
+      if (typeof window.matchMedia !== "function") {
+        return
+      }
+
+      const layoutBreakpoint = window.matchMedia("(min-width: 48rem)")
+      const focusVisibleInput = () => {
+        const visibleSurface = layoutBreakpoint.matches ? "wide" : "mobile"
+        if (visibleSurface === surface && !isSaving) {
+          window.requestAnimationFrame(() => {
+            if (getVisibleCronExpressionSurface() === surface) {
+              inputRef.current?.focus()
+            }
+          })
+        }
+      }
+
+      layoutBreakpoint.addEventListener("change", focusVisibleInput)
+      return () =>
+        layoutBreakpoint.removeEventListener("change", focusVisibleInput)
+    }
+
+    if (
+      focusTarget === "edit" &&
+      focusSurface === surface &&
+      getVisibleCronExpressionSurface() === surface
+    ) {
+      ;(editButtonRef.current ?? expressionRef.current)?.focus()
+      onEditorStateChange((current) =>
+        current.focusTarget === "edit" && current.focusSurface === surface
+          ? { ...current, focusTarget: null }
+          : current
+      )
+    }
+  }, [
+    focusSurface,
+    focusTarget,
+    isEditing,
+    isSaving,
+    onEditorStateChange,
+    surface,
+  ])
 
   const handleCancel = () => {
-    setDraftExpression(cronjob.cronExpression)
-    setError(null)
-    setIsEditing(false)
+    const visibleSurface = getVisibleCronExpressionSurface()
+    onEditorStateChange((current) => ({
+      ...current,
+      isEditing: false,
+      draftExpression: cronjob.cronExpression,
+      error: null,
+      isSaving: false,
+      focusSurface: visibleSurface,
+      focusTarget: "edit",
+    }))
   }
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -602,53 +819,113 @@ function CronExpressionCell({
 
     const expression = draftExpression.trim()
     if (!expression) {
-      setError(dictionary.cronjobs.cronRequired)
+      const visibleSurface = getVisibleCronExpressionSurface()
+      onEditorStateChange((current) => ({
+        ...current,
+        error: dictionary.cronjobs.cronRequired,
+        focusSurface: visibleSurface,
+        focusTarget: "input",
+      }))
       return
     }
 
-    if (expression.length > CRON_EXPRESSION_MAX_LENGTH) {
-      setError(dictionary.cronjobs.cronTooLong)
-      return
-    }
+    onEditorStateChange((current) => ({
+      ...current,
+      error: null,
+      isSaving: true,
+    }))
+    try {
+      const result = await updateCronjob(cronjob.id, { expression })
+      if (result.data) {
+        onCronjobRead(result.data)
+      }
 
-    setError(null)
-    setIsSaving(true)
-    const result = await updateCronjob(cronjob.id, { expression })
-    setIsSaving(false)
-
-    if (result.success) {
-      toast.success(dictionary.cronjobs.cronUpdated)
-      setDraftExpression(expression)
-      setIsEditing(false)
+      if (result.success) {
+        toast.success(dictionary.cronjobs.cronUpdated)
+        const visibleSurface = getVisibleCronExpressionSurface()
+        onEditorStateChange((current) => ({
+          ...current,
+          isEditing: false,
+          draftExpression: result.data.cronExpression,
+          error: null,
+          isSaving: false,
+          focusSurface: visibleSurface,
+          focusTarget: "edit",
+          scheduleUnverified: false,
+        }))
+        router.refresh()
+      } else {
+        const visibleSurface = getVisibleCronExpressionSurface()
+        const scheduleUnverified = result.ambiguous && !result.data
+        onEditorStateChange((current) => ({
+          ...current,
+          error: result.error || dictionary.cronjobs.cronUpdateError,
+          isSaving: true,
+          focusSurface: visibleSurface,
+          focusTarget:
+            result.data?.executionStatus === "RUNNING" ? "error" : "input",
+          scheduleUnverified: result.data
+            ? false
+            : scheduleUnverified || current.scheduleUnverified,
+        }))
+        router.refresh()
+      }
+    } catch {
+      const visibleSurface = getVisibleCronExpressionSurface()
+      onEditorStateChange((current) => ({
+        ...current,
+        error: dictionary.cronjobs.cronUpdateReadbackUnavailable,
+        isSaving: true,
+        focusSurface: visibleSurface,
+        focusTarget: "input",
+        scheduleUnverified: true,
+      }))
       router.refresh()
-    } else {
-      toast.error(result.error || dictionary.cronjobs.cronUpdateError)
+    } finally {
+      onEditorStateChange((current) => ({ ...current, isSaving: false }))
     }
   }
 
   if (!isEditing) {
     return (
-      <div
-        className={`flex min-w-0 items-center gap-1 ${className ?? "justify-center"}`}
-      >
-        <span className="block min-w-0 font-mono text-sm break-all text-muted-foreground">
-          {cronjob.cronExpression}
-        </span>
-        {canUpdate ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-xs"
-            title={dictionary.cronjobs.editCron}
-            onClick={() => {
-              setDraftExpression(cronjob.cronExpression)
-              setError(null)
-              setIsEditing(true)
-            }}
-          >
-            <Pencil data-icon="inline-start" />
-            <span className="sr-only">{dictionary.cronjobs.editCron}</span>
-          </Button>
+      <div className="flex min-w-0 flex-col items-start gap-1">
+        <div
+          className={`flex min-w-0 flex-wrap items-center gap-1 ${className ?? "justify-center"}`}
+        >
+          <span className="block min-w-0 font-mono text-sm break-all text-muted-foreground">
+            <span ref={expressionRef} tabIndex={-1}>
+              {cronjob.cronExpression}
+            </span>
+          </span>
+          {canUpdate ? (
+            <Button
+              ref={editButtonRef}
+              type="button"
+              variant="outline"
+              size="sm"
+              aria-label={dictionary.cronjobs.editCron}
+              onClick={() => {
+                onEditorStateChange((current) => ({
+                  ...current,
+                  isEditing: true,
+                  draftExpression: cronjob.cronExpression,
+                  error: null,
+                  focusSurface: getVisibleCronExpressionSurface(),
+                  focusTarget: "input",
+                }))
+              }}
+            >
+              <Pencil data-icon="inline-start" />
+              <span>{dictionary.common.edit}</span>
+            </Button>
+          ) : null}
+        </div>
+        {scheduleUnverified ? (
+          <p role="status" className="min-w-0 text-xs text-destructive">
+            {dictionary.cronjobs.lastConfirmedSchedule} ·{" "}
+            <code className="break-all">{cronjob.cronExpression}</code>.{" "}
+            {dictionary.cronjobs.effectiveScheduleUnverified}
+          </p>
         ) : null}
       </div>
     )
@@ -656,10 +933,11 @@ function CronExpressionCell({
 
   return (
     <form
-      className={`flex items-center gap-1 ${className ?? "justify-center"}`}
+      className={`flex w-full min-w-0 flex-wrap items-start gap-1 ${className ?? "justify-center"}`}
+      aria-busy={isSaving}
       onSubmit={handleSubmit}
     >
-      <Field data-invalid={Boolean(error)} className="min-w-0 flex-1">
+      <Field data-invalid={Boolean(error)} className="min-w-[8rem] flex-1">
         <FieldLabel htmlFor={`cron-expression-${inputId}`} className="sr-only">
           {dictionary.cronjobs.cronExpressionColumn}
         </FieldLabel>
@@ -667,45 +945,73 @@ function CronExpressionCell({
           id={`cron-expression-${inputId}`}
           value={draftExpression}
           onChange={(event) => {
-            setDraftExpression(event.target.value)
-            if (error) {
-              setError(null)
-            }
+            onEditorStateChange((current) => ({
+              ...current,
+              draftExpression: event.target.value,
+              error: current.error ? null : current.error,
+            }))
           }}
+          ref={inputRef}
           autoComplete="off"
+          placeholder={dictionary.cronjobs.cronExpressionPlaceholder}
           aria-invalid={Boolean(error)}
-          disabled={isSaving}
+          aria-describedby={error ? errorId : undefined}
+          disabled={isSaving || !canUpdate}
           className="min-w-[8rem]"
         />
-        {error ? <FieldError>{error}</FieldError> : null}
+        {error ? (
+          <FieldError ref={errorRef} id={errorId} tabIndex={-1}>
+            {error}
+          </FieldError>
+        ) : null}
+        <p className="w-full text-xs text-muted-foreground">
+          {scheduleUnverified
+            ? dictionary.cronjobs.lastConfirmedSchedule
+            : dictionary.cronjobs.savedSchedule}{" "}
+          · <code className="break-all">{cronjob.cronExpression}</code>
+        </p>
+        {scheduleUnverified ? (
+          <p role="status" className="w-full text-xs text-destructive">
+            {dictionary.cronjobs.effectiveScheduleUnverified}
+          </p>
+        ) : null}
       </Field>
       <div className="flex items-center gap-1">
         <Button
           type="submit"
-          variant="ghost"
-          size="icon-xs"
-          title={dictionary.cronjobs.saveCron}
-          disabled={isSaving}
+          variant="positive"
+          size="sm"
+          aria-label={
+            isSaving ? dictionary.common.saving : dictionary.cronjobs.saveCron
+          }
+          disabled={isSaving || !canUpdate}
         >
           {isSaving ? (
-            <Spinner data-icon="inline-start" />
+            <Spinner aria-hidden="true" data-icon="inline-start" />
           ) : (
             <Check data-icon="inline-start" />
           )}
-          <span className="sr-only">{dictionary.cronjobs.saveCron}</span>
+          <span>
+            {isSaving ? dictionary.common.saving : dictionary.common.save}
+          </span>
         </Button>
         <Button
           type="button"
-          variant="ghost"
-          size="icon-xs"
-          title={dictionary.cronjobs.cancelEdit}
+          variant="outline"
+          size="sm"
+          aria-label={dictionary.cronjobs.cancelEdit}
           disabled={isSaving}
           onClick={handleCancel}
         >
           <X data-icon="inline-start" />
-          <span className="sr-only">{dictionary.cronjobs.cancelEdit}</span>
+          <span>{dictionary.common.cancel}</span>
         </Button>
       </div>
+      {isSaving ? (
+        <span role="status" className="sr-only">
+          {dictionary.common.saving}
+        </span>
+      ) : null}
     </form>
   )
 }

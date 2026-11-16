@@ -332,6 +332,180 @@ test("cronjob wide and mobile renders preserve the approved list composition", a
   }
 })
 
+test("cronjob schedule editor renders and cancels on Wide and Mobile", async ({
+  page,
+  fixture,
+}, testInfo) => {
+  await fixture.setPermissions(["cronjob:read", "cronjob:update"])
+  await page.emulateMedia({ colorScheme: "dark" })
+  await page.setViewportSize({ width: 1520, height: 1024 })
+  await page.goto("/en/cronjobs")
+
+  const runningRow = page.getByRole("row", { name: /Scheduled and running/ })
+  await expect(
+    runningRow.getByRole("button", { name: "Edit cron expression" })
+  ).toHaveCount(0)
+
+  const wideRow = page.getByRole("row", { name: /Paused after execution/ })
+  const wideEdit = wideRow.getByRole("button", {
+    name: "Edit cron expression",
+  })
+  await expect(wideEdit).toBeVisible()
+  await wideEdit.click()
+  const wideInput = wideRow.getByRole("textbox", {
+    name: "Cron expression (UTC)",
+  })
+  await expect(wideInput).toBeVisible()
+  await expect(wideInput).toBeFocused()
+  await expect(wideInput).toHaveValue("0 0/5 * * * ?")
+  const wideSavedSchedule = wideRow
+    .locator("p")
+    .filter({ hasText: "Saved schedule" })
+  await expect(wideSavedSchedule).toBeVisible()
+  await expect(wideSavedSchedule).toContainText("0 0/5 * * * ?")
+  const wideInputBounds = await wideInput.boundingBox()
+  const wideSaveBounds = await wideRow
+    .getByRole("button", { name: "Save cron expression" })
+    .boundingBox()
+  expect(wideInputBounds).not.toBeNull()
+  expect(wideSaveBounds).not.toBeNull()
+  expect(wideSaveBounds!.y).toBeGreaterThanOrEqual(
+    wideInputBounds!.y + wideInputBounds!.height
+  )
+  const wideEditorAxe = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa"])
+    .exclude(".bar")
+    .analyze()
+  expect(
+    wideEditorAxe.violations.filter(
+      (violation) =>
+        violation.impact === "serious" || violation.impact === "critical"
+    )
+  ).toEqual([])
+  await testInfo.attach("SIGN-334-candidate-Wide-edit-1520x1024.png", {
+    body: await page.screenshot(),
+    contentType: "image/png",
+  })
+  await wideRow.getByRole("button", { name: "Cancel edit" }).click()
+  await expect(
+    wideRow.getByText("0 0/5 * * * ?", { exact: true })
+  ).toBeVisible()
+  await expect(
+    wideRow.getByRole("button", { name: "Edit cron expression" })
+  ).toBeFocused()
+
+  await page.setViewportSize({ width: 390, height: 1024 })
+  await fixture.setScenario("/cronjobs", "short")
+  await page.goto("/vi/cronjobs")
+  const mobileCard = page.getByRole("article", {
+    name: "RefreshPendingNarrativesJob",
+  })
+  const mobileEdit = mobileCard.getByRole("button", {
+    name: "Chỉnh sửa biểu thức cron",
+  })
+  await expect(mobileEdit).toBeVisible()
+  await mobileEdit.click()
+  const mobileInput = mobileCard.getByRole("textbox", {
+    name: "Biểu thức cron (UTC)",
+  })
+  await expect(mobileInput).toBeFocused()
+  await expect(mobileInput).toHaveValue("0 */30 * * * ?")
+  await expect(
+    mobileCard.locator("p").filter({ hasText: "Lịch đã lưu" })
+  ).toBeVisible()
+  await expect(mobileCard.locator("code")).toHaveText("0 */30 * * * ?")
+  const mobileEditorAxe = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa"])
+    .exclude(".bar")
+    .analyze()
+  expect(
+    mobileEditorAxe.violations.filter(
+      (violation) =>
+        violation.impact === "serious" || violation.impact === "critical"
+    )
+  ).toEqual([])
+  await testInfo.attach("SIGN-334-candidate-Mobile-vi-edit-390x1024.png", {
+    body: await page.screenshot({ fullPage: true }),
+    contentType: "image/png",
+  })
+  await mobileCard.getByRole("button", { name: "Hủy chỉnh sửa" }).click()
+  await expect(
+    mobileCard.getByText("0 */30 * * * ?", { exact: true })
+  ).toBeVisible()
+  await expect(
+    mobileCard.getByRole("button", { name: "Chỉnh sửa biểu thức cron" })
+  ).toBeFocused()
+})
+
+test("cronjob schedule editor retains its draft and focus across viewport groups", async ({
+  page,
+  fixture,
+}) => {
+  await fixture.setPermissions(["cronjob:read", "cronjob:update"])
+  await fixture.setScenario("/cronjobs", "short")
+
+  for (const colorScheme of ["light", "dark"] as const) {
+    await page.emulateMedia({ colorScheme })
+    await page.setViewportSize({ width: 360, height: 800 })
+    await page.goto("/vi/cronjobs")
+
+    const mobileCard = page.getByRole("article", {
+      name: "Paused after failed run",
+    })
+    await mobileCard
+      .getByRole("button", { name: "Chỉnh sửa biểu thức cron" })
+      .click()
+
+    const draft = "0 0 8 * * ?"
+    await mobileCard
+      .getByRole("textbox", { name: "Biểu thức cron (UTC)" })
+      .fill(draft)
+
+    for (const [width, height] of [
+      [360, 800],
+      [760, 512], // 1520×1024 effective CSS viewport at 200% zoom
+      [767, 844],
+      [768, 844],
+      [767, 844],
+      [360, 800],
+    ]) {
+      await page.setViewportSize({ width, height })
+      const editorSurface =
+        width < 768
+          ? page.getByRole("article", { name: "Paused after failed run" })
+          : page.getByRole("row", { name: /Paused after failed run/ })
+      const input = editorSurface.getByRole("textbox", {
+        name: "Biểu thức cron (UTC)",
+      })
+
+      await expect(input).toBeVisible()
+      await expect(input).toHaveValue(draft)
+      await expect(input).toBeFocused()
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= window.innerWidth
+        ),
+        `page should not overflow at ${width}px`
+      ).toBe(true)
+    }
+
+    const mobileCardAfterResize = page.getByRole("article", {
+      name: "Paused after failed run",
+    })
+    await mobileCardAfterResize
+      .getByRole("button", { name: "Hủy chỉnh sửa" })
+      .click()
+    await expect(
+      mobileCardAfterResize.getByText("0 7/15 * * * ?", { exact: true })
+    ).toBeVisible()
+    await expect(
+      mobileCardAfterResize.getByRole("button", {
+        name: "Chỉnh sửa biểu thức cron",
+      })
+    ).toBeFocused()
+  }
+})
+
 test("read denial, detail errors, and a valid empty list stay distinct", async ({
   page,
   fixture,
