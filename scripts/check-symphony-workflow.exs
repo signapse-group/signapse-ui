@@ -103,14 +103,39 @@ refute Client.normalize_issue_for_test(
          settings.tracker
        ).admission_ready
 
-runbooks = %{
-  "Survey" => "docs/runbooks/survey.md",
-  "Implement" => "docs/runbooks/implement.md",
-  "Review" => "docs/runbooks/review-and-delivery.md"
+phases = %{
+  "Survey" => {"survey-frontend", "Ready → Progress/Blocked"},
+  "Implement" => {"implement", "Progress → In Review/Blocked"},
+  "Review" => {"code-review", "In Review → Progress/Blocked/Done"}
 }
 
-for path <- Map.values(runbooks) do
-  assert File.regular?(Path.join(root, path))
+skill_path = fn name -> ".agents/skills/#{name}/SKILL.md" end
+
+for {name, _grant} <- Map.values(phases) do
+  source = File.read!(Path.join(root, skill_path.(name)))
+  assert ["---", "name: " <> ^name, "description: " <> description, "---" | _] =
+           String.split(source, ~r/\r?\n/)
+
+  assert String.trim(description) != ""
+
+  policy_path = Path.join([root, ".agents", "skills", name, "agents", "openai.yaml"])
+  assert {:ok, %{"policy" => %{"allow_implicit_invocation" => false}}} =
+           YamlElixir.read_from_file(policy_path)
+end
+
+assert_phase = fn rendered, phase ->
+  for name <- Map.keys(phases) ++ ["Stop"] do
+    assert String.contains?(rendered, "## Phase: #{name}") == (phase == name)
+  end
+
+  for {name, {skill, grant}} <- phases do
+    assert String.contains?(rendered, "Invoke [#{skill}](#{skill_path.(skill)}).") == (phase == name)
+    assert String.contains?(rendered, grant) == (phase == name)
+  end
+
+  assert length(Regex.scan(~r/^Grant:/m, rendered)) == if(phase == "Stop", do: 0, else: 1)
+  refute String.contains?(rendered, "docs/runbooks/")
+  if phase == "Stop", do: assert(String.contains?(rendered, "Stop autonomous work"))
 end
 
 fixtures =
@@ -130,19 +155,10 @@ fixtures =
     if attempt, do: assert(String.contains?(rendered, "Follow-up attempt #2"))
 
     phase = %{"Ready" => "Survey", "Progress" => "Implement", "In Review" => "Review"}[state] || "Stop"
-    assert String.contains?(rendered, "## Phase: #{phase}")
-    for other <- ["Survey", "Implement", "Review", "Stop"] -- [phase] do
-      refute String.contains?(rendered, "## Phase: #{other}")
-    end
-
-    for {name, path} <- runbooks do
-      assert String.contains?(rendered, "](#{path})") == (phase == name)
-    end
-    refute String.contains?(rendered, "Grant:")
+    assert_phase.(rendered, phase)
     refute Regex.match?(~r/\$(implement|code-review|agent-execution-policy)\b/, rendered)
     refute String.contains?(rendered, "execution-policy.md")
     refute String.contains?(rendered, "docs/delivery.md")
-    if phase == "Stop", do: assert(String.contains?(rendered, "Stop autonomous work"))
     phase
   end
 
@@ -151,11 +167,9 @@ assert String.contains?(settings.hooks.before_run, "refs/heads/dev:refs/remotes/
 assert {:ok, %{template: template}} = Instructions.checkout_template(root, workflow)
 assert template =~ "from this checkout"
 refute template =~ "git show origin/dev"
-review_skill = ".agents/skills/code-review/SKILL.md"
-assert File.regular?(Path.join(root, review_skill))
-assert File.read!(Path.join(root, runbooks["Review"])) =~ review_skill
+phase_paths = for {name, _grant} <- Map.values(phases), do: skill_path.(name)
 
-for path <- ["AGENTS.md", "components/AGENTS.override.md"] ++ Map.values(runbooks) do
+for path <- ["AGENTS.md", "components/AGENTS.override.md"] ++ phase_paths do
   source = File.read!(Path.join(root, path))
   refute String.contains?(source, "signapse-planing/blob/main/workflow/project-execution-workflow.md#ui-design-gate")
   refute String.contains?(source, "signapse-planing/blob/main/ui-design/references/DESIGN.md#responsive-contract")
@@ -175,13 +189,35 @@ for {state, phase} <- [
       {"", "Stop"}
     ] do
   assert {:ok, %{prompt: rendered}} =
-           Instructions.checkout_prompt(root, workflow, %{issue | state: state}, settings)
+           Instructions.checkout_prompt(
+             root,
+             workflow,
+             %{issue | state: state, labels: [" ROUTE-FRONTEND ", "business-label"]},
+             settings
+           )
 
-  assert String.contains?(rendered, "## Phase: #{phase}")
-  for {name, path} <- runbooks do
-    assert String.contains?(rendered, "](#{path})") == (phase == name)
+  assert_phase.(rendered, phase)
+end
+
+conflicting_routes =
+  for route <- settings.tracker.provider["routing_labels"] -- ["route-frontend"] do
+    ["route-frontend", " #{String.upcase(route)} "]
   end
+
+invalid_routes = [[], ["route-quality-assurance"], ["route-frontend", "route-frontend"]]
+
+for state <- ["Ready", "Progress", "In Review"], labels <- invalid_routes ++ conflicting_routes do
+  assert {:ok, %{prompt: rendered}} =
+           Instructions.checkout_prompt(
+             root,
+             workflow,
+             %{issue | state: state, labels: labels},
+             settings
+           )
+
+  assert_phase.(rendered, "Stop")
+  assert String.contains?(rendered, "missing a valid exclusive FE route")
 end
 
 assert Process.whereis(SymphonyElixir.Supervisor) == nil
-IO.puts("Consumer workflow: config/routing/dependency admission, 108 strict runbook-selection fixtures and 5 normalized/unsupported states passed offline.")
+IO.puts("Consumer workflow: config/routing/dependency admission and 134 skill/grant selection fixtures passed offline.")
