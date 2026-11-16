@@ -216,7 +216,7 @@ test("shows create, send, permission, and quota failures without a completed ans
   await composer.fill("Permission denied question")
   await composer.press("Enter")
   await expect(assistantDialog(page).getByRole("alert")).toContainText(
-    "permission"
+    "quyền"
   )
   await expect(
     assistantMessages(page).getByText("Permission denied question", {
