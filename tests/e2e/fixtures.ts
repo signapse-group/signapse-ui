@@ -50,6 +50,9 @@ type FixtureController = {
       | "delayed"
       | "delayed-old-workspace"
       | "delayed-outage"
+      | "drop-after-accepted"
+      | "assistant-failed"
+      | "quota-exceeded"
       | "daily-history-retry"
       | "workspace-not-selected"
       | "outage"
@@ -100,6 +103,9 @@ type FixtureController = {
       description: string | null
       active: boolean
     }>
+    marketConversations?: Array<Record<string, unknown>>
+    marketConversationTurns?: Array<Record<string, unknown>>
+    marketConversationAttempts?: Array<Record<string, unknown>>
   }>
   setFeedbackScenario(
     scenario:

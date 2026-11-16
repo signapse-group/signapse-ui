@@ -18,6 +18,24 @@
   --typeset-flow: 0.875em;
 }
 
+.fullModePositioner {
+  position: fixed !important;
+  top: 4rem !important;
+  right: 1rem !important;
+  bottom: 1rem !important;
+  left: calc(var(--assistant-sidebar-width) + 1rem) !important;
+  width: auto !important;
+  height: auto !important;
+  transform: none !important;
+}
+
+.fullModePopup {
+  box-sizing: border-box !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+}
+
 @keyframes market-conversation-assistant-shimmer {
   to {
     background-position: -200% 0;

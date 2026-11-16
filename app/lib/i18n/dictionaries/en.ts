@@ -1766,11 +1766,13 @@ export const en: Dictionary = {
   },
   aiAssistant: {
     open: "Open AI assistant",
+    launcher: "Ask Signapse",
     loading: "Loading AI assistant",
     error: "The AI assistant could not be loaded.",
   },
   demoConversation: {
     title: "New Chat",
+    aiNotice: "AI can make mistakes. Please verify important information.",
     newConversation: "New chat",
     expandConversation: "Expand conversation window",
     collapseConversation: "Collapse conversation window",

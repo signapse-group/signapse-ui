@@ -6,7 +6,6 @@ import remarkGfm from "remark-gfm"
 import { useDebouncedCallback } from "use-debounce"
 import {
   ArrowUpIcon,
-  BotMessageSquareIcon,
   ChevronDownIcon,
   CopyIcon,
   ClockIcon,
@@ -87,6 +86,11 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { PopoverContentInOverlay } from "@/components/ui/popover-content-in-overlay"
+import {
+  SIDEBAR_WIDTH,
+  SIDEBAR_WIDTH_ICON,
+  useSidebar,
+} from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
 import { Spinner } from "@/components/ui/spinner"
 import { Tooltip, TooltipTrigger } from "@/components/ui/tooltip"
@@ -150,6 +154,7 @@ export function MarketConversationAssistant({
   workspaceId,
 }: MarketConversationAssistantProps) {
   const { dictionary } = useLocalization()
+  const { isMobile, open: isSidebarOpen } = useSidebar()
   const labels = dictionary.demoConversation
   const [open, setOpen] = React.useState(false)
   const [isExpanded, setIsExpanded] = React.useState(false)
@@ -212,6 +217,7 @@ export function MarketConversationAssistant({
   const renderableMessages = getRenderableConversationMessages(displayMessages)
   const currentTitle = selectedConversation?.title ?? labels.title
   const isRequestPending = isCreating || isSubmitting
+  const isFullMode = isExpanded && !isMobile
   const isRevealing = responseReveal !== null
   const isBusy = isRequestPending || isRevealing
   const composerDisabled = workspaceId == null || isMessagesLoading || isBusy
@@ -621,40 +627,68 @@ export function MarketConversationAssistant({
         render={
           <Button
             type="button"
-            size="icon-lg"
-            className="fixed end-4 bottom-4 size-11 [&_svg:not([class*='size-'])]:size-5"
-            aria-label={dictionary.aiAssistant.open}
-          />
+            variant="outline"
+            size="lg"
+            className="fixed end-4 bottom-4 h-12 w-[10.5rem] justify-start rounded-2xl px-4 text-base has-data-[icon=inline-start]:pl-4"
+            aria-label={dictionary.aiAssistant.launcher}
+          >
+            <span
+              aria-hidden="true"
+              className="inline-flex size-7 shrink-0 items-center justify-center"
+              data-icon="inline-start"
+            >
+              <Logo width={28} height={28} />
+            </span>
+            <span>{dictionary.aiAssistant.launcher}</span>
+          </Button>
         }
-      >
-        <BotMessageSquareIcon data-icon="inline-start" />
-      </PopoverTrigger>
+      />
       <PopoverContentInOverlay
         side="top"
         align="end"
         sideOffset={12}
         collisionPadding={16}
+        positionMethod={isFullMode ? "fixed" : undefined}
+        positionerClassName={isFullMode ? styles.fullModePositioner : undefined}
+        positionerStyle={
+          isFullMode
+            ? ({
+                "--assistant-sidebar-width": isSidebarOpen
+                  ? SIDEBAR_WIDTH
+                  : SIDEBAR_WIDTH_ICON,
+              } as React.CSSProperties)
+            : undefined
+        }
         aria-label={currentTitle}
         className={cn(
+          isFullMode ? styles.fullModePopup : undefined,
           "max-h-[var(--available-height)] w-[calc(100vw-2rem)] gap-0 overflow-hidden rounded-2xl",
-          isExpanded
-            ? "max-w-[min(64rem,var(--available-width))]"
-            : "max-w-xl sm:max-w-xl"
+          isFullMode
+            ? "h-full max-h-none w-full max-w-full"
+            : isExpanded
+              ? "max-w-[min(64rem,var(--available-width))]"
+              : "max-w-xl sm:max-w-xl"
         )}
       >
         <MessageScrollerProvider autoScroll>
           <div
             className={cn(
               "relative flex min-h-0 flex-col",
-              isExpanded
-                ? "h-[min(48rem,calc(var(--available-height)-1.25rem))]"
-                : "h-[min(36rem,calc(var(--available-height)-1.25rem))]"
+              isFullMode
+                ? "h-full"
+                : isExpanded
+                  ? "h-[min(48rem,calc(var(--available-height)-1.25rem))]"
+                  : "h-[min(36rem,calc(var(--available-height)-1.25rem))]"
             )}
           >
             <div
               className={cn(
                 "mx-auto flex min-h-0 w-full flex-1",
-                isExpanded ? "max-w-5xl" : "max-w-xl"
+                isFullMode
+                  ? "max-w-none"
+                  : isExpanded
+                    ? "max-w-5xl"
+                    : "max-w-xl"
               )}
             >
               <div className="flex h-full min-h-0 w-full flex-col">
@@ -1061,6 +1095,9 @@ export function MarketConversationAssistant({
                       </InputGroupAddon>
                     </InputGroup>
                   </form>
+                  <p className="pt-2 text-center text-xs leading-4 text-muted-foreground">
+                    {labels.aiNotice}
+                  </p>
                 </footer>
               </div>
             </div>

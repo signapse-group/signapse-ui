@@ -43,6 +43,8 @@ export const fixtureContracts = [
   { method: "POST", path: "/me/workspaces", mapping: "createWorkspace", status: 200 },
   { method: "PUT", path: "/me/workspaces/{id}", mapping: "updateWorkspace", status: 200 },
   { method: "PATCH", path: "/me/workspaces/{id}/set-current", mapping: "setCurrentWorkspace", status: 200 },
+  { method: "POST", path: "/market-conversations", mapping: "createMarketConversation", status: 200 },
+  { method: "POST", path: "/market-conversations/{id}/messages", mapping: "submitMarketConversationMessage", status: 200 },
   { method: "GET", path: "/dashboard/summary", mapping: "getDashboardSummary", status: 200 },
   { method: "GET", path: "/graph-view", mapping: "getGraphView", status: 200 },
   { method: "GET", path: "/watchlists/assets", mapping: "getWorkspaceWatchlistAssets", status: 200 },
