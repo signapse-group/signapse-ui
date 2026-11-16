@@ -174,7 +174,7 @@ test("renders an assistant FAILED result as a failure", async ({
   expect((await fixture.state()).marketConversationTurns).toHaveLength(1)
 })
 
-test("shows create, permission, and quota request failures without a completed answer", async ({
+test("shows create, send, permission, and quota failures without a completed answer", async ({
   page,
   fixture,
 }) => {
@@ -188,6 +188,30 @@ test("shows create, permission, and quota request failures without a completed a
   expect((await fixture.state()).marketConversations).toHaveLength(0)
 
   await fixture.setScenario("/market-conversations", "success", "POST")
+  const sendFailure = "Send failure question"
+  await fixture.setScenario(
+    "/market-conversations/1/messages",
+    "outage",
+    "POST"
+  )
+  await composer.fill(sendFailure)
+  await composer.press("Enter")
+  await expect(assistantDialog(page).getByRole("alert")).toContainText(
+    "backend is unavailable"
+  )
+  await expect(composer).toHaveValue(sendFailure)
+  await expect(
+    assistantMessages(page).getByText(sendFailure, { exact: true })
+  ).not.toBeVisible()
+  const afterSendFailure = await fixture.state()
+  expect(afterSendFailure.marketConversations).toHaveLength(1)
+  expect(afterSendFailure.marketConversationTurns).toHaveLength(0)
+
+  await fixture.setScenario(
+    "/market-conversations/1/messages",
+    "success",
+    "POST"
+  )
   await fixture.setPermissions([])
   await composer.fill("Permission denied question")
   await composer.press("Enter")
@@ -199,7 +223,7 @@ test("shows create, permission, and quota request failures without a completed a
       exact: true,
     })
   ).not.toBeVisible()
-  expect((await fixture.state()).marketConversations).toHaveLength(0)
+  expect((await fixture.state()).marketConversations).toHaveLength(1)
 
   await fixture.setPermissions(["query:execute"])
   await composer.fill("Quota exceeded question")
