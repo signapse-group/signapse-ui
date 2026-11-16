@@ -669,7 +669,7 @@ export function MarketConversationAssistant({
         align="end"
         sideOffset={12}
         collisionPadding={16}
-        positionMethod={isFullMode ? "fixed" : undefined}
+        positionMethod="fixed"
         positionerClassName={
           isFullMode ? styles.fullModePositioner : styles.compactModePositioner
         }

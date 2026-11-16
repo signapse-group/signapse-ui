@@ -44,6 +44,15 @@ async function expectAssistantFitsViewport(page: Page, dialog: Locator) {
   expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(viewport!.height)
 }
 
+async function expectAssistantBottomRight(page: Page, dialog: Locator) {
+  const viewport = page.viewportSize()
+  const bounds = await dialog.boundingBox()
+  expect(viewport).not.toBeNull()
+  expect(bounds).not.toBeNull()
+  expect(Math.round(bounds!.x + bounds!.width)).toBe(viewport!.width - 16)
+  expect(Math.round(bounds!.y + bounds!.height)).toBe(viewport!.height - 16)
+}
+
 async function expectNoticeBelowComposer(dialog: Locator) {
   const composerBounds = await dialog
     .getByRole("textbox", { name: "Tin nhắn", exact: true })
@@ -441,6 +450,9 @@ test("matches the approved launcher and compact, Full mode, sidebar, and mobile 
   expect(launcherBounds?.height).toBe(48)
   expect(1520 - launcherBounds!.x - launcherBounds!.width).toBe(16)
   expect(1024 - launcherBounds!.y - launcherBounds!.height).toBe(16)
+  await page.screenshot({
+    path: "test-results/market-assistant-launcher-1520x1024.png",
+  })
 
   await page.evaluate(() => {
     document.body.style.minHeight = "200vh"
@@ -460,6 +472,7 @@ test("matches the approved launcher and compact, Full mode, sidebar, and mobile 
   const dialog = assistantDialog(page)
   await expect(dialog).toBeVisible()
   await expect(askButton).toBeHidden()
+  await expectAssistantBottomRight(page, dialog)
   await expect(askButton).toHaveAttribute("aria-hidden", "true")
   await expect(
     dialog.getByRole("textbox", { name: "Tin nhắn", exact: true })
@@ -482,6 +495,7 @@ test("matches the approved launcher and compact, Full mode, sidebar, and mobile 
   expect(fullBounds?.y).toBe(64)
   expect(fullBounds?.width).toBe(1232)
   expect(fullBounds?.height).toBe(944)
+  await expectAssistantBottomRight(page, dialog)
   await expect(dialog.getByText(notice, { exact: true })).toBeVisible()
   await page.screenshot({
     path: "test-results/market-assistant-full-1520x1024.png",
@@ -507,6 +521,7 @@ test("matches the approved launcher and compact, Full mode, sidebar, and mobile 
     dialog.getByRole("button", { name: "Thu gọn cửa sổ hội thoại" })
   ).toBeVisible()
   await expect.poll(async () => (await dialog.boundingBox())?.x).toBe(64)
+  await expectAssistantBottomRight(page, dialog)
   await page.screenshot({
     path: "test-results/market-assistant-full-sidebar-collapsed-1520x1024.png",
   })
@@ -520,6 +535,7 @@ test("matches the approved launcher and compact, Full mode, sidebar, and mobile 
 
   await page.setViewportSize({ width: 1024, height: 768 })
   await expectAssistantFitsViewport(page, dialog)
+  await expectAssistantBottomRight(page, dialog)
   await expect(dialog.getByText(notice, { exact: true })).toBeVisible()
   await expectNoticeBelowComposer(dialog)
   await expect(dialog.getByRole("textbox", { name: "Tin nhắn" })).toBeVisible()
@@ -532,6 +548,7 @@ test("matches the approved launcher and compact, Full mode, sidebar, and mobile 
 
   await page.setViewportSize({ width: 390, height: 844 })
   await expectAssistantFitsViewport(page, dialog)
+  await expectAssistantBottomRight(page, dialog)
   await expect(dialog.getByText(notice, { exact: true })).toBeVisible()
   await expectNoticeBelowComposer(dialog)
   await page.screenshot({
@@ -540,6 +557,7 @@ test("matches the approved launcher and compact, Full mode, sidebar, and mobile 
 
   await page.setViewportSize({ width: 360, height: 800 })
   await expectAssistantFitsViewport(page, dialog)
+  await expectAssistantBottomRight(page, dialog)
   await expect(dialog.getByText(notice, { exact: true })).toBeVisible()
   await expectNoticeBelowComposer(dialog)
   await page.screenshot({
@@ -549,6 +567,7 @@ test("matches the approved launcher and compact, Full mode, sidebar, and mobile 
   // 760×512 CSS px is the effective viewport at 200% zoom on the 1520×1024 frame.
   await page.setViewportSize({ width: 760, height: 512 })
   await expectAssistantFitsViewport(page, dialog)
+  await expectAssistantBottomRight(page, dialog)
   await expect(dialog.getByText(notice, { exact: true })).toBeVisible()
   await expectNoticeBelowComposer(dialog)
   await expect(dialog.getByRole("textbox", { name: "Tin nhắn" })).toBeVisible()
