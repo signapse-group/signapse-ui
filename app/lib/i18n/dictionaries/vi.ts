@@ -73,7 +73,6 @@ export const vi = {
     breadcrumb: "Đường dẫn điều hướng",
     feedbackReview: "Duyệt phản hồi",
     contactRequests: "Yêu cầu liên hệ",
-    apiAccessToken: "Token truy cập API",
   },
   feedback: {
     composeAction: "Gửi phản hồi",
@@ -2326,33 +2325,6 @@ export const vi = {
       unsupportedTitle: "Không thể hiển thị biểu đồ",
       readyForBenchmark: "Sẵn sàng benchmark",
     },
-  },
-  developerToken: {
-    unavailable: "Không có",
-    tokenFetched: "Đã lấy token.",
-    sessionNotFound: "Không tìm thấy phiên đăng nhập.",
-    fetchFailed: "Không thể lấy token.",
-    copied: "Đã sao chép token.",
-    usageTitle: "Hướng dẫn sử dụng",
-    usageDescription:
-      "Clerk token là JWT (JSON Web Token). Hãy gửi token này trong header của mỗi request khi gọi trực tiếp Backend API.",
-    headerFormat: "Định dạng header",
-    tokenLifespan:
-      "Token có thời hạn ngắn, thường khoảng 1 phút. Hãy lấy token mới nếu nhận lỗi 401.",
-    testingTools:
-      "Dùng token này để kiểm thử bằng Postman, Insomnia hoặc cURL.",
-    toolkitTitle: "Công cụ",
-    tokenReady: "Token sẵn sàng",
-    fetchNewToken: "Lấy token mới",
-    generateToken: "Tạo token kiểm thử",
-    copyToClipboard: "Sao chép vào clipboard",
-    rawToken: "Token thô",
-    encodedBase64: "Base64 đã mã hóa",
-    header: "Header",
-    payload: "Payload",
-    subject: "Subject (User ID)",
-    issuedAt: "Phát hành lúc",
-    expiresAt: "Hết hạn lúc",
   },
   editor: {
     moreFormatting: "Định dạng khác",

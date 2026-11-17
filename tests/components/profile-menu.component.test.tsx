@@ -73,6 +73,37 @@ function renderProfileMenu(locale: "en" | "vi" = "en") {
 }
 
 describe("profile menu usage limits", () => {
+  it.each([
+    { locale: "en" as const, label: "API access token" },
+    { locale: "vi" as const, label: "Token truy cập API" },
+  ])("keeps existing profile actions without the token item in $locale", async ({
+    locale,
+    label,
+  }) => {
+    const user = userEvent.setup()
+    renderProfileMenu(locale)
+
+    await user.click(screen.getByRole("button", { name: /Ada Lovelace/ }))
+    const menu = await screen.findByRole("menu")
+
+    expect(
+      within(menu).queryByRole("menuitem", { name: label })
+    ).not.toBeInTheDocument()
+    expect(
+      within(menu).getByRole("menuitem", {
+        name: locale === "en" ? en.auth.account : viDictionary.auth.account,
+      })
+    ).toHaveAttribute("href", `/${locale}/account`)
+    expect(
+      within(menu).getByRole("menuitem", {
+        name:
+          locale === "en"
+            ? en.usageLimits.title
+            : viDictionary.usageLimits.title,
+      })
+    ).toBeVisible()
+  })
+
   afterEach(() => cleanup())
 
   beforeEach(() => {
@@ -266,11 +297,6 @@ describe("profile menu usage limits", () => {
     expect(
       within(menu).getByRole("menuitem", { name: en.auth.account })
     ).toHaveAttribute("href", "/en/account")
-    expect(
-      within(menu).getByRole("menuitem", {
-        name: en.navigation.apiAccessToken,
-      })
-    ).toHaveAttribute("href", "/en/developer-token")
     expect(
       within(menu).getByRole("menuitem", { name: en.auth.notifications })
     ).toBeVisible()
