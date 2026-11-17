@@ -33,11 +33,7 @@ test.describe("P0 profile menu usage limits", () => {
     await expect(
       menu.getByRole("menuitem", { name: en.auth.account })
     ).toHaveAttribute("href", "/en/account")
-    await expect(
-      menu.getByRole("menuitem", {
-        name: en.navigation.apiAccessToken,
-      })
-    ).toHaveAttribute("href", "/en/developer-token")
+    await expect(menu.locator('a[href$="/developer-token"]')).toHaveCount(0)
     await expect(
       menu.getByRole("menuitem", { name: en.auth.notifications })
     ).toBeVisible()
@@ -131,12 +127,7 @@ test.describe("P0 profile menu usage limits", () => {
                 name: dictionary.navigation.mobileSidebarTitle,
               })
             ).toBeVisible()
-          } else if (theme === "dark") {
-            await page
-              .getByRole("button", {
-                name: dictionary.navigation.toggleSidebar,
-              })
-              .click()
+          } else {
             await expect(
               page.locator('[data-slot="sidebar"]').first()
             ).toHaveAttribute("data-state", "collapsed")
@@ -147,6 +138,9 @@ test.describe("P0 profile menu usage limits", () => {
             name: /Signapse Developer/i,
           })
           await expect(menu).toBeVisible()
+          await expect(menu.locator('a[href$="/developer-token"]')).toHaveCount(
+            0
+          )
           await menu
             .getByRole("menuitem", { name: dictionary.usageLimits.title })
             .click()
