@@ -89,6 +89,110 @@ test("P0 roles list and direct detail are localized, read-only, and responsive",
   await page.setViewportSize({ width: 360, height: 800 })
   await expectNoPageOverflow(page)
 
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto("/vi/roles")
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Vai trò" })
+  ).toBeVisible()
+  const mobileRoleKey = page.getByText("CONTENT_REVIEWER", { exact: true })
+  await expect(mobileRoleKey).toBeVisible()
+  expect(
+    await mobileRoleKey.evaluate(
+      (element) => element.scrollHeight <= element.clientHeight
+    )
+  ).toBe(true)
+  await expectNoPageOverflow(page)
+  await attachScreenshot(page, testInfo, "roles-list-mobile-vi.png")
+
+  await page.setViewportSize({ width: 1520, height: 1024 })
+  const zoomSession = await page.context().newCDPSession(page)
+  await zoomSession.send("Emulation.setDeviceMetricsOverride", {
+    width: 760,
+    height: 512,
+    deviceScaleFactor: 2,
+    mobile: false,
+    screenWidth: 1520,
+    screenHeight: 1024,
+  })
+  await page.evaluate(() => {
+    document.cookie = "sidebar_state=false; path=/; max-age=60"
+  })
+  await page.reload()
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Vai trò" })
+  ).toBeVisible()
+  await expect(
+    page.getByRole("columnheader", { name: "Vai trò" })
+  ).toBeVisible()
+  await expect(page.getByRole("columnheader", { name: "Key" })).toBeVisible()
+  await expect(
+    page.getByRole("columnheader", { name: "Quyền" })
+  ).toBeVisible()
+  await expect(page.getByText("CONTENT_REVIEWER", { exact: true })).toBeVisible()
+  await expect(
+    page
+      .getByRole("row", { name: /Người đọc trống/ })
+      .getByRole("cell")
+      .nth(2)
+  ).toHaveText("0")
+  const roleColumns = await page.getByRole("columnheader").evaluateAll((headers) =>
+    headers.map((header) => ({
+      left: header.getBoundingClientRect().left,
+      right: header.getBoundingClientRect().right,
+    }))
+  )
+  const zoomViewportWidth = await page.evaluate(() => window.innerWidth)
+  expect(
+    roleColumns.every(
+      ({ left, right }) => left >= 0 && right <= zoomViewportWidth
+    )
+  ).toBe(true)
+  expect(
+    await page
+      .locator('[data-slot="table-container"]')
+      .evaluate((table) => table.scrollWidth <= table.clientWidth)
+  ).toBe(true)
+  expect(
+    await page.evaluate(() => ({
+      viewportWidth: window.innerWidth,
+      screenWidth: window.screen.width,
+      devicePixelRatio: window.devicePixelRatio,
+    }))
+  ).toEqual({ viewportWidth: 760, screenWidth: 1520, devicePixelRatio: 2 })
+  await expectNoPageOverflow(page)
+  const tableBounds = await page
+    .locator('[data-slot="table-container"]')
+    .evaluate((table) => table.getBoundingClientRect().toJSON())
+  const firstRoleCells = await page
+    .locator('[data-slot="table-body"] tr:first-child td')
+    .evaluateAll((cells) =>
+      cells.map((cell) => {
+        const { left, right } = cell.getBoundingClientRect()
+        return { left, right }
+      })
+    )
+  expect(
+    firstRoleCells.every(
+      ({ left, right }) => left >= tableBounds.left && right <= tableBounds.right
+    )
+  ).toBe(true)
+  const zoomPagePath = testInfo.outputPath("roles-list-zoom-200-vi.png")
+  await page.screenshot({
+    path: zoomPagePath,
+    scale: "device",
+    style: "nextjs-portal { display: none !important; }",
+  })
+  await testInfo.attach("roles-list-zoom-200-vi.png", {
+    path: zoomPagePath,
+    contentType: "image/png",
+  })
+  await page.evaluate(() => {
+    document.cookie = "sidebar_state=true; path=/; max-age=604800"
+  })
+  await zoomSession.send("Emulation.clearDeviceMetricsOverride")
+  await zoomSession.detach()
+
+  await page.setViewportSize({ width: 360, height: 800 })
   await page.goto("/vi/roles/EMPTY_READER")
   await expect(
     page.getByRole("heading", { name: "Chưa có quyền nào được gán" })
@@ -231,4 +335,32 @@ test("P0 role access fails closed for create-only, update-only, missing, and API
       (request) => request.method === "GET" && request.path === "/permissions"
     )
   ).toBe(false)
+
+  await fixture.setPermissions(["role:create"])
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto("/vi/roles")
+  await expect(
+    page.getByText(
+      "Bạn cần quyền role:read để xem vai trò và các quyền đã gán."
+    )
+  ).toBeVisible()
+  await expectNoPageOverflow(page)
+  await attachScreenshot(
+    page,
+    testInfo,
+    "roles-access-create-only-mobile-vi.png"
+  )
+
+  const createOnlyNavigationLink = page
+    .locator('[data-sidebar="content"]')
+    .getByRole("link", {
+      name: "Vai trò & phân quyền",
+      exact: true,
+    })
+  if (!(await createOnlyNavigationLink.isVisible())) {
+    await page
+      .getByRole("button", { name: "Thu gọn/mở rộng thanh điều hướng" })
+      .click()
+  }
+  await expect(createOnlyNavigationLink).toBeVisible()
 })

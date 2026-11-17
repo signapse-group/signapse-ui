@@ -78,7 +78,7 @@ export function RoleListPage({ roles }: RoleListPageProps) {
                   <TableCell className="max-w-0 whitespace-normal">
                     <Badge
                       variant="secondary"
-                      className="max-w-full font-mono text-xs break-all whitespace-normal"
+                      className="h-auto min-h-5 max-w-full font-mono text-xs break-all whitespace-normal"
                     >
                       {role.key}
                     </Badge>

@@ -66,4 +66,23 @@ describe("role permission grouping", () => {
       },
     ])
   })
+
+  it("uses the localized fallback for reserved object property prefixes", () => {
+    for (const key of ["constructor", "__proto__", "toString"]) {
+      const permission = {
+        id: 6,
+        key: `${key}:read`,
+        name: `Read ${key}`,
+        description: null,
+      }
+
+      expect(groupPermissionsByResource([permission], en)).toEqual([
+        {
+          key,
+          title: en.roles.unknownPermissionGroup.replace("{group}", key),
+          permissions: [permission],
+        },
+      ])
+    }
+  })
 })

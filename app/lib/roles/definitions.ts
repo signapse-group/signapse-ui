@@ -41,8 +41,12 @@ function formatPermissionGroupTitle(
   dictionary: Dictionary
 ): string {
   const labels = dictionary.roles.permissionGroups as Record<string, string>
+  const label = Object.prototype.hasOwnProperty.call(labels, groupKey)
+    ? labels[groupKey]
+    : undefined
+
   return (
-    labels[groupKey] ??
+    label ??
     dictionary.roles.unknownPermissionGroup.replace("{group}", groupKey)
   )
 }
