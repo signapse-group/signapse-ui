@@ -56,7 +56,7 @@ describe("read-only roles views", () => {
   afterEach(() => cleanup())
 
   it("lists each role with a localized count, including zero, and a key-specific link", () => {
-    renderLocalized(<RoleListPage roles={roles} />)
+    renderLocalized(<RoleListPage roles={roles} canCreate={false} />)
 
     expect(
       screen.getByRole("heading", { level: 1, name: "Roles" })
@@ -69,10 +69,27 @@ describe("read-only roles views", () => {
     expect(
       screen.getByRole("link", { name: "Content Reviewer" })
     ).toHaveAttribute("href", "/en/roles/CONTENT_REVIEWER")
+    expect(
+      screen.queryByRole("link", { name: en.roles.createAction })
+    ).not.toBeInTheDocument()
 
     const emptyRoleRow = screen.getByRole("row", { name: /Empty reader/ })
     expect(within(emptyRoleRow).getByText("0")).toBeVisible()
     expect(screen.queryAllByRole("button")).toHaveLength(0)
+  })
+
+  it("shows the localized create entry only when the caller can create roles", () => {
+    renderLocalized(<RoleListPage roles={roles} canCreate />)
+
+    expect(
+      screen.getByRole("link", { name: en.roles.createAction })
+    ).toHaveAttribute("href", "/en/roles/create")
+
+    cleanup()
+    renderLocalized(<RoleListPage roles={roles} canCreate={false} />, "vi")
+    expect(
+      screen.queryByRole("link", { name: viDictionary.roles.createAction })
+    ).not.toBeInTheDocument()
   })
 
   it("shows assigned permission names and keys by localized group without edit controls", () => {

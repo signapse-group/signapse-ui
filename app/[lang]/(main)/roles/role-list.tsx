@@ -26,17 +26,23 @@ import {
 } from "@/components/ui/table"
 import { Shield } from "lucide-react"
 
+import { RoleCreateLink } from "./role-create-link"
+
 interface RoleListPageProps {
   roles: RoleResponse[]
+  canCreate: boolean
 }
 
-export function RoleListPage({ roles }: RoleListPageProps) {
+export function RoleListPage({ roles, canCreate }: RoleListPageProps) {
   const { dictionary, formatNumber } = useLocalization()
   const t = dictionary.roles
 
   return (
     <div className="min-w-0">
-      <h1 className="text-2xl font-semibold tracking-tight">{t.pageTitle}</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-semibold tracking-tight">{t.pageTitle}</h1>
+        {canCreate ? <RoleCreateLink label={t.createAction} /> : null}
+      </div>
 
       <AppListTable className="mt-4">
         <Table className="table-fixed">

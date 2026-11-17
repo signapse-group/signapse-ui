@@ -1,10 +1,12 @@
 "use client"
 
 import { ShieldAlert } from "lucide-react"
+import type { ReactNode } from "react"
 
 import { useLocalization } from "@/app/lib/i18n/provider"
 import {
   Empty,
+  EmptyContent,
   EmptyDescription,
   EmptyHeader,
   EmptyMedia,
@@ -15,12 +17,14 @@ interface AccessDeniedProps {
   title?: string
   description: string
   permission?: string
+  action?: ReactNode
 }
 
 export function AccessDenied({
   title,
   description,
   permission,
+  action,
 }: AccessDeniedProps) {
   const { dictionary } = useLocalization()
   const resolvedTitle = title ?? dictionary.errors.accessDeniedTitle
@@ -42,6 +46,7 @@ export function AccessDenied({
           ) : null}
         </EmptyDescription>
       </EmptyHeader>
+      {action ? <EmptyContent>{action}</EmptyContent> : null}
     </Empty>
   )
 }

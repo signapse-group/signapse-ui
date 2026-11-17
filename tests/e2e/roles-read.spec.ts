@@ -27,7 +27,7 @@ test("P0 roles list and direct detail are localized, read-only, and responsive",
   page,
   fixture,
 }, testInfo) => {
-  await fixture.setPermissions(["role:read"])
+  await fixture.setPermissions(["role:read", "role:create"])
   await page.emulateMedia({ colorScheme: "dark" })
   await page.setViewportSize({ width: 1520, height: 1024 })
   await page.goto("/vi/roles")
@@ -35,6 +35,11 @@ test("P0 roles list and direct detail are localized, read-only, and responsive",
   await expect(
     page.getByRole("heading", { level: 1, name: "Vai trò" })
   ).toBeVisible()
+  const createRoleLink = page.getByRole("link", {
+    name: "Tạo vai trò",
+    exact: true,
+  })
+  await expect(createRoleLink).toHaveAttribute("href", "/vi/roles/create")
   await expect(
     page.getByRole("columnheader", { name: "Vai trò" })
   ).toBeVisible()
@@ -57,6 +62,11 @@ test("P0 roles list and direct detail are localized, read-only, and responsive",
   await expectNoPageOverflow(page)
   await attachScreenshot(page, testInfo, "roles-list-wide-vi.png")
 
+  await createRoleLink.focus()
+  await expect(createRoleLink).toBeFocused()
+  expect(
+    await createRoleLink.evaluate((link) => link.matches(":focus-visible"))
+  ).toBe(true)
   await reviewerLink.focus()
   await expect(reviewerLink).toBeFocused()
   expect(
@@ -129,6 +139,9 @@ test("P0 roles list and direct detail are localized, read-only, and responsive",
     page.getByRole("columnheader", { name: "Quyền" })
   ).toBeVisible()
   await expect(page.getByText("CONTENT_REVIEWER", { exact: true })).toBeVisible()
+  await expect(
+    page.getByRole("link", { name: "Tạo vai trò", exact: true })
+  ).toBeVisible()
   await expect(
     page
       .getByRole("row", { name: /Người đọc trống/ })
@@ -207,6 +220,9 @@ test("P0 roles list and direct detail are localized, read-only, and responsive",
   await expect(
     page.getByRole("link", { name: "Content Reviewer" })
   ).toBeVisible()
+  await expect(
+    page.getByRole("link", { name: "Create role", exact: true })
+  ).toHaveAttribute("href", "/en/roles/create")
   const requestState = await fixture.state()
   expect(
     requestState.requests.some(
@@ -281,6 +297,15 @@ test("P0 role access fails closed for create-only, update-only, missing, and API
       })
     if (permissions.includes("role:create")) {
       await expect(rolesNavigationLink).toBeVisible()
+      const createRoleLink = page.getByRole("link", {
+        name: "Tạo vai trò",
+        exact: true,
+      })
+      await expect(createRoleLink).toBeVisible()
+      await expect(createRoleLink).toHaveAttribute(
+        "href",
+        "/vi/roles/create"
+      )
       const path = testInfo.outputPath("roles-access-create-only-vi.png")
       await page.screenshot({
         path,
@@ -293,6 +318,9 @@ test("P0 role access fails closed for create-only, update-only, missing, and API
       })
     } else {
       await expect(rolesNavigationLink).toHaveCount(0)
+      await expect(
+        page.getByRole("link", { name: "Tạo vai trò", exact: true })
+      ).toHaveCount(0)
     }
 
     await page.goto("/vi/roles/CONTENT_REVIEWER")
@@ -304,6 +332,17 @@ test("P0 role access fails closed for create-only, update-only, missing, and API
     await expect(page.getByText("Người duyệt nội dung")).toHaveCount(0)
   }
 
+  const noReadRequests = await fixture.state()
+  expect(
+    noReadRequests.requests.some(
+      (request) =>
+        request.method === "GET" &&
+        (request.path === "/roles" ||
+          (typeof request.path === "string" &&
+            request.path.startsWith("/roles/")))
+    )
+  ).toBe(false)
+
   await fixture.setPermissions(["role:read"])
   await fixture.setScenario("/roles", "permission-denied", "GET")
   await page.goto("/vi/roles")
@@ -312,6 +351,9 @@ test("P0 role access fails closed for create-only, update-only, missing, and API
       "Bạn cần quyền role:read để xem vai trò và các quyền đã gán."
     )
   ).toBeVisible()
+  await expect(
+    page.getByRole("link", { name: "Tạo vai trò", exact: true })
+  ).toHaveCount(0)
   await expect(page.getByText("Người duyệt nội dung")).toHaveCount(0)
 
   await fixture.setScenario(
