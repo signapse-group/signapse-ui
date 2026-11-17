@@ -278,6 +278,9 @@ test("P0 role access fails closed for create-only, update-only, missing, and API
         "Bạn cần quyền role:read để xem vai trò và các quyền đã gán."
       )
     ).toBeVisible()
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Vai trò" })
+    ).toHaveCount(1)
 
     if (
       await page
@@ -329,6 +332,9 @@ test("P0 role access fails closed for create-only, update-only, missing, and API
         "Bạn cần quyền role:read để xem vai trò và các quyền đã gán."
       )
     ).toBeVisible()
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Vai trò" })
+    ).toHaveCount(1)
     await expect(page.getByText("Người duyệt nội dung")).toHaveCount(0)
   }
 
@@ -352,6 +358,9 @@ test("P0 role access fails closed for create-only, update-only, missing, and API
     )
   ).toBeVisible()
   await expect(
+    page.getByRole("heading", { level: 1, name: "Vai trò" })
+  ).toHaveCount(1)
+  await expect(
     page.getByRole("link", { name: "Tạo vai trò", exact: true })
   ).toHaveCount(0)
   await expect(page.getByText("Người duyệt nội dung")).toHaveCount(0)
@@ -367,6 +376,9 @@ test("P0 role access fails closed for create-only, update-only, missing, and API
       "Bạn cần quyền role:read để xem vai trò và các quyền đã gán."
     )
   ).toBeVisible()
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Vai trò" })
+  ).toHaveCount(1)
   await expect(
     page.getByRole("heading", { name: "Người duyệt nội dung" })
   ).toHaveCount(0)

@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/empty"
 
 interface AccessDeniedProps {
+  heading?: string
   title?: string
   description: string
   permission?: string
@@ -21,6 +22,7 @@ interface AccessDeniedProps {
 }
 
 export function AccessDenied({
+  heading,
   title,
   description,
   permission,
@@ -31,6 +33,7 @@ export function AccessDenied({
 
   return (
     <Empty className="min-h-[320px] rounded-lg border border-dashed">
+      {heading ? <h1 className="sr-only">{heading}</h1> : null}
       <EmptyHeader>
         <EmptyMedia variant="icon">
           <ShieldAlert />

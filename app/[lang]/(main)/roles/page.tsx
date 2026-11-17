@@ -27,6 +27,7 @@ export default async function RolesPage() {
   if (!canReadRoles) {
     return (
       <AccessDenied
+        heading={dictionary.roles.pageTitle}
         title={dictionary.errors.accessDeniedTitle}
         description={dictionary.roles.accessDeniedDescription}
         permission={ROLE_READ_PERMISSION}
@@ -53,6 +54,7 @@ export default async function RolesPage() {
     if (status === 403) {
       return (
         <AccessDenied
+          heading={dictionary.roles.pageTitle}
           title={dictionary.errors.accessDeniedTitle}
           description={dictionary.roles.accessDeniedDescription}
           permission={ROLE_READ_PERMISSION}
