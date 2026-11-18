@@ -27,9 +27,11 @@ Commands:
 
 - `pnpm exec vitest run tests/components/market-chart-workbench-live-candles.component.test.tsx`
 - `pnpm typecheck`
-- `pnpm exec eslint "app/[lang]/(main)/market-charts/market-chart-workbench.tsx" tests/components/market-chart-workbench-live-candles.component.test.tsx tests/e2e/market-chart.spec.ts`
-- `pnpm exec prettier --check "app/[lang]/(main)/market-charts/market-chart-workbench.tsx" tests/components/market-chart-workbench-live-candles.component.test.tsx tests/e2e/market-chart.spec.ts docs/design/evidence/SIGN-452/README.md && git diff --check`
-- `/opt/apps/symphony/runtime/run-fe-browser "$PWD" tests/e2e/market-chart.spec.ts --grep 'renders a quote-updated native candle across responsive viewports|shows calendar errors without discarding candle or annotation data|shows the responsive toolbar and supports keyboard candle inspection' --retries=0`
+- `pnpm exec eslint "app/[lang]/(main)/market-charts/market-chart-workbench.tsx" "app/[lang]/(main)/market-charts/market-chart-candle-client.ts" app/api/market-charts/candles/route.ts tests/components/market-chart-workbench-live-candles.component.test.tsx tests/e2e/market-chart.spec.ts`
+- `pnpm exec prettier --check "app/[lang]/(main)/market-charts/market-chart-workbench.tsx" "app/[lang]/(main)/market-charts/market-chart-candle-client.ts" app/api/market-charts/candles/route.ts tests/components/market-chart-workbench-live-candles.component.test.tsx tests/e2e/market-chart.spec.ts docs/design/evidence/SIGN-452/README.md && git diff --check`
+- `pnpm test:contract`
+- `/opt/apps/symphony/runtime/run-fe-browser "$PWD" tests/e2e/market-chart.spec.ts --grep 'shows calendar errors without discarding candle or annotation data'`
+- `/opt/apps/symphony/runtime/run-fe-browser "$PWD" tests/e2e/market-chart.spec.ts --grep 'allows changing asset while the prior candle request is pending'`
 
 ## Limits and handoff
 
