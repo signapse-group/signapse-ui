@@ -30,7 +30,6 @@ import { toast } from "sonner"
 
 import {
   getMarketChartAnnotations,
-  getMarketChartCandles,
   getMarketChartEconomicCalendarEvents,
 } from "@/app/api/market-charts/action"
 import type { ActionResult } from "@/app/lib/definitions"
@@ -61,6 +60,7 @@ import {
   isMarketChartTimeframe,
 } from "@/app/lib/market-charts/definitions"
 import { EVENT_READ_PERMISSIONS } from "@/app/lib/events/permissions"
+import { requestMarketChartCandles } from "./market-chart-candle-client"
 import { WorkspaceWatchlistAssetListItemResponse } from "@/app/lib/watchlists/definitions"
 import { AppTimeMetadata } from "@/components/app-time-metadata"
 import { useHasAnyPermission } from "@/components/permission-provider"
@@ -3788,7 +3788,6 @@ export function MarketChartWorkbench({
         currentTimestamp: Date.now(),
         timeframe,
       })
-
       setPhase("loading")
       setLoadError(null)
       setAnnotationLoadError(null)
@@ -3812,9 +3811,12 @@ export function MarketChartWorkbench({
 
       initialLoadObserverRef.current.start(loadGeneration)
 
-      let result: Awaited<ReturnType<typeof getMarketChartCandles>>
+      let result: ActionResult<MarketChartCandleResponse>
       try {
-        result = await getMarketChartCandles(request)
+        result = await requestMarketChartCandles(request, {
+          loadError: dictionary.marketCharts.loadError,
+          responseInvalid: dictionary.marketCharts.responseInvalid,
+        })
       } catch (error) {
         initialLoadObserverRef.current.finish(loadGeneration, "error")
         throw error
@@ -3942,6 +3944,7 @@ export function MarketChartWorkbench({
       }
     },
     [
+      dictionary.marketCharts.loadError,
       dictionary.marketCharts.responseInvalid,
       startAnnotationSupplementalLoad,
       startCalendarHistorySupplementalLoad,
@@ -4216,6 +4219,7 @@ export function MarketChartWorkbench({
         }
 
         pendingRouteSelectionRef.current = null
+        return
       }
 
       if (timeframeParam && !isMarketChartTimeframe(timeframeParam)) {
@@ -4291,7 +4295,10 @@ export function MarketChartWorkbench({
     loadGenerationRef.current += 1
     setAnnotationLoadError(null)
     setCalendarHistoryLoadError(null)
-    pendingRouteSelectionRef.current = nextSelection
+    const asset = nextSelection.assetId
+      ? findWatchlistAsset(watchlistAssets, nextSelection.assetId)
+      : null
+    pendingRouteSelectionRef.current = asset ? nextSelection : null
     setSelection(nextSelection)
     setErrors({})
 
@@ -4320,6 +4327,9 @@ export function MarketChartWorkbench({
       "",
       `${pathname}?${createQueryString(nextSelection)}`
     )
+    if (asset) {
+      void loadCandles(asset, nextSelection.timeframe)
+    }
   }
 
   function handleAssetChange(assetId: string) {
@@ -4555,7 +4565,10 @@ export function MarketChartWorkbench({
       return emptyPage()
     }
 
-    const result = await getMarketChartCandles(request)
+    const result = await requestMarketChartCandles(request, {
+      loadError: dictionary.marketCharts.loadError,
+      responseInvalid: dictionary.marketCharts.responseInvalid,
+    })
 
     if (loadGenerationRef.current !== loadGeneration) {
       return emptyPage()

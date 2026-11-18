@@ -38,8 +38,11 @@ vi.mock("@/app/lib/i18n/dictionaries", () => ({
   hasLocale: vi.fn(),
 }))
 
+vi.mock("@/app/[lang]/(main)/market-charts/market-chart-candle-client", () => ({
+  requestMarketChartCandles: getCandles,
+}))
+
 vi.mock("@/app/api/market-charts/action", () => ({
-  getMarketChartCandles: getCandles,
   getMarketChartAnnotations: getAnnotations,
   getMarketChartEconomicCalendarEvents: getCalendarEvents,
 }))
@@ -1672,7 +1675,8 @@ describe("Market chart quote-driven candle flow", () => {
 
     await waitFor(() => {
       expect(getCandles).toHaveBeenLastCalledWith(
-        expect.objectContaining({ assetId: 102, timeframe: "1m" })
+        expect.objectContaining({ assetId: 102, timeframe: "1m" }),
+        expect.any(Object)
       )
       expect(FakeEventSource.current).not.toBe(bitcoinSource)
       expect(
@@ -1722,7 +1726,8 @@ describe("Market chart quote-driven candle flow", () => {
 
     await waitFor(() => {
       expect(getCandles).toHaveBeenLastCalledWith(
-        expect.objectContaining({ assetId: 102, timeframe: "5m" })
+        expect.objectContaining({ assetId: 102, timeframe: "5m" }),
+        expect.any(Object)
       )
       expect(FakeEventSource.current).not.toBe(goldSource)
       expect(
