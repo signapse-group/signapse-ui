@@ -4415,8 +4415,7 @@ export function MarketChartWorkbench({
     setCalendarHistoryLoadError(null)
 
     if (
-      !checked ||
-      currentImpacts.includes(impact) ||
+      !nextImpacts.length ||
       phase !== "success" ||
       !chartData?.candles.length ||
       !selectedAsset
@@ -4432,7 +4431,7 @@ export function MarketChartWorkbench({
       },
       chartData.timeframe,
       loadGenerationRef.current,
-      [impact],
+      nextImpacts,
       nextImpacts.join(","),
       chartData
     )
@@ -4593,7 +4592,11 @@ export function MarketChartWorkbench({
 
     if (annotationLayerEnabledRef.current) {
       startAnnotationSupplementalLoad(
-        displayedRange,
+        {
+          assetId: request.assetId,
+          from: displayedInterval.from,
+          to: request.to,
+        },
         request.timeframe,
         loadGeneration
       )

@@ -930,16 +930,14 @@ describe("Market chart quote-driven candle flow", () => {
       from: "2026-08-19T07:00:00.000Z",
       to: "2026-08-19T10:00:00.000Z",
       candles: [
-        "2026-08-19T07:00:00.000Z",
-        "2026-08-19T08:00:00.000Z",
-        "2026-08-19T09:00:00.000Z",
-      ].map((time, index) => ({
-        time,
-        open: 4200 + index,
-        high: 4210 + index,
-        low: 4190 + index,
-        close: 4205 + index,
-      })),
+        {
+          time: "2026-08-19T07:00:00.000Z",
+          open: 4200,
+          high: 4210,
+          low: 4190,
+          close: 4205,
+        },
+      ],
     }
     getCandles.mockImplementation(async () =>
       getCandles.mock.calls.length === 1
@@ -977,10 +975,14 @@ describe("Market chart quote-driven candle flow", () => {
         screen.getByTestId("chart-rest-candles").parentElement
       ).toHaveClass("visible")
     })
-    const expectedRange = {
+    const expectedAnnotationRange = {
       assetId: 101,
       from: "2026-08-19T07:00:00.000Z",
       to: "2026-08-19T10:00:00.000Z",
+    }
+    const expectedCalendarRange = {
+      ...expectedAnnotationRange,
+      to: "2026-08-19T08:00:00.000Z",
     }
     const olderPageComplete = new Promise<void>((resolve) => {
       window.addEventListener(
@@ -995,9 +997,9 @@ describe("Market chart quote-driven candle flow", () => {
     })
     await waitFor(() => {
       expect(getCandles).toHaveBeenCalledTimes(2)
-      expect(getAnnotations).toHaveBeenCalledWith(expectedRange)
+      expect(getAnnotations).toHaveBeenCalledWith(expectedAnnotationRange)
       expect(getCalendarEvents).toHaveBeenCalledWith({
-        ...expectedRange,
+        ...expectedCalendarRange,
         impact: ["HIGH"],
       })
       expect(screen.getByTestId("chart-rest-candles")).toHaveTextContent(
@@ -1028,6 +1030,135 @@ describe("Market chart quote-driven candle flow", () => {
       expect(annotations.find(({ id }) => id === "join-10")?.time).toBe(
         "2026-08-19T10:00:00.000Z"
       )
+    })
+  })
+
+  it("reloads all selected calendar impacts after rapid filter changes", async () => {
+    const initialHigh = createDeferred<{
+      success: true
+      data: MarketChartEconomicCalendarEventResponse[]
+    }>()
+    const highAndMedium = createDeferred<{
+      success: true
+      data: MarketChartEconomicCalendarEventResponse[]
+    }>()
+    const mediumOnly = createDeferred<{
+      success: true
+      data: MarketChartEconomicCalendarEventResponse[]
+    }>()
+    const historicalEvent = (
+      id: number,
+      title: string,
+      impact: "HIGH" | "MEDIUM"
+    ): MarketChartEconomicCalendarEventResponse => ({
+      id,
+      assetId: 101,
+      impact,
+      scheduledAt: "2026-08-23T00:00:30.000Z",
+      status: "AVAILABLE",
+      time: "2026-08-23T00:00:30.000Z",
+      title,
+    })
+    const currentMedium = historicalEvent(701, "Current medium", "MEDIUM")
+    const staleMedium = historicalEvent(702, "Stale medium", "MEDIUM")
+    const staleHigh = historicalEvent(703, "Stale high", "HIGH")
+
+    getCandles.mockResolvedValue({
+      success: true,
+      data: createCandleResponse(101, "1m"),
+    })
+    getCalendarEvents.mockImplementation((request) => {
+      if (Date.parse(request.to) > Date.now()) {
+        return Promise.resolve({ success: true, data: [] })
+      }
+
+      switch (request.impact.join(",")) {
+        case "HIGH":
+          return initialHigh.promise
+        case "HIGH,MEDIUM":
+          return highAndMedium.promise
+        case "MEDIUM":
+          return mediumOnly.promise
+        default:
+          throw new Error(`Unexpected impact filter: ${request.impact}`)
+      }
+    })
+
+    render(
+      <LocalizationProvider locale="vi" dictionary={viDictionary}>
+        <MarketChartWorkbench
+          watchlistAssets={watchlistAssets}
+          watchlistError={null}
+        />
+      </LocalizationProvider>
+    )
+
+    const historicalRequests = () =>
+      getCalendarEvents.mock.calls
+        .map(([request]) => request)
+        .filter((request) => Date.parse(request.to) <= Date.now())
+
+    await waitFor(() => {
+      expect(
+        historicalRequests().some(
+          (request) => request.impact.join(",") === "HIGH"
+        )
+      ).toBe(true)
+    })
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: viDictionary.marketCharts.controls.eventSettingsAria,
+      })
+    )
+    fireEvent.click(
+      screen.getByRole("checkbox", {
+        name: viDictionary.marketCharts.controls.impactOptionLabels.MEDIUM,
+      })
+    )
+
+    await waitFor(() => {
+      expect(
+        historicalRequests().some(
+          (request) => request.impact.join(",") === "HIGH,MEDIUM"
+        )
+      ).toBe(true)
+    })
+
+    fireEvent.click(
+      screen.getByRole("checkbox", {
+        name: viDictionary.marketCharts.controls.impactOptionLabels.HIGH,
+      })
+    )
+
+    await waitFor(() => {
+      expect(
+        historicalRequests().some(
+          (request) => request.impact.join(",") === "MEDIUM"
+        )
+      ).toBe(true)
+    })
+
+    await act(async () => {
+      mediumOnly.resolve({ success: true, data: [currentMedium] })
+    })
+
+    await waitFor(() => {
+      expect(screen.getByTestId("chart-calendar-events")).toHaveTextContent(
+        "Current medium"
+      )
+    })
+
+    await act(async () => {
+      highAndMedium.resolve({ success: true, data: [staleMedium, staleHigh] })
+      initialHigh.resolve({ success: true, data: [staleHigh] })
+    })
+
+    await waitFor(() => {
+      const events = JSON.parse(
+        screen.getByTestId("chart-calendar-events").textContent || "[]"
+      ) as MarketChartEconomicCalendarEventResponse[]
+      expect(events.map((event) => event.title)).toEqual(["Current medium"])
     })
   })
 
