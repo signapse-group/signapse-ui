@@ -2054,6 +2054,9 @@ test.describe("P0 market chart workbench", () => {
   }, testInfo) => {
     await page.clock.install({ time: new Date(MARKET_CHART_FIXTURE_NOW) })
     await page.setViewportSize({ width: 1520, height: 1024 })
+    await page.addInitScript(() =>
+      localStorage.setItem("signapse:market-charts:calendar-layer:v1", "true")
+    )
     await fixture.setScenario(
       "/market-charts/economic-calendar-events",
       "calendar-error",
@@ -2085,17 +2088,79 @@ test.describe("P0 market chart workbench", () => {
     await expect(
       page.getByText("Calendar fixture unavailable", { exact: true })
     ).toHaveCount(0)
-    await expect(
-      page.getByRole("button", { name: "Tải lại dữ liệu mới nhất" })
-    ).toBeVisible()
+    const nextRetry = page
+      .getByTestId("market-chart-next-event-badge")
+      .getByRole("button", {
+        name: "Tải lại dữ liệu mới nhất",
+        exact: true,
+      })
+    const historyRetry = page.getByRole("button", {
+      name: `${calendarError} Tải lại dữ liệu mới nhất`,
+      exact: true,
+    })
+    const annotationMarker = page.getByRole("button", {
+      name: "Mở sự kiện Central bank signals a slower easing path",
+      exact: true,
+    })
+    await expect(nextRetry).toBeVisible()
+    await expect(historyRetry).toBeEnabled()
+    await expect(annotationMarker).toBeVisible()
     const failureScreenshot = await page.screenshot({
-      path: "test-results/SIGN-479-next-refresh-error-wide.png",
+      path: "test-results/SIGN-452-calendar-error-wide-light-1520x1024.png",
       animations: "disabled",
     })
-    await testInfo.attach("SIGN-479-next-refresh-error-wide", {
+    await testInfo.attach("SIGN-452-calendar-error-wide-light-1520x1024", {
       body: failureScreenshot,
       contentType: "image/png",
     })
+
+    for (const [viewport, label] of [
+      [{ width: 1024, height: 768 }, "compact-1024x768"],
+      [{ width: 390, height: 844 }, "mobile-390x844"],
+      [{ width: 360, height: 800 }, "small-mobile-360x800"],
+      [{ width: 760, height: 512 }, "effective-200pct-760x512"],
+    ] as const) {
+      await page.setViewportSize(viewport)
+      await expectNoHorizontalOverflow(page)
+      await expect(historyRetry).toBeVisible()
+      await expect(historyRetry).toBeEnabled()
+      await expect(nextRetry).toBeVisible()
+      await expect(
+        page.getByText("1 mốc sự kiện", { exact: true })
+      ).toBeVisible()
+      await historyRetry.scrollIntoViewIfNeeded()
+      await expect(historyRetry).toBeInViewport()
+      const screenshot = await page.screenshot({
+        path: `test-results/SIGN-452-calendar-error-${label}.png`,
+        fullPage: true,
+        animations: "disabled",
+      })
+      await testInfo.attach(`SIGN-452-calendar-error-${label}`, {
+        body: screenshot,
+        contentType: "image/png",
+      })
+    }
+
+    await page.setViewportSize({ width: 1520, height: 1024 })
+    await historyRetry.focus()
+    await page.keyboard.press("Enter")
+    await expect(historyRetry).toBeEnabled()
+
+    await fixture.setScenario(
+      "/market-charts/economic-calendar-events",
+      "success",
+      "GET"
+    )
+    await historyRetry.click()
+    await expect(historyRetry).toBeHidden()
+    await expect(page.getByTestId("market-chart-next-event-status")).toHaveText(
+      calendarError
+    )
+    await nextRetry.click()
+    await expect(
+      page.getByTestId("market-chart-next-event-status")
+    ).not.toHaveText(calendarError)
+
     await page.keyboard.press("Escape")
     await expect(page.locator("#market-chart-timeframe-selector")).toBeEnabled()
     await page.getByRole("button", { name: "Chú giải sự kiện" }).click()
