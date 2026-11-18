@@ -1,28 +1,37 @@
 # SIGN-641 Graph time-range render evidence
 
-The captures below are from the SIGN-641 candidate in this PR. They were rendered in the issue workspace with the local P0 fixture; the fixture returns a small synthetic graph and does not establish live API integration or QA acceptance.
+These renders use the local P0 fixture. The fixture supplies synthetic Graph data and does not prove live API integration or QA acceptance.
+
+The application renders were captured from `c404d5b`. This follow-up changes only Playwright assertions and evidence files.
 
 ## Accepted design comparison
 
-The accepted references are [SIGN-639](https://signapse-group.atlassian.net/browse/SIGN-639) attachments **10280** (`graph-time-filter-wide.png`) and **10279** (`graph-time-filter-mobile-empty.png`). The wide comparison checks the selector beside the Graph title while graph data is present. The mobile comparison checks the selected seven-day value and all three options above the empty-state card, including its calendar icon and border.
+The approved source is [SIGN-639](https://signapse-group.atlassian.net/browse/SIGN-639): attachment **10280**, `graph-time-filter-wide.png`, and attachment **10279**, `graph-time-filter-mobile-empty.png`. The wide comparison checks the selector beside the Graph title with data present. The mobile comparison checks the selected seven-day value and all three options above the empty state, including its calendar icon and border.
 
-| Source                                                           | Candidate render                                                                            |
-| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| SIGN-639, attachment 10280, Wide, dark, English, 1520×1024       | [Wide graph with seven-day selector](graph-time-range-wide-dark-en-1520x1024.png)           |
-| SIGN-639, attachment 10279, Mobile empty, dark, English, 390×844 | [Mobile empty state with menu open](graph-time-range-empty-menu-mobile-dark-en-390x844.png) |
+| Source                    | Candidate render                                                                      | Viewport, state, theme and sidebar                       |
+| ------------------------- | ------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| SIGN-639 attachment 10280 | [Wide, dark, English](graph-time-range-wide-dark-en-1520x1024.png)                    | 1520×1024; populated Graph; expanded sidebar             |
+| SIGN-639 attachment 10280 | [Wide, light, Vietnamese](graph-time-range-wide-light-vi-1520x1024.png)               | 1520×1024; populated Graph; expanded sidebar             |
+| SIGN-639 attachment 10279 | [Mobile empty, dark, English](graph-time-range-empty-menu-mobile-dark-en-390x844.png) | 390×844; empty Graph; selector menu open; sidebar closed |
 
-The Vietnamese wide render is included to inspect translated labels: [Wide, dark, Vietnamese, 1520×1024](graph-time-range-wide-dark-vi-1520x1024.png).
+The additional Vietnamese wide render is [dark mode, 1520×1024](graph-time-range-wide-dark-vi-1520x1024.png). The selector and selected seven-day value remain visible in the dark mobile empty state. The light mobile empty render is still pending; an older capture was excluded because it predates the candidate commit and does not show the current card/icon treatment.
 
-## Local checks
+## Producer contract
 
-The focused browser case is `tests/e2e/graph-view-time-range.spec.ts`, run through the host fixture wrapper:
+Fetched `https://dev-api.signapse.cloud/v3/api-docs` for dev at 2026-11-18 06:28 UTC. `x-build-revision` was `7d666dead7544a46acc44a28326f12c62f3b3bf6`. `GET /graph-view` accepts optional integer `days` in `[7, 14, 30]`, defaults to 7, and returns an empty `nodes`/`edges` graph as HTTP 200. The operation documents separate 400 workspace/range, 401 authentication, 403 Graph permission, and 500/503 service responses. The consumer action sends the selected range explicitly and validates the returned Graph schema.
 
-```sh
-/opt/apps/symphony/runtime/run-fe-browser "$PWD" tests/e2e/graph-view-time-range.spec.ts
-```
+## Local verification
 
-It verifies the seven-day default on a fresh page load and after reload, keyboard focus and selection of 14 days, touch selection of 30 days, the producer query for each selection, both locales, and no horizontal overflow or clipped empty-state card at 1520, 1440, 1439, 1024, 768, 767, 760 (200% effective width), 390 and 360 CSS pixels. Mobile trigger and option targets measured at least 44px tall.
+- `pnpm exec vitest run tests/api/graph-view-action.test.ts tests/components/graph-view-panel.component.test.tsx tests/core/graph-view-page.test.ts` — 3 files, 19 tests passed.
+- `API_BASE_URL=https://dev-api.signapse.cloud pnpm test:contract -- --live --scope 'GET /graph-view'` — live OpenAPI structural check passed for 1 operation at 2026-11-18 06:30 UTC.
+- Focused ESLint and Prettier checks for the two changed Playwright specs passed.
+- The selected P0 scope is the time-range spec plus Graph workspace, empty/permission/error, missing-workspace and stale-workspace-response cases in `tests/e2e/graph-view-sigma-workspace.spec.ts`. It covers the default/reload, 7/14/30 requests, keyboard focus/selection, touch selection, both locales, no-workspace, Graph 403, empty watchlist vs. no Events, watchlist permission denial, errors, response order and the required responsive widths.
+- Exact P0 command:
 
-The selected empty/permission, missing-workspace and workspace-change cases in `tests/e2e/graph-view-sigma-workspace.spec.ts` also passed through the same host wrapper. Vitest action and component coverage includes query validation, workspace changes and out-of-order responses.
+  ```sh
+  /opt/apps/symphony/runtime/run-fe-browser "$PWD" tests/e2e/graph-view-time-range.spec.ts tests/e2e/graph-view-sigma-workspace.spec.ts --grep 'Graph View time range works across responsive|Sigma workspace graph keeps its watchlist context|Sigma workspace graph preserves graph permission|live Graph View distinguishes empty watchlist from empty graph|live Graph View keeps permission, transport and schema failures distinct|Graph View asks for a workspace when none is selected|Graph View drops a delayed response from the previous workspace|Graph View clears the prior selection after switching workspaces'
+  ```
 
-P0 is fixture-only. QA/coordinator still owns live Graph API, authorization, persistence and feature acceptance on dev.
+- The initial P0 attempt confirmed the selector at 1520/1440px, then timed out because the workspace spec searched for the obsolete Vietnamese launcher name `Mở trợ lý AI`; the current dictionary and rendered page use `Ask Signapse`. Both stale test assertions are now corrected. The host wrapper repeatedly returned `resource_busy` after its 30-second backoff because its interrupted-session fence matches the still-active worker session. The corrected P0 run must be rerun in a fresh worker session. This evidence does not claim a P0 pass.
+
+The responsive checks use the local [Responsive Contract](../../DESIGN.md#responsive-contract), which supplies the execution rules while the Planning reference URL is unavailable. No live Graph feature test was run; QA/coordinator owns live UI, authorization and FE/BE acceptance on dev.

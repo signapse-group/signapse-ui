@@ -211,7 +211,10 @@ for (const width of [1520, 1440, 1439, 1024, 768, 767, 760, 390, 360]) {
       { timeout: 30_000 }
     )
     await page.screenshot({ path: `test-results/sigma-canvas-${width}.png` })
-    await expect(page.getByRole("combobox")).toHaveCount(0)
+    const timeRange = page.getByRole("combobox", {
+      name: "Khoảng thời gian",
+    })
+    await expect(timeRange).toContainText("7 ngày qua")
     await expect(page.getByTestId("graph-demo-re-layout")).toHaveCount(0)
     await expect(
       page.getByTestId("graph-demo-edge-legend").locator('[data-slot="badge"]')
@@ -223,7 +226,7 @@ for (const width of [1520, 1440, 1439, 1024, 768, 767, 760, 390, 360]) {
       .getByTestId("graph-demo-edge-legend")
       .boundingBox())!
     const launcher = (await page
-      .getByRole("button", { name: "Mở trợ lý AI", exact: true })
+      .getByRole("button", { name: "Ask Signapse", exact: true })
       .boundingBox())!
     expect(
       legend.x + legend.width <= launcher.x ||

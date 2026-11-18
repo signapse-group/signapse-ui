@@ -19,6 +19,14 @@ async function tap(page: Page, locator: Locator) {
   await session.detach()
 }
 
+async function setTheme(page: Page, theme: "Dark" | "Light") {
+  await page.getByRole("button", { name: "Choose theme" }).click()
+  await page.getByRole("menuitem", { name: theme, exact: true }).click()
+  await expect(page.locator("html")).toHaveClass(
+    new RegExp(theme.toLowerCase())
+  )
+}
+
 test("Graph View time range works across responsive, keyboard, touch and locale states", async ({
   page,
   fixture,
@@ -35,12 +43,15 @@ test("Graph View time range works across responsive, keyboard, touch and locale 
     "ready",
     { timeout: 30_000 }
   )
-  await page.getByRole("button", { name: "Choose theme" }).click()
-  await page.getByRole("menuitem", { name: "Dark", exact: true }).click()
-  await expect(page.locator("html")).toHaveClass(/dark/)
+  await setTheme(page, "Dark")
   await page.screenshot({
-    path: "test-results/graph-view-time-range-wide-en.png",
+    path: "test-results/graph-time-range-wide-dark-en-1520x1024.png",
   })
+  await setTheme(page, "Light")
+  await page.screenshot({
+    path: "test-results/graph-time-range-wide-light-en-1520x1024.png",
+  })
+  await setTheme(page, "Dark")
 
   let hasKeyboardFocus = false
   for (let tab = 0; tab < 80; tab += 1) {
@@ -99,7 +110,7 @@ test("Graph View time range works across responsive, keyboard, touch and locale 
   await expect(vietnameseRange).toContainText("7 ngày qua")
   await expect(page.locator("html")).toHaveClass(/dark/)
   await page.screenshot({
-    path: "test-results/graph-view-time-range-wide-vi.png",
+    path: "test-results/graph-time-range-wide-dark-vi-1520x1024.png",
   })
 
   await fixture.setScenario("/graph-view", "empty", "GET")
@@ -130,6 +141,7 @@ test("Graph View time range works across responsive, keyboard, touch and locale 
   }
 
   await page.setViewportSize({ width: 390, height: 844 })
+  await setTheme(page, "Light")
   const triggerBox = await mobileRange.boundingBox()
   expect(triggerBox?.height).toBeGreaterThanOrEqual(44)
   await tap(page, mobileRange)
@@ -138,7 +150,14 @@ test("Graph View time range works across responsive, keyboard, touch and locale 
   const optionBox = await thirtyDayOption.boundingBox()
   expect(optionBox?.height).toBeGreaterThanOrEqual(44)
   await page.screenshot({
-    path: "test-results/graph-view-time-range-mobile-empty-en.png",
+    path: "test-results/graph-time-range-empty-menu-mobile-light-en-390x844.png",
+  })
+  await page.keyboard.press("Escape")
+  await setTheme(page, "Dark")
+  await tap(page, mobileRange)
+  await expect(thirtyDayOption).toBeVisible()
+  await page.screenshot({
+    path: "test-results/graph-time-range-empty-menu-mobile-dark-en-390x844.png",
   })
   await tap(page, thirtyDayOption)
   await expect(mobileRange).toContainText("Last 30 days")
