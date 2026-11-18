@@ -34,4 +34,4 @@ Commands:
 
 No live feature test or dev before/after measurement was performed. The coordinator owns live dev checks for open, asset change and timeframe change, including real-time data, event layers, rapid selection changes and annotation backfill boundaries. The source API contract was checked against the published dev OpenAPI at `https://dev-api.signapse.cloud/v3/api-docs` (revision `9f9fae61193e2ff252ddea712789548b96b9491c`); no producer or business contract change was made. Browser-native 200% zoom and dark-theme rendering were not included in this focused evidence set.
 
-The implementation commit and evidence commit will be published together in the PR. Required PR CI and Preview checks, then the coordinator's live dev measurements and feature checks, remain later handoff steps.
+Current-head `Verify / check` and Vercel Preview must pass before In Review. The coordinator owns live dev measurements and feature checks after merge.
