@@ -3689,8 +3689,8 @@ Which asset did you mean? The available data is limited. Add TSLA to your watchl
                 {
                   id: 705,
                   assetId: 101,
-                  assetName: "Akamai Technologies",
-                  assetSymbol: "AKAM",
+                  assetName: "",
+                  assetSymbol: "",
                   assetType: "EQUITY",
                   direction: "MIXED",
                   timeHorizon: "LONG_TERM",

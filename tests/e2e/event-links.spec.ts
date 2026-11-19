@@ -40,10 +40,15 @@ async function saveScreenshot(
   name: string,
   fullPage = false,
   evidenceName?: string,
-  evidenceIssue = "SIGN-287"
+  evidenceIssue = "SIGN-287",
+  locator?: Locator
 ) {
   const path = testInfo.outputPath(name)
-  await page.screenshot({ path, fullPage })
+  if (locator) {
+    await locator.screenshot({ path })
+  } else {
+    await page.screenshot({ path, fullPage })
+  }
   await testInfo.attach(name, { path, contentType: "image/png" })
 
   const evidenceEnv = `${evidenceIssue.replace("-", "")}_CAPTURE_EVIDENCE`
@@ -63,6 +68,40 @@ function getMarketReactionSection(page: Page, heading: string) {
   return page.locator("section").filter({
     has: page.getByRole("heading", { level: 2, name: heading, exact: true }),
   })
+}
+
+function contrastRatio(foreground: string, background: string) {
+  const luminance = (color: string) => {
+    const channels = color.match(/\d+(?:\.\d+)?/g)?.slice(0, 3).map(Number)
+    if (!channels || channels.length !== 3) {
+      throw new Error(`Expected an RGB color, received ${color}`)
+    }
+
+    const [red, green, blue] = channels.map((channel) => {
+      const value = channel / 255
+      return value <= 0.04045
+        ? value / 12.92
+        : ((value + 0.055) / 1.055) ** 2.4
+    })
+
+    return 0.2126 * red + 0.7152 * green + 0.0722 * blue
+  }
+
+  const [lighter, darker] = [
+    luminance(foreground),
+    luminance(background),
+  ].sort((left, right) => right - left)
+
+  return (lighter + 0.05) / (darker + 0.05)
+}
+
+async function getBadgeContrast(locator: Locator) {
+  const colors = await locator.evaluate((element) => {
+    const styles = window.getComputedStyle(element)
+    return { foreground: styles.color, background: styles.backgroundColor }
+  })
+
+  return contrastRatio(colors.foreground, colors.background)
 }
 
 test.describe("Event asset and theme roles", () => {
@@ -356,7 +395,7 @@ test.describe("Event AI forecast reactions", () => {
     await expect(section.getByText("4 total", { exact: true })).toBeVisible()
 
     for (const [copy, variant] of [
-      ["1 bullish", "active"],
+      ["1 bullish", "positive"],
       ["1 neutral", "secondary"],
       ["1 bearish", "destructive"],
       ["1 mixed", "warning"],
@@ -371,10 +410,9 @@ test.describe("Event AI forecast reactions", () => {
       .filter({ hasText: "AKAM" })
       .filter({ hasText: "Short term" })
     await expect(bullish.getByText("Akamai Technologies")).toBeVisible()
-    await expect(bullish.getByText("Bullish", { exact: true })).toHaveAttribute(
-      "data-variant",
-      "active"
-    )
+    const bullishBadge = bullish.getByText("Bullish", { exact: true })
+    await expect(bullishBadge).toHaveAttribute("data-variant", "positive")
+    expect(await getBadgeContrast(bullishBadge)).toBeGreaterThanOrEqual(4.5)
     await expect(bullish.getByText("84%", { exact: true })).toBeVisible()
     await expect(
       bullish.getByText("AI reasoning", { exact: true })
@@ -444,7 +482,68 @@ test.describe("Event AI forecast reactions", () => {
       "SIGN-291"
     )
 
+    await page.emulateMedia({ colorScheme: "light" })
+    expect(await getBadgeContrast(bullishBadge)).toBeGreaterThanOrEqual(4.5)
+    await saveScreenshot(
+      page,
+      testInfo,
+      "event-forecast-wide-light-en.png",
+      true,
+      "event-detail-wide-light-en-1520x1280.png",
+      "SIGN-291"
+    )
+
+    // 760×512 is the effective CSS viewport for 1520×1024 at 200% zoom.
+    await page.setViewportSize({ width: 760, height: 512 })
+    await page.goto("/en/events/61")
+    const zoomSection = getMarketReactionSection(
+      page,
+      enDictionary.events.marketReactions
+    )
+    await expect(zoomSection.locator('[data-slot="card"]')).toHaveCount(4)
+    await expect(
+      zoomSection.getByText(enDictionary.events.marketReactionsDisclosure, {
+        exact: true,
+      })
+    ).toBeVisible()
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth)
+    ).toBeLessThanOrEqual(760)
+    await saveScreenshot(
+      page,
+      testInfo,
+      "event-forecast-zoom-200-en.png",
+      false,
+      "event-market-reactions-zoom-200-equivalent-en-760x512.png",
+      "SIGN-291",
+      zoomSection
+    )
+    const lastReasoning = zoomSection
+      .locator('[data-slot="card"]')
+      .nth(3)
+      .getByText(
+        "Cloud demand could lift holdings, while higher infrastructure costs could pressure margins.",
+        { exact: true }
+    )
+    await lastReasoning.evaluate((element) =>
+      element.scrollIntoView({ block: "center" })
+    )
+    const [reasoningBounds, assistantBounds] = await Promise.all([
+      lastReasoning.boundingBox(),
+      page.locator("button").filter({ hasText: "Ask Signapse" }).boundingBox(),
+    ])
+    expect(reasoningBounds).not.toBeNull()
+    expect(assistantBounds).not.toBeNull()
+    if (!reasoningBounds || !assistantBounds) {
+      throw new Error("Expected the forecast and assistant launcher to render")
+    }
+    expect(reasoningBounds.y + reasoningBounds.height).toBeLessThan(
+      assistantBounds.y
+    )
+
+    await page.emulateMedia({ colorScheme: "dark" })
     await page.setViewportSize({ width: 390, height: 844 })
+    await page.goto("/en/events/61")
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth)
     ).toBeLessThanOrEqual(390)
@@ -601,8 +700,22 @@ test.describe("Event AI forecast reactions", () => {
     await expect(
       card.getByText(enDictionary.events.noReasoning, { exact: true })
     ).toBeVisible()
+    await expect(card.getByText("Asset ID 101", { exact: true })).toBeVisible()
     await expect(
       section.getByText(/Observed at|Reference timestamp/i)
     ).toHaveCount(0)
+
+    await fixture.setScenario(
+      "/events",
+      "event-market-reactions-null-fields",
+      "GET"
+    )
+    await page.goto("/vi/events/61")
+    const localizedCard = getMarketReactionSection(
+      page,
+      viDictionary.events.marketReactions
+    ).locator('[data-slot="card"]')
+    await expect(localizedCard.getByText("Mã tài sản 101", { exact: true }))
+      .toBeVisible()
   })
 })

@@ -18,6 +18,7 @@ type BadgeVariant =
   | "outline"
   | "destructive"
   | "info"
+  | "positive"
   | "warning"
   | "active"
 
@@ -179,7 +180,7 @@ export function getEventMarketReactionDirectionVariant(
 ): BadgeVariant {
   switch (direction) {
     case "BULLISH":
-      return "active"
+      return "positive"
     case "BEARISH":
       return "destructive"
     case "MIXED":

@@ -1044,6 +1044,7 @@ export const vi = {
     noAssetsTitle: "Chưa có tài sản liên quan",
     noAssetsDescription:
       "Sự kiện này chưa có liên kết tài sản trong dữ liệu hiện tại.",
+    assetIdFallback: "Mã tài sản {id}",
     relatedThemes: "Chủ đề liên quan",
     noThemesTitle: "Chưa có chủ đề liên quan",
     noThemesDescription:

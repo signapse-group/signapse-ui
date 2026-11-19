@@ -180,8 +180,13 @@ function MarketReactionCard({
   dictionary: Dictionary
   locale: AppLocale
 }) {
-  const assetLabel = reaction.assetSymbol.trim()
-  const showAssetName = reaction.assetName.trim() !== assetLabel
+  const assetSymbol = reaction.assetSymbol.trim()
+  const assetName = reaction.assetName.trim()
+  const assetLabel =
+    assetSymbol ||
+    assetName ||
+    formatMessage(dictionary.events.assetIdFallback, { id: reaction.assetId })
+  const showAssetName = assetName.length > 0 && assetName !== assetLabel
 
   return (
     <Card size="sm">
@@ -208,7 +213,7 @@ function MarketReactionCard({
 
         <CardTitle>{assetLabel}</CardTitle>
         {showAssetName ? (
-          <CardDescription>{reaction.assetName}</CardDescription>
+          <CardDescription>{assetName}</CardDescription>
         ) : null}
 
         <CardAction className="row-span-1 row-start-2 text-right text-xs text-muted-foreground">

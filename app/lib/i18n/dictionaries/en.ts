@@ -1050,6 +1050,7 @@ export const en: Dictionary = {
     relatedAssets: "Related assets",
     noAssetsTitle: "No related assets yet",
     noAssetsDescription: "This event has no asset links in the current data.",
+    assetIdFallback: "Asset ID {id}",
     relatedThemes: "Related themes",
     noThemesTitle: "No related themes yet",
     noThemesDescription: "This event has no theme links in the current data.",
