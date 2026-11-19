@@ -423,6 +423,7 @@ test.describe("Event AI forecast reactions", () => {
       enDictionary.events.marketReactions
     )
     const cards = section.locator('[data-slot="card"]')
+    const reactionGrid = cards.first().locator("xpath=..")
 
     await expect(section).toBeVisible()
     await expect(cards).toHaveCount(4)
@@ -498,6 +499,23 @@ test.describe("Event AI forecast reactions", () => {
     await expect(
       section.getByText(/Observed at|Reference timestamp/i)
     ).toHaveCount(0)
+
+    for (const [width, columns] of [
+      [767, 1],
+      [768, 2],
+      [1439, 2],
+      [1440, 4],
+      [1520, 4],
+    ]) {
+      await page.setViewportSize({ width, height: 1280 })
+      const renderedColumns = await reactionGrid.evaluate(
+        (grid) => getComputedStyle(grid).gridTemplateColumns.split(/\s+/).length
+      )
+      expect(renderedColumns, `expected ${columns} columns at ${width}px`).toBe(
+        columns
+      )
+    }
+    await page.setViewportSize({ width: 1520, height: 1280 })
 
     const requests = (await fixture.state()).requests
     const eventRequest = requests.find(

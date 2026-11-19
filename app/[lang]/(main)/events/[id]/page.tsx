@@ -530,7 +530,7 @@ async function FetchEventData({
               <p className="text-sm leading-5 text-muted-foreground md:leading-6">
                 {dictionary.events.marketReactionsDisclosure}
               </p>
-              <div className="grid gap-2 min-[1440px]:grid-cols-4 md:grid-cols-2 md:gap-4">
+              <div className="grid gap-2 min-[1440px]:grid-cols-4 md:gap-4 md:max-[1440px]:grid-cols-2">
                 {marketReactions.map((reaction) => (
                   <MarketReactionCard
                     key={reaction.id}
