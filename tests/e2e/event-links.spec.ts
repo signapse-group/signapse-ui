@@ -103,7 +103,43 @@ test.describe("Event asset and theme roles", () => {
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth)
     ).toBeLessThanOrEqual(390)
-    await saveScreenshot(page, testInfo, "event-detail-mobile-vi.png", true)
+    await saveScreenshot(
+      page,
+      testInfo,
+      "event-detail-mobile-vi.png",
+      true,
+      "event-detail-mobile-dark-vi-390x844.png"
+    )
+
+    for (const width of [360, 720]) {
+      await page.setViewportSize({ width, height: 900 })
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth)
+      ).toBeLessThanOrEqual(width)
+      await expect(
+        page.getByText("Chủ thể chính", { exact: true })
+      ).toBeVisible()
+      await expect(
+        page.getByText("Tài sản bị ảnh hưởng", { exact: true })
+      ).toBeVisible()
+      await expect(
+        page.getByText("Tài sản tham chiếu", { exact: true })
+      ).toBeVisible()
+      await expect(
+        page.getByText("Chủ đề chính", { exact: true })
+      ).toBeVisible()
+      await expect(page.getByText("Chủ đề phụ", { exact: true })).toBeVisible()
+
+      if (width === 720) {
+        await saveScreenshot(
+          page,
+          testInfo,
+          "event-detail-effective-200-vi.png",
+          true,
+          "event-detail-dark-vi-effective-720x900.png"
+        )
+      }
+    }
 
     for (const [section, screenshot] of [
       [viDictionary.events.relatedAssets, "event-detail-mobile-assets-vi.png"],
@@ -171,7 +207,9 @@ test.describe("Event asset and theme roles", () => {
     for (const viewport of [
       { width: 1520, height: 1440, placement: "right" },
       { width: 1024, height: 900, placement: "bottom" },
+      { width: 720, height: 900, placement: "bottom" },
       { width: 390, height: 844, placement: "bottom" },
+      { width: 360, height: 844, placement: "bottom" },
     ]) {
       await page.setViewportSize({
         width: viewport.width,
@@ -181,22 +219,55 @@ test.describe("Event asset and theme roles", () => {
         page.locator("[data-quick-detail-placement]")
       ).toHaveAttribute("data-quick-detail-placement", viewport.placement)
       await expect(dialog).toBeVisible()
+      await expect(
+        dialog.getByRole("link", { name: viDictionary.common.openFullPage })
+      ).toHaveAttribute("href", "/vi/events/61")
+      await expect(
+        dialog.getByText("Chủ thể chính", { exact: true })
+      ).toBeVisible()
+      await expect(
+        dialog.getByText("Tài sản bị ảnh hưởng", { exact: true })
+      ).toBeVisible()
+      await expect(
+        dialog.getByText("Tài sản tham chiếu", { exact: true })
+      ).toBeVisible()
+      await expect(
+        dialog.getByText("Chủ đề chính", { exact: true })
+      ).toBeVisible()
+      await expect(
+        dialog.getByText("Chủ đề phụ", { exact: true })
+      ).toBeVisible()
       expect(
         await page.evaluate(() => document.documentElement.scrollWidth)
       ).toBeLessThanOrEqual(viewport.width)
 
       if (viewport.width === 1024) {
         await dialog
-          .getByRole("heading", { name: viDictionary.events.relatedAssets })
+          .getByRole("heading", { name: viDictionary.events.relatedThemes })
           .scrollIntoViewIfNeeded()
-        await saveScreenshot(page, testInfo, "quick-event-compact-vi.png")
+        await saveScreenshot(
+          page,
+          testInfo,
+          "quick-event-compact-themes-vi.png",
+          false,
+          "quick-event-compact-dark-vi-1024x900-assets-and-themes.png"
+        )
       }
 
-      if (viewport.width === 390) {
+      if (viewport.width === 720) {
         await dialog
           .getByRole("heading", { name: viDictionary.events.relatedAssets })
           .scrollIntoViewIfNeeded()
-        await saveScreenshot(page, testInfo, "quick-event-mobile-assets-vi.png")
+        await saveScreenshot(
+          page,
+          testInfo,
+          "quick-event-effective-200-assets-vi.png",
+          false,
+          "quick-event-dark-vi-effective-720x900-assets-and-themes.png"
+        )
+      }
+
+      if (viewport.width === 390) {
         await dialog
           .getByRole("heading", { name: viDictionary.events.relatedThemes })
           .scrollIntoViewIfNeeded()
