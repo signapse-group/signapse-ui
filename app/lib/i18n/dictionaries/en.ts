@@ -1089,6 +1089,8 @@ export const en: Dictionary = {
     assetTypeLabels: {
       COMMODITY: "Commodity",
       CRYPTO: "Crypto",
+      EQUITY: "Equity",
+      ETF: "ETF",
       FX: "FX",
       INDEX: "Index",
     },

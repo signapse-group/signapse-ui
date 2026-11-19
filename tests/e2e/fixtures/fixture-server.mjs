@@ -3508,10 +3508,70 @@ Which asset did you mean? The available data is limited. Add TSLA to your watchl
       }
     }
 
+    const scenario = getScenario(state, method, "/events")
+    const isVietnamese = String(locale ?? "en")
+      .toLowerCase()
+      .startsWith("vi")
+    let status = event.status
+    let assets = []
+    let themes = []
+
+    if (scenario === "event-links") {
+      assets = [
+        {
+          assetId: 101,
+          assetName: "SPDR S&P 500 ETF Trust",
+          assetSymbol: "SPY",
+          assetType: "ETF",
+          relationType: "PRIMARY_SUBJECT",
+          weight: 1,
+        },
+        {
+          assetId: 102,
+          assetName: "JPMorgan Chase & Co.",
+          assetSymbol: "JPM",
+          assetType: "EQUITY",
+          relationType: "AFFECTED_ASSET",
+          weight: 0.65,
+        },
+        {
+          assetId: 103,
+          assetName: "US Dollar Index",
+          assetSymbol: "DXY",
+          assetType: "INDEX",
+          relationType: "REFERENCE_ASSET",
+          weight: 0.35,
+        },
+      ]
+      themes = [
+        {
+          themeId: 201,
+          themeTitle: isVietnamese ? "Lãi suất" : "Interest rates",
+          themeSlug: "interest-rates",
+          relationType: "PRIMARY_THEME",
+          weight: 0.9,
+        },
+        {
+          themeId: 202,
+          themeTitle: isVietnamese
+            ? "Thị trường trái phiếu"
+            : "Treasury markets",
+          themeSlug: "treasury-markets",
+          relationType: "SECONDARY_THEME",
+          weight: 0.5,
+        },
+      ]
+    } else if (scenario === "event-empty-no-match") {
+      status = "ENRICHMENT_NO_MATCH"
+    } else if (scenario === "event-empty-failed") {
+      status = "ENRICHMENT_FAILED"
+    }
+
     return {
       ...event,
-      assets: [],
-      themes: [],
+      status,
+      assets,
+      themes,
       evidence:
         id === 61 || id === 63
           ? [

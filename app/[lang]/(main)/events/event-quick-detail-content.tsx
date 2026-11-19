@@ -20,10 +20,8 @@ import { Badge } from "@/components/ui/badge"
 import { buttonVariants } from "@/components/ui/button"
 import { AppTimeMetadata } from "@/components/app-time-metadata"
 
-import {
-  getEventStatusLabel,
-  getEventStatusVariant,
-} from "./event-presentation"
+import { getEventAssetRelationVariant } from "./event-presentation"
+import { EventSectionEmpty } from "./event-section-empty"
 
 function formatDateTime(
   value: string | null | undefined,
@@ -99,16 +97,11 @@ export function EventQuickDetailContent({
   const evidenceItems = event.evidence ?? []
   const assets = event.assets ?? []
   const primaryAssets = assets.slice(0, 4)
+  const themes = event.themes ?? []
 
   return (
     <div className="flex flex-col gap-5">
       <section className="flex flex-col gap-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge variant={getEventStatusVariant(event.status)}>
-            {getEventStatusLabel(event.status, dictionary)}
-          </Badge>
-        </div>
-
         <p className="text-sm leading-6 text-muted-foreground">
           {event.description?.trim() || dictionary.events.detailNoDescription}
         </p>
@@ -130,10 +123,10 @@ export function EventQuickDetailContent({
       </dl>
 
       <section className="flex flex-col gap-3">
-        <div className="flex items-center gap-2 text-sm font-semibold">
-          <GitBranch className="size-4 text-muted-foreground" />
+        <h3 className="flex items-center gap-2 text-sm font-semibold tracking-wide text-muted-foreground uppercase">
+          <GitBranch aria-hidden="true" className="size-4" />
           {dictionary.events.mainEvidence}
-        </div>
+        </h3>
 
         {evidenceItems.length ? (
           <div className="flex flex-col gap-3">
@@ -223,12 +216,12 @@ export function EventQuickDetailContent({
         )}
       </section>
 
-      {primaryAssets.length ? (
-        <section className="flex flex-col gap-3">
-          <div className="flex items-center gap-2 text-sm font-semibold">
-            <Layers3 className="size-4 text-muted-foreground" />
-            {dictionary.events.relatedAssets}
-          </div>
+      <section className="flex flex-col gap-3">
+        <h3 className="flex items-center gap-2 text-sm font-semibold tracking-wide text-muted-foreground uppercase">
+          <Layers3 aria-hidden="true" className="size-4" />
+          {dictionary.events.relatedAssets}
+        </h3>
+        {primaryAssets.length ? (
           <div className="grid gap-2 sm:grid-cols-2">
             {primaryAssets.map((asset, index) => (
               <div
@@ -242,7 +235,9 @@ export function EventQuickDetailContent({
                     </Badge>
                   ) : null}
                   {asset.relationType ? (
-                    <Badge variant="secondary">
+                    <Badge
+                      variant={getEventAssetRelationVariant(asset.relationType)}
+                    >
                       {
                         dictionary.events.assetRelationLabels[
                           asset.relationType
@@ -264,8 +259,47 @@ export function EventQuickDetailContent({
               </div>
             ))}
           </div>
-        </section>
-      ) : null}
+        ) : (
+          <EventSectionEmpty
+            title={dictionary.events.noAssetsTitle}
+            description={dictionary.events.noAssetsDescription}
+          />
+        )}
+      </section>
+
+      <section className="flex flex-col gap-3">
+        <h3 className="flex items-center gap-2 text-sm font-semibold tracking-wide text-muted-foreground uppercase">
+          <Layers3 aria-hidden="true" className="size-4" />
+          {dictionary.events.relatedThemes}
+        </h3>
+        {themes.length ? (
+          <div className="grid gap-2 sm:grid-cols-2">
+            {themes.map((theme, index) => (
+              <div
+                key={`${theme.themeId}-${index}`}
+                className="rounded-lg border bg-muted/20 p-3"
+              >
+                {theme.relationType ? (
+                  <Badge variant="secondary">
+                    {dictionary.events.themeRelationLabels[theme.relationType]}
+                  </Badge>
+                ) : null}
+                <div className="mt-2 text-sm font-medium">
+                  {theme.themeTitle || dictionary.events.noThemeName}
+                </div>
+                <div className="mt-1 text-xs text-muted-foreground">
+                  {theme.themeSlug || dictionary.events.noThemeSlug}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <EventSectionEmpty
+            title={dictionary.events.noThemesTitle}
+            description={dictionary.events.noThemesDescription}
+          />
+        )}
+      </section>
 
       <section className="rounded-lg border bg-muted/20 p-3">
         <AppTimeMetadata icon={Calendar}>

@@ -6,12 +6,13 @@ import {
   EventMarketReactionDerivationResult,
   EventMarketReactionDirection,
   EventMarketReactionTimeHorizon,
+  EventAssetRelationType,
   EventStatus,
   PendingEventMarketReactionDerivationBatchResult,
   PendingEventEnrichmentBatchResult,
 } from "@/app/lib/events/definitions"
 
-type BadgeVariant = "default" | "secondary" | "outline" | "destructive"
+type BadgeVariant = "default" | "secondary" | "outline" | "destructive" | "info"
 
 export function getEventStatusLabel(
   status: EventStatus | undefined,
@@ -35,6 +36,19 @@ export function getEventStatusVariant(status?: string): BadgeVariant {
     case "ENRICHMENT_NO_MATCH":
     case "ARCHIVED":
     default:
+      return "outline"
+  }
+}
+
+export function getEventAssetRelationVariant(
+  relationType: EventAssetRelationType
+): Exclude<BadgeVariant, "default" | "destructive"> {
+  switch (relationType) {
+    case "PRIMARY_SUBJECT":
+      return "info"
+    case "AFFECTED_ASSET":
+      return "secondary"
+    case "REFERENCE_ASSET":
       return "outline"
   }
 }
