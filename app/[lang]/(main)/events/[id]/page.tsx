@@ -190,7 +190,7 @@ function MarketReactionCard({
 
   return (
     <Card size="sm">
-      <CardHeader className="gap-3">
+      <CardHeader className="gap-1 md:gap-3">
         <div className="col-span-full flex flex-wrap items-center gap-2">
           <Badge variant="outline">
             {dictionary.events.assetTypeLabels[reaction.assetType]}
@@ -212,9 +212,7 @@ function MarketReactionCard({
         </div>
 
         <CardTitle>{assetLabel}</CardTitle>
-        {showAssetName ? (
-          <CardDescription>{assetName}</CardDescription>
-        ) : null}
+        {showAssetName ? <CardDescription>{assetName}</CardDescription> : null}
 
         <CardAction className="row-span-1 row-start-2 text-right text-xs text-muted-foreground">
           <div>{dictionary.events.confidence}</div>
@@ -224,7 +222,7 @@ function MarketReactionCard({
         </CardAction>
       </CardHeader>
 
-      <CardContent className="flex flex-col gap-3">
+      <CardContent className="flex flex-col gap-2 md:gap-3">
         <div className="flex flex-col gap-1">
           <p className="text-xs font-medium text-muted-foreground">
             {dictionary.events.marketReactionReasoning}
@@ -469,7 +467,7 @@ async function FetchEventData({
           )}
         </section>
 
-        <section className="flex flex-col gap-4">
+        <section className="flex flex-col gap-2 md:gap-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <SectionHeading
               title={dictionary.events.marketReactions}
@@ -529,10 +527,10 @@ async function FetchEventData({
             </div>
           ) : marketReactions.length > 0 ? (
             <>
-              <p className="text-sm leading-6 text-muted-foreground">
+              <p className="text-sm leading-5 text-muted-foreground md:leading-6">
                 {dictionary.events.marketReactionsDisclosure}
               </p>
-              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="grid gap-2 min-[1440px]:grid-cols-4 md:grid-cols-2 md:gap-4">
                 {marketReactions.map((reaction) => (
                   <MarketReactionCard
                     key={reaction.id}

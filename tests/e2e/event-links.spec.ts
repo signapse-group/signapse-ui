@@ -70,27 +70,66 @@ function getMarketReactionSection(page: Page, heading: string) {
   })
 }
 
+function getVisibleTextOverlaps(
+  cards: Locator,
+  overlay: { x: number; y: number; width: number; height: number }
+) {
+  return cards.evaluateAll((cardElements, overlayBounds) => {
+    const overlaps: string[] = []
+
+    for (const card of cardElements) {
+      const walker = document.createTreeWalker(card, NodeFilter.SHOW_TEXT)
+      while (walker.nextNode()) {
+        const textNode = walker.currentNode
+        if (!textNode.textContent?.trim()) continue
+
+        const range = document.createRange()
+        range.selectNodeContents(textNode)
+
+        for (const bounds of Array.from(range.getClientRects())) {
+          const visibleInViewport =
+            bounds.right > 0 &&
+            bounds.left < window.innerWidth &&
+            bounds.bottom > 0 &&
+            bounds.top < window.innerHeight
+          const overlapsOverlay =
+            bounds.left < overlayBounds.x + overlayBounds.width &&
+            bounds.right > overlayBounds.x &&
+            bounds.top < overlayBounds.y + overlayBounds.height &&
+            bounds.bottom > overlayBounds.y
+
+          if (visibleInViewport && overlapsOverlay) {
+            overlaps.push(textNode.textContent.trim())
+          }
+        }
+      }
+    }
+
+    return overlaps
+  }, overlay)
+}
+
 function contrastRatio(foreground: string, background: string) {
   const luminance = (color: string) => {
-    const channels = color.match(/\d+(?:\.\d+)?/g)?.slice(0, 3).map(Number)
+    const channels = color
+      .match(/\d+(?:\.\d+)?/g)
+      ?.slice(0, 3)
+      .map(Number)
     if (!channels || channels.length !== 3) {
       throw new Error(`Expected an RGB color, received ${color}`)
     }
 
     const [red, green, blue] = channels.map((channel) => {
       const value = channel / 255
-      return value <= 0.04045
-        ? value / 12.92
-        : ((value + 0.055) / 1.055) ** 2.4
+      return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4
     })
 
     return 0.2126 * red + 0.7152 * green + 0.0722 * blue
   }
 
-  const [lighter, darker] = [
-    luminance(foreground),
-    luminance(background),
-  ].sort((left, right) => right - left)
+  const [lighter, darker] = [luminance(foreground), luminance(background)].sort(
+    (left, right) => right - left
+  )
 
   return (lighter + 0.05) / (darker + 0.05)
 }
@@ -500,7 +539,8 @@ test.describe("Event AI forecast reactions", () => {
       page,
       enDictionary.events.marketReactions
     )
-    await expect(zoomSection.locator('[data-slot="card"]')).toHaveCount(4)
+    const zoomCards = zoomSection.locator('[data-slot="card"]')
+    await expect(zoomCards).toHaveCount(4)
     await expect(
       zoomSection.getByText(enDictionary.events.marketReactionsDisclosure, {
         exact: true,
@@ -509,22 +549,45 @@ test.describe("Event AI forecast reactions", () => {
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth)
     ).toBeLessThanOrEqual(760)
+    expect(await page.evaluate(() => window.scrollY)).toBe(0)
+    const assistantLauncher = page.getByRole("button", {
+      name: "Ask Signapse",
+    })
+    await expect(assistantLauncher).toBeVisible()
+    const initialAssistantBounds = await assistantLauncher.boundingBox()
+    if (!initialAssistantBounds) {
+      throw new Error("Expected the assistant launcher to render")
+    }
+    // Check the first paint before any scroll, then the forecast section before reading a card.
+    expect(
+      await getVisibleTextOverlaps(zoomCards, initialAssistantBounds)
+    ).toEqual([])
+    await zoomSection
+      .getByRole("heading", {
+        level: 2,
+        name: enDictionary.events.marketReactions,
+        exact: true,
+      })
+      .evaluate((heading) => heading.scrollIntoView({ block: "start" }))
+    expect(
+      await getVisibleTextOverlaps(zoomCards, initialAssistantBounds)
+    ).toEqual([])
     await saveScreenshot(
       page,
       testInfo,
       "event-forecast-zoom-200-en.png",
       false,
       "event-market-reactions-zoom-200-equivalent-en-760x512.png",
-      "SIGN-291",
-      zoomSection
+      "SIGN-291"
     )
+
     const lastReasoning = zoomSection
       .locator('[data-slot="card"]')
       .nth(3)
       .getByText(
         "Cloud demand could lift holdings, while higher infrastructure costs could pressure margins.",
         { exact: true }
-    )
+      )
     await lastReasoning.evaluate((element) =>
       element.scrollIntoView({ block: "center" })
     )
@@ -622,7 +685,7 @@ test.describe("Event AI forecast reactions", () => {
   test("distinguishes no forecasts, incomplete forecast data, and event load errors", async ({
     page,
     fixture,
-  }) => {
+  }, testInfo) => {
     await page.setViewportSize({ width: 1024, height: 900 })
 
     await fixture.setScenario("/events", "event-market-reactions-empty", "GET")
@@ -640,6 +703,14 @@ test.describe("Event AI forecast reactions", () => {
     await expect(
       emptySection.getByText("Trung lập", { exact: true })
     ).toHaveCount(0)
+    await saveScreenshot(
+      page,
+      testInfo,
+      "event-market-reactions-empty-compact-vi.png",
+      true,
+      "event-market-reactions-empty-compact-vi-1024x900.png",
+      "SIGN-291"
+    )
 
     await fixture.setScenario(
       "/events",
@@ -715,7 +786,8 @@ test.describe("Event AI forecast reactions", () => {
       page,
       viDictionary.events.marketReactions
     ).locator('[data-slot="card"]')
-    await expect(localizedCard.getByText("Mã tài sản 101", { exact: true }))
-      .toBeVisible()
+    await expect(
+      localizedCard.getByText("Mã tài sản 101", { exact: true })
+    ).toBeVisible()
   })
 })
