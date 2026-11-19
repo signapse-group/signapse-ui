@@ -56,7 +56,6 @@ import {
   getEventMarketReactionDirectionLabel,
   getEventMarketReactionDirectionVariant,
   getEventMarketReactionTimeHorizonLabel,
-  getEventMarketReactionTimeHorizonVariant,
   getEventStatusLabel,
   getEventStatusVariant,
 } from "../event-presentation"
@@ -93,7 +92,7 @@ function formatDateTime(
 }
 
 function formatConfidence(
-  value: number | undefined,
+  value: number | null | undefined,
   locale: AppLocale,
   dictionary: Dictionary
 ) {
@@ -167,10 +166,6 @@ function countMarketReactionDirections(
   return reactions.reduce<
     Partial<Record<EventMarketReactionDirection, number>>
   >((counts, reaction) => {
-    if (!reaction.direction) {
-      return counts
-    }
-
     counts[reaction.direction] = (counts[reaction.direction] ?? 0) + 1
     return counts
   }, {})
@@ -178,55 +173,37 @@ function countMarketReactionDirections(
 
 function MarketReactionCard({
   reaction,
-  index,
   dictionary,
   locale,
 }: {
   reaction: EventMarketReactionSummaryResponse
-  index: number
   dictionary: Dictionary
   locale: AppLocale
 }) {
-  const assetLabel =
-    reaction.assetSymbol?.trim() ||
-    reaction.assetName?.trim() ||
-    formatMessage(dictionary.events.noAssetName, { index: index + 1 })
-  const showAssetName =
-    reaction.assetName?.trim() && reaction.assetName.trim() !== assetLabel
+  const assetLabel = reaction.assetSymbol.trim()
+  const showAssetName = reaction.assetName.trim() !== assetLabel
 
   return (
     <Card size="sm">
       <CardHeader className="gap-3">
-        <div className="flex flex-wrap items-center gap-2">
-          {reaction.assetType ? (
-            <Badge variant="outline">
-              {dictionary.events.assetTypeLabels[reaction.assetType]}
-            </Badge>
-          ) : null}
-          {reaction.direction ? (
-            <Badge
-              variant={getEventMarketReactionDirectionVariant(
-                reaction.direction
-              )}
-            >
-              {getEventMarketReactionDirectionLabel(
-                reaction.direction,
-                dictionary
-              )}
-            </Badge>
-          ) : null}
-          {reaction.timeHorizon ? (
-            <Badge
-              variant={getEventMarketReactionTimeHorizonVariant(
-                reaction.timeHorizon
-              )}
-            >
-              {getEventMarketReactionTimeHorizonLabel(
-                reaction.timeHorizon,
-                dictionary
-              )}
-            </Badge>
-          ) : null}
+        <div className="col-span-full flex flex-wrap items-center gap-2">
+          <Badge variant="outline">
+            {dictionary.events.assetTypeLabels[reaction.assetType]}
+          </Badge>
+          <Badge
+            variant={getEventMarketReactionDirectionVariant(reaction.direction)}
+          >
+            {getEventMarketReactionDirectionLabel(
+              reaction.direction,
+              dictionary
+            )}
+          </Badge>
+          <Badge variant="secondary">
+            {getEventMarketReactionTimeHorizonLabel(
+              reaction.timeHorizon,
+              dictionary
+            )}
+          </Badge>
         </div>
 
         <CardTitle>{assetLabel}</CardTitle>
@@ -234,7 +211,7 @@ function MarketReactionCard({
           <CardDescription>{reaction.assetName}</CardDescription>
         ) : null}
 
-        <CardAction className="text-right text-xs text-muted-foreground">
+        <CardAction className="row-span-1 row-start-2 text-right text-xs text-muted-foreground">
           <div>{dictionary.events.confidence}</div>
           <div className="font-medium text-foreground">
             {formatConfidence(reaction.confidence, locale, dictionary)}
@@ -243,14 +220,14 @@ function MarketReactionCard({
       </CardHeader>
 
       <CardContent className="flex flex-col gap-3">
-        <p className="line-clamp-4 text-sm leading-6 whitespace-pre-wrap text-foreground/90">
-          {reaction.reasoning?.trim() || dictionary.events.noReasoning}
-        </p>
-        <AppTimeMetadata icon={Calendar}>
-          {formatMessage(dictionary.events.observedAt, {
-            time: formatDateTime(reaction.observedAt, locale, dictionary),
-          })}
-        </AppTimeMetadata>
+        <div className="flex flex-col gap-1">
+          <p className="text-xs font-medium text-muted-foreground">
+            {dictionary.events.marketReactionReasoning}
+          </p>
+          <p className="text-sm leading-6 whitespace-pre-wrap text-foreground/90">
+            {reaction.reasoning?.trim() || dictionary.events.noReasoning}
+          </p>
+        </div>
       </CardContent>
     </Card>
   )
@@ -331,8 +308,12 @@ async function FetchEventData({
   const assets = event.assets ?? []
   const themes = event.themes ?? []
   const evidenceItems = event.evidence ?? []
-  const marketReactions = event.marketReactions ?? []
-  const marketReactionCounts = countMarketReactionDirections(marketReactions)
+  const marketReactions = Array.isArray(event.marketReactions)
+    ? event.marketReactions
+    : null
+  const marketReactionCounts: Partial<
+    Record<EventMarketReactionDirection, number>
+  > = marketReactions ? countMarketReactionDirections(marketReactions) : {}
 
   return (
     <div className="flex flex-col gap-6">
@@ -489,14 +470,14 @@ async function FetchEventData({
               title={dictionary.events.marketReactions}
               icon={TrendingUp}
             />
-            {marketReactions.length > 0 ? (
+            {marketReactions && marketReactions.length > 0 ? (
               <div className="flex flex-wrap gap-2">
                 <Badge variant="secondary">
                   {formatMessage(dictionary.events.reactionCount, {
                     count: formatNumber(marketReactions.length, locale),
                   })}
                 </Badge>
-                {(["BULLISH", "BEARISH", "MIXED", "NEUTRAL"] as const).map(
+                {(["BULLISH", "NEUTRAL", "BEARISH", "MIXED"] as const).map(
                   (direction) => {
                     const count = marketReactionCounts[direction] ?? 0
 
@@ -529,18 +510,34 @@ async function FetchEventData({
             ) : null}
           </div>
 
-          {marketReactions.length > 0 ? (
-            <div className="grid gap-4 lg:grid-cols-2">
-              {marketReactions.map((reaction, index) => (
-                <MarketReactionCard
-                  key={`${reaction.id ?? reaction.assetId ?? "reaction"}-${index}`}
-                  reaction={reaction}
-                  index={index}
-                  dictionary={dictionary}
-                  locale={locale}
-                />
-              ))}
+          {marketReactions === null ? (
+            <div
+              role="alert"
+              className="flex flex-col gap-1 border-l-2 border-destructive pl-3 text-sm"
+            >
+              <p className="font-medium text-destructive">
+                {dictionary.events.marketReactionsUnavailableTitle}
+              </p>
+              <p className="text-muted-foreground">
+                {dictionary.events.marketReactionsUnavailableDescription}
+              </p>
             </div>
+          ) : marketReactions.length > 0 ? (
+            <>
+              <p className="text-sm leading-6 text-muted-foreground">
+                {dictionary.events.marketReactionsDisclosure}
+              </p>
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                {marketReactions.map((reaction) => (
+                  <MarketReactionCard
+                    key={reaction.id}
+                    reaction={reaction}
+                    dictionary={dictionary}
+                    locale={locale}
+                  />
+                ))}
+              </div>
+            </>
           ) : (
             <EventSectionEmpty
               title={dictionary.events.noMarketReactionsTitle}

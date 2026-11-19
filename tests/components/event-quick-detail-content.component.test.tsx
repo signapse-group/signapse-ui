@@ -22,6 +22,7 @@ function makeEvent(
     lastModifiedDate: "2026-01-15T08:00:00.000Z",
     ...links,
     evidence: [],
+    marketReactions: [],
   } as unknown as EventResponse
 }
 

@@ -125,6 +125,7 @@ const event: EventResponse = {
   assets: [],
   themes: [],
   evidence: [],
+  marketReactions: [],
 }
 
 function renderDrawer(selectedArticle: NewsArticleResponse = article) {
