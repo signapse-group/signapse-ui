@@ -6,37 +6,24 @@ export type EventStatus =
   | "ARCHIVED"
 
 export type EventEnrichmentStatus =
-  | "PENDING"
-  | "SUCCESS"
-  | "NO_MATCH"
-  | "FAILED"
+  "PENDING" | "SUCCESS" | "NO_MATCH" | "FAILED"
 
-export type EventAssetType = "COMMODITY" | "CRYPTO" | "FX" | "INDEX"
+export type EventAssetType =
+  "COMMODITY" | "CRYPTO" | "EQUITY" | "ETF" | "FX" | "INDEX"
 
 export type EventMarketReactionDirection =
-  | "BULLISH"
-  | "BEARISH"
-  | "MIXED"
-  | "NEUTRAL"
+  "BULLISH" | "BEARISH" | "MIXED" | "NEUTRAL"
 
 export type EventMarketReactionTimeHorizon =
-  | "INTRADAY"
-  | "SHORT_TERM"
-  | "MEDIUM_TERM"
-  | "LONG_TERM"
+  "INTRADAY" | "SHORT_TERM" | "MEDIUM_TERM" | "LONG_TERM"
 
 export type EventAssetRelationType =
-  | "PRIMARY_SUBJECT"
-  | "AFFECTED_ASSET"
-  | "REFERENCE_ASSET"
+  "PRIMARY_SUBJECT" | "AFFECTED_ASSET" | "REFERENCE_ASSET"
 
 export type EventThemeRelationType = "PRIMARY_THEME" | "SECONDARY_THEME"
 
 export type EventEvidenceRole =
-  | "PRIMARY"
-  | "SUPPORTING"
-  | "UPDATE"
-  | "CONTRADICTING"
+  "PRIMARY" | "SUPPORTING" | "UPDATE" | "CONTRADICTING"
 
 export type EventEnrichmentOutcome = EventStatus
 
@@ -53,20 +40,20 @@ export interface EventListResponse {
 }
 
 export interface EventAssetSummaryResponse {
-  assetId?: number
-  assetName?: string
-  assetSymbol?: string
-  assetType?: EventAssetType
-  relationType?: EventAssetRelationType
-  weight?: number
+  assetId: number
+  assetName: string
+  assetSymbol: string
+  assetType: EventAssetType
+  relationType: EventAssetRelationType
+  weight: number | null
 }
 
 export interface EventThemeSummaryResponse {
-  themeId?: number
-  themeTitle?: string
-  themeSlug?: string
-  relationType?: EventThemeRelationType
-  weight?: number
+  themeId: number
+  themeTitle: string | null
+  themeSlug: string
+  relationType: EventThemeRelationType
+  weight: number | null
 }
 
 export interface EventEvidenceSummaryResponse {

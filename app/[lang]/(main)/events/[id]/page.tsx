@@ -46,18 +46,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/ui/empty"
 import { Skeleton } from "@/components/ui/skeleton"
 
 import { EventEnrichButton } from "../event-enrich-button"
 import { EventMarketReactionButton } from "../event-market-reaction-button"
+import { EventSectionEmpty } from "../event-section-empty"
 import {
+  getEventAssetRelationVariant,
   getEventMarketReactionDirectionLabel,
   getEventMarketReactionDirectionVariant,
   getEventMarketReactionTimeHorizonLabel,
@@ -163,26 +158,6 @@ function SectionHeading({
         {title}
       </h2>
     </div>
-  )
-}
-
-function SectionEmpty({
-  title,
-  description,
-}: {
-  title: string
-  description: string
-}) {
-  return (
-    <Empty className="min-h-[220px] rounded-lg border border-dashed">
-      <EmptyHeader>
-        <EmptyMedia variant="icon">
-          <Layers3 className="h-10 w-10 text-muted-foreground" />
-        </EmptyMedia>
-        <EmptyTitle>{title}</EmptyTitle>
-        <EmptyDescription>{description}</EmptyDescription>
-      </EmptyHeader>
-    </Empty>
   )
 }
 
@@ -501,7 +476,7 @@ async function FetchEventData({
               ))}
             </div>
           ) : (
-            <SectionEmpty
+            <EventSectionEmpty
               title={dictionary.events.noEvidenceTitle}
               description={dictionary.events.noEvidenceDescription}
             />
@@ -567,7 +542,7 @@ async function FetchEventData({
               ))}
             </div>
           ) : (
-            <SectionEmpty
+            <EventSectionEmpty
               title={dictionary.events.noMarketReactionsTitle}
               description={dictionary.events.noMarketReactionsDescription}
             />
@@ -594,7 +569,11 @@ async function FetchEventData({
                       </Badge>
                     ) : null}
                     {asset.relationType ? (
-                      <Badge variant="secondary">
+                      <Badge
+                        variant={getEventAssetRelationVariant(
+                          asset.relationType
+                        )}
+                      >
                         {
                           dictionary.events.assetRelationLabels[
                             asset.relationType
@@ -625,7 +604,7 @@ async function FetchEventData({
               ))}
             </div>
           ) : (
-            <SectionEmpty
+            <EventSectionEmpty
               title={dictionary.events.noAssetsTitle}
               description={dictionary.events.noAssetsDescription}
             />
@@ -678,7 +657,7 @@ async function FetchEventData({
               ))}
             </div>
           ) : (
-            <SectionEmpty
+            <EventSectionEmpty
               title={dictionary.events.noThemesTitle}
               description={dictionary.events.noThemesDescription}
             />

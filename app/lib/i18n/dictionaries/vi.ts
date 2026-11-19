@@ -1085,6 +1085,8 @@ export const vi = {
     assetTypeLabels: {
       COMMODITY: "Hàng hóa",
       CRYPTO: "Tiền mã hóa",
+      EQUITY: "Cổ phiếu",
+      ETF: "ETF",
       FX: "Ngoại hối",
       INDEX: "Chỉ số",
     },
