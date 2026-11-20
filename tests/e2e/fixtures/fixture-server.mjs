@@ -916,6 +916,46 @@ function slicePage(items, url) {
   )
 }
 
+function eventsPage(items, url) {
+  const { pageNumber, size, filter } = getPageParams(url)
+  const filtered = filter.length
+    ? items.filter((event) =>
+        filter.some((term) =>
+          [event.title, event.description, event.canonicalKey].some((value) =>
+            value?.toLowerCase().includes(term)
+          )
+        )
+      )
+    : items
+  const sort = url.searchParams.get("sort")
+  const sortOptions = new Set([
+    "occurredAt,desc",
+    "occurredAt,asc",
+    "confidence,desc",
+    "createdDate,desc",
+  ])
+  const sorted = sortOptions.has(sort)
+    ? [...filtered].sort((left, right) => {
+        const [field, direction] = sort.split(",")
+        const leftValue = left[field] ?? ""
+        const rightValue = right[field] ?? ""
+        const comparison =
+          typeof leftValue === "number" && typeof rightValue === "number"
+            ? leftValue - rightValue
+            : String(leftValue).localeCompare(String(rightValue))
+
+        return direction === "asc" ? comparison : -comparison
+      })
+    : filtered
+
+  return page(
+    sorted.slice(pageNumber * size, pageNumber * size + size),
+    pageNumber,
+    size,
+    filtered.length
+  )
+}
+
 function getNewsArticleFilterValue(filter, expression) {
   const match = filter.match(expression)
   return match?.[1]?.replaceAll("''", "'")
@@ -3493,7 +3533,40 @@ Which asset did you mean? The available data is limited. Add TSLA to your watchl
   }
 
   if (method === "GET" && pathname === "/events") {
-    return slicePage(state.events, url)
+    const scenario = getScenario(state, method, pathname)
+    if (scenario === "event-list-denied") {
+      return {
+        __status: 403,
+        payload: errorPayload("Event permission denied", "FORBIDDEN"),
+      }
+    }
+
+    if (scenario === "event-list-error") {
+      return {
+        __status: 503,
+        payload: errorPayload("Event list unavailable", "SERVICE_UNAVAILABLE"),
+      }
+    }
+
+    if (scenario === "event-list-empty") {
+      return eventsPage([], url)
+    }
+
+    const events = scenario.startsWith("event-partial")
+      ? state.events.map((event) =>
+          event.id === 62
+            ? {
+                ...event,
+                title: null,
+                description: null,
+                confidence: null,
+                occurredAt: null,
+              }
+            : event
+        )
+      : state.events
+
+    return eventsPage(events, url)
   }
 
   const eventDetailMatch = pathname.match(/^\/events\/(\d+)$/)
@@ -3517,6 +3590,13 @@ Which asset did you mean? The available data is limited. Add TSLA to your watchl
       return {
         __status: 503,
         payload: errorPayload("Event data unavailable", "SERVICE_UNAVAILABLE"),
+      }
+    }
+
+    if (scenario === "event-detail-denied") {
+      return {
+        __status: 403,
+        payload: errorPayload("Event permission denied", "FORBIDDEN"),
       }
     }
 
@@ -3707,22 +3787,36 @@ Which asset did you mean? The available data is limited. Add TSLA to your watchl
       assets,
       themes,
       evidence:
-        id === 61 || id === 63
+        id === 61 ||
+        id === 63 ||
+        (id === 62 && scenario.startsWith("event-partial"))
           ? [
               {
                 newsArticleId: 71,
-                newsArticleTitle: "Fixture market update",
-                newsArticleUrl: "https://fixture.invalid/news/71",
+                newsArticleTitle: id === 62 ? null : "Fixture market update",
+                newsArticleUrl:
+                  id === 62 && scenario === "event-partial-no-source"
+                    ? null
+                    : `https://fixture.invalid/news/${id}`,
                 sourceName: "Fixture Wire",
                 publishedAt: NOW,
                 evidenceRole: "PRIMARY",
-                confidence: 0.92,
+                confidence: id === 62 ? null : 0.92,
                 evidenceNote:
-                  "Synthetic evidence for the browser quality gate.",
+                  id === 62
+                    ? null
+                    : "Synthetic evidence for the browser quality gate.",
               },
             ]
           : [],
       marketReactions,
+    }
+
+    if (id === 62 && scenario.startsWith("event-partial")) {
+      response.title = null
+      response.description = null
+      response.confidence = null
+      response.occurredAt = null
     }
 
     if (scenario === "event-market-reactions-missing") {

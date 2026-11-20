@@ -120,7 +120,11 @@ const article: NewsArticleResponse = {
 const event: EventResponse = {
   id: 73,
   title: "Sự kiện được chọn trong dòng thời gian",
+  canonicalKey: null,
+  description: null,
   status: "ENRICHED",
+  confidence: null,
+  occurredAt: null,
   createdDate: "2026-08-19T12:00:00.000Z",
   assets: [],
   themes: [],
@@ -729,12 +733,28 @@ describe("LocalEntityQuickDetailDrawer event navigation", () => {
     await waitFor(() => {
       expect(getEventById).toHaveBeenCalledWith(event.id)
       expect(
-        screen.getByRole("heading", { level: 2, name: event.title })
+        screen.getByRole("heading", {
+          level: 2,
+          name: event.title ?? viDictionary.events.untitled,
+        })
       ).toBeInTheDocument()
     })
 
     expect(
       screen.getByRole("link", { name: viDictionary.common.openFullPage })
     ).toHaveAttribute("href", `/vi/events/${event.id}`)
+  })
+
+  it("uses the localized untitled label when the selected Event has no title", async () => {
+    renderEventDrawer({ ...event, title: null })
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("heading", {
+          level: 2,
+          name: viDictionary.events.untitled,
+        })
+      ).toBeInTheDocument()
+    })
   })
 })

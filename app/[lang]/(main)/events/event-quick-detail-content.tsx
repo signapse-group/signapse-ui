@@ -47,7 +47,7 @@ function formatDateTime(
 }
 
 function formatConfidence(
-  value: number | undefined,
+  value: number | null | undefined,
   locale: AppLocale,
   dictionary: Dictionary
 ) {
@@ -157,12 +157,13 @@ export function EventQuickDetailContent({
                 </div>
 
                 <h3 className="mt-2 line-clamp-2 text-sm font-medium">
-                  {evidence.newsArticleTitle ||
+                  {evidence.newsArticleTitle?.trim() ||
                     dictionary.events.evidenceUntitled}
                 </h3>
                 <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                   <span>
-                    {evidence.sourceName || dictionary.newsArticles.noOutlet}
+                    {evidence.sourceName?.trim() ||
+                      dictionary.newsArticles.noOutlet}
                   </span>
                   <AppTimeMetadata icon={Calendar}>
                     {formatDateTime(evidence.publishedAt, locale, dictionary)}
