@@ -9,6 +9,7 @@ import {
   screen,
   within,
 } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import type { Settings } from "sigma/settings"
 
@@ -1240,5 +1241,208 @@ describe("Sigma drag release", () => {
       "Rates"
     )
     expect(sigma.getNodeDisplayData("event:1").highlighted).toBe(true)
+  })
+
+  it("filters node kinds independently, keeps isolated nodes, and recovers from an all-off canvas", async () => {
+    const user = userEvent.setup()
+    await mountGraph({
+      includeNarrative: true,
+      edges: [
+        {
+          id: "narrative-event:5",
+          kind: "narrative-event",
+          sourceNodeId: "narrative:5",
+          targetNodeId: "event:1",
+          relationType: "DRIVER",
+          weight: null,
+          confidence: null,
+          note: null,
+        },
+        {
+          id: "narrative-asset:5",
+          kind: "narrative-asset",
+          sourceNodeId: "narrative:5",
+          targetNodeId: "asset:2",
+          relationType: "AFFECTED",
+          weight: null,
+          confidence: null,
+          note: null,
+        },
+      ],
+    })
+
+    const narrativeFilter = screen.getByTestId(
+      "graph-demo-node-filter-narrative"
+    )
+    await user.click(narrativeFilter)
+
+    await vi.waitFor(() => {
+      expect(SigmaDouble.current.graph.hasNode("narrative:5")).toBe(false)
+      expect(SigmaDouble.current.graph.nodes()).toEqual([
+        "event:1",
+        "asset:2",
+        "asset:3",
+      ])
+      expect(SigmaDouble.current.graph.edges()).toEqual([])
+    })
+    expect(narrativeFilter).toHaveAttribute("aria-pressed", "false")
+    expect(screen.getByTestId("graph-demo-node-filter-event")).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    )
+
+    await user.click(narrativeFilter)
+    await vi.waitFor(() => {
+      expect(SigmaDouble.current.graph.hasNode("narrative:5")).toBe(true)
+      expect(SigmaDouble.current.graph.edges()).toEqual([
+        "narrative-event:5",
+        "narrative-asset:5",
+      ])
+    })
+
+    for (const kind of [
+      "event",
+      "asset",
+      "news-article",
+      "narrative",
+    ] as const) {
+      await user.click(screen.getByTestId(`graph-demo-node-filter-${kind}`))
+    }
+
+    expect(await screen.findByTestId("graph-filter-empty")).toHaveTextContent(
+      en.graphView.demo.emptyFilteredNodes
+    )
+    for (const kind of [
+      "event",
+      "asset",
+      "news-article",
+      "narrative",
+    ] as const) {
+      expect(
+        screen.getByTestId(`graph-demo-node-filter-${kind}`)
+      ).toHaveAttribute("aria-pressed", "false")
+    }
+
+    await user.click(screen.getByTestId("graph-demo-node-filter-event"))
+    expect(screen.queryByTestId("graph-filter-empty")).not.toBeInTheDocument()
+    await vi.waitFor(() => {
+      expect(SigmaDouble.current.graph.nodes()).toEqual(["event:1"])
+    })
+  })
+
+  it("exposes localized pressed state and supports keyboard activation", async () => {
+    const user = userEvent.setup()
+    await mountGraph({ includeArticle: true, locale: "vi" })
+
+    const filters = screen.getByRole("group", { name: "Bộ lọc loại nút" })
+    const eventFilter = screen.getByTestId("graph-demo-node-filter-event")
+    const assetFilter = screen.getByTestId("graph-demo-node-filter-asset")
+
+    expect(filters).toBeInTheDocument()
+    expect(eventFilter).toHaveAttribute("aria-pressed", "true")
+    await user.tab()
+    expect(eventFilter).toHaveFocus()
+    await user.tab()
+    expect(assetFilter).toHaveFocus()
+    await user.keyboard(" ")
+
+    expect(assetFilter).toHaveAttribute("aria-pressed", "false")
+    expect(assetFilter).toHaveAttribute("data-state", "off")
+    expect(eventFilter).toHaveAttribute("aria-pressed", "true")
+  })
+
+  it("preserves visible selection and closes the inspector when its node or edge is hidden", async () => {
+    const user = userEvent.setup()
+    const { sigma, graphView } = await mountGraph({
+      includeArticle: true,
+      includeNarrative: true,
+    })
+    act(() => {
+      sigma.emit("clickNode", {
+        node: "asset:2",
+        preventSigmaDefault() {},
+      })
+    })
+    expect(screen.getByTestId("graph-demo-inspector")).toHaveTextContent(
+      "Bitcoin"
+    )
+
+    await user.click(screen.getByTestId("graph-demo-node-filter-narrative"))
+    await vi.waitFor(() => {
+      expect(SigmaDouble.current.graph.hasNode("narrative:5")).toBe(false)
+    })
+    expect(screen.getByTestId("graph-demo-inspector")).toHaveTextContent(
+      "Bitcoin"
+    )
+
+    await user.click(screen.getByTestId("graph-demo-node-filter-asset"))
+    await vi.waitFor(() => {
+      expect(SigmaDouble.current.graph.hasNode("asset:2")).toBe(false)
+    })
+    expect(screen.queryByTestId("graph-demo-inspector")).not.toBeInTheDocument()
+
+    await user.click(screen.getByTestId("graph-demo-node-filter-asset"))
+    await vi.waitFor(() => {
+      expect(SigmaDouble.current.graph.hasNode("asset:2")).toBe(true)
+    })
+    clickGraphEdge(SigmaDouble.current, graphView.edges[0]!)
+    expect(screen.getByTestId("graph-edge-inspector")).toBeInTheDocument()
+
+    await user.click(screen.getByTestId("graph-demo-node-filter-news-article"))
+    await vi.waitFor(() => {
+      expect(SigmaDouble.current.graph.hasEdge("news-article-event:4")).toBe(
+        false
+      )
+    })
+    expect(screen.getByTestId("graph-edge-inspector")).toBeInTheDocument()
+
+    await user.click(screen.getByTestId("graph-demo-node-filter-asset"))
+    await vi.waitFor(() => {
+      expect(SigmaDouble.current.graph.hasEdge("event-asset:1")).toBe(false)
+    })
+    expect(screen.queryByTestId("graph-edge-inspector")).not.toBeInTheDocument()
+    expect(SigmaDouble.current.graph.hasNode("asset:2")).toBe(false)
+  })
+
+  it("keeps Event evidence available and preserves filters when quick detail closes", async () => {
+    const user = userEvent.setup()
+    vi.mocked(getEventByIdForQuickDetail).mockResolvedValueOnce({
+      success: true,
+      data: quickEvent,
+    })
+    await mountGraph({
+      includeArticle: true,
+      permissions: ["graph-view:read", "event:read", "news-article:read"],
+    })
+    await user.click(screen.getByTestId("graph-demo-node-filter-news-article"))
+    await vi.waitFor(() => {
+      expect(SigmaDouble.current.graph.hasNode("news-article:4")).toBe(false)
+    })
+    act(() => {
+      SigmaDouble.current.emit("clickNode", {
+        node: "event:1",
+        preventSigmaDefault() {},
+      })
+    })
+    fireEvent.click(
+      within(screen.getByTestId("graph-demo-inspector")).getByRole("button", {
+        name: en.graphView.inspector.readEvent,
+      })
+    )
+    await screen.findByRole("heading", { level: 2, name: "Rates detail" })
+
+    expect(screen.getByText("Source article title")).toBeInTheDocument()
+    expect(screen.getByRole("heading", { name: "Rates detail" })).toBeVisible()
+
+    await user.click(screen.getByRole("button", { name: en.common.close }))
+    await vi.waitFor(() => {
+      expect(screen.queryByRole("heading", { name: "Rates detail" })).toBeNull()
+    })
+    expect(
+      screen.getByTestId("graph-demo-node-filter-news-article")
+    ).toHaveAttribute("aria-pressed", "false")
+    expect(screen.getByTestId("graph-demo-inspector")).toHaveTextContent(
+      "Rates"
+    )
   })
 })
