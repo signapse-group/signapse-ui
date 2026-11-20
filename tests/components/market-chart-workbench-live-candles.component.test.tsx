@@ -1008,6 +1008,81 @@ describe("Market chart quote-driven candle flow", () => {
     })
   })
 
+  it("keeps the active candle response when URL sync acknowledges a selection", async () => {
+    const previousCandleRequest = createDeferred<{
+      success: true
+      data: ReturnType<typeof createCandleResponse>
+    }>()
+    const selectedCandleRequest = createDeferred<{
+      success: true
+      data: ReturnType<typeof createCandleResponse>
+    }>()
+    getCandles
+      .mockImplementationOnce(() => previousCandleRequest.promise)
+      .mockImplementationOnce(() => selectedCandleRequest.promise)
+
+    const view = render(
+      <LocalizationProvider locale="vi" dictionary={viDictionary}>
+        <MarketChartWorkbench
+          watchlistAssets={watchlistAssets}
+          watchlistError={null}
+        />
+      </LocalizationProvider>
+    )
+
+    await waitFor(() => expect(getCandles).toHaveBeenCalledTimes(1))
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: viDictionary.marketCharts.timeframes["5m"],
+      })
+    )
+    await waitFor(() => expect(getCandles).toHaveBeenCalledTimes(2))
+
+    routeSearchParams.current = new URLSearchParams("assetId=101&timeframe=5m")
+    view.rerender(
+      <LocalizationProvider locale="vi" dictionary={viDictionary}>
+        <MarketChartWorkbench
+          watchlistAssets={watchlistAssets}
+          watchlistError={null}
+        />
+      </LocalizationProvider>
+    )
+    await act(async () => {
+      await new Promise((resolve) => window.setTimeout(resolve, 1))
+    })
+
+    await act(async () => {
+      selectedCandleRequest.resolve({
+        success: true,
+        data: createCandleResponse(101, "5m"),
+      })
+    })
+
+    const candles = screen.getByTestId("chart-rest-candles")
+    const selectedCandles = JSON.stringify(
+      createRestCandles([
+        "2026-08-23T00:00:00.000Z",
+        "2026-08-23T00:05:00.000Z",
+      ])
+    )
+    await waitFor(() => {
+      expect(candles).toHaveTextContent(selectedCandles)
+      expect(candles.parentElement).toHaveClass("visible")
+      expect(
+        screen.getByTestId("market-chart-toolbar").parentElement?.parentElement
+      ).toHaveAttribute("aria-busy", "false")
+    })
+
+    await act(async () => {
+      previousCandleRequest.resolve({
+        success: true,
+        data: createCandleResponse(101, "1m"),
+      })
+    })
+    expect(candles).toHaveTextContent(selectedCandles)
+    expect(candles.parentElement).toHaveClass("visible")
+  })
+
   it("loads backfill candles and supplemental ranges through the page gap", async () => {
     routeSearchParams.current = new URLSearchParams("assetId=101&timeframe=1h")
     const joinAnnotation = createHotAnnotation(

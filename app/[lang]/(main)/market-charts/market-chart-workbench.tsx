@@ -4192,8 +4192,18 @@ export function MarketChartWorkbench({
       return
     }
 
-    initialLoadObserverRef.current.cancelCurrent()
-    loadGenerationRef.current += 1
+    const pendingRouteSelection = pendingRouteSelectionRef.current
+    const preservePendingLoad =
+      pendingRouteSelection !== null &&
+      !watchlistError &&
+      findWatchlistAsset(watchlistAssets, pendingRouteSelection.assetId) !==
+        null
+
+    // updateRoute already invalidates prior selections and owns this load.
+    if (!preservePendingLoad) {
+      initialLoadObserverRef.current.cancelCurrent()
+      loadGenerationRef.current += 1
+    }
 
     const timeoutId = window.setTimeout(() => {
       setAnnotationLoadError(null)
