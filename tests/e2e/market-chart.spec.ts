@@ -12,6 +12,72 @@ type ChartCanvasTextDraw = {
   y: number
 }
 
+async function getTextContrastRatio(locator: Locator) {
+  return locator.evaluate((element) => {
+    const canvas = document.createElement("canvas")
+    const context = canvas.getContext("2d", { willReadFrequently: true })
+    if (!context) {
+      throw new Error("Canvas 2D is unavailable for contrast measurement")
+    }
+    const colorContext = context
+
+    function parseColor(value: string) {
+      colorContext.clearRect(0, 0, 1, 1)
+      colorContext.fillStyle = value
+      colorContext.fillRect(0, 0, 1, 1)
+      const [red, green, blue, alpha] = colorContext.getImageData(
+        0,
+        0,
+        1,
+        1
+      ).data
+
+      return {
+        channels: [red, green, blue],
+        alpha: alpha! / 255,
+      }
+    }
+
+    const ancestors: Element[] = []
+    let current: Element | null = element
+    while (current) {
+      ancestors.unshift(current)
+      current = current.parentElement
+    }
+
+    let background = [255, 255, 255]
+    for (const ancestor of ancestors) {
+      const { channels, alpha } = parseColor(
+        getComputedStyle(ancestor).backgroundColor
+      )
+      if (channels.length === 3) {
+        background = channels.map(
+          (channel, index) => channel * alpha + background[index]! * (1 - alpha)
+        )
+      }
+    }
+
+    const foreground = parseColor(getComputedStyle(element).color).channels
+    const luminance = (channels: number[]) => {
+      const [red, green, blue] = channels.map((channel) => {
+        const normalized = channel / 255
+        return normalized <= 0.04045
+          ? normalized / 12.92
+          : ((normalized + 0.055) / 1.055) ** 2.4
+      })
+
+      return 0.2126 * red! + 0.7152 * green! + 0.0722 * blue!
+    }
+
+    const foregroundLuminance = luminance(foreground)
+    const backgroundLuminance = luminance(background)
+    const lighter = Math.max(foregroundLuminance, backgroundLuminance)
+    const darker = Math.min(foregroundLuminance, backgroundLuminance)
+
+    return (lighter + 0.05) / (darker + 0.05)
+  })
+}
+
 async function trackMarketChartCanvasText(page: Page) {
   await page.addInitScript(() => {
     const trackedWindow = window as Window & {
@@ -2054,6 +2120,14 @@ test.describe("P0 market chart workbench", () => {
   }, testInfo) => {
     await page.clock.install({ time: new Date(MARKET_CHART_FIXTURE_NOW) })
     await page.setViewportSize({ width: 1520, height: 1024 })
+    await page.addInitScript(() =>
+      localStorage.setItem("signapse:market-charts:calendar-layer:v1", "true")
+    )
+    await fixture.setScenario(
+      "/market-charts/candles",
+      "full-then-empty",
+      "GET"
+    )
     await fixture.setScenario(
       "/market-charts/economic-calendar-events",
       "calendar-error",
@@ -2076,6 +2150,9 @@ test.describe("P0 market chart workbench", () => {
       .toEqual([true, true])
 
     const calendarError = "Không thể tải sự kiện lịch kinh tế."
+    const calendarHistoryError = page
+      .locator('[role="alert"]')
+      .filter({ hasText: calendarError })
     await expect(page.getByTestId("market-chart-next-event-status")).toHaveText(
       calendarError
     )
@@ -2085,17 +2162,130 @@ test.describe("P0 market chart workbench", () => {
     await expect(
       page.getByText("Calendar fixture unavailable", { exact: true })
     ).toHaveCount(0)
-    await expect(
-      page.getByRole("button", { name: "Tải lại dữ liệu mới nhất" })
-    ).toBeVisible()
+    const nextRetry = page
+      .getByTestId("market-chart-next-event-badge")
+      .getByRole("button", {
+        name: "Tải lại dữ liệu mới nhất",
+        exact: true,
+      })
+    const historyRetry = page.getByRole("button", {
+      name: `${calendarError} Tải lại dữ liệu mới nhất`,
+      exact: true,
+    })
+    const annotationMarker = page.getByRole("button", {
+      name: "Mở sự kiện Central bank signals a slower easing path",
+      exact: true,
+    })
+    await expect(nextRetry).toBeVisible()
+    await expect(historyRetry).toBeEnabled()
+    await expect(annotationMarker).toBeVisible()
+    await expect(calendarHistoryError).toHaveText(calendarError)
+    expect(
+      await getTextContrastRatio(calendarHistoryError)
+    ).toBeGreaterThanOrEqual(4.5)
+    expect(await getTextContrastRatio(historyRetry)).toBeGreaterThanOrEqual(4.5)
     const failureScreenshot = await page.screenshot({
-      path: "test-results/SIGN-479-next-refresh-error-wide.png",
+      path: "test-results/SIGN-452-calendar-error-wide-light-1520x1024.png",
       animations: "disabled",
     })
-    await testInfo.attach("SIGN-479-next-refresh-error-wide", {
+    await testInfo.attach("SIGN-452-calendar-error-wide-light-1520x1024", {
       body: failureScreenshot,
       contentType: "image/png",
     })
+
+    for (const [viewport, label] of [
+      [{ width: 1024, height: 768 }, "compact-1024x768"],
+      [{ width: 390, height: 844 }, "mobile-390x844"],
+      [{ width: 360, height: 800 }, "small-mobile-360x800"],
+      [{ width: 760, height: 512 }, "effective-200pct-760x512"],
+    ] as const) {
+      await page.setViewportSize(viewport)
+      await expectNoHorizontalOverflow(page)
+      await expect(historyRetry).toBeVisible()
+      await expect(historyRetry).toBeEnabled()
+      await expect(nextRetry).toBeVisible()
+      await expect(
+        page.getByText("1 mốc sự kiện", { exact: true })
+      ).toBeVisible()
+      await historyRetry.scrollIntoViewIfNeeded()
+      await expect(historyRetry).toBeInViewport()
+      const screenshot = await page.screenshot({
+        path: `test-results/SIGN-452-calendar-error-${label}.png`,
+        fullPage: true,
+        animations: "disabled",
+      })
+      await testInfo.attach(`SIGN-452-calendar-error-${label}`, {
+        body: screenshot,
+        contentType: "image/png",
+      })
+    }
+
+    await page.setViewportSize({ width: 1520, height: 1024 })
+    await page.evaluate(() => window.localStorage.setItem("theme", "dark"))
+    await fixture.setScenario("/market-charts/candles", "success", "GET")
+    await page.reload()
+    await expect(page.locator("html")).toHaveClass(/dark/)
+    await expect(
+      page.getByTestId("market-chart-next-event-status")
+    ).toHaveAttribute("role", "status")
+    await expect(calendarHistoryError).toHaveText(calendarError)
+    await expect(historyRetry).toBeEnabled()
+    await expect(nextRetry).toBeVisible()
+    expect(
+      await getTextContrastRatio(calendarHistoryError)
+    ).toBeGreaterThanOrEqual(4.5)
+    expect(await getTextContrastRatio(historyRetry)).toBeGreaterThanOrEqual(4.5)
+    await page.setViewportSize({ width: 760, height: 512 })
+    await expectNoHorizontalOverflow(page)
+    await historyRetry.scrollIntoViewIfNeeded()
+    await expect(historyRetry).toBeInViewport()
+    await page.keyboard.press("Tab")
+    await historyRetry.focus()
+    await expect(historyRetry).toBeFocused()
+    expect(
+      await historyRetry.evaluate((element) =>
+        element.matches(":focus-visible")
+      )
+    ).toBe(true)
+    const darkEffectiveWidthScreenshot = await page.screenshot({
+      path: "test-results/SIGN-452-calendar-error-dark-760x512.png",
+      animations: "disabled",
+    })
+    await testInfo.attach("SIGN-452-calendar-error-dark-760x512", {
+      body: darkEffectiveWidthScreenshot,
+      contentType: "image/png",
+    })
+
+    await page.setViewportSize({ width: 1520, height: 1024 })
+    const calendarEventRequestCount = async () =>
+      (await fixture.state()).requests.filter(
+        (request) => request.path === "/market-charts/economic-calendar-events"
+      ).length
+
+    const requestsBeforeKeyboardRetry = await calendarEventRequestCount()
+    await historyRetry.focus()
+    await page.keyboard.press("Enter")
+    await expect
+      .poll(calendarEventRequestCount)
+      .toBeGreaterThan(requestsBeforeKeyboardRetry)
+    await expect(historyRetry).toBeEnabled()
+    await expect(calendarHistoryError).toHaveText(calendarError)
+
+    await fixture.setScenario(
+      "/market-charts/economic-calendar-events",
+      "success",
+      "GET"
+    )
+    await historyRetry.click()
+    await expect(historyRetry).toBeHidden()
+    await expect(page.getByTestId("market-chart-next-event-status")).toHaveText(
+      calendarError
+    )
+    await nextRetry.click()
+    await expect(
+      page.getByTestId("market-chart-next-event-status")
+    ).not.toHaveText(calendarError)
+
     await page.keyboard.press("Escape")
     await expect(page.locator("#market-chart-timeframe-selector")).toBeEnabled()
     await page.getByRole("button", { name: "Chú giải sự kiện" }).click()
@@ -2576,8 +2766,8 @@ test.describe("P0 market chart history selection", () => {
     const staleResponse = page.waitForResponse((response) => {
       const url = new URL(response.url())
       return (
-        response.request().method() === "POST" &&
-        url.pathname === "/vi/market-charts" &&
+        response.request().method() === "GET" &&
+        url.pathname === "/api/market-charts/candles" &&
         url.searchParams.get("assetId") === "101" &&
         url.searchParams.get("timeframe") === "4h"
       )
@@ -2648,7 +2838,17 @@ test.describe("P0 market chart history selection", () => {
       page.getByText("Đang tải dữ liệu biểu đồ giá.", { exact: true })
     ).toBeVisible()
 
+    const currentResponse = page.waitForResponse((response) => {
+      const url = new URL(response.url())
+      return (
+        response.request().method() === "GET" &&
+        url.pathname === "/api/market-charts/candles" &&
+        url.searchParams.get("assetId") === "102" &&
+        url.searchParams.get("timeframe") === "4h"
+      )
+    })
     await fixture.setScenario("/market-charts/candles", "success", "GET")
+    expect((await currentResponse).status()).toBe(200)
     await expect(readout).toContainText("105,00")
     await expectMarketChartCanvasText(page, "2.500,25")
     await expect(chart).toHaveAccessibleDescription(/Quote gần nhất: 2.500,25/)
