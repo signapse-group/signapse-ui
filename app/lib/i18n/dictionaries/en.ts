@@ -2316,6 +2316,11 @@ export const en: Dictionary = {
       interactionHint: "Drag to pan · Select a node or connection to inspect",
       liveInteractionHint:
         "Drag to pan the graph · Select a node or relationship to inspect",
+      nodeKindFilters: "Node type filters",
+      newsArticleFilter: "News Article",
+      emptyFilteredNodes: "No nodes match these filters",
+      emptyFilteredNodesDescription:
+        "Turn on a node type above to show its nodes.",
       relationshipInterpretation:
         "A connection describes a recorded association. It does not establish causation.",
       sourceUnavailable: "No original source URL is available.",

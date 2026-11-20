@@ -8,6 +8,7 @@ import { getGraphViewForWorkspace } from "@/app/api/graph-view/action"
 import {
   graphViewDaysSchema,
   type GraphViewDays,
+  type GraphViewNodeKind,
   type GraphViewResponse,
 } from "@/app/lib/graph-view/definitions"
 import { useLocalization } from "@/app/lib/i18n/provider"
@@ -31,6 +32,10 @@ import {
 } from "@/components/ui/select"
 
 import { GraphViewStateActions } from "./graph-view-state-actions"
+import {
+  GRAPH_VIEW_NODE_KIND_ORDER,
+  toggleGraphViewNodeKind,
+} from "./graph-view-node-filter"
 import { SigmaGraphViewEntry } from "./sigma-graph-view-entry"
 
 type GraphViewPanelProps = {
@@ -68,6 +73,9 @@ export function GraphViewPanel({
   const [watchlistIsEmpty, setWatchlistIsEmpty] = useState(
     initialWatchlistIsEmpty
   )
+  const [enabledNodeKinds, setEnabledNodeKinds] = useState<
+    ReadonlySet<GraphViewNodeKind>
+  >(() => new Set(GRAPH_VIEW_NODE_KIND_ORDER))
   const [loadState, setLoadState] = useState<LoadState>("ready")
   const latestRequest = useRef(0)
 
@@ -116,6 +124,10 @@ export function GraphViewPanel({
 
     setDays(parsedDays.data)
     void loadDays(parsedDays.data)
+  }
+
+  function handleNodeKindToggle(kind: GraphViewNodeKind) {
+    setEnabledNodeKinds((current) => toggleGraphViewNodeKind(current, kind))
   }
 
   const timeRangeControl = (
@@ -237,6 +249,8 @@ export function GraphViewPanel({
       </p>
       <SigmaGraphViewEntry
         graphView={graphView}
+        enabledNodeKinds={enabledNodeKinds}
+        onToggleNodeKind={handleNodeKindToggle}
         timeRangeControl={timeRangeControl}
       />
     </>

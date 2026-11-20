@@ -2296,6 +2296,10 @@ export const vi = {
         "Kéo để di chuyển · Chọn nút hoặc đường nối để xem chi tiết",
       liveInteractionHint:
         "Kéo để di chuyển biểu đồ · Chọn nút hoặc quan hệ để xem thông tin",
+      nodeKindFilters: "Bộ lọc loại nút",
+      newsArticleFilter: "Bài viết tin tức",
+      emptyFilteredNodes: "Không có nút nào khớp với các bộ lọc",
+      emptyFilteredNodesDescription: "Bật một loại nút ở trên để hiển thị lại.",
       relationshipInterpretation:
         "Kết nối thể hiện mối liên hệ được ghi nhận, không khẳng định quan hệ nhân quả.",
       sourceUnavailable: "Chưa có liên kết đến bài báo gốc.",

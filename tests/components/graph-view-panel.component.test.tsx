@@ -20,14 +20,35 @@ vi.mock("@/app/api/graph-view/action", () => ({
 vi.mock("@/app/[lang]/(main)/graph-view/sigma-graph-view-entry", () => ({
   SigmaGraphViewEntry: ({
     graphView,
+    enabledNodeKinds,
+    onToggleNodeKind,
     timeRangeControl,
   }: {
     graphView: { nodes: Array<{ label: string }> }
+    enabledNodeKinds: ReadonlySet<
+      "event" | "asset" | "news-article" | "narrative"
+    >
+    onToggleNodeKind: (
+      kind: "event" | "asset" | "news-article" | "narrative"
+    ) => void
     timeRangeControl: React.ReactNode
   }) => (
     <div data-testid="graph-view-content">
       {graphView.nodes.map((node) => node.label).join(", ")}
       {timeRangeControl}
+      {(["event", "asset", "news-article", "narrative"] as const).map(
+        (kind) => (
+          <button
+            key={kind}
+            type="button"
+            data-testid={`graph-panel-filter-${kind}`}
+            aria-pressed={enabledNodeKinds.has(kind)}
+            onClick={() => onToggleNodeKind(kind)}
+          >
+            {kind}
+          </button>
+        )
+      )}
     </div>
   ),
 }))
@@ -164,6 +185,45 @@ describe("GraphViewPanel time range", () => {
     expect(
       await screen.findByText("No events in the last 14 days")
     ).toBeInTheDocument()
+  })
+
+  it("keeps type filters local and resets them when the keyed workspace changes", async () => {
+    const user = userEvent.setup()
+    const props = createProps({ graphView: createGraph("Current graph") })
+    const renderKeyedPanel = (key: string, panelProps: PanelProps) => (
+      <LocalizationProvider locale="en" dictionary={en}>
+        <GraphViewPanel key={key} {...panelProps} />
+      </LocalizationProvider>
+    )
+    const view = render(renderKeyedPanel("workspace-10", props))
+
+    const eventFilter = screen.getByTestId("graph-panel-filter-event")
+    expect(eventFilter).toHaveAttribute("aria-pressed", "true")
+    await user.click(eventFilter)
+    expect(eventFilter).toHaveAttribute("aria-pressed", "false")
+    expect(mocks.getGraphViewForWorkspace).not.toHaveBeenCalled()
+    expect(screen.getByTestId("graph-view-content")).toHaveTextContent(
+      "Current graph"
+    )
+
+    view.rerender(
+      renderKeyedPanel("workspace-11", {
+        ...props,
+        workspace: { id: 11, name: "Next workspace" },
+      })
+    )
+    for (const kind of [
+      "event",
+      "asset",
+      "news-article",
+      "narrative",
+    ] as const) {
+      expect(screen.getByTestId(`graph-panel-filter-${kind}`)).toHaveAttribute(
+        "aria-pressed",
+        "true"
+      )
+    }
+    expect(mocks.getGraphViewForWorkspace).not.toHaveBeenCalled()
   })
 
   it("accepts mouse selection for the 30-day range", async () => {
