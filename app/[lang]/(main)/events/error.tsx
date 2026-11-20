@@ -27,7 +27,11 @@ export default function Error({
   }, [error])
 
   return (
-    <div className="flex min-h-[400px] items-center justify-center p-4">
+    <div
+      className="flex min-h-[400px] items-center justify-center p-4"
+      role="alert"
+      aria-live="assertive"
+    >
       <Card className="max-w-md border-destructive/20 shadow-lg">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10">
@@ -37,7 +41,7 @@ export default function Error({
             {dictionary.events.errorTitle}
           </CardTitle>
           <CardDescription className="mt-2 text-muted-foreground">
-            {error.message || dictionary.events.errorDescription}
+            {dictionary.events.errorDescription}
           </CardDescription>
         </CardHeader>
         <CardContent className="flex justify-center pb-8">
