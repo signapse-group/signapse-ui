@@ -1,6 +1,6 @@
 # SIGN-582 Graph View node-filter evidence
 
-The Graph View implementation is in [`1e3d74d483c052362e579fa158f9ea031a9faa6b`](https://github.com/signapse-group/signapse-ui/commit/1e3d74d483c052362e579fa158f9ea031a9faa6b), based on `origin/dev` at [`011473145ad6cc62ccf17abe68eaae0e754a22e1`](https://github.com/signapse-group/signapse-ui/commit/011473145ad6cc62ccf17abe68eaae0e754a22e1). These screenshots were rendered from that UI candidate with the fixture-backed Playwright test in `tests/e2e/graph-view-node-filters.spec.ts`.
+The Graph View implementation is in [`1e3d74d483c052362e579fa158f9ea031a9faa6b`](https://github.com/signapse-group/signapse-ui/commit/1e3d74d483c052362e579fa158f9ea031a9faa6b); the current shared trailing-icon spacing fix is in [`090afd10f691a483ce3972131c27913ec1395e2a`](https://github.com/signapse-group/signapse-ui/commit/090afd10f691a483ce3972131c27913ec1395e2a), based on `origin/dev` at [`011473145ad6cc62ccf17abe68eaae0e754a22e1`](https://github.com/signapse-group/signapse-ui/commit/011473145ad6cc62ccf17abe68eaae0e754a22e1). These screenshots were refreshed from that UI candidate with the fixture-backed Playwright test in `tests/e2e/graph-view-node-filters.spec.ts`.
 
 ## Accepted design sources
 
