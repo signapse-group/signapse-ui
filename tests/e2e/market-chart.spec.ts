@@ -149,9 +149,56 @@ async function expectMarketChartReadoutShowsClose(
   page: Page,
   expectedClose: string
 ) {
-  await expect(page.getByTestId("market-chart-readout")).toContainText(
-    "C " + expectedClose
+  await expect
+    .poll(() => hasNativeMarketChartLegendText(page, expectedClose), {
+      timeout: 10_000,
+    })
+    .toBe(true)
+}
+
+async function getMarketChartCanvasText(page: Page) {
+  return page.evaluate(() => {
+    const chart = document.querySelector(
+      '[role="application"][aria-label="Biểu đồ giá"]'
+    )
+    const chartCanvases = new Set(
+      Array.from(chart?.querySelectorAll("canvas") ?? [])
+    )
+    const trackedWindow = window as Window & {
+      __sign498ChartCanvasTextDraws?: ChartCanvasTextDraw[]
+    }
+
+    return (
+      trackedWindow.__sign498ChartCanvasTextDraws
+        ?.filter(
+          ({ canvas }) => canvas.isConnected && chartCanvases.has(canvas)
+        )
+        .map(({ canvas, text, x, y }) => {
+          const width = canvas.getBoundingClientRect().width
+          const scale = canvas.width / Math.max(width, 1)
+          return { text: text.trim(), x: x / scale, y: y / scale }
+        }) ?? []
+    )
+  })
+}
+
+async function hasNativeMarketChartLegendText(page: Page, text: string) {
+  const draws = await getMarketChartCanvasText(page)
+  return draws.some(
+    ({ text: drawnText, y }) => y <= 80 && drawnText.includes(text)
   )
+}
+
+async function expectNoMarketChartCanvasText(page: Page, expectedText: string) {
+  await expect
+    .poll(
+      async () =>
+        (await getMarketChartCanvasText(page)).some(({ text }) =>
+          text.includes(expectedText)
+        ),
+      { timeout: 10_000 }
+    )
+    .toBe(false)
 }
 
 async function setAnnotationsVisible(page: Page, visible: boolean) {
@@ -241,43 +288,60 @@ async function expectMarketChartReadoutShowsTime(page: Page, status: Locator) {
 
   if (!time) throw new Error(`Could not read a candle time from: ${readout}`)
 
-  await expect(page.getByTestId("market-chart-readout")).toContainText(time)
+  await expect
+    .poll(() => hasNativeMarketChartLegendText(page, time), { timeout: 5_000 })
+    .toBe(true)
 }
 
 async function expectMarketChartReadoutReflow(page: Page, wraps: boolean) {
-  const timeVolume = page.getByTestId("market-chart-readout-time-volume")
-  const values = page.getByTestId("market-chart-readout-values")
-  await expect(timeVolume).toBeVisible()
-  await expect(timeVolume).toContainText("· Vol")
-  await expect(values).toBeVisible()
-  const valueTexts = await values.locator("span").allTextContents()
-  expect(valueTexts.map((text) => text.trim()[0])).toEqual(["O", "H", "L", "C"])
+  const chart = page.getByRole("application", { name: "Biểu đồ giá" })
+  const status = chart.locator('span[role="status"]')
+  const readout = await status.innerText()
+  const time = readout.match(/\b\d{2}:\d{2}\b/)?.[0]
+  if (!time) throw new Error(`Could not read a candle time from: ${readout}`)
 
-  const [timeVolumeBounds, valuesBounds] = await Promise.all([
-    timeVolume.boundingBox(),
-    values.boundingBox(),
-  ])
-  expect(timeVolumeBounds).not.toBeNull()
-  expect(valuesBounds).not.toBeNull()
-  if (!timeVolumeBounds || !valuesBounds) {
-    throw new Error("Market chart readout was not laid out")
-  }
+  await expect
+    .poll(
+      async () => {
+        const draws = await getMarketChartCanvasText(page)
+        const top = draws.filter(({ y }) => y <= 100)
+        const timeDraw = top.find(({ text }) => text.includes(time))
+        const volumeDraw = top.find(({ text }) => text === "· Vol")
+        const labels = ["O", "H", "L", "C"].map((label) =>
+          top.find(({ text }) => text === label)
+        )
 
-  if (wraps) {
-    expect(valuesBounds.y).toBeGreaterThan(timeVolumeBounds.y)
-    const valueCells = await values.locator("span").evaluateAll((elements) =>
-      elements.map((element) => {
-        const { x, y } = element.getBoundingClientRect()
-        return { x, y }
-      })
+        if (!timeDraw || !volumeDraw || labels.some((label) => !label)) {
+          return false
+        }
+
+        const rows = labels.map((label) => label!.y)
+        const legendOrder = [
+          top.findIndex(({ text }) => text.includes(time)),
+          top.findIndex(({ text }) => text === "· Vol"),
+          ...["O", "H", "L", "C"].map((label) =>
+            top.findIndex(({ text }) => text === label)
+          ),
+        ]
+        if (legendOrder.some((index) => index < 0)) return false
+        if (
+          !legendOrder.every(
+            (index, position) =>
+              position === 0 || index > legendOrder[position - 1]!
+          )
+        ) {
+          return false
+        }
+        if (Math.abs(timeDraw.y - volumeDraw.y) >= 2) return false
+        if (wraps) {
+          return rows.some((row) => row > timeDraw.y + 2)
+        }
+
+        return rows.every((row) => Math.abs(row - timeDraw.y) < 2)
+      },
+      { timeout: 10_000 }
     )
-    expect(valueCells).toHaveLength(4)
-    expect(Math.abs(valueCells[0]!.y - valueCells[1]!.y)).toBeLessThan(2)
-    expect(valueCells[2]!.y).toBeGreaterThan(valueCells[0]!.y)
-    expect(Math.abs(valueCells[2]!.y - valueCells[3]!.y)).toBeLessThan(2)
-  } else {
-    expect(Math.abs(valuesBounds.y - timeVolumeBounds.y)).toBeLessThan(2)
-  }
+    .toBe(true)
 }
 
 async function expectMarketChartCrosshairAxisLabel(
@@ -349,9 +413,16 @@ test.describe("P0 market chart workbench", () => {
     await page.clock.setFixedTime(new Date(MARKET_CHART_FIXTURE_NOW))
     await page.setViewportSize({ width: 1520, height: 1024 })
     await trackMarketChartCanvasText(page)
-    await page.addInitScript(() => localStorage.setItem("theme", "light"))
+    await page.addInitScript(() => localStorage.setItem("theme", "dark"))
     await fixture.setScenario("/market-charts/live", "reconnect", "GET")
     await fixture.setScenario("/market-charts/candles", "success", "GET")
+    await page.context().addCookies([
+      {
+        name: "sidebar_state",
+        value: "true",
+        url: "http://127.0.0.1:3100/",
+      },
+    ])
     await page.goto("/vi/market-charts?assetId=101&timeframe=1h")
 
     await expect(page.locator("#market-chart-asset")).toBeVisible()
@@ -393,9 +464,26 @@ test.describe("P0 market chart workbench", () => {
       [{ width: 390, height: 844 }, "mobile"],
     ] as const) {
       await page.setViewportSize(viewport)
+      await page.context().addCookies([
+        {
+          name: "sidebar_state",
+          value: label === "wide" ? "true" : "false",
+          url: "http://127.0.0.1:3100/",
+        },
+      ])
+      await page.reload()
+      await expect(chart).toBeVisible()
       await expectNoHorizontalOverflow(page)
       await expectMarketChartReadoutShowsClose(page, "110,50")
       await expectMarketChartReadoutReflow(page, label === "mobile")
+      if (label !== "mobile") {
+        await expect(
+          page.locator('[data-slot="sidebar"]').first()
+        ).toHaveAttribute(
+          "data-state",
+          label === "wide" ? "expanded" : "collapsed"
+        )
+      }
       await expect(chart).toHaveAccessibleDescription(/Quote gần nhất: 110,50/)
       await expect(chart.locator('span[role="status"]')).toContainText(
         "đóng cửa 110,50; khối lượng 1,003K."
@@ -452,7 +540,7 @@ test.describe("P0 market chart workbench", () => {
     fixture,
   }, testInfo) => {
     await page.clock.install({ time: new Date(MARKET_CHART_FIXTURE_NOW) })
-    // Track canvas text for axis labels and price markers; the candle readout is HTML.
+    // Track canvas text for the native candle legend and chart axes.
     await trackMarketChartCanvasText(page)
     await fixture.setScenario(
       "/market-charts/candles",
@@ -725,7 +813,7 @@ test.describe("P0 market chart workbench", () => {
     await expect.poll(() => page.evaluate(() => window.innerWidth)).toBe(760)
     await expect(status).toHaveText(latestReadout)
     await expectNoHorizontalOverflow(page)
-    await expectMarketChartReadoutReflow(page, true)
+    await expectMarketChartReadoutReflow(page, false)
     await testInfo.attach("sign-474-effective-viewport-760x512", {
       body: await page.screenshot({ fullPage: true }),
       contentType: "image/png",
@@ -859,9 +947,7 @@ test.describe("P0 market chart workbench", () => {
     await expect(
       page.getByText("Đang kết nối giá trực tiếp", { exact: true })
     ).toBeVisible()
-    await expect(page.getByTestId("market-chart-readout")).not.toContainText(
-      "C 110,50"
-    )
+    await expectNoMarketChartCanvasText(page, "110,50")
     await expect(page.getByText(/^Cập nhật /)).toHaveCount(0)
 
     await fixture.setScenario("/market-charts/live", "market-closed", "GET")
@@ -2804,9 +2890,7 @@ test.describe("P0 market chart history selection", () => {
     await expect(readout).toContainText("105,00")
     await expectMarketChartReadoutShowsClose(page, "2.500,25")
     await expect(chart).toHaveAccessibleDescription(/Quote gần nhất: 2.500,25/)
-    await expect(page.getByTestId("market-chart-readout")).not.toContainText(
-      "110,50"
-    )
+    await expectNoMarketChartCanvasText(page, "110,50")
     await expect(page.getByText("Giá trực tiếp", { exact: true })).toBeVisible()
     expect((await fixture.state()).streamConnections).toBe(2)
   })

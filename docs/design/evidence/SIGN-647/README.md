@@ -1,24 +1,27 @@
 # SIGN-647 Market Chart layout and readout evidence
 
-The approved design is the active **20 November 2026** version on [SIGN-121](https://signapse-group.atlassian.net/browse/SIGN-121). I downloaded and inspected attachments **10294–10296**. The screenshots below are local browser renders using the Market Chart fixture; fixture candle and quote values are synthetic and do not prove live API behavior or coordinator acceptance.
+The accepted source is the active 20 November 2026 design on [SIGN-121](https://signapse-group.atlassian.net/browse/SIGN-121), attachments 10294–10296. The local browser renders below use synthetic fixture candles and quotes. They show layout and formatting only; they do not verify live API behavior or coordinator acceptance.
 
-| Accepted source                                                | Candidate render                                                       | Render context                                                       |
-| -------------------------------------------------------------- | ---------------------------------------------------------------------- | -------------------------------------------------------------------- |
-| Attachment 10294, `SIGN-121-Market-Chart-Wide-20261120.png`    | [Wide](market-chart-wide-dark-vi-1520x1024.png)                        | 1520×1024, dark, Vietnamese, expanded sidebar; latest candle readout |
-| Attachment 10295, `SIGN-121-Market-Chart-Compact-20261120.png` | [Compact](market-chart-compact-light-vi-1024x768.png)                  | 1024×768, light, Vietnamese, collapsed sidebar                       |
-| Attachment 10296, `SIGN-121-Market-Chart-Mobile-20261120.png`  | [Mobile](market-chart-mobile-dark-vi-390x844.png)                      | 390×844, dark, Vietnamese, sidebar closed                            |
-| Responsive Contract, 360px check                               | [Small mobile](market-chart-small-mobile-dark-vi-360x800.png)          | 360×800, dark, Vietnamese, sidebar closed                            |
-| Responsive Contract, 200% effective width check                | [Effective 200% width](market-chart-effective-200-dark-vi-760x512.png) | 760×512, dark, Vietnamese, sidebar closed                            |
+| Design source                        | Local render                                                           | Render context                                           |
+| ------------------------------------ | ---------------------------------------------------------------------- | -------------------------------------------------------- |
+| Wide, attachment 10294               | [Wide](market-chart-wide-dark-en-1520x1024-verified.png)               | 1520×1024, dark, English, expanded sidebar               |
+| Compact, attachment 10295            | [Compact](market-chart-compact-dark-en-1024x768-verified.png)          | 1024×768, dark, English, collapsed sidebar               |
+| Mobile, attachment 10296             | [Mobile](market-chart-mobile-dark-en-390x844-verified.png)             | 390×844, dark, English, mobile shell                     |
+| Responsive Contract, 360px           | [Small mobile](market-chart-small-mobile-dark-en-360x800-verified.png) | 360×800, dark, English                                   |
+| Responsive Contract, effective 760px | [760×512](market-chart-effective-width-760x512-dark-en-verified.png)   | 760×512 CSS viewport, dark, English                      |
+| Native browser zoom 200%             | [200% zoom](market-chart-browser-zoom-200-dark-en-verified.png)        | 1520×1024 display, dark, English, actual Chrome tab zoom |
 
-The candidate screenshots retain the current shell and place the chart toolbar above the plot, drawing tools at its left, and chart footer within the chart frame. The top-left readout puts localized time and `Vol` together, then shows `O`, `H`, `L`, `C` in order. At 390px, 360px and 760×512, `Time · Vol` stays together and OHLC reflows into two readable rows. The local browser checks found no page-level horizontal overflow and kept the chart axes and footer visible at the checked widths.
+The frame follows the current application shell. The chart toolbar sits above the plot, drawing tools stay on the left, and chart footer remains inside the frame. The native KLine legend displays time and volume before O/H/L/C; at 390px and 360px the OHLC values reflow and remain readable. The accessible status keeps full parameter names.
 
-The 760×512 render simulates the effective CSS viewport width of a 1520×1024 frame at 200% zoom. The host's headless Playwright runner did not apply native browser zoom, so native 200% zoom remains unverified. The linked Planning Responsive Contract URL returned HTTP 404 during this run; the equivalent, versioned FE execution contract in [`docs/design/DESIGN.md`](../../DESIGN.md#responsive-contract) supplied the viewport frames and checks.
+For the native 200% capture, Chrome reported `innerWidth=760`, `devicePixelRatio=2`, and CDP `cssVisualViewport.zoom=2`; `document.documentElement.scrollWidth` stayed at or below 760. The screenshot was captured at device scale, and the full legend remained inside the chart canvas. This is an actual browser zoom check; the separate 760×512 screenshot is a CSS viewport check.
+
+The linked Planning Responsive Contract URL returned HTTP 404 during this run. The equivalent versioned FE execution contract in [`docs/design/DESIGN.md`](../../DESIGN.md#responsive-contract) supplied the local viewport checks.
 
 ## Local verification
 
-- `pnpm exec vitest run tests/market-chart/market-chart-helpers.test.ts` — helper formatting, timeframe, zero/missing volume and readout checks.
+- `pnpm exec vitest run tests/market-chart/market-chart-helpers.test.ts` — formatting, timeframe, precision, and zero/missing volume.
 - `pnpm typecheck`.
-- Focused ESLint and Prettier checks for the changed Market Chart files and this evidence document; `git diff --check`.
-- Focused Playwright coverage passed **6/6** cases: quote-updated readout across wide/compact/mobile/360px, keyboard inspection and pan, 760×512 effective-width reflow, chart loading skeleton, empty history, quote/request pending behavior, and candle errors/retry. These are local fixtures; no live feature test was run.
+- Focused Playwright checks through `/opt/apps/symphony/runtime/run-fe-browser`, including responsive reflow, chart states, native legend, and actual 200% Chrome zoom.
+- Focused ESLint, Prettier, and `git diff --check` for the changed files. ESLint reports 11 existing hook/import warnings in `market-chart-canvas.tsx` and no errors.
 
-Current PR `Verify / check` and Vercel Preview evidence are required before the In Review handoff. The coordinator owns live dev acceptance and delivery revision verification after review and merge.
+Current PR CI and Vercel Preview checks are required before the In Review handoff. The coordinator owns dev acceptance and delivery revision verification after review and merge.

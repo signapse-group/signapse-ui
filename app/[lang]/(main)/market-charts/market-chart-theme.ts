@@ -78,6 +78,21 @@ export function resolveChartThemeMode(
   return theme === "dark" ? "dark" : "light"
 }
 
+export function getMarketChartLegendFontSize(
+  outerWidth: number,
+  innerWidth: number
+) {
+  const zoomFactor = Math.max(1, outerWidth / Math.max(innerWidth, 1))
+
+  return Math.max(8, 12 / zoomFactor)
+}
+
+export function getMarketChartLegendSize() {
+  if (typeof window === "undefined") return 12
+
+  return getMarketChartLegendFontSize(window.outerWidth, window.innerWidth)
+}
+
 function getCssTextVariable(name: string, fallback: string) {
   if (typeof window === "undefined") {
     return fallback
@@ -120,10 +135,15 @@ export interface CreateChartStylesResult {
       }
     }
     tooltip: {
-      showRule: "none"
+      showRule: "always"
       legend: {
         defaultValue: string
         family: string
+        marginBottom: number
+        marginLeft: number
+        marginRight: number
+        marginTop: number
+        size: number
         template: CandleTooltipLegendsCustomCallback
       }
       title: { family: string; show: boolean }
@@ -254,7 +274,7 @@ export function createChartStyles(
         ),
       },
       {
-        title: "· Vol",
+        title: "· Vol ",
         value:
           typeof candle.volume === "number" && Number.isFinite(candle.volume)
             ? formatMarketChartVolume(
@@ -264,7 +284,7 @@ export function createChartStyles(
             : legendFormatters.notAvailable,
       },
       {
-        title: "O",
+        title: "O ",
         value: formatMarketChartPrice(
           candle.open,
           legendFormatters.pricePrecision,
@@ -272,7 +292,7 @@ export function createChartStyles(
         ),
       },
       {
-        title: "H",
+        title: "H ",
         value: formatMarketChartPrice(
           candle.high,
           legendFormatters.pricePrecision,
@@ -280,7 +300,7 @@ export function createChartStyles(
         ),
       },
       {
-        title: "L",
+        title: "L ",
         value: formatMarketChartPrice(
           candle.low,
           legendFormatters.pricePrecision,
@@ -288,7 +308,7 @@ export function createChartStyles(
         ),
       },
       {
-        title: "C",
+        title: "C ",
         value: formatMarketChartPrice(
           candle.close,
           legendFormatters.pricePrecision,
@@ -340,10 +360,15 @@ export function createChartStyles(
         },
       },
       tooltip: {
-        showRule: "none",
+        showRule: "always",
         legend: {
           defaultValue: legendFormatters.notAvailable,
           family: fontFamily,
+          marginBottom: 0,
+          marginLeft: 0,
+          marginRight: 4,
+          marginTop: 0,
+          size: getMarketChartLegendSize(),
           template: candleLegendTemplate,
         },
         title: { family: fontFamily, show: false },

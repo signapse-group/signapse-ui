@@ -34,6 +34,7 @@ import {
   formatMarketChartVolume,
   formatMarketChartPrice,
   getMarketChartCandleTimeFormatOptions,
+  getMarketChartLegendFontSize,
   getMarketChartThemePalette,
 } from "@/app/[lang]/(main)/market-charts/market-chart-theme"
 import {
@@ -511,6 +512,12 @@ describe("native market-chart last-price marker", () => {
 })
 
 describe("native market-chart readout", () => {
+  it("keeps the full native legend readable under browser zoom", () => {
+    expect(getMarketChartLegendFontSize(1520, 1520)).toBe(12)
+    expect(getMarketChartLegendFontSize(1520, 760)).toBe(8)
+    expect(getMarketChartLegendFontSize(1520, 0)).toBe(8)
+  })
+
   it("uses the latest loaded candle when inspection has been cleared", () => {
     const latestCandle = {
       close: 5.5,
@@ -528,7 +535,7 @@ describe("native market-chart readout", () => {
       pricePrecision: 2,
       timeframe: "1m",
     })
-    expect(styles.candle.tooltip.showRule).toBe("none")
+    expect(styles.candle.tooltip.showRule).toBe("always")
     const template = styles.candle.tooltip.legend.template
 
     if (typeof template !== "function") {
@@ -553,11 +560,11 @@ describe("native market-chart readout", () => {
 
     expect(legends.map(({ title, value }) => [title, value])).toEqual([
       ["", "time-200"],
-      ["· Vol", "7"],
-      ["O", "5"],
-      ["H", "6"],
-      ["L", "4"],
-      ["C", "5.5"],
+      ["· Vol ", "7"],
+      ["O ", "5"],
+      ["H ", "6"],
+      ["L ", "4"],
+      ["C ", "5.5"],
     ])
   })
 
@@ -592,8 +599,8 @@ describe("native market-chart readout", () => {
       )
     }
 
-    expect(createLegends(0)[1]).toEqual({ title: "· Vol", value: "0.00" })
-    expect(createLegends()[1]).toEqual({ title: "· Vol", value: "N/A" })
+    expect(createLegends(0)[1]).toEqual({ title: "· Vol ", value: "0.00" })
+    expect(createLegends()[1]).toEqual({ title: "· Vol ", value: "N/A" })
   })
 })
 

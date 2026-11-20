@@ -88,6 +88,7 @@ import {
   formatMarketChartPrice,
   formatMarketChartVolume,
   getMarketChartCandleTimeFormatOptions,
+  getMarketChartLegendSize,
   getMarketChartThemePalette,
   resolveChartThemeMode,
   type ChartThemeMode,
@@ -1796,8 +1797,16 @@ export const MarketChartCanvas = forwardRef<
     chart.subscribeAction("onZoom", scheduleMarkerPositionUpdate)
 
     const frameId = window.requestAnimationFrame(updateMarkerPositions)
+    let legendSize = getMarketChartLegendSize()
     const resizeObserver = new ResizeObserver(() => {
       chart.resize()
+      const nextLegendSize = getMarketChartLegendSize()
+      if (nextLegendSize !== legendSize) {
+        chart.setStyles({
+          candle: { tooltip: { legend: { size: nextLegendSize } } },
+        })
+        legendSize = nextLegendSize
+      }
       scheduleMarkerPositionUpdate()
     })
 
@@ -2277,32 +2286,6 @@ export const MarketChartCanvas = forwardRef<
       >
         {chartReadout}
       </span>
-      {currentReadout ? (
-        <div
-          aria-hidden="true"
-          data-testid="market-chart-readout"
-          className="pointer-events-none absolute top-2 left-2 z-10 flex max-w-[calc(100%-4rem)] flex-wrap items-start gap-x-3 gap-y-1 bg-card text-xs leading-4 text-muted-foreground"
-        >
-          <div
-            data-testid="market-chart-readout-time-volume"
-            className="flex flex-wrap items-center gap-x-1"
-          >
-            <span>{currentReadout.time}</span>
-            <span className="whitespace-nowrap">
-              · Vol {currentReadout.volume}
-            </span>
-          </div>
-          <div
-            data-testid="market-chart-readout-values"
-            className="grid w-fit basis-full grid-cols-2 gap-x-3 min-[768px]:basis-auto min-[768px]:grid-cols-4"
-          >
-            <span className="whitespace-nowrap">O {currentReadout.open}</span>
-            <span className="whitespace-nowrap">H {currentReadout.high}</span>
-            <span className="whitespace-nowrap">L {currentReadout.low}</span>
-            <span className="whitespace-nowrap">C {currentReadout.close}</span>
-          </div>
-        </div>
-      ) : null}
       <div
         ref={containerRef}
         className={cn(
