@@ -642,6 +642,7 @@ export const en: Dictionary = {
     loadMore: "Load more",
   },
   quickDetail: {
+    readerRegionLabel: "Quick detail content",
     notFoundTitle: "Detail not found",
     notFoundDescription:
       "The selected content no longer exists or you cannot access it.",
@@ -1041,6 +1042,8 @@ export const en: Dictionary = {
     confidencePrefix: "Confidence: {value}",
     trusted: "Confidence {value}",
     viewArticle: "View article",
+    articleIdentityUnavailable: "Article identity not provided.",
+    sourceUrlUnavailable: "Original source URL not provided.",
     openOriginalLink: "Open original link",
     openOriginal: "Open original",
     marketReactions: "Market reactions · AI forecasts",

@@ -11,8 +11,8 @@ import {
   type RefObject,
 } from "react"
 
-import { getEventById } from "@/app/api/events/action"
-import { getNewsArticleById } from "@/app/api/news-articles/action"
+import { getEventByIdForQuickDetail } from "@/app/api/events/action"
+import { getNewsArticleByIdForQuickDetail } from "@/app/api/news-articles/action"
 import { EVENT_READ_PERMISSIONS } from "@/app/lib/events/permissions"
 import type { EventResponse } from "@/app/lib/events/definitions"
 import { useLocalization } from "@/app/lib/i18n/provider"
@@ -35,6 +35,8 @@ import {
 } from "@/components/ui/empty"
 import { Spinner } from "@/components/ui/spinner"
 import { Button, buttonVariants } from "@/components/ui/button"
+import { Tooltip, TooltipTrigger } from "@/components/ui/tooltip"
+import { TooltipContentInOverlay } from "@/components/ui/tooltip-content-in-overlay"
 import { useHasAnyPermission } from "@/components/permission-provider"
 import { cn } from "@/lib/utils"
 
@@ -79,17 +81,20 @@ interface LocalEntityQuickDetailDrawerProps {
   onBeforeClose?: () => void
   onClose: () => void
   owner: LocalQuickDetailOwner
+  watchlistAssetIds?: readonly number[]
   returnFocusRef?: RefObject<HTMLElement | null> | null
 }
 
-function getErrorStatus(error: unknown) {
-  if (typeof error !== "object" || error === null) {
-    return null
+function getErrorPhase(status: number | null): "error" | "missing" | "denied" {
+  if (status === 404) {
+    return "missing"
   }
 
-  const status = (error as { status?: unknown }).status
+  if (status === 401 || status === 403) {
+    return "denied"
+  }
 
-  return typeof status === "number" ? status : null
+  return "error"
 }
 
 function subscribeToViewport(callback: () => void) {
@@ -146,6 +151,7 @@ export function LocalEntityQuickDetailDrawer({
   onBeforeClose,
   onClose,
   owner,
+  watchlistAssetIds = [],
   returnFocusRef = null,
 }: LocalEntityQuickDetailDrawerProps) {
   const { dictionary, locale } = useLocalization()
@@ -209,9 +215,13 @@ export function LocalEntityQuickDetailDrawer({
             dictionary.newsArticles.titleUnavailable
           : currentState?.phase === "missing"
             ? dictionary.quickDetail.notFoundTitle
-            : currentState?.phase === "error"
-              ? dictionary.quickDetail.errorTitle
-              : dictionary.common.loading
+            : currentState?.phase === "denied"
+              ? entity.kind === "event"
+                ? dictionary.events.quickAccessDeniedTitle
+                : dictionary.newsArticles.quickAccessDeniedTitle
+              : currentState?.phase === "error"
+                ? dictionary.quickDetail.errorTitle
+                : dictionary.common.loading
   const title = detailTitle
   const canonicalHref =
     entity &&
@@ -287,56 +297,57 @@ export function LocalEntityQuickDetailDrawer({
     async function loadDetail() {
       try {
         if (selectedEntity.kind === "event") {
-          const event = await getEventById(selectedEntity.id)
+          const result = await getEventByIdForQuickDetail(selectedEntity.id)
 
-          if (isActive) {
+          if (!isActive) {
+            return
+          }
+
+          if (!result.success) {
             setState({
               entityKey: currentEntityKey,
-              event,
-              phase: "event",
+              phase: getErrorPhase(result.status),
               retryNonce,
               sessionId,
             })
+            return
           }
 
-          return
-        }
-
-        const article = await getNewsArticleById(selectedEntity.id)
-
-        if (isActive) {
           setState({
-            article,
             entityKey: currentEntityKey,
-            phase: "news-article",
+            event: result.data,
+            phase: "event",
             retryNonce,
             sessionId,
           })
+          return
         }
-      } catch (error) {
+
+        const result = await getNewsArticleByIdForQuickDetail(selectedEntity.id)
+
         if (!isActive) {
           return
         }
 
-        const status = getErrorStatus(error)
-
-        if (status === 404) {
+        if (!result.success) {
           setState({
             entityKey: currentEntityKey,
-            phase: "missing",
+            phase: getErrorPhase(result.status),
             retryNonce,
             sessionId,
           })
           return
         }
 
-        if (status === 401 || status === 403) {
-          setState({
-            entityKey: currentEntityKey,
-            phase: "denied",
-            retryNonce,
-            sessionId,
-          })
+        setState({
+          article: result.data,
+          entityKey: currentEntityKey,
+          phase: "news-article",
+          retryNonce,
+          sessionId,
+        })
+      } catch {
+        if (!isActive) {
           return
         }
 
@@ -406,43 +417,67 @@ export function LocalEntityQuickDetailDrawer({
         initialFocus={closeButtonRef}
         style={getDrawerStyle(presentation)}
       >
-        <DrawerHeader className="sticky top-0 z-10 border-b bg-popover/95 px-4 py-3 text-left backdrop-blur-sm">
-          <div className="flex flex-wrap items-start gap-3">
+        <DrawerHeader
+          className={cn(
+            "sticky top-0 z-10 border-b bg-popover/95 px-4 py-3 text-left",
+            "backdrop-blur-sm group-data-[swipe-axis=y]/drawer-popup:text-left"
+          )}
+        >
+          <div className="flex items-start gap-2">
             <div className="min-w-0 flex-1">
-              <DrawerTitle className="truncate text-base font-semibold">
+              <DrawerTitle className="text-base leading-snug font-semibold break-words">
                 {title}
               </DrawerTitle>
             </div>
-            <Button
-              ref={closeButtonRef}
-              aria-label={dictionary.common.close}
-              type="button"
-              size="icon-sm"
-              variant="ghost"
-              onClick={requestClose}
-            >
-              <X aria-hidden="true" data-icon="inline-start" />
-            </Button>
-          </div>
-
-          {canonicalHref ? (
-            <div className="mt-3 flex justify-start">
-              <Link
-                href={canonicalHref}
-                className={buttonVariants({ size: "sm", variant: "outline" })}
+            <div className="flex shrink-0 items-start gap-1">
+              {canonicalHref ? (
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <Link
+                        href={canonicalHref}
+                        aria-label={dictionary.common.openFullPage}
+                        className={cn(
+                          buttonVariants({ size: "icon-sm", variant: "ghost" }),
+                          "size-[44px] min-[768px]:size-[28px]"
+                        )}
+                        onClick={requestClose}
+                      >
+                        <ArrowUpRight
+                          aria-hidden="true"
+                          className="size-[16px]"
+                        />
+                      </Link>
+                    }
+                  />
+                  <TooltipContentInOverlay>
+                    {dictionary.common.openFullPage}
+                  </TooltipContentInOverlay>
+                </Tooltip>
+              ) : null}
+              <Button
+                ref={closeButtonRef}
+                aria-label={dictionary.common.close}
+                className="size-[44px] min-[768px]:size-[28px]"
+                type="button"
+                size="icon-sm"
+                variant="ghost"
                 onClick={requestClose}
               >
-                <ArrowUpRight aria-hidden="true" data-icon="inline-start" />
-                {dictionary.common.openFullPage}
-              </Link>
+                <X aria-hidden="true" className="size-[16px]" />
+              </Button>
             </div>
-          ) : null}
+          </div>
         </DrawerHeader>
 
         <div
           ref={bodyRef}
+          data-quick-detail-scroll-region
+          role="region"
+          aria-label={dictionary.quickDetail.readerRegionLabel}
+          tabIndex={0}
           className={cn(
-            "min-h-0 flex-1 overflow-y-auto p-4 motion-reduce:transition-none",
+            "min-h-0 flex-1 overflow-y-auto p-4 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset motion-reduce:transition-none",
             entity?.kind === "event" && presentation.placement === "bottom"
               ? "mx-auto w-full max-w-[64rem]"
               : null
@@ -523,6 +558,7 @@ export function LocalEntityQuickDetailDrawer({
               dictionary={dictionary}
               event={currentState.event}
               locale={locale}
+              watchlistAssetIds={watchlistAssetIds}
             />
           ) : (
             <NewsArticleQuickDetailContent

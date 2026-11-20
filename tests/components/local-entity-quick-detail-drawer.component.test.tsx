@@ -15,20 +15,22 @@ import {
   type ReactNode,
 } from "react"
 
-const { getEventById, getNewsArticleById, useHasAnyPermission } = vi.hoisted(
-  () => ({
-    getEventById: vi.fn(),
-    getNewsArticleById: vi.fn(),
-    useHasAnyPermission: vi.fn(() => true),
-  })
-)
+const {
+  getEventByIdForQuickDetail,
+  getNewsArticleByIdForQuickDetail,
+  useHasAnyPermission,
+} = vi.hoisted(() => ({
+  getEventByIdForQuickDetail: vi.fn(),
+  getNewsArticleByIdForQuickDetail: vi.fn(),
+  useHasAnyPermission: vi.fn(() => true),
+}))
 
 vi.mock("@/app/api/events/action", () => ({
-  getEventById,
+  getEventByIdForQuickDetail,
 }))
 
 vi.mock("@/app/api/news-articles/action", () => ({
-  getNewsArticleById,
+  getNewsArticleByIdForQuickDetail,
 }))
 
 vi.mock("@/components/permission-provider", () => ({
@@ -39,7 +41,13 @@ vi.mock("@/components/ui/drawer", () => ({
   DrawerHeader: ({ children }: { children: ReactNode }) => (
     <header>{children}</header>
   ),
-  DrawerTitle: ({ children }: { children: ReactNode }) => <h2>{children}</h2>,
+  DrawerTitle: ({
+    children,
+    className,
+  }: {
+    children: ReactNode
+    className?: string
+  }) => <h2 className={className}>{children}</h2>,
 }))
 
 vi.mock("@/components/ui/drawer-content-in-overlay", () => ({
@@ -117,7 +125,7 @@ const article: NewsArticleResponse = {
   ],
 }
 
-const event: EventResponse = {
+const event = {
   id: 73,
   title: "Sự kiện được chọn trong dòng thời gian",
   canonicalKey: null,
@@ -130,10 +138,13 @@ const event: EventResponse = {
   themes: [],
   evidence: [],
   marketReactions: [],
-}
+} satisfies EventResponse
 
 function renderDrawer(selectedArticle: NewsArticleResponse = article) {
-  getNewsArticleById.mockResolvedValueOnce(selectedArticle)
+  getNewsArticleByIdForQuickDetail.mockResolvedValueOnce({
+    success: true,
+    data: selectedArticle,
+  })
 
   return render(
     <LocalizationProvider locale="vi" dictionary={viDictionary}>
@@ -147,7 +158,10 @@ function renderDrawer(selectedArticle: NewsArticleResponse = article) {
 }
 
 function renderEventDrawer(selectedEvent: EventResponse = event) {
-  getEventById.mockResolvedValueOnce(selectedEvent)
+  getEventByIdForQuickDetail.mockResolvedValueOnce({
+    success: true,
+    data: selectedEvent,
+  })
 
   return render(
     <LocalizationProvider locale="vi" dictionary={viDictionary}>
@@ -279,11 +293,14 @@ describe("LocalEntityQuickDetailDrawer news article reading surface", () => {
 
   it("keeps the canonical action during transient errors and retries the snapshot", async () => {
     const backendError = new Error("internal Article service detail")
-    getNewsArticleById
+    getNewsArticleByIdForQuickDetail
       .mockRejectedValueOnce(backendError)
       .mockResolvedValueOnce({
-        ...article,
-        title: "Bài viết sau khi thử lại",
+        success: true,
+        data: {
+          ...article,
+          title: "Bài viết sau khi thử lại",
+        },
       })
 
     render(
@@ -319,7 +336,7 @@ describe("LocalEntityQuickDetailDrawer news article reading surface", () => {
         })
       ).toBeInTheDocument()
     })
-    expect(getNewsArticleById).toHaveBeenCalledTimes(2)
+    expect(getNewsArticleByIdForQuickDetail).toHaveBeenCalledTimes(2)
   })
 
   it("does not show a previous snapshot while another entity opens", async () => {
@@ -328,14 +345,20 @@ describe("LocalEntityQuickDetailDrawer news article reading surface", () => {
       id: 43,
       title: "Bài viết thứ hai",
     }
-    let resolveNextArticle: ((value: NewsArticleResponse) => void) | undefined
+    let resolveNextArticle:
+      | ((value: { success: true; data: NewsArticleResponse }) => void)
+      | undefined
 
-    getNewsArticleById.mockResolvedValueOnce(article).mockImplementationOnce(
-      () =>
-        new Promise<NewsArticleResponse>((resolve) => {
-          resolveNextArticle = resolve
-        })
-    )
+    getNewsArticleByIdForQuickDetail
+      .mockResolvedValueOnce({ success: true, data: article })
+      .mockImplementationOnce(
+        () =>
+          new Promise<{ success: true; data: NewsArticleResponse }>(
+            (resolve) => {
+              resolveNextArticle = resolve
+            }
+          )
+      )
 
     const view = render(
       <LocalizationProvider locale="vi" dictionary={viDictionary}>
@@ -372,7 +395,7 @@ describe("LocalEntityQuickDetailDrawer news article reading surface", () => {
       screen.queryByRole("heading", { name: new RegExp(article.title ?? "") })
     ).not.toBeInTheDocument()
 
-    resolveNextArticle?.(nextArticle)
+    resolveNextArticle?.({ success: true, data: nextArticle })
 
     await waitFor(() => {
       expect(
@@ -390,16 +413,20 @@ describe("LocalEntityQuickDetailDrawer news article reading surface", () => {
       title: "Bài viết thứ hai",
       content: "Nội dung của bài thứ hai.",
     }
-    let resolveFirstArticle: ((value: NewsArticleResponse) => void) | undefined
+    let resolveFirstArticle:
+      | ((value: { success: true; data: NewsArticleResponse }) => void)
+      | undefined
 
-    getNewsArticleById
+    getNewsArticleByIdForQuickDetail
       .mockImplementationOnce(
         () =>
-          new Promise<NewsArticleResponse>((resolve) => {
-            resolveFirstArticle = resolve
-          })
+          new Promise<{ success: true; data: NewsArticleResponse }>(
+            (resolve) => {
+              resolveFirstArticle = resolve
+            }
+          )
       )
-      .mockResolvedValueOnce(nextArticle)
+      .mockResolvedValueOnce({ success: true, data: nextArticle })
 
     const view = render(
       <LocalizationProvider locale="vi" dictionary={viDictionary}>
@@ -412,7 +439,7 @@ describe("LocalEntityQuickDetailDrawer news article reading surface", () => {
     )
 
     await waitFor(() => {
-      expect(getNewsArticleById).toHaveBeenCalledTimes(1)
+      expect(getNewsArticleByIdForQuickDetail).toHaveBeenCalledTimes(1)
     })
 
     view.rerender(
@@ -428,7 +455,7 @@ describe("LocalEntityQuickDetailDrawer news article reading surface", () => {
     await waitFor(() => {
       expect(screen.getByText("Nội dung của bài thứ hai.")).toBeInTheDocument()
     })
-    resolveFirstArticle?.(article)
+    resolveFirstArticle?.({ success: true, data: article })
 
     await waitFor(() => {
       expect(screen.getByText("Nội dung của bài thứ hai.")).toBeInTheDocument()
@@ -443,8 +470,10 @@ describe("LocalEntityQuickDetailDrawer news article reading surface", () => {
   })
 
   it("omits recovery and canonical actions for missing content", async () => {
-    const error = Object.assign(new Error("missing"), { status: 404 })
-    getNewsArticleById.mockRejectedValueOnce(error)
+    getNewsArticleByIdForQuickDetail.mockResolvedValueOnce({
+      success: false,
+      status: 404,
+    })
 
     render(
       <LocalizationProvider locale="vi" dictionary={viDictionary}>
@@ -484,7 +513,7 @@ describe("LocalEntityQuickDetailDrawer news article reading surface", () => {
         })
       ).toBeInTheDocument()
     })
-    expect(getNewsArticleById).not.toHaveBeenCalled()
+    expect(getNewsArticleByIdForQuickDetail).not.toHaveBeenCalled()
     expect(
       screen.queryByRole("button", { name: viDictionary.common.retry })
     ).not.toBeInTheDocument()
@@ -517,8 +546,10 @@ describe("LocalEntityQuickDetailDrawer news article reading surface", () => {
   })
 
   it("does not expose Article data or actions after the API denies access", async () => {
-    const forbidden = Object.assign(new Error("Forbidden"), { status: 403 })
-    getNewsArticleById.mockRejectedValueOnce(forbidden)
+    getNewsArticleByIdForQuickDetail.mockResolvedValueOnce({
+      success: false,
+      status: 403,
+    })
 
     render(
       <LocalizationProvider locale="vi" dictionary={viDictionary}>
@@ -531,6 +562,12 @@ describe("LocalEntityQuickDetailDrawer news article reading surface", () => {
     )
 
     await waitFor(() => {
+      expect(
+        screen.getByRole("heading", {
+          level: 2,
+          name: viDictionary.newsArticles.quickAccessDeniedTitle,
+        })
+      ).toBeInTheDocument()
       expect(
         screen.getByText(viDictionary.newsArticles.detailDenied, {
           exact: false,
@@ -731,7 +768,7 @@ describe("LocalEntityQuickDetailDrawer event navigation", () => {
     renderEventDrawer()
 
     await waitFor(() => {
-      expect(getEventById).toHaveBeenCalledWith(event.id)
+      expect(getEventByIdForQuickDetail).toHaveBeenCalledWith(event.id)
       expect(
         screen.getByRole("heading", {
           level: 2,
@@ -740,9 +777,165 @@ describe("LocalEntityQuickDetailDrawer event navigation", () => {
       ).toBeInTheDocument()
     })
 
+    const canonicalAction = screen.getByRole("link", {
+      name: viDictionary.common.openFullPage,
+    })
+    const closeAction = screen.getByRole("button", {
+      name: viDictionary.common.close,
+    })
+
+    expect(canonicalAction).toHaveAttribute("href", `/vi/events/${event.id}`)
+    expect(canonicalAction.parentElement).toBe(closeAction.parentElement)
+    expect(canonicalAction).not.toHaveTextContent(
+      viDictionary.common.openFullPage
+    )
+    expect(canonicalAction.querySelector("svg")).toHaveAttribute(
+      "aria-hidden",
+      "true"
+    )
+    expect(
+      screen.getByRole("heading", { level: 2, name: event.title })
+    ).not.toHaveClass("truncate")
+  })
+
+  it("shows a localized fallback title and hides canonical navigation when access is denied", async () => {
+    const eventWithoutTitle = { ...event, title: null }
+    getEventByIdForQuickDetail.mockResolvedValueOnce({
+      success: true,
+      data: eventWithoutTitle,
+    })
+
+    render(
+      <LocalizationProvider locale="vi" dictionary={viDictionary}>
+        <LocalEntityQuickDetailDrawer
+          entity={{ id: event.id, kind: "event" }}
+          onClose={vi.fn()}
+          owner="dashboard"
+        />
+      </LocalizationProvider>
+    )
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("heading", {
+          level: 2,
+          name: viDictionary.events.untitled,
+        })
+      ).toBeInTheDocument()
+    })
+
+    cleanup()
+    vi.clearAllMocks()
+    useHasAnyPermission.mockReturnValue(false)
+    getEventByIdForQuickDetail.mockResolvedValueOnce({
+      success: true,
+      data: event,
+    })
+    renderEventDrawer()
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(viDictionary.events.detailDenied, { exact: false })
+      ).toBeVisible()
+    })
+    expect(
+      screen.queryByRole("link", { name: viDictionary.common.openFullPage })
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: viDictionary.common.close })
+    ).toBeInTheDocument()
+  })
+
+  it("uses a localized denied title when the Event API rejects access", async () => {
+    getEventByIdForQuickDetail.mockResolvedValueOnce({
+      success: false,
+      status: 403,
+    })
+
+    renderEventDrawer()
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("heading", {
+          level: 2,
+          name: viDictionary.events.quickAccessDeniedTitle,
+        })
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText(viDictionary.events.detailDenied, { exact: false })
+      ).toBeVisible()
+    })
+    expect(
+      screen.queryByRole("link", { name: viDictionary.common.openFullPage })
+    ).not.toBeInTheDocument()
+  })
+
+  it("ignores an Event response that arrives after selection changes", async () => {
+    const nextEvent = {
+      ...event,
+      id: 74,
+      title: "Nội dung của sự kiện thứ hai",
+    } satisfies EventResponse
+    let resolveFirstEvent:
+      ((value: { success: true; data: EventResponse }) => void) | undefined
+
+    getEventByIdForQuickDetail
+      .mockImplementationOnce(
+        () =>
+          new Promise<{ success: true; data: EventResponse }>((resolve) => {
+            resolveFirstEvent = resolve
+          })
+      )
+      .mockResolvedValueOnce({ success: true, data: nextEvent })
+
+    const view = render(
+      <LocalizationProvider locale="vi" dictionary={viDictionary}>
+        <LocalEntityQuickDetailDrawer
+          entity={{ id: event.id, kind: "event" }}
+          onClose={vi.fn()}
+          owner="dashboard"
+        />
+      </LocalizationProvider>
+    )
+
+    await waitFor(() => {
+      expect(getEventByIdForQuickDetail).toHaveBeenCalledTimes(1)
+    })
+
+    view.rerender(
+      <LocalizationProvider locale="vi" dictionary={viDictionary}>
+        <LocalEntityQuickDetailDrawer
+          entity={{ id: nextEvent.id, kind: "event" }}
+          onClose={vi.fn()}
+          owner="dashboard"
+        />
+      </LocalizationProvider>
+    )
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("heading", {
+          level: 2,
+          name: nextEvent.title,
+        })
+      ).toBeInTheDocument()
+    })
+    resolveFirstEvent?.({ success: true, data: event })
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("heading", {
+          level: 2,
+          name: nextEvent.title,
+        })
+      ).toBeInTheDocument()
+    })
+    expect(
+      screen.queryByRole("heading", { level: 2, name: event.title })
+    ).not.toBeInTheDocument()
     expect(
       screen.getByRole("link", { name: viDictionary.common.openFullPage })
-    ).toHaveAttribute("href", `/vi/events/${event.id}`)
+    ).toHaveAttribute("href", `/vi/events/${nextEvent.id}`)
   })
 
   it("uses the localized untitled label when the selected Event has no title", async () => {

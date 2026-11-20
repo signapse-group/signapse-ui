@@ -2119,6 +2119,7 @@ function ChartSurface({
           onBeforeClose={onQuickDetailBeforeClose}
           onClose={onQuickDetailClose}
           owner="market-charts"
+          watchlistAssetIds={watchlistAssets.map((asset) => asset.assetId)}
         />
       </OverlayPortalContainerProvider>
     </section>

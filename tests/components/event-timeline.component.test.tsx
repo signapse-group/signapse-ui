@@ -48,7 +48,7 @@ function renderTimeline(
 ) {
   return render(
     <LocalizationProvider locale={locale} dictionary={dictionary}>
-      <DashboardQuickDetailProvider>
+      <DashboardQuickDetailProvider watchlistAssetIds={[]}>
         <EventTimeline
           dictionary={dictionary}
           error={null}

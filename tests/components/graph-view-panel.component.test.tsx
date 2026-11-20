@@ -153,9 +153,10 @@ describe("GraphViewPanel time range", () => {
 
     const trigger = screen.getByRole("combobox", { name: "Time range" })
     await user.click(trigger)
+    await screen.findByRole("option", { name: "Last 14 days" })
     await user.keyboard("{ArrowDown}{Enter}")
 
-    expect(trigger).toHaveTextContent("Last 14 days")
+    await vi.waitFor(() => expect(trigger).toHaveTextContent("Last 14 days"))
     expect(mocks.getGraphViewForWorkspace).toHaveBeenLastCalledWith(14, {
       userId: 1,
       workspaceId: 10,

@@ -642,6 +642,7 @@ export const vi = {
     loadMore: "Xem thêm",
   },
   quickDetail: {
+    readerRegionLabel: "Nội dung chi tiết nhanh",
     notFoundTitle: "Không tìm thấy chi tiết",
     notFoundDescription:
       "Nội dung được chọn không còn tồn tại hoặc bạn không thể truy cập.",
@@ -1035,6 +1036,8 @@ export const vi = {
     confidencePrefix: "Độ tin cậy: {value}",
     trusted: "Tin cậy {value}",
     viewArticle: "Xem bài viết",
+    articleIdentityUnavailable: "Chưa có định danh bài viết.",
+    sourceUrlUnavailable: "Chưa có URL nguồn.",
     openOriginalLink: "Mở liên kết gốc",
     openOriginal: "Mở nguồn gốc",
     marketReactions: "Phản ứng thị trường · Dự báo AI",
