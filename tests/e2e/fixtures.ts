@@ -103,6 +103,7 @@ type FixtureController = {
       | "chart-later-page"
       | "overview-expanded"
       | "article-reader-long-content"
+      | "graph-article-node"
       | "scope-mismatch"
       | "calendar-historical",
     method?: string

@@ -14,6 +14,44 @@ async function captureQuickDetail(
   await testInfo.attach(name, { path, contentType: "image/png" })
 }
 
+async function selectGraphArticle(page: Page, input: "mouse" | "touch") {
+  const graph = page.getByTestId("graph-view")
+  await expect(graph).toHaveAttribute("data-layout-status", "ready", {
+    timeout: 45_000,
+  })
+  const graphCanvas = page.getByTestId("graph-demo-canvas")
+  await expect(graphCanvas).toHaveAttribute(
+    "data-benchmark-anchor-id",
+    "news-article:71",
+    { timeout: 45_000 }
+  )
+  const anchor = await graphCanvas.evaluate((element) => {
+    const rect = element.getBoundingClientRect()
+    return {
+      id: (element as HTMLElement).dataset.benchmarkAnchorId ?? "",
+      x: rect.x + Number((element as HTMLElement).dataset.benchmarkAnchorX),
+      y: rect.y + Number((element as HTMLElement).dataset.benchmarkAnchorY),
+    }
+  })
+
+  if (input === "touch") {
+    const cdp = await page.context().newCDPSession(page)
+    await cdp.send("Input.dispatchTouchEvent", {
+      type: "touchStart",
+      touchPoints: [{ x: anchor.x, y: anchor.y }],
+    })
+    await cdp.send("Input.dispatchTouchEvent", {
+      type: "touchEnd",
+      touchPoints: [],
+    })
+    await cdp.detach()
+  } else {
+    await page.mouse.click(anchor.x, anchor.y)
+  }
+
+  return { graph, graphCanvas, anchor }
+}
+
 test.describe("P0 quick-detail overlay", () => {
   test("renders the complete localized Article within wide, compact, and mobile readers", async ({
     page,
@@ -765,6 +803,123 @@ test.describe("P0 quick-detail overlay", () => {
     await expect(graph).toBeVisible()
     await expect(page).toHaveURL(/\/vi\/graph-view(?:\?.*)?$/)
   })
+
+  for (const viewport of [
+    {
+      width: 1600,
+      height: 900,
+      placement: "right",
+      input: "mouse",
+      screenshot: "sign-346-graph-article-wide.png",
+    },
+    {
+      width: 390,
+      height: 844,
+      placement: "bottom",
+      input: "touch",
+      screenshot: "sign-346-graph-article-mobile.png",
+    },
+  ] as const) {
+    test(`opens and closes the Graph Article reader at ${viewport.width}px`, async ({
+      page,
+      fixture,
+    }, testInfo) => {
+      test.setTimeout(120_000)
+      await fixture.setScenario("/graph-view", "graph-article-node", "GET")
+      await fixture.setScenario(
+        "/news-articles",
+        "article-reader-long-content",
+        "GET"
+      )
+      await fixture.setPermissions(["graph-view:read", "news-article:read"])
+      await page.setViewportSize({
+        width: viewport.width,
+        height: viewport.height,
+      })
+      await page.addInitScript(() =>
+        window.localStorage.setItem("theme", "dark")
+      )
+      await page.goto("/vi/graph-view")
+
+      const { graph, graphCanvas, anchor } = await selectGraphArticle(
+        page,
+        viewport.input
+      )
+      const inspector = page.getByTestId("graph-demo-inspector")
+      const readArticle = inspector.getByRole("button", {
+        name: viDictionary.graphView.inspector.readArticle,
+        exact: true,
+      })
+      await expect(readArticle).toBeVisible()
+      await expect(
+        inspector.getByRole("link", {
+          name: viDictionary.graphView.inspector.openOriginalSource,
+          exact: true,
+        })
+      ).toHaveAttribute("href", "https://fixture.invalid/news/71")
+      await readArticle.click()
+
+      const overlay = page.locator("[data-quick-detail-placement]")
+      const dialog = page.getByRole("dialog")
+      await expect(overlay).toHaveAttribute(
+        "data-quick-detail-placement",
+        viewport.placement
+      )
+      await expect(overlay).toHaveAttribute(
+        "data-quick-detail-profile",
+        "news-article"
+      )
+      await expect(
+        dialog.getByRole("heading", {
+          name: "Bản tin thị trường đã bản địa hóa",
+          exact: true,
+        })
+      ).toBeVisible()
+      await expect(
+        dialog.getByText("Dấu mốc cuối bài: Nội dung dài vẫn được giữ đầy đủ.")
+      ).toBeVisible()
+      await expect(
+        dialog.getByRole("link", {
+          name: viDictionary.newsArticles.openOriginalLink,
+          exact: true,
+        })
+      ).toHaveAttribute("href", "https://fixture.invalid/news/71")
+      await expect(
+        dialog.getByRole("link", {
+          name: viDictionary.common.openFullPage,
+          exact: true,
+        })
+      ).toHaveAttribute("href", "/vi/news-articles/71")
+
+      const state = await fixture.state()
+      expect(
+        state.requests.some(
+          (request) =>
+            request.method === "GET" && request.path === "/news-articles/71"
+        )
+      ).toBe(true)
+      await captureQuickDetail(page, testInfo, viewport.screenshot)
+
+      await dialog.getByRole("button", { name: "Đóng", exact: true }).click()
+      await expect(overlay).toBeHidden()
+      await expect(readArticle).toBeFocused()
+      await expect(graph).toBeVisible()
+      await expect(graphCanvas).toHaveAttribute(
+        "data-benchmark-anchor-id",
+        anchor.id
+      )
+      const restored = await graphCanvas.evaluate((element) => {
+        const rect = element.getBoundingClientRect()
+        return {
+          x: rect.x + Number((element as HTMLElement).dataset.benchmarkAnchorX),
+          y: rect.y + Number((element as HTMLElement).dataset.benchmarkAnchorY),
+        }
+      })
+      expect(Math.abs(restored.x - anchor.x)).toBeLessThan(2)
+      expect(Math.abs(restored.y - anchor.y)).toBeLessThan(2)
+      await expect(page).toHaveURL(/\/vi\/graph-view(?:\?.*)?$/)
+    })
+  }
 
   test("uses the shared desktop sheet from Market Charts and restores annotation context", async ({
     page,
