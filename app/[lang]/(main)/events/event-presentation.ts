@@ -1,3 +1,5 @@
+import type { CSSProperties } from "react"
+
 import type { Dictionary } from "@/app/lib/i18n/dictionary-types"
 import { formatMessage } from "@/app/lib/i18n/messages"
 import {
@@ -12,7 +14,14 @@ import {
   PendingEventEnrichmentBatchResult,
 } from "@/app/lib/events/definitions"
 
-type BadgeVariant = "default" | "secondary" | "outline" | "destructive" | "info"
+type BadgeVariant =
+  | "default"
+  | "secondary"
+  | "outline"
+  | "destructive"
+  | "info"
+  | "warning"
+  | "active"
 
 export function getEventStatusLabel(
   status: EventStatus | undefined,
@@ -161,51 +170,45 @@ export function buildPendingEventEnrichmentSummary(
 }
 
 export function getEventMarketReactionDirectionLabel(
-  direction: EventMarketReactionDirection | undefined,
+  direction: EventMarketReactionDirection,
   dictionary: Dictionary
 ) {
-  if (!direction) {
-    return dictionary.common.notAvailable
-  }
-
   return dictionary.events.marketDirectionLabels[direction]
 }
 
 export function getEventMarketReactionDirectionVariant(
-  direction?: EventMarketReactionDirection
+  direction: EventMarketReactionDirection
 ): BadgeVariant {
   switch (direction) {
     case "BULLISH":
-      return "default"
+      return "secondary"
     case "BEARISH":
       return "destructive"
     case "MIXED":
-      return "secondary"
+      return "warning"
     case "NEUTRAL":
-    default:
-      return "outline"
+      return "secondary"
+  }
+}
+
+export function getEventMarketReactionDirectionStyle(
+  direction: EventMarketReactionDirection
+): CSSProperties | undefined {
+  if (direction !== "BULLISH") {
+    return undefined
+  }
+
+  return {
+    backgroundColor: "var(--market-reaction-bullish-bg)",
+    color: "var(--market-reaction-bullish-fg)",
   }
 }
 
 export function getEventMarketReactionTimeHorizonLabel(
-  timeHorizon: EventMarketReactionTimeHorizon | undefined,
+  timeHorizon: EventMarketReactionTimeHorizon,
   dictionary: Dictionary
 ) {
-  if (!timeHorizon) {
-    return dictionary.common.notAvailable
-  }
-
   return dictionary.events.marketTimeHorizonLabels[timeHorizon]
-}
-
-export function getEventMarketReactionTimeHorizonVariant(
-  timeHorizon?: EventMarketReactionTimeHorizon
-): Exclude<BadgeVariant, "destructive"> {
-  if (timeHorizon === "INTRADAY" || timeHorizon === "SHORT_TERM") {
-    return "secondary"
-  }
-
-  return "outline"
 }
 
 export function buildEventMarketReactionDerivationSummary(

@@ -295,6 +295,7 @@ function getDemoQuickDetailFixture(
       evidence: [],
       id: entityId,
       lastModifiedDate: now,
+      marketReactions: [],
       status: "ENRICHED",
       themes: [],
       title: node.label,

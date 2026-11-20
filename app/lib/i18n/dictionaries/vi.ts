@@ -1029,16 +1029,22 @@ export const vi = {
     viewArticle: "Xem bài viết",
     openOriginalLink: "Mở liên kết gốc",
     openOriginal: "Mở nguồn gốc",
-    marketReactions: "Tác động thị trường",
-    reactionCount: "{count} tác động",
+    marketReactions: "Phản ứng thị trường · Dự báo AI",
+    marketReactionsDisclosure:
+      "Đây là dự báo AI dựa trên ngữ cảnh sự kiện và bằng chứng hiện có, không phải phản ứng giá đã đo. Độ tin cậy thể hiện mức tự tin của AI, không phải tỷ lệ thắng giao dịch đã kiểm chứng.",
+    marketReactionsUnavailableTitle: "Dữ liệu dự báo không khả dụng",
+    marketReactionsUnavailableDescription:
+      "Dữ liệu dự báo hiện không khả dụng. Hãy tải lại sự kiện để thử lại.",
+    marketReactionReasoning: "Diễn giải của AI",
+    reactionCount: "Tổng {count}",
     reactionCountByDirection: "{count} {direction}",
-    noMarketReactionsTitle: "Chưa có tác động thị trường",
-    noMarketReactionsDescription:
-      "Sự kiện này chưa có kết quả suy luận hướng phản ứng theo từng tài sản.",
+    noMarketReactionsTitle: "Chưa có dự báo AI",
+    noMarketReactionsDescription: "Sự kiện này chưa có dự báo AI nào được lưu.",
     relatedAssets: "Tài sản liên quan",
     noAssetsTitle: "Chưa có tài sản liên quan",
     noAssetsDescription:
       "Sự kiện này chưa có liên kết tài sản trong dữ liệu hiện tại.",
+    assetIdFallback: "Mã tài sản {id}",
     relatedThemes: "Chủ đề liên quan",
     noThemesTitle: "Chưa có chủ đề liên quan",
     noThemesDescription:
@@ -1048,8 +1054,8 @@ export const vi = {
     noThemeName: "Chưa có tên chủ đề",
     noThemeSlug: "Chưa có slug",
     weight: "Trọng số: {value}",
-    noReasoning: "Chưa có diễn giải chi tiết cho tác động này.",
-    observedAt: "Quan sát lúc: {time}",
+    noReasoning:
+      "Chưa có phần diễn giải AI cho dự báo này trong ngôn ngữ đã chọn.",
     technicalInfo: "Thông tin kỹ thuật",
     createdAt: "Tạo lúc",
     updatedAt: "Cập nhật",

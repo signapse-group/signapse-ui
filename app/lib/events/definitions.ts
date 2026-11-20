@@ -68,23 +68,23 @@ export interface EventEvidenceSummaryResponse {
 }
 
 export interface EventMarketReactionSummaryResponse {
-  id?: number
-  assetId?: number
-  assetName?: string
-  assetSymbol?: string
-  assetType?: EventAssetType
-  direction?: EventMarketReactionDirection
-  timeHorizon?: EventMarketReactionTimeHorizon
-  confidence?: number
-  reasoning?: string
-  observedAt?: string | null
+  id: number
+  assetId: number
+  assetName: string
+  assetSymbol: string
+  assetType: EventAssetType
+  direction: EventMarketReactionDirection
+  timeHorizon: EventMarketReactionTimeHorizon
+  confidence: number | null
+  reasoning: string | null
+  observedAt: string | null
 }
 
 export interface EventResponse extends EventListResponse {
   assets: EventAssetSummaryResponse[]
   themes: EventThemeSummaryResponse[]
   evidence: EventEvidenceSummaryResponse[]
-  marketReactions?: EventMarketReactionSummaryResponse[]
+  marketReactions: EventMarketReactionSummaryResponse[]
 }
 
 export interface EventEnrichmentResult {

@@ -3512,6 +3512,14 @@ Which asset did you mean? The available data is limited. Add TSLA to your watchl
     const isVietnamese = String(locale ?? "en")
       .toLowerCase()
       .startsWith("vi")
+
+    if (scenario === "event-detail-error") {
+      return {
+        __status: 503,
+        payload: errorPayload("Event data unavailable", "SERVICE_UNAVAILABLE"),
+      }
+    }
+
     let status = event.status
     let assets = []
     let themes = []
@@ -3565,9 +3573,135 @@ Which asset did you mean? The available data is limited. Add TSLA to your watchl
       status = "ENRICHMENT_NO_MATCH"
     } else if (scenario === "event-empty-failed") {
       status = "ENRICHMENT_FAILED"
+    } else if (
+      scenario === "event-market-reactions" ||
+      scenario === "event-market-reactions-null-fields"
+    ) {
+      assets = [
+        {
+          assetId: 101,
+          assetName: "Akamai Technologies",
+          assetSymbol: "AKAM",
+          assetType: "EQUITY",
+          relationType: "PRIMARY_SUBJECT",
+          weight: 1,
+        },
+        {
+          assetId: 102,
+          assetName: "First Trust Cloud Computing ETF",
+          assetSymbol: "SKYY",
+          assetType: "ETF",
+          relationType: "AFFECTED_ASSET",
+          weight: 0.65,
+        },
+        {
+          assetId: 103,
+          assetName: "Microsoft",
+          assetSymbol: "MSFT",
+          assetType: "EQUITY",
+          relationType: "REFERENCE_ASSET",
+          weight: 0.35,
+        },
+        {
+          assetId: 104,
+          assetName: "US Dollar Index",
+          assetSymbol: "DXY",
+          assetType: "INDEX",
+          relationType: "REFERENCE_ASSET",
+          weight: 0.2,
+        },
+      ]
+      themes = [
+        {
+          themeId: 201,
+          themeTitle: isVietnamese ? "Công nghệ" : "Technology",
+          themeSlug: "technology",
+          relationType: "PRIMARY_THEME",
+          weight: 0.9,
+        },
+      ]
     }
 
-    return {
+    const marketReactions =
+      id !== 61
+        ? []
+        : scenario === "event-market-reactions"
+          ? [
+              {
+                id: 701,
+                assetId: 101,
+                assetName: "Akamai Technologies",
+                assetSymbol: "AKAM",
+                assetType: "EQUITY",
+                direction: "BULLISH",
+                timeHorizon: "SHORT_TERM",
+                confidence: 0.84,
+                reasoning: isVietnamese
+                  ? "Hợp đồng điện toán đám mây dài hạn có thể cải thiện khả năng dự đoán doanh thu của Akamai, hỗ trợ triển vọng tăng trong ngắn hạn."
+                  : "The long-term cloud contract could improve Akamai’s revenue visibility, supporting a bullish short-term outlook.",
+                observedAt: "2026-11-18T08:00:00.000Z",
+              },
+              {
+                id: 702,
+                assetId: 102,
+                assetName: "First Trust Cloud Computing ETF",
+                assetSymbol: "SKYY",
+                assetType: "ETF",
+                direction: "NEUTRAL",
+                timeHorizon: "MEDIUM_TERM",
+                confidence: 0.64,
+                reasoning: isVietnamese
+                  ? "Thỏa thuận có thể hỗ trợ nhu cầu năng lực điện toán đám mây, trong khi ETF đa dạng hóa làm giảm tác động của một hợp đồng riêng lẻ."
+                  : "The agreement could support demand for cloud capacity, while the diversified ETF limits the impact of a single deal.",
+                observedAt: "2026-11-18T08:00:00.000Z",
+              },
+              {
+                id: 703,
+                assetId: 103,
+                assetName: "Microsoft",
+                assetSymbol: "MSFT",
+                assetType: "EQUITY",
+                direction: "BEARISH",
+                timeHorizon: "SHORT_TERM",
+                confidence: 0.68,
+                reasoning: isVietnamese
+                  ? "Cạnh tranh gia tăng trong lĩnh vực điện toán đám mây có thể gây áp lực lên biên lợi nhuận ngắn hạn của Microsoft."
+                  : "More competition for cloud workloads could pressure Microsoft’s near-term margins.",
+                observedAt: "2026-11-18T08:00:00.000Z",
+              },
+              {
+                id: 704,
+                assetId: 102,
+                assetName: "First Trust Cloud Computing ETF",
+                assetSymbol: "SKYY",
+                assetType: "ETF",
+                direction: "MIXED",
+                timeHorizon: "LONG_TERM",
+                confidence: 0.61,
+                reasoning: isVietnamese
+                  ? "Nhu cầu điện toán đám mây có thể hỗ trợ các công ty trong ETF, nhưng chi phí hạ tầng tăng cũng có thể gây áp lực lên biên lợi nhuận."
+                  : "Cloud demand could lift holdings, while higher infrastructure costs could pressure margins.",
+                observedAt: "2026-11-18T08:00:00.000Z",
+              },
+            ]
+          : scenario === "event-market-reactions-null-fields"
+            ? [
+                {
+                  id: 705,
+                  assetId: 101,
+                  assetName: "",
+                  assetSymbol: "",
+                  assetType: "EQUITY",
+                  direction: "MIXED",
+                  timeHorizon: "LONG_TERM",
+                  confidence: null,
+                  reasoning: null,
+                  observedAt: null,
+                },
+              ]
+            : []
+
+    const response = {
       ...event,
       status,
       assets,
@@ -3588,8 +3722,14 @@ Which asset did you mean? The available data is limited. Add TSLA to your watchl
               },
             ]
           : [],
-      marketReactions: [],
+      marketReactions,
     }
+
+    if (scenario === "event-market-reactions-missing") {
+      delete response.marketReactions
+    }
+
+    return response
   }
 
   if (method === "GET" && pathname === "/me/notes") {
