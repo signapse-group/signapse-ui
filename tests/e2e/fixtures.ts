@@ -83,6 +83,8 @@ type FixtureController = {
       | "event-market-reactions-empty"
       | "event-market-reactions-missing"
       | "event-market-reactions-null-fields"
+      | "event-list-empty"
+      | "event-list-denied"
       | "event-list-error"
       | "event-detail-error"
       | "event-detail-denied"

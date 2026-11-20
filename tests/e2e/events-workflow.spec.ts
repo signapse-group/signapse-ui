@@ -25,6 +25,16 @@ async function navigateToEventWithClientRouter(page: Page, id: number) {
   }, id)
 }
 
+async function setColorScheme(page: Page, colorScheme: "dark" | "light") {
+  await page.emulateMedia({ colorScheme })
+
+  if (colorScheme === "dark") {
+    await expect(page.locator("html")).toHaveClass(/dark/)
+  } else {
+    await expect(page.locator("html")).not.toHaveClass(/dark/)
+  }
+}
+
 test.describe("Events workflow", () => {
   test("keeps search and sort results with URL state when changing from later pages", async ({
     page,
@@ -323,7 +333,8 @@ test.describe("Events workflow", () => {
   }) => {
     await fixture.setPermissions(["event:read"])
     await fixture.setScenario("/events/62", "delayed", "GET")
-    await page.setViewportSize({ width: 1280, height: 800 })
+    await page.context().clearCookies({ name: "sidebar_state" })
+    await page.setViewportSize({ width: 1520, height: 1024 })
     await page.goto("/vi/events/61")
 
     const firstEventHeading = page.getByRole("heading", {
@@ -338,6 +349,28 @@ test.describe("Events workflow", () => {
       .poll(async () => (await fixture.state()).pendingRequests)
       .toBeGreaterThan(0)
     await expect(firstEventHeading).toHaveCount(0)
+    await expect(page.getByRole("status")).toContainText(
+      viDictionary.events.loading
+    )
+    await expect(
+      page.getByRole("heading", {
+        level: 1,
+        name: viDictionary.navigation.events,
+        exact: true,
+      })
+    ).toHaveCount(1)
+    await page.screenshot({
+      path: "test-results/SIGN-283-detail-loading-wide-light-vi-1520x1024.png",
+      fullPage: true,
+      style: "nextjs-portal { display: none !important; }",
+    })
+    await setColorScheme(page, "dark")
+    await page.screenshot({
+      path: "test-results/SIGN-283-detail-loading-wide-dark-vi-1520x1024.png",
+      fullPage: true,
+      style: "nextjs-portal { display: none !important; }",
+    })
+    await setColorScheme(page, "light")
 
     await fixture.setScenario("/events", "event-detail-denied", "GET")
     await fixture.setScenario("/events/62", "success", "GET")
@@ -348,6 +381,13 @@ test.describe("Events workflow", () => {
       })
     ).toContainText(viDictionary.events.detailDenied)
     await expect(firstEventHeading).toHaveCount(0)
+    await expect(
+      page.getByRole("heading", {
+        level: 1,
+        name: viDictionary.navigation.events,
+        exact: true,
+      })
+    ).toHaveCount(1)
     await expect(
       page.getByRole("heading", {
         level: 1,
@@ -375,14 +415,95 @@ test.describe("Events workflow", () => {
     page,
     fixture,
   }) => {
+    await fixture.setPermissions(["event:read"])
+    await fixture.setScenario("/events", "event-list-empty", "GET")
+    await page.context().clearCookies({ name: "sidebar_state" })
+    await page.setViewportSize({ width: 1520, height: 1024 })
+    await page.goto("/vi/events")
+    await expect(
+      page.getByRole("heading", {
+        level: 1,
+        name: viDictionary.navigation.events,
+        exact: true,
+      })
+    ).toHaveCount(1)
+    await expect(
+      page.getByRole("status").getByText(viDictionary.events.emptyTitle, {
+        exact: true,
+      })
+    ).toBeVisible()
+    await expect(
+      page.getByRole("status").getByText(viDictionary.events.emptyDescription, {
+        exact: true,
+      })
+    ).toBeVisible()
+    await page.screenshot({
+      path: "test-results/SIGN-283-list-empty-wide-light-vi-1520x1024.png",
+      fullPage: true,
+      style: "nextjs-portal { display: none !important; }",
+    })
+    await setColorScheme(page, "dark")
+    await page.screenshot({
+      path: "test-results/SIGN-283-list-empty-wide-dark-vi-1520x1024.png",
+      fullPage: true,
+      style: "nextjs-portal { display: none !important; }",
+    })
+    await setColorScheme(page, "light")
+
+    await fixture.setScenario("/events", "event-list-denied", "GET")
+    await page.goto("/vi/events")
+    await expect(
+      page.getByRole("alert").filter({
+        hasText: viDictionary.events.readDenied,
+      })
+    ).toContainText(viDictionary.events.readDenied)
+    await expect(
+      page.getByRole("alert").filter({
+        hasText: viDictionary.events.errorTitle,
+      })
+    ).toHaveCount(0)
+    await expect(
+      page.getByRole("heading", {
+        level: 1,
+        name: viDictionary.navigation.events,
+        exact: true,
+      })
+    ).toHaveCount(1)
+    await page.screenshot({
+      path: "test-results/SIGN-283-list-denied-wide-light-vi-1520x1024.png",
+      fullPage: true,
+      style: "nextjs-portal { display: none !important; }",
+    })
+    await setColorScheme(page, "dark")
+    await page.screenshot({
+      path: "test-results/SIGN-283-list-denied-wide-dark-vi-1520x1024.png",
+      fullPage: true,
+      style: "nextjs-portal { display: none !important; }",
+    })
+    await setColorScheme(page, "light")
+
     const params = new URLSearchParams({ page: "1", size: "10" })
     params.set(searchFilter, "no-matching-event")
+    await fixture.setScenario("/events", "success", "GET")
     await page.goto(`/vi/events?${params.toString()}`)
     await expect(
       page.getByRole("status").getByText("Không tìm thấy sự kiện", {
         exact: true,
       })
     ).toBeVisible()
+    await page.screenshot({
+      path: "test-results/SIGN-283-list-no-results-wide-light-vi-1520x1024.png",
+      fullPage: true,
+      style: "nextjs-portal { display: none !important; }",
+    })
+    await setColorScheme(page, "dark")
+    await page.screenshot({
+      path: "test-results/SIGN-283-list-no-results-wide-dark-vi-1520x1024.png",
+      fullPage: true,
+      style: "nextjs-portal { display: none !important; }",
+    })
+    await setColorScheme(page, "light")
+
     await fixture.setScenario("/events", "event-list-error", "GET")
     await page.goto("/vi/events")
     await expect(
@@ -395,6 +516,25 @@ test.describe("Events workflow", () => {
         hasText: viDictionary.events.errorTitle,
       })
     ).not.toContainText(viDictionary.events.searchEmptyTitle)
+    await expect(
+      page.getByRole("heading", {
+        level: 1,
+        name: viDictionary.navigation.events,
+        exact: true,
+      })
+    ).toHaveCount(1)
+    await page.screenshot({
+      path: "test-results/SIGN-283-list-error-wide-light-vi-1520x1024.png",
+      fullPage: true,
+      style: "nextjs-portal { display: none !important; }",
+    })
+    await setColorScheme(page, "dark")
+    await page.screenshot({
+      path: "test-results/SIGN-283-list-error-wide-dark-vi-1520x1024.png",
+      fullPage: true,
+      style: "nextjs-portal { display: none !important; }",
+    })
+    await setColorScheme(page, "light")
 
     await fixture.setScenario("/events", "success", "GET")
     await fixture.setPermissions([])
@@ -404,6 +544,29 @@ test.describe("Events workflow", () => {
         hasText: viDictionary.events.readDenied,
       })
     ).toContainText(viDictionary.events.readDenied)
+
+    const beforeDirectDenied = (await fixture.state()).requests.filter(
+      (request) => request.method === "GET" && request.path === "/events/61"
+    ).length
+    await fixture.setPermissions([])
+    await page.goto("/vi/events/61")
+    await expect(
+      page.getByRole("alert").filter({
+        hasText: viDictionary.events.detailDenied,
+      })
+    ).toContainText(viDictionary.events.detailDenied)
+    await expect(
+      page.getByRole("heading", {
+        level: 1,
+        name: viDictionary.navigation.events,
+        exact: true,
+      })
+    ).toHaveCount(1)
+    expect(
+      (await fixture.state()).requests.filter(
+        (request) => request.method === "GET" && request.path === "/events/61"
+      )
+    ).toHaveLength(beforeDirectDenied)
 
     await fixture.setPermissions(["event:read"])
     await page.goto("/vi/events/61")
@@ -422,6 +585,25 @@ test.describe("Events workflow", () => {
     await expect(
       page.getByRole("heading", {
         level: 1,
+        name: viDictionary.navigation.events,
+        exact: true,
+      })
+    ).toHaveCount(1)
+    await page.screenshot({
+      path: "test-results/SIGN-283-detail-unavailable-wide-light-vi-1520x1024.png",
+      fullPage: true,
+      style: "nextjs-portal { display: none !important; }",
+    })
+    await setColorScheme(page, "dark")
+    await page.screenshot({
+      path: "test-results/SIGN-283-detail-unavailable-wide-dark-vi-1520x1024.png",
+      fullPage: true,
+      style: "nextjs-portal { display: none !important; }",
+    })
+    await setColorScheme(page, "light")
+    await expect(
+      page.getByRole("heading", {
+        level: 1,
         name: "Central bank signals a slower easing path",
         exact: true,
       })
@@ -434,6 +616,25 @@ test.describe("Events workflow", () => {
         hasText: viDictionary.events.detailDenied,
       })
     ).toContainText(viDictionary.events.detailDenied)
+    await expect(
+      page.getByRole("heading", {
+        level: 1,
+        name: viDictionary.navigation.events,
+        exact: true,
+      })
+    ).toHaveCount(1)
+    await page.screenshot({
+      path: "test-results/SIGN-283-detail-denied-wide-light-vi-1520x1024.png",
+      fullPage: true,
+      style: "nextjs-portal { display: none !important; }",
+    })
+    await setColorScheme(page, "dark")
+    await page.screenshot({
+      path: "test-results/SIGN-283-detail-denied-wide-dark-vi-1520x1024.png",
+      fullPage: true,
+      style: "nextjs-portal { display: none !important; }",
+    })
+    await setColorScheme(page, "light")
     await expect(
       page.getByRole("heading", {
         level: 1,
@@ -454,5 +655,64 @@ test.describe("Events workflow", () => {
         hasText: enDictionary.events.errorDescription,
       })
     ).not.toContainText("Event data unavailable")
+    await expect(
+      page.getByRole("heading", {
+        level: 1,
+        name: enDictionary.navigation.events,
+        exact: true,
+      })
+    ).toHaveCount(1)
+    await page.screenshot({
+      path: "test-results/SIGN-283-detail-error-wide-light-en-1520x1024.png",
+      fullPage: true,
+      style: "nextjs-portal { display: none !important; }",
+    })
+    await setColorScheme(page, "dark")
+    await page.screenshot({
+      path: "test-results/SIGN-283-detail-error-wide-dark-en-1520x1024.png",
+      fullPage: true,
+      style: "nextjs-portal { display: none !important; }",
+    })
+    await setColorScheme(page, "light")
+  })
+
+  test("announces the list loading state while its request is pending", async ({
+    page,
+    fixture,
+  }) => {
+    await fixture.setPermissions(["event:read"])
+    await fixture.setScenario("/events", "delayed", "GET")
+    await page.context().clearCookies({ name: "sidebar_state" })
+    await page.setViewportSize({ width: 1520, height: 1024 })
+
+    try {
+      await page.goto("/vi/events", { waitUntil: "commit" })
+      await expect
+        .poll(async () => (await fixture.state()).pendingRequests)
+        .toBeGreaterThan(0)
+      await expect(page.getByRole("status")).toContainText(
+        viDictionary.events.loading
+      )
+      await expect(
+        page.getByRole("heading", {
+          level: 1,
+          name: viDictionary.navigation.events,
+          exact: true,
+        })
+      ).toHaveCount(1)
+      await page.screenshot({
+        path: "test-results/SIGN-283-list-loading-wide-light-vi-1520x1024.png",
+        fullPage: true,
+        style: "nextjs-portal { display: none !important; }",
+      })
+      await setColorScheme(page, "dark")
+      await page.screenshot({
+        path: "test-results/SIGN-283-list-loading-wide-dark-vi-1520x1024.png",
+        fullPage: true,
+        style: "nextjs-portal { display: none !important; }",
+      })
+    } finally {
+      await fixture.setScenario("/events", "success", "GET")
+    }
   })
 })

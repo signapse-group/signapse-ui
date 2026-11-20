@@ -109,6 +109,10 @@ function formatConfidence(
   })
 }
 
+function EventRouteHeading({ dictionary }: { dictionary: Dictionary }) {
+  return <h1 className="sr-only">{dictionary.navigation.events}</h1>
+}
+
 function DetailCard({
   title,
   value,
@@ -236,10 +240,15 @@ export default async function EventDetailPage({ params }: PageProps) {
 
   if (!hasAnyPermission(permissions, EVENT_READ_PERMISSIONS)) {
     return (
-      <AccessDenied
-        description={dictionary.events.detailDenied}
-        permission={EVENT_READ_PERMISSIONS[0]}
-      />
+      <>
+        <EventRouteHeading dictionary={dictionary} />
+        <div role="alert" aria-live="assertive">
+          <AccessDenied
+            description={dictionary.events.detailDenied}
+            permission={EVENT_READ_PERMISSIONS[0]}
+          />
+        </div>
+      </>
     )
   }
 
@@ -302,12 +311,15 @@ async function FetchEventData({
 
     if (status === 403) {
       return (
-        <div role="alert" aria-live="assertive">
-          <AccessDenied
-            description={dictionary.events.detailDenied}
-            permission={EVENT_READ_PERMISSIONS[0]}
-          />
-        </div>
+        <>
+          <EventRouteHeading dictionary={dictionary} />
+          <div role="alert" aria-live="assertive">
+            <AccessDenied
+              description={dictionary.events.detailDenied}
+              permission={EVENT_READ_PERMISSIONS[0]}
+            />
+          </div>
+        </>
       )
     }
 
@@ -686,6 +698,7 @@ function EventDetailSkeleton({ dictionary }: { dictionary: Dictionary }) {
       aria-live="polite"
       aria-busy="true"
     >
+      <EventRouteHeading dictionary={dictionary} />
       <span className="sr-only">{dictionary.events.loading}</span>
       <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
         <div className="flex flex-col gap-4">
@@ -747,11 +760,14 @@ function EventDetailSkeleton({ dictionary }: { dictionary: Dictionary }) {
 
 function EventUnavailable({ dictionary }: { dictionary: Dictionary }) {
   return (
-    <div role="status" aria-live="polite">
-      <EventSectionEmpty
-        title={dictionary.events.eventUnavailableTitle}
-        description={dictionary.events.eventUnavailableDescription}
-      />
-    </div>
+    <>
+      <EventRouteHeading dictionary={dictionary} />
+      <div role="status" aria-live="polite">
+        <EventSectionEmpty
+          title={dictionary.events.eventUnavailableTitle}
+          description={dictionary.events.eventUnavailableDescription}
+        />
+      </div>
+    </>
   )
 }

@@ -64,6 +64,7 @@ export default async function EventsPage({ searchParams }: PageProps) {
           size={size}
           sort={sort}
           searchParams={params}
+          dictionary={dictionary}
         />
       </Suspense>
     </>
@@ -75,22 +76,48 @@ async function EventListContent({
   size,
   sort,
   searchParams,
+  dictionary,
 }: {
   page: number
   size: number
   sort: string
   searchParams: { [key: string]: string | string[] | undefined }
+  dictionary: Dictionary
 }) {
   const filter = buildFilterQuery(searchParams)
   const sortQuery = buildSortQuery(sort)
-  const eventPage = await getEvents({
+  const result = await loadEventPage({
     page: page - 1,
     size,
     filter,
     sort: sortQuery,
   })
 
-  return <EventList eventPage={eventPage} hasSearch={Boolean(filter)} />
+  if (result.kind === "error") {
+    const error = result.error
+    if (error instanceof Error && "status" in error && error.status === 403) {
+      return (
+        <div role="alert" aria-live="assertive">
+          <AccessDenied
+            description={dictionary.events.readDenied}
+            permission={EVENT_READ_PERMISSIONS[0]}
+          />
+        </div>
+      )
+    }
+
+    throw error
+  }
+
+  return <EventList eventPage={result.eventPage} hasSearch={Boolean(filter)} />
+}
+
+async function loadEventPage(input: Parameters<typeof getEvents>[0]) {
+  try {
+    return { kind: "success" as const, eventPage: await getEvents(input) }
+  } catch (error) {
+    return { kind: "error" as const, error }
+  }
 }
 
 function EventListSkeleton({ dictionary }: { dictionary: Dictionary }) {

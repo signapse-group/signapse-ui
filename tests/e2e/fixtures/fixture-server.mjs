@@ -3534,11 +3534,22 @@ Which asset did you mean? The available data is limited. Add TSLA to your watchl
 
   if (method === "GET" && pathname === "/events") {
     const scenario = getScenario(state, method, pathname)
+    if (scenario === "event-list-denied") {
+      return {
+        __status: 403,
+        payload: errorPayload("Event permission denied", "FORBIDDEN"),
+      }
+    }
+
     if (scenario === "event-list-error") {
       return {
         __status: 503,
         payload: errorPayload("Event list unavailable", "SERVICE_UNAVAILABLE"),
       }
+    }
+
+    if (scenario === "event-list-empty") {
+      return eventsPage([], url)
     }
 
     const events = scenario.startsWith("event-partial")

@@ -26,23 +26,37 @@ Captured from P0 fixture-backed Chromium against the real FE HTTP boundary, incl
 
 Playwright hides the `nextjs-portal` development chrome for these screenshots so it does not obscure the product UI.
 
-The browser check also verifies the list at 360px, 767px, 768px and an effective 760px CSS viewport representing a 1520px frame at 200% zoom. It checks the desktop/mobile list switch at 768px, no page-level horizontal overflow, pointer and keyboard activation, one localized list `<h1>`, search/sort/page URL state, no-results versus request failure, denied and unavailable detail states, a partial title, and both evidence-link permission cases. In-place App Router navigation from Event `61` to delayed Event `62` returns 403; a second delayed navigation to Event `999` returns 404. The previous Event identity is absent during both pending and resolved destination states.
+The browser check also verifies the list at 360px, 767px, 768px and an effective 760px CSS viewport representing a 1520px frame at 200% zoom. It checks the desktop/mobile list switch at 768px, no page-level horizontal overflow, pointer and keyboard activation, one localized `<h1>` in each list/detail state, status and alert announcements, search/sort/page URL state, unfiltered empty versus filtered no-results versus request failure, denied and unavailable detail states, a partial title, and both evidence-link permission cases. In-place App Router navigation from Event `61` to delayed Event `62` returns 403; a second delayed navigation to Event `999` returns 404. The previous Event identity is absent during both pending and resolved destination states.
+
+## State renders
+
+These fixture-backed state renders use the same wide 1520×1024 viewport and expanded sidebar. List states are compared with approved attachment 10282; detail states with attachment 10286. They use the approved composition while making loading, empty, denied, unavailable, and load-error states visible. `No results` is a filtered empty result, `Unfiltered empty` has no events, and a 503 response is shown as a load error.
+
+| Flow and state                            | Light                                                         | Dark                                                         |
+| ----------------------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------ |
+| Events list, unfiltered empty             | [render](events-list-unfiltered-empty-light-vi-1520x1024.png) | [render](events-list-unfiltered-empty-dark-vi-1520x1024.png) |
+| Events list, loading                      | [render](events-list-loading-light-vi-1520x1024.png)          | [render](events-list-loading-dark-vi-1520x1024.png)          |
+| Events list, no results                   | [render](events-list-no-results-light-vi-1520x1024.png)       | [render](events-list-no-results-dark-vi-1520x1024.png)       |
+| Events list, API denied                   | [render](events-list-api-denied-light-vi-1520x1024.png)       | [render](events-list-api-denied-dark-vi-1520x1024.png)       |
+| Events list, load error                   | [render](events-list-load-error-light-vi-1520x1024.png)       | [render](events-list-load-error-dark-vi-1520x1024.png)       |
+| Event detail, loading                     | [render](event-detail-loading-light-vi-1520x1024.png)         | [render](event-detail-loading-dark-vi-1520x1024.png)         |
+| Event detail, API denied                  | [render](event-detail-api-denied-light-vi-1520x1024.png)      | [render](event-detail-api-denied-dark-vi-1520x1024.png)      |
+| Event detail, unavailable                 | [render](event-detail-unavailable-light-vi-1520x1024.png)     | [render](event-detail-unavailable-dark-vi-1520x1024.png)     |
+| Event detail, load error (English locale) | [render](event-detail-load-error-light-en-1520x1024.png)      | [render](event-detail-load-error-dark-en-1520x1024.png)      |
 
 ## API and verification
 
 The producer handoff is [SIGN-281 comment 11573](https://signapse-group.atlassian.net/browse/SIGN-281?focusedCommentId=11573); it records dev deployment revision `765059683b3b265ce101823765d9cc5f9495e0f4`, a successful deployment health check and an OpenAPI revision match. The accepted FE survey [SIGN-283 comment 11574](https://signapse-group.atlassian.net/browse/SIGN-283?focusedCommentId=11574) records the live OpenAPI `x-build-revision` as the same SHA.
 
-The current `https://dev-api.signapse.cloud/v3/api-docs` fetch returned HTTP 200 at 2026-11-20 12:11:45 UTC with body SHA-256 `35075166f2e3be867d40ffcbfe29f93267a5a08094dd19af578ed0163dfb1d5c`; the OpenAPI `x-build-revision` is `765059683b3b265ce101823765d9cc5f9495e0f4`, matching producer handoff [SIGN-281 comment 11573](https://signapse-group.atlassian.net/browse/SIGN-281?focusedCommentId=11573). The in-scope live structural check passed for `GET /events` and `GET /events/{id}` at 2026-11-20 12:09:04 UTC. A later fetch confirmed the same body hash and producer revision.
+The current `https://dev-api.signapse.cloud/v3/api-docs` fetch returned HTTP 200 at 2026-11-20 12:48:08 UTC with body SHA-256 `35075166f2e3be867d40ffcbfe29f93267a5a08094dd19af578ed0163dfb1d5c`; the OpenAPI `x-build-revision` is `765059683b3b265ce101823765d9cc5f9495e0f4`, matching producer handoff [SIGN-281 comment 11573](https://signapse-group.atlassian.net/browse/SIGN-281?focusedCommentId=11573). The in-scope live structural check passed for `GET /events` and `GET /events/{id}` at 2026-11-20 13:12:15 UTC.
 
 Local checks for this candidate:
 
 - `pnpm typecheck` — passed.
 - `pnpm test:contract` — fixture consistency passed for 88 operations.
 - `API_BASE_URL=https://dev-api.signapse.cloud pnpm test:contract -- --scope 'GET /events,GET /events/{id}' --live` — passed for both Events operations.
-- `pnpm exec vitest run tests/components/local-entity-quick-detail-drawer.component.test.tsx` — 16 passed.
-- `/opt/apps/symphony/runtime/run-fe-browser "$PWD" tests/e2e/events-workflow.spec.ts` — 4 passed; fixture-backed Chromium SSR and routing, locale, permissions, delayed in-place identity changes, failure states, pointer/keyboard activation and responsive checks.
-- Local fixture render capture helper (temporary and removed after capture) — 1 passed; generated the four dark-theme renders above with the accepted Vietnamese content and permissions.
-- Scoped ESLint on the changed Events route, Vietnamese dictionary and browser spec — passed.
+- `/opt/apps/symphony/runtime/run-fe-browser "$PWD" tests/e2e/events-workflow.spec.ts` — 5 passed; fixture-backed Chromium at the real FE HTTP boundary, including SSR, URL state, permissions, delayed in-place identity changes, list/detail loading and failure states, accessible headings and status messages, keyboard/pointer activation, and responsive checks.
+- Scoped ESLint on the changed Events routes, browser spec, and fixtures — passed.
 - `git diff --check` — passed.
 
 These local fixture checks do not prove live authorization or feature acceptance. QA owns live feature coverage; the coordinator owns Story acceptance.
