@@ -105,7 +105,6 @@ Light mode và dark mode phải là hai biến thể của cùng một direction
 
 - Dùng variant mặc định phù hợp cho badge trung tính. Với category, lifecycle hoặc status có màu đã chốt, dùng shared presentation và semantic tokens tương ứng. Nếu còn xung đột giữa phần cố định và chuẩn component, xác định chênh lệch và owner trước khi triển khai phần phụ thuộc.
 - Ngoại lệ design system cho shared [Badge](../../components/ui/badge.tsx): các variant `info`, `warning`, `emerging`, `active`, `weakening` dùng token light/dark trong [globals.css](../../app/globals.css). Dùng [AssetCategoryBadge](../../components/asset-category-badge.tsx) cho category đã được duyệt, với Equity → info, ETF → emerging và Commodity → warning. Ba lifecycle Emerging, Active và Weakening dùng variant cùng tên. Khi cần variant mới, ghi quyết định design system có phạm vi dùng chung tại đây và kiểm callers bị ảnh hưởng.
-- Event forecast direction badges use `positive` green for Bullish, `destructive` red for Bearish, `warning` amber for Mixed and `secondary` gray for Neutral. Keep the direction label so color is not the only cue.
 - Giữ nhãn hoặc icon thể hiện ý nghĩa và kiểm màu foreground/background đã resolve cùng contrast trong theme áp dụng.
 
 ## Layout And Surface Composition

@@ -21,8 +21,8 @@
   --secondary-foreground: oklch(0.205 0 0);
   --badge-info-bg: #e0f2fe;
   --badge-info-fg: #075985;
-  --badge-positive-bg: #dcfce7;
-  --badge-positive-fg: #166534;
+  --market-reaction-bullish-bg: #dcfce7;
+  --market-reaction-bullish-fg: #166534;
   --badge-warning-bg: #fef3c7;
   --badge-warning-fg: #92400e;
   --badge-emerging-bg: #ede9fe;
@@ -73,8 +73,8 @@
   --secondary-foreground: oklch(0.985 0 0);
   --badge-info-bg: #082f49;
   --badge-info-fg: #7dd3fc;
-  --badge-positive-bg: #052e16;
-  --badge-positive-fg: #86efac;
+  --market-reaction-bullish-bg: #052e16;
+  --market-reaction-bullish-fg: #86efac;
   --badge-warning-bg: #451a03;
   --badge-warning-fg: #fcd34d;
   --badge-emerging-bg: #2e1065;

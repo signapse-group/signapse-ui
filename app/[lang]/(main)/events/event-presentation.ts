@@ -1,3 +1,5 @@
+import type { CSSProperties } from "react"
+
 import type { Dictionary } from "@/app/lib/i18n/dictionary-types"
 import { formatMessage } from "@/app/lib/i18n/messages"
 import {
@@ -18,7 +20,6 @@ type BadgeVariant =
   | "outline"
   | "destructive"
   | "info"
-  | "positive"
   | "warning"
   | "active"
 
@@ -180,13 +181,26 @@ export function getEventMarketReactionDirectionVariant(
 ): BadgeVariant {
   switch (direction) {
     case "BULLISH":
-      return "positive"
+      return "secondary"
     case "BEARISH":
       return "destructive"
     case "MIXED":
       return "warning"
     case "NEUTRAL":
       return "secondary"
+  }
+}
+
+export function getEventMarketReactionDirectionStyle(
+  direction: EventMarketReactionDirection
+): CSSProperties | undefined {
+  if (direction !== "BULLISH") {
+    return undefined
+  }
+
+  return {
+    backgroundColor: "var(--market-reaction-bullish-bg)",
+    color: "var(--market-reaction-bullish-fg)",
   }
 }
 

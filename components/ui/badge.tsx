@@ -20,7 +20,6 @@ const badgeVariants = cva(
           "hover:bg-muted hover:text-muted-foreground dark:hover:bg-muted/50",
         link: "text-primary underline-offset-4 hover:underline",
         info: "bg-(--badge-info-bg) text-(color:--badge-info-fg)",
-        positive: "bg-(--badge-positive-bg) text-(color:--badge-positive-fg)",
         warning: "bg-(--badge-warning-bg) text-(color:--badge-warning-fg)",
         emerging: "bg-(--badge-emerging-bg) text-(color:--badge-emerging-fg)",
         active: "bg-(--badge-active-bg) text-(color:--badge-active-fg)",

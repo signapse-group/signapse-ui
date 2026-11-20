@@ -54,6 +54,7 @@ import { EventSectionEmpty } from "../event-section-empty"
 import {
   getEventAssetRelationVariant,
   getEventMarketReactionDirectionLabel,
+  getEventMarketReactionDirectionStyle,
   getEventMarketReactionDirectionVariant,
   getEventMarketReactionTimeHorizonLabel,
   getEventStatusLabel,
@@ -197,6 +198,7 @@ function MarketReactionCard({
           </Badge>
           <Badge
             variant={getEventMarketReactionDirectionVariant(reaction.direction)}
+            style={getEventMarketReactionDirectionStyle(reaction.direction)}
           >
             {getEventMarketReactionDirectionLabel(
               reaction.direction,
@@ -494,6 +496,7 @@ async function FetchEventData({
                         variant={getEventMarketReactionDirectionVariant(
                           direction
                         )}
+                        style={getEventMarketReactionDirectionStyle(direction)}
                       >
                         {formatMessage(
                           dictionary.events.reactionCountByDirection,

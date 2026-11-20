@@ -153,13 +153,19 @@ function contrastRatio(foreground: string, background: string) {
   return (lighter + 0.05) / (darker + 0.05)
 }
 
-async function getBadgeContrast(locator: Locator) {
+async function expectBadgeColors(
+  locator: Locator,
+  expected: { foreground: string; background: string }
+) {
   const colors = await locator.evaluate((element) => {
     const styles = window.getComputedStyle(element)
     return { foreground: styles.color, background: styles.backgroundColor }
   })
 
-  return contrastRatio(colors.foreground, colors.background)
+  expect(colors).toEqual(expected)
+  expect(
+    contrastRatio(colors.foreground, colors.background)
+  ).toBeGreaterThanOrEqual(4.5)
 }
 
 test.describe("Event asset and theme roles", () => {
@@ -454,7 +460,7 @@ test.describe("Event AI forecast reactions", () => {
     await expect(section.getByText("4 total", { exact: true })).toBeVisible()
 
     for (const [copy, variant] of [
-      ["1 bullish", "positive"],
+      ["1 bullish", "secondary"],
       ["1 neutral", "secondary"],
       ["1 bearish", "destructive"],
       ["1 mixed", "warning"],
@@ -470,8 +476,16 @@ test.describe("Event AI forecast reactions", () => {
       .filter({ hasText: "Short term" })
     await expect(bullish.getByText("Akamai Technologies")).toBeVisible()
     const bullishBadge = bullish.getByText("Bullish", { exact: true })
-    await expect(bullishBadge).toHaveAttribute("data-variant", "positive")
-    expect(await getBadgeContrast(bullishBadge)).toBeGreaterThanOrEqual(4.5)
+    const bullishCountBadge = section.getByText("1 bullish", { exact: true })
+    await expect(bullishBadge).toHaveAttribute("data-variant", "secondary")
+    await expectBadgeColors(bullishBadge, {
+      foreground: "rgb(134, 239, 172)",
+      background: "rgb(5, 46, 22)",
+    })
+    await expectBadgeColors(bullishCountBadge, {
+      foreground: "rgb(134, 239, 172)",
+      background: "rgb(5, 46, 22)",
+    })
     await expect(bullish.getByText("84%", { exact: true })).toBeVisible()
     await expect(
       bullish.getByText("AI reasoning", { exact: true })
@@ -560,7 +574,14 @@ test.describe("Event AI forecast reactions", () => {
     )
 
     await page.emulateMedia({ colorScheme: "light" })
-    expect(await getBadgeContrast(bullishBadge)).toBeGreaterThanOrEqual(4.5)
+    await expectBadgeColors(bullishBadge, {
+      foreground: "rgb(22, 101, 52)",
+      background: "rgb(220, 252, 231)",
+    })
+    await expectBadgeColors(bullishCountBadge, {
+      foreground: "rgb(22, 101, 52)",
+      background: "rgb(220, 252, 231)",
+    })
     await saveScreenshot(
       page,
       testInfo,
