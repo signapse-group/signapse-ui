@@ -616,13 +616,31 @@ describe("Market chart quote-driven candle flow", () => {
       return calendarRequest.promise
     })
 
-    render(
+    const view = render(
       <LocalizationProvider locale="vi" dictionary={viDictionary}>
         <MarketChartWorkbench
           watchlistAssets={watchlistAssets}
           watchlistError={null}
         />
       </LocalizationProvider>
+    )
+
+    const mobileStatusRegion = await waitFor(() => {
+      const statusRegion = Array.from(
+        view.container.querySelectorAll("span.sr-only")
+      ).find((status) => status.classList.contains("sm:hidden"))
+
+      expect(statusRegion).toBeInTheDocument()
+      return statusRegion
+    })
+    expect(mobileStatusRegion).toHaveAttribute("role", "status")
+    expect(mobileStatusRegion).toHaveAttribute("aria-live", "polite")
+    expect(mobileStatusRegion).toHaveAttribute("aria-atomic", "true")
+    expect(mobileStatusRegion).toHaveTextContent(
+      viDictionary.marketCharts.annotations.loadingEvents
+    )
+    expect(mobileStatusRegion).toHaveTextContent(
+      viDictionary.marketCharts.calendar.loadingEvents
     )
 
     await waitFor(() => {
@@ -670,6 +688,12 @@ describe("Market chart quote-driven candle flow", () => {
       const candlesOnChart = screen.getByTestId("chart-rest-candles")
       expect(candlesOnChart).toHaveTextContent(expectedCandles)
       expect(candlesOnChart.parentElement).toHaveClass("visible")
+      expect(mobileStatusRegion).toHaveTextContent(
+        viDictionary.marketCharts.annotations.noEvents
+      )
+      expect(mobileStatusRegion).toHaveTextContent(
+        viDictionary.marketCharts.calendar.noEvents
+      )
       candlePaintAt ||= performance.now()
     })
 
@@ -818,7 +842,7 @@ describe("Market chart quote-driven candle flow", () => {
       "signapse:market-charts:calendar-layer:v1",
       "true"
     )
-    render(
+    const view = render(
       <LocalizationProvider locale="vi" dictionary={viDictionary}>
         <MarketChartWorkbench
           watchlistAssets={watchlistAssets}
@@ -849,6 +873,10 @@ describe("Market chart quote-driven candle flow", () => {
     const calendarRetry = await screen.findByRole("button", {
       name: `${calendarError} ${refreshLabel}`,
     })
+    const mobileStatusRegion = Array.from(
+      view.container.querySelectorAll("span.sr-only")
+    ).find((status) => status.classList.contains("sm:hidden"))
+    expect(mobileStatusRegion).toHaveAttribute("aria-hidden", "true")
     const candles = screen.getByTestId("chart-rest-candles")
     const originalCandles = candles.textContent
 

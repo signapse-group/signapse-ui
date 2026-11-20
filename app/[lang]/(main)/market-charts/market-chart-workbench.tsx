@@ -3194,7 +3194,17 @@ function MarketChartAnnotationControls({
                 </div>
               ) : null}
             </div>
-            <span className="sr-only sm:hidden">
+            <span
+              className="sr-only sm:hidden"
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+              aria-hidden={
+                annotationLoadError || calendarHistoryLoadError
+                  ? true
+                  : undefined
+              }
+            >
               {[label, calendarLabel].filter(Boolean).join(" · ")}
             </span>
           </>
