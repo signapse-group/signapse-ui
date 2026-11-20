@@ -480,20 +480,30 @@ test.describe("P0 quick-detail overlay", () => {
           evidenceBounds.top < regionBounds.bottom
         )
       })
-    for (let pageDownCount = 0; pageDownCount < 6; pageDownCount += 1) {
+    const maxScrollDistance = await readerRegion.evaluate(
+      (element) => element.scrollHeight - element.clientHeight
+    )
+    const maxArrowDownPresses = Math.ceil(maxScrollDistance / 40) + 4
+    let reachedFinalEvidence = false
+    for (
+      let arrowDownCount = 0;
+      arrowDownCount < maxArrowDownPresses;
+      arrowDownCount += 1
+    ) {
       if (await finalEvidenceIsInReader()) {
+        reachedFinalEvidence = true
         break
       }
 
       const previousScrollTop = await readerRegion.evaluate(
         (element) => element.scrollTop
       )
-      await page.keyboard.press("PageDown")
+      await page.keyboard.press("ArrowDown")
       await expect
         .poll(() => readerRegion.evaluate((element) => element.scrollTop))
         .toBeGreaterThan(previousScrollTop)
     }
-    expect(await finalEvidenceIsInReader()).toBe(true)
+    expect(reachedFinalEvidence || (await finalEvidenceIsInReader())).toBe(true)
     await captureQuickDetail(
       page,
       testInfo,
@@ -503,6 +513,96 @@ test.describe("P0 quick-detail overlay", () => {
     await page.keyboard.press("End")
     await expect(dialog.getByText(/Cập nhật lần cuối:/).last()).toBeInViewport()
     await captureQuickDetail(page, testInfo, "event-reader-end-vi-360.png")
+  })
+
+  test("shows localized access denial when the Event API returns 403", async ({
+    page,
+    fixture,
+  }, testInfo) => {
+    await fixture.setScenario("/events", "event-detail-denied", "GET")
+    await page.emulateMedia({ colorScheme: "dark" })
+    await page.setViewportSize({ width: 1024, height: 900 })
+    await page.goto("/vi/dashboard")
+
+    const trigger = page.getByRole("button", {
+      name: "Mở sự kiện: Central bank signals a slower easing path",
+      exact: true,
+    })
+    await expect(trigger).toBeVisible()
+    await waitForClientHandler(trigger)
+    await trigger.click()
+
+    const dialog = page.getByRole("dialog")
+    await expect(
+      dialog.getByRole("heading", {
+        name: viDictionary.events.quickAccessDeniedTitle,
+        level: 2,
+        exact: true,
+      })
+    ).toBeVisible()
+    await expect(
+      dialog.getByText(viDictionary.events.detailDenied, { exact: false })
+    ).toBeVisible()
+    await expect(
+      dialog.getByRole("link", {
+        name: viDictionary.common.openFullPage,
+        exact: true,
+      })
+    ).toHaveCount(0)
+
+    const state = await fixture.state()
+    expect(
+      state.requests.some(
+        (request) => request.method === "GET" && request.path === "/events/61"
+      )
+    ).toBe(true)
+    await captureQuickDetail(page, testInfo, "event-api-denied-vi-1024.png")
+  })
+
+  test("shows the missing state when the Event API returns 404", async ({
+    page,
+    fixture,
+  }, testInfo) => {
+    await fixture.setScenario("/events", "event-detail-not-found", "GET")
+    await page.emulateMedia({ colorScheme: "dark" })
+    await page.setViewportSize({ width: 1024, height: 900 })
+    await page.goto("/vi/dashboard")
+
+    const trigger = page.getByRole("button", {
+      name: "Mở sự kiện: Central bank signals a slower easing path",
+      exact: true,
+    })
+    await expect(trigger).toBeVisible()
+    await waitForClientHandler(trigger)
+    await trigger.click()
+
+    const dialog = page.getByRole("dialog")
+    await expect(
+      dialog.getByRole("heading", {
+        name: viDictionary.quickDetail.notFoundTitle,
+        level: 2,
+        exact: true,
+      })
+    ).toBeVisible()
+    await expect(
+      dialog.getByText(viDictionary.quickDetail.notFoundDescription, {
+        exact: true,
+      })
+    ).toBeVisible()
+    await expect(
+      dialog.getByRole("link", {
+        name: viDictionary.common.openFullPage,
+        exact: true,
+      })
+    ).toHaveCount(0)
+
+    const state = await fixture.state()
+    expect(
+      state.requests.some(
+        (request) => request.method === "GET" && request.path === "/events/61"
+      )
+    ).toBe(true)
+    await captureQuickDetail(page, testInfo, "event-api-missing-vi-1024.png")
   })
 
   test("uses the shared desktop sheet from Graph View and restores inspector focus", async ({

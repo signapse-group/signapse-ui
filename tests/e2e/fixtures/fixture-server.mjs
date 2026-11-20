@@ -3600,6 +3600,13 @@ Which asset did you mean? The available data is limited. Add TSLA to your watchl
       }
     }
 
+    if (scenario === "event-detail-not-found") {
+      return {
+        __status: 404,
+        payload: errorPayload("Event not found", "NOT_FOUND"),
+      }
+    }
+
     let status = event.status
     let assets = []
     let themes = []

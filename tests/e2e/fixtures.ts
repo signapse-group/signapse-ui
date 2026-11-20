@@ -90,6 +90,7 @@ type FixtureController = {
       | "event-list-error"
       | "event-detail-error"
       | "event-detail-denied"
+      | "event-detail-not-found"
       | "event-partial"
       | "event-partial-no-source"
       | "annotations-many"

@@ -11,8 +11,8 @@ import {
   type RefObject,
 } from "react"
 
-import { getEventById } from "@/app/api/events/action"
-import { getNewsArticleById } from "@/app/api/news-articles/action"
+import { getEventByIdForQuickDetail } from "@/app/api/events/action"
+import { getNewsArticleByIdForQuickDetail } from "@/app/api/news-articles/action"
 import { EVENT_READ_PERMISSIONS } from "@/app/lib/events/permissions"
 import type { EventResponse } from "@/app/lib/events/definitions"
 import { useLocalization } from "@/app/lib/i18n/provider"
@@ -85,14 +85,16 @@ interface LocalEntityQuickDetailDrawerProps {
   returnFocusRef?: RefObject<HTMLElement | null> | null
 }
 
-function getErrorStatus(error: unknown) {
-  if (typeof error !== "object" || error === null) {
-    return null
+function getErrorPhase(status: number | null): "error" | "missing" | "denied" {
+  if (status === 404) {
+    return "missing"
   }
 
-  const status = (error as { status?: unknown }).status
+  if (status === 401 || status === 403) {
+    return "denied"
+  }
 
-  return typeof status === "number" ? status : null
+  return "error"
 }
 
 function subscribeToViewport(callback: () => void) {
@@ -213,9 +215,13 @@ export function LocalEntityQuickDetailDrawer({
             dictionary.newsArticles.titleUnavailable
           : currentState?.phase === "missing"
             ? dictionary.quickDetail.notFoundTitle
-            : currentState?.phase === "error"
-              ? dictionary.quickDetail.errorTitle
-              : dictionary.common.loading
+            : currentState?.phase === "denied"
+              ? entity.kind === "event"
+                ? dictionary.events.quickAccessDeniedTitle
+                : dictionary.newsArticles.quickAccessDeniedTitle
+              : currentState?.phase === "error"
+                ? dictionary.quickDetail.errorTitle
+                : dictionary.common.loading
   const title = detailTitle
   const canonicalHref =
     entity &&
@@ -291,56 +297,57 @@ export function LocalEntityQuickDetailDrawer({
     async function loadDetail() {
       try {
         if (selectedEntity.kind === "event") {
-          const event = await getEventById(selectedEntity.id)
+          const result = await getEventByIdForQuickDetail(selectedEntity.id)
 
-          if (isActive) {
+          if (!isActive) {
+            return
+          }
+
+          if (!result.success) {
             setState({
               entityKey: currentEntityKey,
-              event,
-              phase: "event",
+              phase: getErrorPhase(result.status),
               retryNonce,
               sessionId,
             })
+            return
           }
 
-          return
-        }
-
-        const article = await getNewsArticleById(selectedEntity.id)
-
-        if (isActive) {
           setState({
-            article,
             entityKey: currentEntityKey,
-            phase: "news-article",
+            event: result.data,
+            phase: "event",
             retryNonce,
             sessionId,
           })
+          return
         }
-      } catch (error) {
+
+        const result = await getNewsArticleByIdForQuickDetail(selectedEntity.id)
+
         if (!isActive) {
           return
         }
 
-        const status = getErrorStatus(error)
-
-        if (status === 404) {
+        if (!result.success) {
           setState({
             entityKey: currentEntityKey,
-            phase: "missing",
+            phase: getErrorPhase(result.status),
             retryNonce,
             sessionId,
           })
           return
         }
 
-        if (status === 401 || status === 403) {
-          setState({
-            entityKey: currentEntityKey,
-            phase: "denied",
-            retryNonce,
-            sessionId,
-          })
+        setState({
+          article: result.data,
+          entityKey: currentEntityKey,
+          phase: "news-article",
+          retryNonce,
+          sessionId,
+        })
+      } catch {
+        if (!isActive) {
           return
         }
 
