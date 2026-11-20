@@ -1647,6 +1647,7 @@ export function SigmaGraphView({
                 <VisibilityIcon
                   aria-hidden="true"
                   className="size-4 shrink-0"
+                  data-icon="inline-end"
                 />
               </Button>
             )

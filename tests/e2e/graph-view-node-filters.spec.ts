@@ -55,6 +55,8 @@ test("Graph View node filters support keyboard, touch, empty recovery and reload
   await expect(filters).toBeVisible()
   for (const filter of allFilters)
     await expect(filter).toHaveAttribute("aria-pressed", "true")
+  for (const filter of allFilters)
+    await expect(filter.locator('[data-icon="inline-end"]')).toHaveCount(1)
   await expect(article).toContainText("News Article")
   await expect(article).toHaveAccessibleName(/News Article/)
 
