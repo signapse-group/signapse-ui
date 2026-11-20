@@ -1169,7 +1169,7 @@ export const vi = {
     searchLabel: "Tìm lịch kinh tế",
     searchPending: "Đang tìm kiếm",
     searchPlaceholder: "Tìm theo tiêu đề sự kiện...",
-    untitled: "Chưa có tiêu đề",
+    untitled: "Sự kiện chưa có tiêu đề",
     itemIdLabel: "Mã mục",
     itemId: "Mã mục #{id}",
     impactLabels: {

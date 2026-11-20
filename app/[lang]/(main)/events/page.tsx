@@ -33,15 +33,21 @@ interface PageProps {
 export default async function EventsPage({ searchParams }: PageProps) {
   const permissions = await getCurrentPermissions()
   const dictionary = await getServerDictionary()
+  const pageHeading = (
+    <h1 className="sr-only">{dictionary.navigation.events}</h1>
+  )
 
   if (!hasAnyPermission(permissions, EVENT_READ_PERMISSIONS)) {
     return (
-      <div role="alert" aria-live="assertive">
-        <AccessDenied
-          description={dictionary.events.readDenied}
-          permission={EVENT_READ_PERMISSIONS[0]}
-        />
-      </div>
+      <>
+        {pageHeading}
+        <div role="alert" aria-live="assertive">
+          <AccessDenied
+            description={dictionary.events.readDenied}
+            permission={EVENT_READ_PERMISSIONS[0]}
+          />
+        </div>
+      </>
     )
   }
 
@@ -50,14 +56,17 @@ export default async function EventsPage({ searchParams }: PageProps) {
   const sort = typeof params.sort === "string" ? params.sort : "occurredAt_desc"
 
   return (
-    <Suspense fallback={<EventListSkeleton dictionary={dictionary} />}>
-      <EventListContent
-        page={page}
-        size={size}
-        sort={sort}
-        searchParams={params}
-      />
-    </Suspense>
+    <>
+      {pageHeading}
+      <Suspense fallback={<EventListSkeleton dictionary={dictionary} />}>
+        <EventListContent
+          page={page}
+          size={size}
+          sort={sort}
+          searchParams={params}
+        />
+      </Suspense>
+    </>
   )
 }
 

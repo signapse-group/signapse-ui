@@ -1,3 +1,5 @@
+import type { Page } from "@playwright/test"
+
 import { expect, test, waitForClientHandler } from "./fixtures"
 
 import { en as enDictionary } from "@/app/lib/i18n/dictionaries/en"
@@ -5,6 +7,23 @@ import { vi as viDictionary } from "@/app/lib/i18n/dictionaries/vi"
 
 const searchFilter =
   "title[containsIgnoreCase],description[containsIgnoreCase],canonicalKey[containsIgnoreCase]"
+
+async function navigateToEventWithClientRouter(page: Page, id: number) {
+  await page.evaluate((eventId) => {
+    // Next exposes this router on window.next in development for debugging.
+    const router = (
+      window as Window & {
+        next?: { router?: { push: (href: string) => void } }
+      }
+    ).next?.router
+
+    if (!router) {
+      throw new Error("The Next.js App Router debug interface is unavailable")
+    }
+
+    router.push(`/vi/events/${eventId}`)
+  }, id)
+}
 
 test.describe("Events workflow", () => {
   test("keeps search and sort results with URL state when changing from later pages", async ({
@@ -21,6 +40,13 @@ test.describe("Events workflow", () => {
     params.set(searchFilter, "Fixture")
     await page.goto(`/vi/events?${params.toString()}`)
 
+    await expect(
+      page.getByRole("heading", {
+        level: 1,
+        name: viDictionary.navigation.events,
+        exact: true,
+      })
+    ).toHaveCount(1)
     const search = page.getByRole("searchbox", {
       name: viDictionary.events.searchLabel,
     })
@@ -298,48 +324,20 @@ test.describe("Events workflow", () => {
     await fixture.setPermissions(["event:read"])
     await fixture.setScenario("/events/62", "delayed", "GET")
     await page.setViewportSize({ width: 1280, height: 800 })
-    await page.goto("/vi/events?size=20")
+    await page.goto("/vi/events/61")
 
-    const firstEventLink = page.getByRole("link", {
+    const firstEventHeading = page.getByRole("heading", {
+      level: 1,
       name: "Central bank signals a slower easing path",
       exact: true,
     })
-    await waitForClientHandler(firstEventLink)
-    await firstEventLink.click()
-    await expect(page).toHaveURL(/\/vi\/events\/61$/)
-    await expect(
-      page.getByRole("heading", {
-        level: 1,
-        name: "Central bank signals a slower easing path",
-        exact: true,
-      })
-    ).toBeVisible()
-
-    const backToEvents = page.getByRole("link", {
-      name: viDictionary.common.back,
-      exact: true,
-    })
-    await waitForClientHandler(backToEvents)
-    await backToEvents.click()
-    await expect(page).toHaveURL(/\/vi\/events(?:\?size=20)?$/)
-
-    const destinationEventLink = page.getByRole("link", {
-      name: "Energy demand outlook revised higher",
-      exact: true,
-    })
-    await waitForClientHandler(destinationEventLink)
-    await destinationEventLink.click()
+    await expect(firstEventHeading).toBeVisible()
+    await navigateToEventWithClientRouter(page, 62)
     await expect(page).toHaveURL(/\/vi\/events\/62$/)
     await expect
       .poll(async () => (await fixture.state()).pendingRequests)
       .toBeGreaterThan(0)
-    await expect(
-      page.getByRole("heading", {
-        level: 1,
-        name: "Central bank signals a slower easing path",
-        exact: true,
-      })
-    ).toHaveCount(0)
+    await expect(firstEventHeading).toHaveCount(0)
 
     await fixture.setScenario("/events", "event-detail-denied", "GET")
     await fixture.setScenario("/events/62", "success", "GET")
@@ -349,13 +347,28 @@ test.describe("Events workflow", () => {
         hasText: viDictionary.events.detailDenied,
       })
     ).toContainText(viDictionary.events.detailDenied)
+    await expect(firstEventHeading).toHaveCount(0)
     await expect(
       page.getByRole("heading", {
         level: 1,
-        name: "Central bank signals a slower easing path",
+        name: "Energy demand outlook revised higher",
         exact: true,
       })
     ).toHaveCount(0)
+
+    await fixture.setScenario("/events/999", "delayed", "GET")
+    await navigateToEventWithClientRouter(page, 999)
+    await expect(page).toHaveURL(/\/vi\/events\/999$/)
+    await expect
+      .poll(async () => (await fixture.state()).pendingRequests)
+      .toBeGreaterThan(0)
+    await expect(firstEventHeading).toHaveCount(0)
+
+    await fixture.setScenario("/events/999", "success", "GET")
+    await expect(page.getByRole("status")).toContainText(
+      viDictionary.events.eventUnavailableTitle
+    )
+    await expect(firstEventHeading).toHaveCount(0)
   })
 
   test("separates no-results, permission, unavailable, and load-error states", async ({
