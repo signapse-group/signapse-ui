@@ -25,6 +25,10 @@ async function setTheme(page: Page, theme: "Dark" | "Light") {
   await expect(page.locator("html")).toHaveClass(
     new RegExp(theme.toLowerCase())
   )
+  await page.keyboard.press("Escape")
+  await expect(
+    page.getByRole("menuitem", { name: theme, exact: true })
+  ).toBeHidden()
 }
 
 test("Graph View time range works across responsive, keyboard, touch and locale states", async ({
@@ -142,11 +146,18 @@ test("Graph View time range works across responsive, keyboard, touch and locale 
 
   await page.setViewportSize({ width: 390, height: 844 })
   await setTheme(page, "Light")
+  await page.screenshot({
+    path: "test-results/graph-time-range-empty-mobile-light-en-390x844.png",
+  })
   const triggerBox = await mobileRange.boundingBox()
   expect(triggerBox?.height).toBeGreaterThanOrEqual(44)
   await tap(page, mobileRange)
   const thirtyDayOption = page.getByRole("option", { name: "Last 30 days" })
   await expect(thirtyDayOption).toBeVisible()
+  await expect(page.locator('[data-slot="select-content"]')).toHaveCSS(
+    "opacity",
+    "1"
+  )
   const optionBox = await thirtyDayOption.boundingBox()
   expect(optionBox?.height).toBeGreaterThanOrEqual(44)
   await page.screenshot({
@@ -156,6 +167,10 @@ test("Graph View time range works across responsive, keyboard, touch and locale 
   await setTheme(page, "Dark")
   await tap(page, mobileRange)
   await expect(thirtyDayOption).toBeVisible()
+  await expect(page.locator('[data-slot="select-content"]')).toHaveCSS(
+    "opacity",
+    "1"
+  )
   await page.screenshot({
     path: "test-results/graph-time-range-empty-menu-mobile-dark-en-390x844.png",
   })

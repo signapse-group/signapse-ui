@@ -1612,7 +1612,7 @@ export function SigmaGraphView({
       </p>
       <div
         data-graph-label-obstacle
-        className="pointer-events-none absolute inset-x-4 bottom-20 z-10 flex flex-col gap-3 min-[1440px]:right-20 min-[1440px]:bottom-4 min-[1440px]:flex-row min-[1440px]:items-end min-[1440px]:justify-between"
+        className="pointer-events-none absolute inset-x-4 bottom-20 z-10 flex flex-col gap-3 min-[1440px]:right-52 min-[1440px]:bottom-4 min-[1440px]:flex-row min-[1440px]:items-end min-[1440px]:justify-between"
       >
         <Badge variant="outline">
           <span data-testid="graph-demo-node-count">
