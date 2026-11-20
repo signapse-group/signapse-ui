@@ -410,7 +410,12 @@ export function LocalEntityQuickDetailDrawer({
         initialFocus={closeButtonRef}
         style={getDrawerStyle(presentation)}
       >
-        <DrawerHeader className="sticky top-0 z-10 border-b bg-popover/95 px-4 py-3 text-left backdrop-blur-sm">
+        <DrawerHeader
+          className={cn(
+            "sticky top-0 z-10 border-b bg-popover/95 px-4 py-3 text-left",
+            "backdrop-blur-sm group-data-[swipe-axis=y]/drawer-popup:text-left"
+          )}
+        >
           <div className="flex items-start gap-2">
             <div className="min-w-0 flex-1">
               <DrawerTitle className="text-base leading-snug font-semibold break-words">

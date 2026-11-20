@@ -24,6 +24,7 @@ test.describe("P0 quick-detail overlay", () => {
       "article-reader-long-content",
       "GET"
     )
+    await page.addInitScript(() => window.localStorage.setItem("theme", "dark"))
     await page.setViewportSize({ width: 1520, height: 1000 })
     await page.goto("/vi/dashboard")
 
@@ -37,7 +38,9 @@ test.describe("P0 quick-detail overlay", () => {
 
     const dialog = page.getByRole("dialog")
     const overlay = page.locator("[data-quick-detail-placement]")
+    const readerHeader = dialog.locator('[data-slot="drawer-header"]')
     await expect(dialog).toBeVisible()
+    await expect(readerHeader).toHaveCSS("text-align", "left")
     await expect(overlay).toHaveAttribute(
       "data-quick-detail-placement",
       "right"
@@ -121,6 +124,7 @@ test.describe("P0 quick-detail overlay", () => {
         viewport.placement
       )
       await expect(dialog).toBeVisible()
+      await expect(readerHeader).toHaveCSS("text-align", "left")
       const expectedControlSize = viewport.width < 768 ? 44 : 28
       for (const control of [canonicalLink, closeButton]) {
         await expect
@@ -206,6 +210,7 @@ test.describe("P0 quick-detail overlay", () => {
 
     const overlay = page.locator("[data-quick-detail-placement]")
     const dialog = page.getByRole("dialog")
+    const readerHeader = dialog.locator('[data-slot="drawer-header"]')
     const longTitle = `Central bank signals a slower easing path ${"across global markets ".repeat(5)}`
     await expect(page.locator('[data-slot="drawer-popup"]')).toBeVisible()
     await expect(overlay).toHaveAttribute(
@@ -219,6 +224,7 @@ test.describe("P0 quick-detail overlay", () => {
         exact: true,
       })
     ).toBeVisible()
+    await expect(readerHeader).toHaveCSS("text-align", "left")
     const canonicalLink = dialog.getByRole("link", {
       name: "Mở trang đầy đủ",
       exact: true,
@@ -320,6 +326,7 @@ test.describe("P0 quick-detail overlay", () => {
       "bottom"
     )
     await expect(dialog).toBeVisible()
+    await expect(readerHeader).toHaveCSS("text-align", "left")
 
     await page.setViewportSize({ width: 1024, height: 900 })
     await expect(overlay).toHaveAttribute(
@@ -327,6 +334,7 @@ test.describe("P0 quick-detail overlay", () => {
       "bottom"
     )
     await expect(dialog).toBeVisible()
+    await expect(readerHeader).toHaveCSS("text-align", "left")
     await dialog
       .getByRole("heading", { name: "Tài sản liên quan", exact: true })
       .scrollIntoViewIfNeeded()
@@ -339,6 +347,7 @@ test.describe("P0 quick-detail overlay", () => {
         "bottom"
       )
       await expect(dialog).toBeVisible()
+      await expect(readerHeader).toHaveCSS("text-align", "left")
       expect(
         await page.evaluate(() => document.documentElement.scrollWidth)
       ).toBeLessThanOrEqual(width)
