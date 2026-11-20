@@ -1371,6 +1371,7 @@ function ChartSurface({
   selectedCalendarImpacts,
   calendarHistoryLoadError,
   calendarHistoryLoading,
+  hasCurrentRange,
   futureCalendarLoadError,
   calendarLoadedAt,
   calendarLoading,
@@ -1425,6 +1426,7 @@ function ChartSurface({
   selectedCalendarImpacts: EconomicCalendarImpactLevel[]
   calendarHistoryLoadError: string | null
   calendarHistoryLoading: boolean
+  hasCurrentRange: boolean
   futureCalendarLoadError: string | null
   calendarLoadedAt: string | null
   calendarLoading: boolean
@@ -2034,6 +2036,7 @@ function ChartSurface({
           calendarLayerEnabled={calendarLayerEnabled}
           calendarHistoryLoadError={calendarHistoryLoadError}
           calendarHistoryLoading={calendarHistoryLoading}
+          hasCurrentRange={hasCurrentRange}
           freshnessLabel={freshnessLabel}
           groups={annotationGroups}
           liveStatusLabel={liveStatusLabel}
@@ -3043,6 +3046,7 @@ function MarketChartAnnotationControls({
   calendarLayerEnabled,
   calendarHistoryLoadError,
   calendarHistoryLoading,
+  hasCurrentRange,
   freshnessLabel,
   groups,
   liveStatusLabel,
@@ -3057,6 +3061,7 @@ function MarketChartAnnotationControls({
   calendarLayerEnabled: boolean
   calendarHistoryLoadError: string | null
   calendarHistoryLoading: boolean
+  hasCurrentRange: boolean
   freshnessLabel: string | null
   groups: MarketChartAnnotationGroup[]
   liveStatusLabel: string | null
@@ -3065,30 +3070,39 @@ function MarketChartAnnotationControls({
   onCalendarHistoryRetry: () => void
 }) {
   const { dictionary, formatMessage, formatNumber } = useLocalization()
-  const calendarEventCount = calendarEvents.length
+  const currentGroups = hasCurrentRange ? groups : []
+  const calendarEventCount = hasCurrentRange ? calendarEvents.length : 0
   const label = annotationLayerEnabled
-    ? annotationLoading
-      ? dictionary.marketCharts.annotations.loadingEvents
-      : (annotationLoadError ??
-        (groups.length > 0
-          ? formatMessage(dictionary.marketCharts.annotations.eventMarkers, {
-              count: formatNumber(groups.length),
-            })
-          : dictionary.marketCharts.annotations.noEvents))
+    ? !hasCurrentRange
+      ? annotationLoading
+        ? dictionary.marketCharts.annotations.loadingEvents
+        : null
+      : annotationLoading
+        ? dictionary.marketCharts.annotations.loadingEvents
+        : (annotationLoadError ??
+          (currentGroups.length > 0
+            ? formatMessage(dictionary.marketCharts.annotations.eventMarkers, {
+                count: formatNumber(currentGroups.length),
+              })
+            : dictionary.marketCharts.annotations.noEvents))
     : null
   const calendarLabel = calendarLayerEnabled
-    ? calendarHistoryLoadError ||
-      (calendarHistoryLoading
+    ? !hasCurrentRange
+      ? calendarHistoryLoading
         ? dictionary.marketCharts.calendar.loadingEvents
-        : calendarEventCount > 0
-          ? formatMessage(dictionary.marketCharts.calendar.eventMarkers, {
-              count: formatNumber(calendarEventCount),
-            })
-          : dictionary.marketCharts.calendar.noEvents)
+        : null
+      : calendarHistoryLoadError ||
+        (calendarHistoryLoading
+          ? dictionary.marketCharts.calendar.loadingEvents
+          : calendarEventCount > 0
+            ? formatMessage(dictionary.marketCharts.calendar.eventMarkers, {
+                count: formatNumber(calendarEventCount),
+              })
+            : dictionary.marketCharts.calendar.noEvents)
     : null
-  const hasEvents = groups.length > 0
+  const hasEvents = currentGroups.length > 0
   const eventColorClassNames = getMarketChartAnnotationColorClassNames(
-    getAnnotationGroupsSummaryDirection(groups)
+    getAnnotationGroupsSummaryDirection(currentGroups)
   )
 
   return (
@@ -3191,7 +3205,7 @@ function MarketChartAnnotationControls({
           annotationLayerEnabled={annotationLayerEnabled}
           calendarEventCount={calendarEventCount}
           calendarLayerEnabled={calendarLayerEnabled}
-          groups={groups}
+          groups={currentGroups}
         />
         {freshnessLabel || liveStatusLabel ? (
           <div className="ml-auto flex w-full min-w-0 flex-wrap items-center justify-end gap-x-3 gap-y-1 pr-12 text-right sm:w-auto sm:shrink-0">
@@ -3321,19 +3335,31 @@ export function MarketChartWorkbench({
     (currentFutureCalendarState?.loading ?? true)
   const isBusy = phase === "loading" || isPending
   const supplementalSelectionKey = `${selectedAssetId ?? "none"}:${selection.timeframe}`
+  const chartData = loadedData ?? data
+  const currentChartData =
+    chartData?.asset.id === selectedAssetId &&
+    chartData.timeframe === selection.timeframe
+      ? chartData
+      : null
+  const hasCurrentRange = Boolean(currentChartData?.candles.length)
+  const awaitingCurrentRange =
+    selectedAssetId !== null &&
+    !hasCurrentRange &&
+    (phase === "idle" || phase === "loading")
   const annotationRequestContextKey = `${activeLoadGeneration}:${annotationRequestGeneration}:${supplementalSelectionKey}`
   const annotationLoading =
-    phase === "success" &&
-    annotationPendingRequests.contextKey === annotationRequestContextKey &&
-    annotationPendingRequests.count > 0
+    awaitingCurrentRange ||
+    (phase === "success" &&
+      annotationPendingRequests.contextKey === annotationRequestContextKey &&
+      annotationPendingRequests.count > 0)
   const calendarHistoryRequestContextKey = `${activeLoadGeneration}:${calendarHistoryRequestGeneration}:${selectedCalendarImpacts.join(",")}:${supplementalSelectionKey}`
   const calendarHistoryLoading =
-    phase === "success" &&
-    calendarHistoryPendingRequests.contextKey ===
-      calendarHistoryRequestContextKey &&
-    calendarHistoryPendingRequests.count > 0
+    awaitingCurrentRange ||
+    (phase === "success" &&
+      calendarHistoryPendingRequests.contextKey ===
+        calendarHistoryRequestContextKey &&
+      calendarHistoryPendingRequests.count > 0)
   const timeframeLabels = getMarketChartTimeframeLabels(dictionary)
-  const chartData = loadedData ?? data
   const chartDataRef = useRef(chartData)
   useEffect(() => {
     chartDataRef.current = chartData
@@ -3350,16 +3376,16 @@ export function MarketChartWorkbench({
       : null
   const liveCandle = currentLiveState.candle
   const annotationGroups = useMemo(() => {
-    if (!annotationLayerEnabled || !chartData) {
+    if (!annotationLayerEnabled || !currentChartData) {
       return []
     }
 
     return createMarketChartAnnotationGroups(
-      chartData.annotations,
-      chartData.candles,
-      chartData.timeframe
+      currentChartData.annotations,
+      currentChartData.candles,
+      currentChartData.timeframe
     )
-  }, [annotationLayerEnabled, chartData])
+  }, [annotationLayerEnabled, currentChartData])
 
   useEffect(() => {
     if (phase === "success" && loadedData) {
@@ -3373,10 +3399,10 @@ export function MarketChartWorkbench({
   const allCalendarEvents = useMemo(
     () =>
       mergeMarketChartEconomicCalendarEvents(
-        chartData?.economicCalendarEvents ?? [],
+        currentChartData?.economicCalendarEvents ?? [],
         futureCalendarEvents
       ),
-    [chartData?.economicCalendarEvents, futureCalendarEvents]
+    [currentChartData?.economicCalendarEvents, futureCalendarEvents]
   )
   const calendarEvents = useMemo(
     () =>
@@ -3390,30 +3416,30 @@ export function MarketChartWorkbench({
     [calendarEvents, calendarLayerEnabled]
   )
   const calendarEventGroups = useMemo(() => {
-    if (!calendarLayerEnabled || !chartData) {
+    if (!calendarLayerEnabled || !currentChartData) {
       return []
     }
 
     return createMarketChartEconomicCalendarEventGroups(
       visibleCalendarEvents,
-      chartData.candles
+      currentChartData.candles
     )
-  }, [calendarLayerEnabled, chartData, visibleCalendarEvents])
+  }, [calendarLayerEnabled, currentChartData, visibleCalendarEvents])
   const warmAnnotationGroups = useMemo(() => {
     if (
       !annotationLayerEnabled ||
-      !chartData ||
+      !currentChartData ||
       !isMarketChartWarmBandTimeframe(selection.timeframe)
     ) {
       return []
     }
 
     return createMarketChartWarmAnnotationGroups(
-      chartData.annotations,
-      chartData.candles,
+      currentChartData.annotations,
+      currentChartData.candles,
       selection.timeframe
     )
-  }, [annotationLayerEnabled, chartData, selection.timeframe])
+  }, [annotationLayerEnabled, currentChartData, selection.timeframe])
 
   useEffect(() => {
     function updateCalendarClock() {
@@ -4680,6 +4706,7 @@ export function MarketChartWorkbench({
         selectedCalendarImpacts={selectedCalendarImpacts}
         calendarHistoryLoadError={calendarHistoryLoadError}
         calendarHistoryLoading={calendarHistoryLoading}
+        hasCurrentRange={hasCurrentRange}
         futureCalendarLoadError={futureCalendarLoadError}
         calendarLoadedAt={futureCalendarLoadedAt}
         calendarLoading={futureCalendarLoading}

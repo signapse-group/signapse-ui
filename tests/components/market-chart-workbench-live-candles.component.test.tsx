@@ -681,6 +681,113 @@ describe("Market chart quote-driven candle flow", () => {
     expect(visibleWhileSupplementsPending).toBe(true)
   })
 
+  it("keeps event counts scoped to a selection with a known candle range", async () => {
+    const firstCandleRequest = createDeferred<{
+      success: true
+      data: ReturnType<typeof createCandleResponse>
+    }>()
+    const nextCandleRequest = createDeferred<{
+      success: true
+      data: ReturnType<typeof createCandleResponse>
+    }>()
+    const priorEventTime = "2026-08-23T00:01:00.000Z"
+    const priorEvent: MarketChartEconomicCalendarEventResponse = {
+      id: 101,
+      assetId: 101,
+      time: priorEventTime,
+      scheduledAt: priorEventTime,
+      title: "Prior selection event",
+      impact: "HIGH",
+      status: "AVAILABLE",
+    }
+
+    window.localStorage.setItem(
+      "signapse:market-charts:calendar-layer:v1",
+      "true"
+    )
+    getCandles
+      .mockImplementationOnce(() => firstCandleRequest.promise)
+      .mockImplementationOnce(() => nextCandleRequest.promise)
+    getAnnotations.mockResolvedValueOnce({
+      success: true,
+      data: [createHotAnnotation("prior-selection", priorEventTime)],
+    })
+    getCalendarEvents.mockImplementation(async (request) =>
+      Date.parse(request.to) > Date.now()
+        ? { success: true, data: [] }
+        : request.assetId === 101
+          ? { success: true, data: [priorEvent] }
+          : { success: true, data: [] }
+    )
+
+    const view = render(
+      <LocalizationProvider locale="vi" dictionary={viDictionary}>
+        <MarketChartWorkbench
+          watchlistAssets={watchlistAssets}
+          watchlistError={null}
+        />
+      </LocalizationProvider>
+    )
+
+    const annotationLoading =
+      viDictionary.marketCharts.annotations.loadingEvents
+    const calendarLoading = viDictionary.marketCharts.calendar.loadingEvents
+    expect(await screen.findByText(annotationLoading)).toBeVisible()
+    expect(screen.getByText(calendarLoading)).toBeVisible()
+    expect(
+      screen.queryByText(viDictionary.marketCharts.annotations.noEvents)
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByText(viDictionary.marketCharts.calendar.noEvents)
+    ).not.toBeInTheDocument()
+
+    await act(async () => {
+      firstCandleRequest.resolve({
+        success: true,
+        data: createCandleResponse(101, "1m"),
+      })
+    })
+    expect(await screen.findAllByText(/1 mốc sự kiện/)).not.toHaveLength(0)
+    expect(
+      await screen.findAllByText(/1 sự kiện lịch kinh tế/)
+    ).not.toHaveLength(0)
+
+    routeSearchParams.current = new URLSearchParams("assetId=102&timeframe=5m")
+    view.rerender(
+      <LocalizationProvider locale="vi" dictionary={viDictionary}>
+        <MarketChartWorkbench
+          watchlistAssets={watchlistAssets}
+          watchlistError={null}
+        />
+      </LocalizationProvider>
+    )
+
+    await waitFor(() => expect(getCandles).toHaveBeenCalledTimes(2))
+    expect(screen.getByText(annotationLoading)).toBeVisible()
+    expect(screen.getByText(calendarLoading)).toBeVisible()
+    expect(screen.queryByText(/1 mốc sự kiện/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/1 sự kiện lịch kinh tế/)).not.toBeInTheDocument()
+    expect(
+      screen.queryByText(viDictionary.marketCharts.annotations.noEvents)
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByText(viDictionary.marketCharts.calendar.noEvents)
+    ).not.toBeInTheDocument()
+
+    await act(async () => {
+      nextCandleRequest.resolve({
+        success: true,
+        data: createCandleResponse(102, "5m"),
+      })
+    })
+    expect(
+      await screen.findAllByText(viDictionary.marketCharts.annotations.noEvents)
+    ).not.toHaveLength(0)
+    expect(
+      await screen.findAllByText(viDictionary.marketCharts.calendar.noEvents)
+    ).not.toHaveLength(0)
+  })
+
   it("keeps candles when each supplemental source fails and retries independently", async () => {
     const annotationRequest = createDeferred<{
       success: boolean
