@@ -29,12 +29,12 @@ export type EventEnrichmentOutcome = EventStatus
 
 export interface EventListResponse {
   id: number
-  title: string
-  canonicalKey?: string
-  description?: string
+  title: string | null
+  canonicalKey?: string | null
+  description?: string | null
   status: EventStatus
-  confidence?: number
-  occurredAt?: string
+  confidence?: number | null
+  occurredAt?: string | null
   createdDate: string
   lastModifiedDate?: string
 }
@@ -58,13 +58,13 @@ export interface EventThemeSummaryResponse {
 
 export interface EventEvidenceSummaryResponse {
   newsArticleId?: number
-  newsArticleTitle?: string
-  newsArticleUrl?: string
-  sourceName?: string
+  newsArticleTitle?: string | null
+  newsArticleUrl?: string | null
+  sourceName?: string | null
   publishedAt?: string | null
   evidenceRole?: EventEvidenceRole
-  confidence?: number
-  evidenceNote?: string
+  confidence?: number | null
+  evidenceNote?: string | null
 }
 
 export interface EventMarketReactionSummaryResponse {

@@ -15,12 +15,15 @@ import {
   formatDateTime as formatLocalizedDateTime,
   formatPercent,
 } from "@/app/lib/i18n/format"
-import { EventResponse } from "@/app/lib/events/definitions"
+import type { EventResponse } from "@/app/lib/events/definitions"
 import { Badge } from "@/components/ui/badge"
 import { buttonVariants } from "@/components/ui/button"
 import { AppTimeMetadata } from "@/components/app-time-metadata"
 
-import { getEventAssetRelationVariant } from "./event-presentation"
+import {
+  getEventAssetRelationVariant,
+  selectQuickEventAssets,
+} from "./event-presentation"
 import { EventSectionEmpty } from "./event-section-empty"
 
 function formatDateTime(
@@ -47,7 +50,7 @@ function formatDateTime(
 }
 
 function formatConfidence(
-  value: number | undefined,
+  value: number | null | undefined,
   locale: AppLocale,
   dictionary: Dictionary
 ) {
@@ -88,21 +91,22 @@ export function EventQuickDetailContent({
   dictionary,
   event,
   locale,
+  watchlistAssetIds = [],
 }: {
   canReadNewsArticles: boolean
   dictionary: Dictionary
   event: EventResponse
   locale: AppLocale
+  watchlistAssetIds?: readonly number[]
 }) {
   const evidenceItems = event.evidence ?? []
-  const assets = event.assets ?? []
-  const primaryAssets = assets.slice(0, 4)
+  const primaryAssets = selectQuickEventAssets(event.assets, watchlistAssetIds)
   const themes = event.themes ?? []
 
   return (
     <div className="flex flex-col gap-5">
       <section className="flex flex-col gap-3">
-        <p className="text-sm leading-6 text-muted-foreground">
+        <p className="text-sm leading-6 break-words text-muted-foreground">
           {event.description?.trim() || dictionary.events.detailNoDescription}
         </p>
       </section>
@@ -156,7 +160,7 @@ export function EventQuickDetailContent({
                   </Badge>
                 </div>
 
-                <h3 className="mt-2 line-clamp-2 text-sm font-medium">
+                <h3 className="mt-2 text-sm font-medium break-words">
                   {evidence.newsArticleTitle ||
                     dictionary.events.evidenceUntitled}
                 </h3>
@@ -169,7 +173,7 @@ export function EventQuickDetailContent({
                   </AppTimeMetadata>
                 </div>
                 {evidence.evidenceNote?.trim() ? (
-                  <p className="mt-2 line-clamp-3 text-sm leading-6 text-muted-foreground">
+                  <p className="mt-2 text-sm leading-6 break-words text-muted-foreground">
                     {evidence.evidenceNote}
                   </p>
                 ) : null}
@@ -246,13 +250,13 @@ export function EventQuickDetailContent({
                     </Badge>
                   ) : null}
                 </div>
-                <div className="mt-2 text-sm font-medium">
+                <div className="mt-2 text-sm font-medium break-words">
                   {asset.assetSymbol ||
                     asset.assetName ||
                     dictionary.events.noAssetName}
                 </div>
                 {asset.assetName ? (
-                  <div className="mt-1 text-xs text-muted-foreground">
+                  <div className="mt-1 text-xs break-words text-muted-foreground">
                     {asset.assetName}
                   </div>
                 ) : null}
@@ -284,10 +288,10 @@ export function EventQuickDetailContent({
                     {dictionary.events.themeRelationLabels[theme.relationType]}
                   </Badge>
                 ) : null}
-                <div className="mt-2 text-sm font-medium">
+                <div className="mt-2 text-sm font-medium break-words">
                   {theme.themeTitle || dictionary.events.noThemeName}
                 </div>
-                <div className="mt-1 text-xs text-muted-foreground">
+                <div className="mt-1 text-xs break-words text-muted-foreground">
                   {theme.themeSlug || dictionary.events.noThemeSlug}
                 </div>
               </div>

@@ -24,8 +24,10 @@ const DashboardQuickDetailContext = createContext<OpenQuickDetail | null>(null)
 
 export function DashboardQuickDetailProvider({
   children,
+  watchlistAssetIds,
 }: {
   children: ReactNode
+  watchlistAssetIds?: readonly number[]
 }) {
   const [entity, setEntity] = useState<LocalQuickDetailEntity | null>(null)
   const returnFocusRef = useRef<HTMLElement | null>(null)
@@ -46,6 +48,7 @@ export function DashboardQuickDetailProvider({
         onClose={() => setEntity(null)}
         owner="dashboard"
         returnFocusRef={returnFocusRef}
+        watchlistAssetIds={watchlistAssetIds ?? []}
       />
     </DashboardQuickDetailContext.Provider>
   )

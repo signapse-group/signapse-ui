@@ -35,6 +35,8 @@ import {
 } from "@/components/ui/empty"
 import { Spinner } from "@/components/ui/spinner"
 import { Button, buttonVariants } from "@/components/ui/button"
+import { Tooltip, TooltipTrigger } from "@/components/ui/tooltip"
+import { TooltipContentInOverlay } from "@/components/ui/tooltip-content-in-overlay"
 import { useHasAnyPermission } from "@/components/permission-provider"
 import { cn } from "@/lib/utils"
 
@@ -79,6 +81,7 @@ interface LocalEntityQuickDetailDrawerProps {
   onBeforeClose?: () => void
   onClose: () => void
   owner: LocalQuickDetailOwner
+  watchlistAssetIds?: readonly number[]
   returnFocusRef?: RefObject<HTMLElement | null> | null
 }
 
@@ -146,6 +149,7 @@ export function LocalEntityQuickDetailDrawer({
   onBeforeClose,
   onClose,
   owner,
+  watchlistAssetIds = [],
   returnFocusRef = null,
 }: LocalEntityQuickDetailDrawerProps) {
   const { dictionary, locale } = useLocalization()
@@ -203,7 +207,7 @@ export function LocalEntityQuickDetailDrawer({
         ? dictionary.events.quickAccessDeniedTitle
         : dictionary.newsArticles.quickAccessDeniedTitle
       : currentState?.phase === "event"
-        ? currentState.event.title
+        ? currentState.event.title?.trim() || dictionary.common.notAvailable
         : currentState?.phase === "news-article"
           ? currentState.article.title?.trim() ||
             dictionary.newsArticles.titleUnavailable
@@ -407,40 +411,56 @@ export function LocalEntityQuickDetailDrawer({
         style={getDrawerStyle(presentation)}
       >
         <DrawerHeader className="sticky top-0 z-10 border-b bg-popover/95 px-4 py-3 text-left backdrop-blur-sm">
-          <div className="flex flex-wrap items-start gap-3">
+          <div className="flex items-start gap-2">
             <div className="min-w-0 flex-1">
-              <DrawerTitle className="truncate text-base font-semibold">
+              <DrawerTitle className="text-base leading-snug font-semibold break-words">
                 {title}
               </DrawerTitle>
             </div>
-            <Button
-              ref={closeButtonRef}
-              aria-label={dictionary.common.close}
-              type="button"
-              size="icon-sm"
-              variant="ghost"
-              onClick={requestClose}
-            >
-              <X aria-hidden="true" data-icon="inline-start" />
-            </Button>
-          </div>
-
-          {canonicalHref ? (
-            <div className="mt-3 flex justify-start">
-              <Link
-                href={canonicalHref}
-                className={buttonVariants({ size: "sm", variant: "outline" })}
+            <div className="flex shrink-0 items-start gap-1">
+              {canonicalHref ? (
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <Link
+                        href={canonicalHref}
+                        aria-label={dictionary.common.openFullPage}
+                        className={cn(
+                          buttonVariants({ size: "icon-sm", variant: "ghost" }),
+                          "size-[44px] min-[768px]:size-[28px]"
+                        )}
+                        onClick={requestClose}
+                      >
+                        <ArrowUpRight
+                          aria-hidden="true"
+                          className="size-[16px]"
+                        />
+                      </Link>
+                    }
+                  />
+                  <TooltipContentInOverlay>
+                    {dictionary.common.openFullPage}
+                  </TooltipContentInOverlay>
+                </Tooltip>
+              ) : null}
+              <Button
+                ref={closeButtonRef}
+                aria-label={dictionary.common.close}
+                className="size-[44px] min-[768px]:size-[28px]"
+                type="button"
+                size="icon-sm"
+                variant="ghost"
                 onClick={requestClose}
               >
-                <ArrowUpRight aria-hidden="true" data-icon="inline-start" />
-                {dictionary.common.openFullPage}
-              </Link>
+                <X aria-hidden="true" className="size-[16px]" />
+              </Button>
             </div>
-          ) : null}
+          </div>
         </DrawerHeader>
 
         <div
           ref={bodyRef}
+          data-quick-detail-scroll-region
           className={cn(
             "min-h-0 flex-1 overflow-y-auto p-4 motion-reduce:transition-none",
             entity?.kind === "event" && presentation.placement === "bottom"
@@ -523,6 +543,7 @@ export function LocalEntityQuickDetailDrawer({
               dictionary={dictionary}
               event={currentState.event}
               locale={locale}
+              watchlistAssetIds={watchlistAssetIds}
             />
           ) : (
             <NewsArticleQuickDetailContent

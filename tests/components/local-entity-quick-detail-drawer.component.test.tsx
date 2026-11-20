@@ -39,7 +39,13 @@ vi.mock("@/components/ui/drawer", () => ({
   DrawerHeader: ({ children }: { children: ReactNode }) => (
     <header>{children}</header>
   ),
-  DrawerTitle: ({ children }: { children: ReactNode }) => <h2>{children}</h2>,
+  DrawerTitle: ({
+    children,
+    className,
+  }: {
+    children: ReactNode
+    className?: string
+  }) => <h2 className={className}>{children}</h2>,
 }))
 
 vi.mock("@/components/ui/drawer-content-in-overlay", () => ({
@@ -117,7 +123,7 @@ const article: NewsArticleResponse = {
   ],
 }
 
-const event: EventResponse = {
+const event = {
   id: 73,
   title: "Sự kiện được chọn trong dòng thời gian",
   status: "ENRICHED",
@@ -126,7 +132,7 @@ const event: EventResponse = {
   themes: [],
   evidence: [],
   marketReactions: [],
-}
+} satisfies EventResponse
 
 function renderDrawer(selectedArticle: NewsArticleResponse = article) {
   getNewsArticleById.mockResolvedValueOnce(selectedArticle)
@@ -733,8 +739,133 @@ describe("LocalEntityQuickDetailDrawer event navigation", () => {
       ).toBeInTheDocument()
     })
 
+    const canonicalAction = screen.getByRole("link", {
+      name: viDictionary.common.openFullPage,
+    })
+    const closeAction = screen.getByRole("button", {
+      name: viDictionary.common.close,
+    })
+
+    expect(canonicalAction).toHaveAttribute("href", `/vi/events/${event.id}`)
+    expect(canonicalAction.parentElement).toBe(closeAction.parentElement)
+    expect(canonicalAction).not.toHaveTextContent(
+      viDictionary.common.openFullPage
+    )
+    expect(canonicalAction.querySelector("svg")).toHaveAttribute(
+      "aria-hidden",
+      "true"
+    )
+    expect(
+      screen.getByRole("heading", { level: 2, name: event.title })
+    ).not.toHaveClass("truncate")
+  })
+
+  it("shows a localized fallback title and hides canonical navigation when access is denied", async () => {
+    const eventWithoutTitle = { ...event, title: null }
+    getEventById.mockResolvedValueOnce(eventWithoutTitle)
+
+    render(
+      <LocalizationProvider locale="vi" dictionary={viDictionary}>
+        <LocalEntityQuickDetailDrawer
+          entity={{ id: event.id, kind: "event" }}
+          onClose={vi.fn()}
+          owner="dashboard"
+        />
+      </LocalizationProvider>
+    )
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("heading", {
+          level: 2,
+          name: viDictionary.common.notAvailable,
+        })
+      ).toBeInTheDocument()
+    })
+
+    cleanup()
+    vi.clearAllMocks()
+    useHasAnyPermission.mockReturnValue(false)
+    getEventById.mockResolvedValueOnce(event)
+    renderEventDrawer()
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(viDictionary.events.detailDenied, { exact: false })
+      ).toBeVisible()
+    })
+    expect(
+      screen.queryByRole("link", { name: viDictionary.common.openFullPage })
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: viDictionary.common.close })
+    ).toBeInTheDocument()
+  })
+
+  it("ignores an Event response that arrives after selection changes", async () => {
+    const nextEvent = {
+      ...event,
+      id: 74,
+      title: "Nội dung của sự kiện thứ hai",
+    } satisfies EventResponse
+    let resolveFirstEvent: ((value: EventResponse) => void) | undefined
+
+    getEventById
+      .mockImplementationOnce(
+        () =>
+          new Promise<EventResponse>((resolve) => {
+            resolveFirstEvent = resolve
+          })
+      )
+      .mockResolvedValueOnce(nextEvent)
+
+    const view = render(
+      <LocalizationProvider locale="vi" dictionary={viDictionary}>
+        <LocalEntityQuickDetailDrawer
+          entity={{ id: event.id, kind: "event" }}
+          onClose={vi.fn()}
+          owner="dashboard"
+        />
+      </LocalizationProvider>
+    )
+
+    await waitFor(() => {
+      expect(getEventById).toHaveBeenCalledTimes(1)
+    })
+
+    view.rerender(
+      <LocalizationProvider locale="vi" dictionary={viDictionary}>
+        <LocalEntityQuickDetailDrawer
+          entity={{ id: nextEvent.id, kind: "event" }}
+          onClose={vi.fn()}
+          owner="dashboard"
+        />
+      </LocalizationProvider>
+    )
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("heading", {
+          level: 2,
+          name: nextEvent.title,
+        })
+      ).toBeInTheDocument()
+    })
+    resolveFirstEvent?.(event)
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("heading", {
+          level: 2,
+          name: nextEvent.title,
+        })
+      ).toBeInTheDocument()
+    })
+    expect(
+      screen.queryByRole("heading", { level: 2, name: event.title })
+    ).not.toBeInTheDocument()
     expect(
       screen.getByRole("link", { name: viDictionary.common.openFullPage })
-    ).toHaveAttribute("href", `/vi/events/${event.id}`)
+    ).toHaveAttribute("href", `/vi/events/${nextEvent.id}`)
   })
 })

@@ -1,4 +1,18 @@
+import AxeBuilder from "@axe-core/playwright"
+import type { Page, TestInfo } from "@playwright/test"
+
 import { expect, test, waitForClientHandler } from "./fixtures"
+import { vi as viDictionary } from "@/app/lib/i18n/dictionaries/vi"
+
+async function captureQuickDetail(
+  page: Page,
+  testInfo: TestInfo,
+  name: string
+) {
+  const path = testInfo.outputPath(name)
+  await page.screenshot({ path })
+  await testInfo.attach(name, { path, contentType: "image/png" })
+}
 
 test.describe("P0 quick-detail overlay", () => {
   test("renders the complete localized Article within wide, compact, and mobile readers", async ({
@@ -53,6 +67,32 @@ test.describe("P0 quick-detail overlay", () => {
     await expect(
       dialog.getByRole("link", { name: "Mở trang đầy đủ", exact: true })
     ).toHaveAttribute("href", "/vi/news-articles/71")
+    const canonicalLink = dialog.getByRole("link", {
+      name: "Mở trang đầy đủ",
+      exact: true,
+    })
+    const closeButton = dialog.getByRole("button", {
+      name: "Đóng",
+      exact: true,
+    })
+    await expect(canonicalLink).toHaveText("")
+    await expect(
+      canonicalLink.locator("xpath=..").getByRole("button", {
+        name: "Đóng",
+        exact: true,
+      })
+    ).toHaveCount(1)
+    const iconBounds = await canonicalLink.locator("svg").boundingBox()
+    expect(iconBounds?.width).toBe(16)
+    expect(iconBounds?.height).toBe(16)
+    await expect(closeButton).toBeFocused()
+    await page.keyboard.press("Shift+Tab")
+    await expect(canonicalLink).toBeFocused()
+    const canonicalTooltip = page.locator('[data-slot="tooltip-content"]')
+    await expect(canonicalTooltip).toBeVisible()
+    await expect(canonicalTooltip).toHaveText("Mở trang đầy đủ")
+    await page.keyboard.press("Tab")
+    await expect(closeButton).toBeFocused()
 
     const image = dialog.getByRole("img", { name: "Ảnh minh họa bài viết mẫu" })
     await expect(image).toBeVisible()
@@ -70,7 +110,7 @@ test.describe("P0 quick-detail overlay", () => {
     for (const viewport of [
       { width: 1520, height: 1000, placement: "right", name: "wide" },
       { width: 1024, height: 900, placement: "bottom", name: "compact" },
-      { width: 390, height: 844, placement: "bottom", name: "mobile" },
+      { width: 360, height: 844, placement: "bottom", name: "mobile" },
     ]) {
       await page.setViewportSize({
         width: viewport.width,
@@ -81,6 +121,19 @@ test.describe("P0 quick-detail overlay", () => {
         viewport.placement
       )
       await expect(dialog).toBeVisible()
+      const expectedControlSize = viewport.width < 768 ? 44 : 28
+      for (const control of [canonicalLink, closeButton]) {
+        await expect
+          .poll(() =>
+            control.evaluate((element) => (element as HTMLElement).offsetWidth)
+          )
+          .toBe(expectedControlSize)
+        await expect
+          .poll(() =>
+            control.evaluate((element) => (element as HTMLElement).offsetHeight)
+          )
+          .toBe(expectedControlSize)
+      }
       expect(
         await page.evaluate(() => document.documentElement.scrollWidth)
       ).toBeLessThanOrEqual(viewport.width)
@@ -92,10 +145,11 @@ test.describe("P0 quick-detail overlay", () => {
       )
       expect(wideRegions).toEqual([true, true])
 
-      await testInfo.attach(`article-reader-${viewport.name}.png`, {
-        body: await page.screenshot(),
-        contentType: "image/png",
-      })
+      await captureQuickDetail(
+        page,
+        testInfo,
+        `article-reader-${viewport.name}.png`
+      )
     }
 
     for (const viewport of [
@@ -116,14 +170,15 @@ test.describe("P0 quick-detail overlay", () => {
       ).toBeLessThanOrEqual(viewport.width)
     }
 
-    await page.setViewportSize({ width: 390, height: 844 })
+    await page.setViewportSize({ width: 360, height: 844 })
     await dialog
       .getByText("Dấu mốc cuối bài: Nội dung dài vẫn được giữ đầy đủ.")
       .scrollIntoViewIfNeeded()
-    await testInfo.attach("article-reader-mobile-content-end.png", {
-      body: await page.screenshot(),
-      contentType: "image/png",
-    })
+    await captureQuickDetail(
+      page,
+      testInfo,
+      "article-reader-mobile-content-end.png"
+    )
 
     const detailRequest = (await fixture.state()).requests.find(
       (request) =>
@@ -134,8 +189,11 @@ test.describe("P0 quick-detail overlay", () => {
 
   test("keeps Dashboard mounted while one Event session crosses placement breakpoints", async ({
     page,
-  }) => {
-    await page.setViewportSize({ width: 1600, height: 900 })
+    fixture,
+  }, testInfo) => {
+    await fixture.setScenario("/events", "event-quick-detail-long", "GET")
+    await page.emulateMedia({ colorScheme: "dark" })
+    await page.setViewportSize({ width: 1520, height: 1000 })
     await page.goto("/vi/dashboard")
 
     const trigger = page.getByRole("button", {
@@ -148,6 +206,7 @@ test.describe("P0 quick-detail overlay", () => {
 
     const overlay = page.locator("[data-quick-detail-placement]")
     const dialog = page.getByRole("dialog")
+    const longTitle = `Central bank signals a slower easing path ${"across global markets ".repeat(5)}`
     await expect(page.locator('[data-slot="drawer-popup"]')).toBeVisible()
     await expect(overlay).toHaveAttribute(
       "data-quick-detail-placement",
@@ -156,14 +215,111 @@ test.describe("P0 quick-detail overlay", () => {
     await expect(overlay).toHaveAttribute("data-quick-detail-profile", "event")
     await expect(
       dialog.getByRole("heading", {
-        name: "Central bank signals a slower easing path",
+        name: longTitle,
         exact: true,
       })
     ).toBeVisible()
+    const canonicalLink = dialog.getByRole("link", {
+      name: "Mở trang đầy đủ",
+      exact: true,
+    })
+    const closeButton = dialog.getByRole("button", {
+      name: "Đóng",
+      exact: true,
+    })
+    await expect(canonicalLink).toHaveAttribute("href", "/vi/events/61")
+    await expect(canonicalLink).toHaveText("")
     await expect(
-      dialog.getByRole("button", { name: "Đóng", exact: true })
-    ).toBeFocused()
+      canonicalLink.locator("xpath=..").getByRole("button", {
+        name: "Đóng",
+        exact: true,
+      })
+    ).toHaveCount(1)
+    await expect(closeButton).toBeFocused()
+    await page.keyboard.press("Shift+Tab")
+    await expect(canonicalLink).toBeFocused()
+    const canonicalTooltip = page.locator('[data-slot="tooltip-content"]')
+    await expect(canonicalTooltip).toBeVisible()
+    await expect(canonicalTooltip).toHaveText("Mở trang đầy đủ")
+    await page.keyboard.press("Tab")
+    await expect(closeButton).toBeFocused()
+    for (const control of [canonicalLink, closeButton]) {
+      const bounds = await control.boundingBox()
+      expect(bounds?.width).toBe(28)
+      expect(bounds?.height).toBe(28)
+    }
+    const iconBounds = await canonicalLink.locator("svg").boundingBox()
+    expect(iconBounds?.width).toBe(16)
+    expect(iconBounds?.height).toBe(16)
+    await expect(
+      dialog.getByText(
+        `Synthetic long-form event description ${"with preserved market context and complete supplied wording. ".repeat(12)}`
+      )
+    ).toBeVisible()
+    const relatedAssets = dialog
+      .getByRole("heading", { name: "Tài sản liên quan", exact: true })
+      .locator("xpath=..")
+    await expect(
+      relatedAssets.getByText("BTC/USDT", { exact: true })
+    ).toBeVisible()
+    await expect(
+      relatedAssets.getByText("XAUUSD", { exact: true })
+    ).toBeVisible()
+    await expect(relatedAssets.getByText("DXY", { exact: true })).toBeVisible()
+    await expect(relatedAssets.getByText("AKAM", { exact: true })).toBeVisible()
+    await expect(relatedAssets.getByText("MSFT", { exact: true })).toHaveCount(
+      0
+    )
+    await expect(
+      dialog.getByRole("link", { name: "Xem bài viết" }).first()
+    ).toHaveAttribute("href", "/vi/news-articles/71")
+    await expect(
+      dialog.getByRole("link", { name: "Mở nguồn gốc" }).first()
+    ).toHaveAttribute("href", "https://fixture.invalid/news/71")
+    await expect(
+      dialog.getByRole("heading", { name: /Fixture evidence 1/ })
+    ).toBeVisible()
+    await expect(
+      dialog.getByRole("heading", { name: /Fixture evidence 4/ })
+    ).toHaveCount(1)
+    await expect(
+      dialog.getByRole("heading", { name: /Fixture evidence 5/ })
+    ).toHaveCount(0)
+    await expect(
+      dialog.getByText("Chủ thể chính", { exact: true })
+    ).toBeVisible()
+    await expect(
+      dialog.getByText("Tài sản bị ảnh hưởng", { exact: true })
+    ).toBeVisible()
+    await expect(
+      dialog.getByText("Tài sản tham chiếu", { exact: true }).first()
+    ).toBeVisible()
+    await expect(
+      dialog.getByText(viDictionary.events.statusLabels.ENRICHED, {
+        exact: true,
+      })
+    ).toHaveCount(0)
+    const accessibility = await new AxeBuilder({ page })
+      .include('[role="dialog"]')
+      .analyze()
+    expect(accessibility.violations).toEqual([])
     await expect(page).toHaveURL(/\/vi\/dashboard$/)
+
+    await captureQuickDetail(page, testInfo, "event-wide.png")
+
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await expect(overlay).toHaveAttribute(
+      "data-quick-detail-placement",
+      "right"
+    )
+    await expect(dialog).toBeVisible()
+
+    await page.setViewportSize({ width: 1439, height: 900 })
+    await expect(overlay).toHaveAttribute(
+      "data-quick-detail-placement",
+      "bottom"
+    )
+    await expect(dialog).toBeVisible()
 
     await page.setViewportSize({ width: 1024, height: 900 })
     await expect(overlay).toHaveAttribute(
@@ -171,6 +327,63 @@ test.describe("P0 quick-detail overlay", () => {
       "bottom"
     )
     await expect(dialog).toBeVisible()
+    await dialog
+      .getByRole("heading", { name: "Tài sản liên quan", exact: true })
+      .scrollIntoViewIfNeeded()
+    await captureQuickDetail(page, testInfo, "event-compact.png")
+
+    for (const width of [768, 767, 760, 360]) {
+      await page.setViewportSize({ width, height: 900 })
+      await expect(overlay).toHaveAttribute(
+        "data-quick-detail-placement",
+        "bottom"
+      )
+      await expect(dialog).toBeVisible()
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth)
+      ).toBeLessThanOrEqual(width)
+      const expectedSize = width < 768 ? 44 : 28
+      for (const control of [canonicalLink, closeButton]) {
+        await expect
+          .poll(() =>
+            control.evaluate((element) => (element as HTMLElement).offsetWidth)
+          )
+          .toBe(expectedSize)
+        await expect
+          .poll(() =>
+            control.evaluate((element) => (element as HTMLElement).offsetHeight)
+          )
+          .toBe(expectedSize)
+      }
+    }
+    await dialog
+      .getByRole("heading", { name: "Tài sản liên quan", exact: true })
+      .scrollIntoViewIfNeeded()
+    await captureQuickDetail(page, testInfo, "event-mobile.png")
+
+    await page.setViewportSize({ width: 360, height: 844 })
+    const titleMetrics = await dialog
+      .getByRole("heading", { name: longTitle, exact: true })
+      .evaluate((element) => {
+        const style = window.getComputedStyle(element)
+        return {
+          height: element.getBoundingClientRect().height,
+          lineHeight: Number.parseFloat(style.lineHeight),
+          whiteSpace: style.whiteSpace,
+        }
+      })
+    expect(titleMetrics.whiteSpace).not.toBe("nowrap")
+    expect(titleMetrics.height).toBeGreaterThan(titleMetrics.lineHeight * 1.5)
+    const scrollRegion = dialog.locator("[data-quick-detail-scroll-region]")
+    await scrollRegion.evaluate((element) => {
+      element.scrollTop = element.scrollHeight
+    })
+    await expect(dialog.getByText(/Cập nhật lần cuối:/).last()).toBeInViewport()
+    await expect(
+      dialog.getByText(
+        `Synthetic complete evidence note 4 ${"retained inside the quick reader without truncation. ".repeat(5)}`
+      )
+    ).toBeVisible()
 
     await page.setViewportSize({ width: 640, height: 900 })
     await expect(overlay).toHaveAttribute(
@@ -179,7 +392,7 @@ test.describe("P0 quick-detail overlay", () => {
     )
     await expect(dialog).toBeVisible()
 
-    await dialog.getByRole("button", { name: "Đóng", exact: true }).click()
+    await closeButton.click()
     await expect(overlay).toBeHidden()
     await expect(trigger).toBeFocused()
   })

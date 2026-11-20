@@ -3569,6 +3569,75 @@ Which asset did you mean? The available data is limited. Add TSLA to your watchl
           weight: 0.5,
         },
       ]
+    } else if (scenario === "event-quick-detail-long") {
+      assets = [
+        {
+          assetId: 103,
+          assetName: "US Dollar Index",
+          assetSymbol: "DXY",
+          assetType: "INDEX",
+          relationType: "REFERENCE_ASSET",
+          weight: 0.8,
+        },
+        {
+          assetId: 101,
+          assetName: "Bitcoin",
+          assetSymbol: "BTC/USDT",
+          assetType: "CRYPTO",
+          relationType: "PRIMARY_SUBJECT",
+          weight: 1,
+        },
+        {
+          assetId: 104,
+          assetName: "Akamai Technologies",
+          assetSymbol: "AKAM",
+          assetType: "EQUITY",
+          relationType: "AFFECTED_ASSET",
+          weight: 0.65,
+        },
+        {
+          assetId: 102,
+          assetName: "Gold",
+          assetSymbol: "XAUUSD",
+          assetType: "COMMODITY",
+          relationType: "REFERENCE_ASSET",
+          weight: 0.35,
+        },
+        {
+          assetId: 105,
+          assetName: "Microsoft",
+          assetSymbol: "MSFT",
+          assetType: "EQUITY",
+          relationType: "REFERENCE_ASSET",
+          weight: 0.25,
+        },
+        {
+          assetId: 106,
+          assetName: "SPDR S&P 500 ETF Trust",
+          assetSymbol: "SPY",
+          assetType: "ETF",
+          relationType: "REFERENCE_ASSET",
+          weight: 0.15,
+        },
+      ]
+      themes = [
+        {
+          themeId: 201,
+          themeTitle: isVietnamese ? "Lãi suất" : "Interest rates",
+          themeSlug: "interest-rates",
+          relationType: "PRIMARY_THEME",
+          weight: 0.9,
+        },
+        {
+          themeId: 202,
+          themeTitle: isVietnamese
+            ? "Thị trường trái phiếu"
+            : "Treasury markets",
+          themeSlug: "treasury-markets",
+          relationType: "SECONDARY_THEME",
+          weight: 0.5,
+        },
+      ]
     } else if (scenario === "event-empty-no-match") {
       status = "ENRICHMENT_NO_MATCH"
     } else if (scenario === "event-empty-failed") {
@@ -3703,25 +3772,42 @@ Which asset did you mean? The available data is limited. Add TSLA to your watchl
 
     const response = {
       ...event,
+      ...(scenario === "event-quick-detail-long"
+        ? {
+            title: `Central bank signals a slower easing path ${"across global markets ".repeat(5)}`,
+            description: `Synthetic long-form event description ${"with preserved market context and complete supplied wording. ".repeat(12)}`,
+          }
+        : {}),
       status,
       assets,
       themes,
       evidence:
-        id === 61 || id === 63
-          ? [
-              {
-                newsArticleId: 71,
-                newsArticleTitle: "Fixture market update",
-                newsArticleUrl: "https://fixture.invalid/news/71",
-                sourceName: "Fixture Wire",
-                publishedAt: NOW,
-                evidenceRole: "PRIMARY",
-                confidence: 0.92,
-                evidenceNote:
-                  "Synthetic evidence for the browser quality gate.",
-              },
-            ]
-          : [],
+        scenario === "event-quick-detail-long" && id === 61
+          ? Array.from({ length: 6 }, (_, index) => ({
+              newsArticleId: 71 + index,
+              newsArticleTitle: `Fixture evidence ${index + 1} ${"long title remains complete ".repeat(4)}`,
+              newsArticleUrl: `https://fixture.invalid/news/${71 + index}`,
+              sourceName: `Fixture Source ${index + 1}`,
+              publishedAt: NOW,
+              evidenceRole: index === 0 ? "PRIMARY" : "SUPPORTING",
+              confidence: 0.92 - index * 0.05,
+              evidenceNote: `Synthetic complete evidence note ${index + 1} ${"retained inside the quick reader without truncation. ".repeat(5)}`,
+            }))
+          : id === 61 || id === 63
+            ? [
+                {
+                  newsArticleId: 71,
+                  newsArticleTitle: "Fixture market update",
+                  newsArticleUrl: "https://fixture.invalid/news/71",
+                  sourceName: "Fixture Wire",
+                  publishedAt: NOW,
+                  evidenceRole: "PRIMARY",
+                  confidence: 0.92,
+                  evidenceNote:
+                    "Synthetic evidence for the browser quality gate.",
+                },
+              ]
+            : [],
       marketReactions,
     }
 

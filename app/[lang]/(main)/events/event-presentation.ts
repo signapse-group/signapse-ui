@@ -8,6 +8,7 @@ import {
   EventMarketReactionDerivationResult,
   EventMarketReactionDirection,
   EventMarketReactionTimeHorizon,
+  EventAssetSummaryResponse,
   EventAssetRelationType,
   EventStatus,
   PendingEventMarketReactionDerivationBatchResult,
@@ -22,6 +23,40 @@ type BadgeVariant =
   | "info"
   | "warning"
   | "active"
+
+export function selectQuickEventAssets(
+  assets: readonly EventAssetSummaryResponse[] | null | undefined,
+  watchlistAssetIds: readonly number[] = []
+) {
+  const seenAssetIds = new Set<number>()
+  const uniqueAssets = (assets ?? []).filter((asset) => {
+    if (seenAssetIds.has(asset.assetId)) {
+      return false
+    }
+
+    seenAssetIds.add(asset.assetId)
+    return true
+  })
+
+  if (watchlistAssetIds.length === 0) {
+    return uniqueAssets.slice(0, 4)
+  }
+
+  const watchlist = new Set(watchlistAssetIds)
+  const watchlistAssets = uniqueAssets.filter((asset) =>
+    watchlist.has(asset.assetId)
+  )
+
+  if (watchlistAssets.length === 0) {
+    return uniqueAssets.slice(0, 4)
+  }
+
+  const otherAssets = uniqueAssets.filter(
+    (asset) => !watchlist.has(asset.assetId)
+  )
+
+  return [...watchlistAssets, ...otherAssets].slice(0, 4)
+}
 
 export function getEventStatusLabel(
   status: EventStatus | undefined,
