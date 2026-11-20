@@ -120,6 +120,7 @@ export interface CreateChartStylesResult {
       }
     }
     tooltip: {
+      showRule: "none"
       legend: {
         defaultValue: string
         family: string
@@ -180,23 +181,23 @@ export function formatMarketChartPrice(
   })
 }
 
-function getCandleTimeFormatOptions(
+export function getMarketChartCandleTimeFormatOptions(
   timeframe: MarketChartTimeframe
 ): Intl.DateTimeFormatOptions {
   if (timeframe === "1mo") {
-    return { year: "numeric", month: "long" }
+    return { year: "numeric", month: "short" }
   }
 
   if (timeframe === "1d" || timeframe === "1w") {
-    return { year: "numeric", month: "long", day: "numeric" }
+    return { month: "short", day: "numeric" }
   }
 
   return {
-    year: "numeric",
     month: "short",
     day: "numeric",
     hour: "2-digit",
     minute: "2-digit",
+    hourCycle: "h23",
   }
 }
 
@@ -207,13 +208,13 @@ export function formatMarketChartVolume(
   let divisor = 1
   let suffix = ""
 
-  if (value > 1_000_000_000) {
+  if (value >= 1_000_000_000) {
     divisor = 1_000_000_000
     suffix = "B"
-  } else if (value > 1_000_000) {
+  } else if (value >= 1_000_000) {
     divisor = 1_000_000
     suffix = "M"
-  } else if (value > 1_000) {
+  } else if (value >= 1_000) {
     divisor = 1_000
     suffix = "K"
   }
@@ -232,7 +233,9 @@ export function createChartStyles(
   neutralizeLastPrice = false
 ): CreateChartStylesResult {
   const fontFamily = getCssTextVariable("--font-sans", "Geist, sans-serif")
-  const timeOptions = getCandleTimeFormatOptions(legendFormatters.timeframe)
+  const timeOptions = getMarketChartCandleTimeFormatOptions(
+    legendFormatters.timeframe
+  )
 
   const candleLegendTemplate: CandleTooltipLegendsCustomCallback = ({
     current,
@@ -243,7 +246,7 @@ export function createChartStyles(
 
     return [
       {
-        title: "time",
+        title: "",
         value: legendFormatters.formatDateTime(
           candle.timestamp,
           timeOptions,
@@ -251,39 +254,7 @@ export function createChartStyles(
         ),
       },
       {
-        title: "open",
-        value: formatMarketChartPrice(
-          candle.open,
-          legendFormatters.pricePrecision,
-          legendFormatters.formatNumber
-        ),
-      },
-      {
-        title: "high",
-        value: formatMarketChartPrice(
-          candle.high,
-          legendFormatters.pricePrecision,
-          legendFormatters.formatNumber
-        ),
-      },
-      {
-        title: "low",
-        value: formatMarketChartPrice(
-          candle.low,
-          legendFormatters.pricePrecision,
-          legendFormatters.formatNumber
-        ),
-      },
-      {
-        title: "close",
-        value: formatMarketChartPrice(
-          candle.close,
-          legendFormatters.pricePrecision,
-          legendFormatters.formatNumber
-        ),
-      },
-      {
-        title: "volume",
+        title: "· Vol",
         value:
           typeof candle.volume === "number" && Number.isFinite(candle.volume)
             ? formatMarketChartVolume(
@@ -291,6 +262,38 @@ export function createChartStyles(
                 legendFormatters.formatNumber
               )
             : legendFormatters.notAvailable,
+      },
+      {
+        title: "O",
+        value: formatMarketChartPrice(
+          candle.open,
+          legendFormatters.pricePrecision,
+          legendFormatters.formatNumber
+        ),
+      },
+      {
+        title: "H",
+        value: formatMarketChartPrice(
+          candle.high,
+          legendFormatters.pricePrecision,
+          legendFormatters.formatNumber
+        ),
+      },
+      {
+        title: "L",
+        value: formatMarketChartPrice(
+          candle.low,
+          legendFormatters.pricePrecision,
+          legendFormatters.formatNumber
+        ),
+      },
+      {
+        title: "C",
+        value: formatMarketChartPrice(
+          candle.close,
+          legendFormatters.pricePrecision,
+          legendFormatters.formatNumber
+        ),
       },
     ]
   }
@@ -337,6 +340,7 @@ export function createChartStyles(
         },
       },
       tooltip: {
+        showRule: "none",
         legend: {
           defaultValue: legendFormatters.notAvailable,
           family: fontFamily,

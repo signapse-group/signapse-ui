@@ -1758,7 +1758,7 @@ function ChartSurface({
     <section
       ref={setSurfaceRef}
       data-fullscreen={isFullscreen}
-      className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-border bg-card data-[fullscreen=true]:mt-0 data-[fullscreen=true]:h-screen data-[fullscreen=true]:min-h-0 data-[fullscreen=true]:rounded-none data-[fullscreen=true]:border-0"
+      className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-card data-[fullscreen=true]:mt-0 data-[fullscreen=true]:h-screen data-[fullscreen=true]:min-h-0"
     >
       <OverlayPortalContainerProvider
         value={isFullscreen ? surfaceElement : null}

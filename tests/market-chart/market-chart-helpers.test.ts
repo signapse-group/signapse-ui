@@ -31,7 +31,9 @@ import {
 } from "@/app/[lang]/(main)/market-charts/market-chart-candle-helpers"
 import {
   createChartStyles,
+  formatMarketChartVolume,
   formatMarketChartPrice,
+  getMarketChartCandleTimeFormatOptions,
   getMarketChartThemePalette,
 } from "@/app/[lang]/(main)/market-charts/market-chart-theme"
 import {
@@ -440,6 +442,46 @@ describe("market-chart price formatting", () => {
   })
 })
 
+describe("market-chart compact readout formatting", () => {
+  const formatEnglishNumber = (
+    value: number,
+    options?: Intl.NumberFormatOptions
+  ) => new Intl.NumberFormat("en-US", options).format(value)
+
+  it("uses shorter timeframe-aware time options", () => {
+    expect(getMarketChartCandleTimeFormatOptions("1h")).toEqual({
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    })
+    expect(getMarketChartCandleTimeFormatOptions("1d")).toEqual({
+      month: "short",
+      day: "numeric",
+    })
+    expect(getMarketChartCandleTimeFormatOptions("1mo")).toEqual({
+      year: "numeric",
+      month: "short",
+    })
+  })
+
+  it("formats volume as localized K/M/B values and preserves zero", () => {
+    expect(formatMarketChartVolume(0, formatEnglishNumber)).toBe("0.00")
+    expect(formatMarketChartVolume(1_000, formatEnglishNumber)).toBe("1K")
+    expect(formatMarketChartVolume(14_400, formatEnglishNumber)).toBe("14.4K")
+    expect(formatMarketChartVolume(1_000_000, formatEnglishNumber)).toBe("1M")
+    expect(formatMarketChartVolume(2_000_000_000, formatEnglishNumber)).toBe(
+      "2B"
+    )
+    expect(
+      formatMarketChartVolume(14_400, (value, options) =>
+        new Intl.NumberFormat("vi-VN", options).format(value)
+      )
+    ).toBe("14,4K")
+  })
+})
+
 describe("native market-chart last-price marker", () => {
   it("uses candle direction colors while live and a neutral color when stale", () => {
     const palette = getMarketChartThemePalette("light")
@@ -486,6 +528,7 @@ describe("native market-chart readout", () => {
       pricePrecision: 2,
       timeframe: "1m",
     })
+    expect(styles.candle.tooltip.showRule).toBe("none")
     const template = styles.candle.tooltip.legend.template
 
     if (typeof template !== "function") {
@@ -509,13 +552,48 @@ describe("native market-chart readout", () => {
     )
 
     expect(legends.map(({ title, value }) => [title, value])).toEqual([
-      ["time", "time-200"],
-      ["open", "5"],
-      ["high", "6"],
-      ["low", "4"],
-      ["close", "5.5"],
-      ["volume", "7"],
+      ["", "time-200"],
+      ["· Vol", "7"],
+      ["O", "5"],
+      ["H", "6"],
+      ["L", "4"],
+      ["C", "5.5"],
     ])
+  })
+
+  it("distinguishes zero volume from missing volume in the same candle", () => {
+    const createLegends = (volume?: number) => {
+      const styles = createChartStyles(getMarketChartThemePalette("light"), {
+        formatDateTime: (value) => `time-${value}`,
+        formatNumber: (value, options) =>
+          new Intl.NumberFormat("en-US", options).format(value),
+        notAvailable: "N/A",
+        pricePrecision: 2,
+        timeframe: "1m",
+      })
+      const template = styles.candle.tooltip.legend.template
+      if (typeof template !== "function") {
+        throw new Error("Expected the native candle legend template")
+      }
+      return template(
+        {
+          current: {
+            close: 5.5,
+            high: 6,
+            low: 4,
+            open: 5,
+            timestamp: 200,
+            ...(volume === undefined ? {} : { volume }),
+          },
+          next: null,
+          prev: null,
+        },
+        {} as never
+      )
+    }
+
+    expect(createLegends(0)[1]).toEqual({ title: "· Vol", value: "0.00" })
+    expect(createLegends()[1]).toEqual({ title: "· Vol", value: "N/A" })
   })
 })
 
