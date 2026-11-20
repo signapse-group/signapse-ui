@@ -25,9 +25,11 @@ const WATCHLIST_CHART_ASSET_SEARCH = {
 
 export default function MarketChartsPage() {
   return (
-    <Suspense fallback={<MarketChartWorkbenchSkeleton />}>
-      <MarketChartsContent />
-    </Suspense>
+    <div className="-m-5 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+      <Suspense fallback={<MarketChartSurfaceSkeleton />}>
+        <MarketChartsContent />
+      </Suspense>
+    </div>
   )
 }
 
@@ -78,13 +80,5 @@ async function MarketChartsContent() {
       watchlistError={watchlistError}
       workspaceId={workspaceId}
     />
-  )
-}
-
-function MarketChartWorkbenchSkeleton() {
-  return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-      <MarketChartSurfaceSkeleton />
-    </div>
   )
 }

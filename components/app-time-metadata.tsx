@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils"
 interface AppTimeMetadataProps {
   children: ReactNode
   className?: string
+  contentClassName?: string
   icon: LucideIcon
   iconClassName?: string
 }
@@ -13,6 +14,7 @@ interface AppTimeMetadataProps {
 function AppTimeMetadata({
   children,
   className,
+  contentClassName,
   icon: Icon,
   iconClassName,
 }: AppTimeMetadataProps) {
@@ -27,7 +29,7 @@ function AppTimeMetadata({
         aria-hidden="true"
         className={cn("size-3 shrink-0", iconClassName)}
       />
-      <span>{children}</span>
+      <span className={contentClassName}>{children}</span>
     </span>
   )
 }

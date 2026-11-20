@@ -87,6 +87,8 @@ import {
   createDrawingOverlayStyles,
   formatMarketChartPrice,
   formatMarketChartVolume,
+  getMarketChartCandleTimeFormatOptions,
+  getMarketChartLegendSize,
   getMarketChartThemePalette,
   resolveChartThemeMode,
   type ChartThemeMode,
@@ -125,6 +127,16 @@ export interface MarketChartLoadedData {
   candles: MarketChartCandleItemResponse[]
   economicCalendarEvents: MarketChartEconomicCalendarEventResponse[]
   from: string | null
+}
+
+interface FormattedMarketChartCandleReadout {
+  close: string
+  high: string
+  low: string
+  open: string
+  text: string
+  time: string
+  volume: string
 }
 
 export const MARKET_CHART_INDICATORS = [
@@ -798,56 +810,84 @@ export const MarketChartCanvas = forwardRef<
   const panResetRequestRef = useRef<number | null>(null)
   const readoutContextKey = `${assetId}:${timeframe}:${dataVersion}`
   const readoutContextKeyRef = useRef(readoutContextKey)
-  const [chartReadoutState, setChartReadoutState] = useState({
+  const [chartReadoutState, setChartReadoutState] = useState<{
+    contextKey: string
+    readout: FormattedMarketChartCandleReadout | null
+  }>({
     contextKey: "",
-    text: "",
+    readout: null,
   })
-  const chartReadout =
+  const currentReadout =
     chartReadoutState.contextKey === readoutContextKey
-      ? chartReadoutState.text
-      : ""
+      ? chartReadoutState.readout
+      : null
+  const chartReadout = currentReadout?.text ?? ""
   useEffect(() => {
     readoutContextKeyRef.current = readoutContextKey
   }, [readoutContextKey])
-  const setChartReadout = useCallback((text: string) => {
-    setChartReadoutState({ contextKey: readoutContextKeyRef.current, text })
-  }, [])
-  const readoutFormatterRef = useRef<(candle: KLineData) => string>(() => "")
+  const setChartReadout = useCallback(
+    (readout: FormattedMarketChartCandleReadout | null) => {
+      setChartReadoutState({
+        contextKey: readoutContextKeyRef.current,
+        readout,
+      })
+    },
+    []
+  )
+  const readoutFormatterRef = useRef<
+    (candle: KLineData) => FormattedMarketChartCandleReadout
+  >(() => {
+    throw new Error("Market chart readout formatter is not ready")
+  })
   const formatCandleReadout = useCallback(
-    (candle: KLineData) => {
-      const timeOptions: Intl.DateTimeFormatOptions =
-        timeframe === "1mo"
-          ? { year: "numeric", month: "long" }
-          : timeframe === "1d" || timeframe === "1w"
-            ? { year: "numeric", month: "long", day: "numeric" }
-            : {
-                year: "numeric",
-                month: "short",
-                day: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-              }
+    (candle: KLineData): FormattedMarketChartCandleReadout => {
+      const timeOptions = getMarketChartCandleTimeFormatOptions(timeframe)
+      const time = formatDateTime(
+        candle.timestamp,
+        timeOptions,
+        dictionary.marketCharts.format.notAvailable
+      )
       const volume =
         typeof candle.volume === "number" && Number.isFinite(candle.volume)
           ? formatMarketChartVolume(candle.volume, formatNumber)
           : dictionary.marketCharts.format.notAvailable
+      const open = formatMarketChartPrice(
+        candle.open,
+        pricePrecision,
+        formatNumber
+      )
+      const high = formatMarketChartPrice(
+        candle.high,
+        pricePrecision,
+        formatNumber
+      )
+      const low = formatMarketChartPrice(
+        candle.low,
+        pricePrecision,
+        formatNumber
+      )
+      const close = formatMarketChartPrice(
+        candle.close,
+        pricePrecision,
+        formatNumber
+      )
 
-      return formatMessage(dictionary.marketCharts.inspection.candleReadout, {
-        time: formatDateTime(
-          candle.timestamp,
-          timeOptions,
-          dictionary.marketCharts.format.notAvailable
-        ),
-        open: formatMarketChartPrice(candle.open, pricePrecision, formatNumber),
-        high: formatMarketChartPrice(candle.high, pricePrecision, formatNumber),
-        low: formatMarketChartPrice(candle.low, pricePrecision, formatNumber),
-        close: formatMarketChartPrice(
-          candle.close,
-          pricePrecision,
-          formatNumber
-        ),
+      return {
+        close,
+        high,
+        low,
+        open,
+        text: formatMessage(dictionary.marketCharts.inspection.candleReadout, {
+          time,
+          open,
+          high,
+          low,
+          close,
+          volume,
+        }),
+        time,
         volume,
-      })
+      }
     },
     [
       dictionary.marketCharts.format.notAvailable,
@@ -859,6 +899,15 @@ export const MarketChartCanvas = forwardRef<
       timeframe,
     ]
   )
+  const setFormattedCandleReadout = useCallback(
+    (candle: KLineData | null) => {
+      setChartReadout(candle ? readoutFormatterRef.current(candle) : null)
+    },
+    [setChartReadout]
+  )
+  useEffect(() => {
+    readoutFormatterRef.current = formatCandleReadout
+  }, [formatCandleReadout])
   const chartLegendFormatters = useMemo(
     () => ({
       formatDateTime,
@@ -949,20 +998,16 @@ export const MarketChartCanvas = forwardRef<
   const setLatestChartReadout = useCallback(
     (chart: Chart | null = chartRef.current) => {
       if (!chartContextReadyRef.current || !chart) {
-        setChartReadout("")
+        setChartReadout(null)
         return
       }
 
       const candles = chart.getDataList()
       const latest = candles[candles.length - 1]
-      setChartReadout(latest ? readoutFormatterRef.current(latest) : "")
+      setFormattedCandleReadout(latest ?? null)
     },
-    [setChartReadout]
+    [setFormattedCandleReadout, setChartReadout]
   )
-
-  useEffect(() => {
-    readoutFormatterRef.current = formatCandleReadout
-  }, [formatCandleReadout])
 
   function resetChartInspection() {
     const chart = chartRef.current
@@ -985,7 +1030,7 @@ export const MarketChartCanvas = forwardRef<
 
     keyboardInspectionIndexRef.current = dataIndex
     keyboardInspectingRef.current = true
-    setChartReadout(readoutFormatterRef.current(candle))
+    setFormattedCandleReadout(candle)
     chart.scrollToDataIndex(dataIndex, 0)
 
     window.requestAnimationFrame(() => {
@@ -1752,8 +1797,16 @@ export const MarketChartCanvas = forwardRef<
     chart.subscribeAction("onZoom", scheduleMarkerPositionUpdate)
 
     const frameId = window.requestAnimationFrame(updateMarkerPositions)
+    let legendSize = getMarketChartLegendSize()
     const resizeObserver = new ResizeObserver(() => {
       chart.resize()
+      const nextLegendSize = getMarketChartLegendSize()
+      if (nextLegendSize !== legendSize) {
+        chart.setStyles({
+          candle: { tooltip: { legend: { size: nextLegendSize } } },
+        })
+        legendSize = nextLegendSize
+      }
       scheduleMarkerPositionUpdate()
     })
 
@@ -1972,7 +2025,7 @@ export const MarketChartCanvas = forwardRef<
         const latest = initialData[initialData.length - 1]
         chartContextReadyRef.current = !!latest
         setChartReadout(
-          latest ? readoutFormatterRef.current(latest as KLineData) : ""
+          latest ? readoutFormatterRef.current(latest as KLineData) : null
         )
         scheduleMarkerPositionUpdateRef.current()
         return
