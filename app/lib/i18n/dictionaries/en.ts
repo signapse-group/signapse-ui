@@ -2210,6 +2210,7 @@ export const en: Dictionary = {
     description:
       "Use this space to track how events, assets, narratives, and evidence connect on one exploration surface.",
     readDenied: "You do not have permission to access the knowledge graph.",
+    timeRangeInvalid: "Choose one of the available graph time ranges.",
     responseInvalid:
       "The backend returned knowledge graph data in an unexpected format.",
     errorTitle: "Could not load knowledge graph",
@@ -2296,6 +2297,14 @@ export const en: Dictionary = {
     demo: {
       liveDescription:
         "Explore the knowledge connected to your current workspace watchlist.",
+      timeRange: "Time range",
+      last7Days: "Last 7 days",
+      last14Days: "Last 14 days",
+      last30Days: "Last 30 days",
+      loadingTimeRange: "Loading graph for the last {days} days…",
+      loadedTimeRange: "Graph loaded for the last {days} days.",
+      noEvents: "No events in the last {days} days",
+      noEventsDescription: "Choose a different time range to check for events.",
       relationMeaning: "Relation type",
       connectionGroup: "Connection",
       closeRelationship: "Close relationship details",

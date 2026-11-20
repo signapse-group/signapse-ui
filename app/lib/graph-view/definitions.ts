@@ -78,6 +78,26 @@ export interface GraphViewResponse {
   edges: GraphViewEdge[]
 }
 
+export const graphViewDaysSchema = z.union([
+  z.literal(7),
+  z.literal(14),
+  z.literal(30),
+])
+
+export type GraphViewDays = z.infer<typeof graphViewDaysSchema>
+
+export interface GraphViewWorkspaceIdentity {
+  userId: number
+  workspaceId: number
+}
+
+export type GraphViewWorkspaceLoadResult =
+  | { kind: "success"; graphView: GraphViewResponse }
+  | { kind: "workspace-required" }
+  | { kind: "workspace-changed" }
+  | { kind: "permission-denied" }
+  | { kind: "error" }
+
 export interface GraphViewEntityReference {
   kind: GraphViewNodeKind
   entityId: number

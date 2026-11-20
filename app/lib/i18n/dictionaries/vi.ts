@@ -2189,6 +2189,7 @@ export const vi = {
     description:
       "Không gian này dùng để theo dõi cách sự kiện, tài sản, luận điểm, giai đoạn warm và bằng chứng kết nối với nhau trên cùng một mặt phẳng khám phá.",
     readDenied: "Bạn không có quyền truy cập biểu đồ tri thức.",
+    timeRangeInvalid: "Hãy chọn một trong các khoảng thời gian của biểu đồ.",
     responseInvalid:
       "Backend trả về dữ liệu biểu đồ tri thức không đúng định dạng mong đợi.",
     errorTitle: "Không thể tải biểu đồ tri thức",
@@ -2274,6 +2275,15 @@ export const vi = {
     demo: {
       liveDescription:
         "Khám phá tri thức liên quan đến watchlist của workspace hiện tại.",
+      timeRange: "Khoảng thời gian",
+      last7Days: "7 ngày qua",
+      last14Days: "14 ngày qua",
+      last30Days: "30 ngày qua",
+      loadingTimeRange: "Đang tải biểu đồ trong {days} ngày qua…",
+      loadedTimeRange: "Đã tải biểu đồ trong {days} ngày qua.",
+      noEvents: "Không có Event trong {days} ngày qua",
+      noEventsDescription:
+        "Hãy chọn khoảng thời gian khác để kiểm tra sự kiện.",
       relationMeaning: "Loại quan hệ",
       connectionGroup: "Nhóm kết nối",
       closeRelationship: "Đóng chi tiết quan hệ",
