@@ -39,6 +39,7 @@ import {
   type EconomicCalendarImpactLevel,
 } from "@/app/lib/economic-calendar/definitions"
 import { useLocalization } from "@/app/lib/i18n/provider"
+import { CURRENT_WORKSPACE_CHANGED_EVENT } from "@/app/lib/workspaces/events"
 import {
   DEFAULT_MARKET_CHART_TIMEFRAME,
   MARKET_CHART_TIMEFRAMES,
@@ -60,7 +61,10 @@ import {
   isMarketChartTimeframe,
 } from "@/app/lib/market-charts/definitions"
 import { EVENT_READ_PERMISSIONS } from "@/app/lib/events/permissions"
-import { requestMarketChartCandles } from "./market-chart-candle-client"
+import {
+  requestMarketChartCandles,
+  type MarketChartInitialCandleLoad,
+} from "./market-chart-candle-client"
 import { WorkspaceWatchlistAssetListItemResponse } from "@/app/lib/watchlists/definitions"
 import { AppTimeMetadata } from "@/components/app-time-metadata"
 import { useHasAnyPermission } from "@/components/permission-provider"
@@ -217,7 +221,10 @@ import {
   deriveMarketChartDisplayedCandleInterval,
 } from "./market-chart-history-helpers"
 import { openMarketChartLiveStream } from "./market-chart-live-stream"
-import { createMarketChartInitialLoadObserver } from "./market-chart-initial-load-observability"
+import {
+  createMarketChartInitialLoadObserver,
+  type MarketChartInitialLoadObserver,
+} from "./market-chart-initial-load-observability"
 import { MarketChartSurfaceSkeleton } from "./market-chart-skeleton"
 
 type WorkbenchPhase = "idle" | "loading" | "success" | "error"
@@ -290,6 +297,9 @@ const MARKET_CHART_ANNOTATION_LEGEND_DIRECTIONS = [
 export interface MarketChartWorkbenchProps {
   watchlistAssets: WorkspaceWatchlistAssetListItemResponse[]
   watchlistError: string | null
+  workspaceId?: number | null
+  initialCandleLoad?: MarketChartInitialCandleLoad | null
+  initialLoadObserver?: MarketChartInitialLoadObserver
 }
 
 const MARKET_CHART_CALENDAR_MAX_RANGE_DAYS = 366
@@ -3252,6 +3262,9 @@ function MarketChartAnnotationControls({
 export function MarketChartWorkbench({
   watchlistAssets,
   watchlistError,
+  workspaceId,
+  initialCandleLoad,
+  initialLoadObserver,
 }: MarketChartWorkbenchProps) {
   const localization = useLocalization()
   const { dictionary } = localization
@@ -3280,7 +3293,34 @@ export function MarketChartWorkbench({
   const [dataVersion, setDataVersion] = useState(0)
   const loadGenerationRef = useRef(0)
   const [activeLoadGeneration, setActiveLoadGeneration] = useState(0)
-  const initialLoadObserverRef = useRef(createMarketChartInitialLoadObserver())
+  const [fallbackInitialLoadObserver] = useState(() =>
+    createMarketChartInitialLoadObserver()
+  )
+  const initialLoadObserverRef = useRef(
+    initialLoadObserver ?? fallbackInitialLoadObserver
+  )
+  const initialCandleLoadRef = useRef(initialCandleLoad)
+  const initialCandleLoadConsumedRef = useRef(false)
+
+  useEffect(() => {
+    function invalidateWorkspaceSelection() {
+      loadGenerationRef.current += 1
+      initialLoadObserverRef.current.cancelCurrent()
+    }
+
+    window.addEventListener(
+      CURRENT_WORKSPACE_CHANGED_EVENT,
+      invalidateWorkspaceSelection
+    )
+
+    return () => {
+      window.removeEventListener(
+        CURRENT_WORKSPACE_CHANGED_EVENT,
+        invalidateWorkspaceSelection
+      )
+    }
+  }, [])
+
   const [annotationLayerEnabled, setAnnotationLayerEnabled] = useState(true)
   const [calendarLayerPreference, setCalendarLayerPreference] = useState<
     boolean | null
@@ -3816,15 +3856,26 @@ export function MarketChartWorkbench({
       asset: WorkspaceWatchlistAssetListItemResponse,
       timeframe: MarketChartTimeframe
     ) {
-      initialLoadObserverRef.current.cancelCurrent()
       const loadGeneration = ++loadGenerationRef.current
       setActiveLoadGeneration(loadGeneration)
       const previousData = chartDataRef.current
-      const request = createLatestHistoryRequest({
-        assetId: asset.assetId,
-        currentTimestamp: Date.now(),
-        timeframe,
-      })
+      const candidateInitialLoad = initialCandleLoadRef.current
+      const useInitialLoad =
+        !initialCandleLoadConsumedRef.current &&
+        candidateInitialLoad?.workspaceId === (workspaceId ?? null) &&
+        candidateInitialLoad.request.assetId === asset.assetId &&
+        candidateInitialLoad.request.timeframe === timeframe
+          ? candidateInitialLoad
+          : null
+      initialCandleLoadConsumedRef.current = true
+
+      const request =
+        useInitialLoad?.request ??
+        createLatestHistoryRequest({
+          assetId: asset.assetId,
+          currentTimestamp: Date.now(),
+          timeframe,
+        })
       setPhase("loading")
       setLoadError(null)
       setAnnotationLoadError(null)
@@ -3846,14 +3897,27 @@ export function MarketChartWorkbench({
         return
       }
 
-      initialLoadObserverRef.current.start(loadGeneration)
-
-      let result: ActionResult<MarketChartCandleResponse>
-      try {
-        result = await requestMarketChartCandles(request, {
+      if (useInitialLoad) {
+        if (!initialLoadObserverRef.current.adopt(loadGeneration)) {
+          initialLoadObserverRef.current.start(loadGeneration)
+        }
+        useInitialLoad.start({
           loadError: dictionary.marketCharts.loadError,
           responseInvalid: dictionary.marketCharts.responseInvalid,
         })
+      } else {
+        initialLoadObserverRef.current.cancelCurrent()
+        initialLoadObserverRef.current.start(loadGeneration)
+      }
+
+      let result: ActionResult<MarketChartCandleResponse>
+      try {
+        result = useInitialLoad
+          ? await useInitialLoad.promise
+          : await requestMarketChartCandles(request, {
+              loadError: dictionary.marketCharts.loadError,
+              responseInvalid: dictionary.marketCharts.responseInvalid,
+            })
       } catch (error) {
         initialLoadObserverRef.current.finish(loadGeneration, "error")
         throw error
@@ -3985,6 +4049,7 @@ export function MarketChartWorkbench({
       dictionary.marketCharts.responseInvalid,
       startAnnotationSupplementalLoad,
       startCalendarHistorySupplementalLoad,
+      workspaceId,
     ]
   )
 
@@ -4209,9 +4274,26 @@ export function MarketChartWorkbench({
       !watchlistError &&
       findWatchlistAsset(watchlistAssets, pendingRouteSelection.assetId) !==
         null
+    const routeAssetId = getSingleParam(searchParams, "assetId")
+    const routeTimeframeParam = getSingleParam(searchParams, "timeframe")
+    const routeTimeframe = getTimeframeFromSearchParams(searchParams)
+    const initialLoadAssetId =
+      routeAssetId || String(watchlistAssets[0]?.assetId ?? "")
+    const initialLoad = initialCandleLoadRef.current
+    const preserveInitialLoad =
+      !initialCandleLoadConsumedRef.current &&
+      initialLoad !== null &&
+      initialLoad !== undefined &&
+      !watchlistError &&
+      hasWatchlistAssets &&
+      (!routeTimeframeParam || isMarketChartTimeframe(routeTimeframeParam)) &&
+      initialLoad.workspaceId === (workspaceId ?? null) &&
+      initialLoad.request.assetId === Number(initialLoadAssetId) &&
+      initialLoad.request.timeframe === routeTimeframe &&
+      findWatchlistAsset(watchlistAssets, initialLoadAssetId) !== null
 
-    // updateRoute already invalidates prior selections and owns this load.
-    if (!preservePendingLoad) {
+    // The wrapper owns the validated first request until the workbench adopts it.
+    if (!preservePendingLoad && !preserveInitialLoad) {
       initialLoadObserverRef.current.cancelCurrent()
       loadGenerationRef.current += 1
     }
@@ -4288,12 +4370,19 @@ export function MarketChartWorkbench({
       }
 
       if (!assetId) {
+        const defaultAsset = watchlistAssets[0]
+        if (!defaultAsset) {
+          return
+        }
+
         const nextSelection = {
-          assetId: String(watchlistAssets[0].assetId),
+          assetId: String(defaultAsset.assetId),
           timeframe,
         }
         setSelection(nextSelection)
-        setPhase("loading")
+        setErrors({})
+        pendingRouteSelectionRef.current = nextSelection
+        void loadCandles(defaultAsset, timeframe)
         startTransition(() => {
           router.replace(`${pathname}?${createQueryString(nextSelection)}`, {
             scroll: false,
@@ -4335,6 +4424,7 @@ export function MarketChartWorkbench({
     searchParams,
     watchlistAssets,
     watchlistError,
+    workspaceId,
   ])
 
   function updateRoute(nextSelection: MarketChartSelectionState) {

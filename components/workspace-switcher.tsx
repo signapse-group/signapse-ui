@@ -18,6 +18,7 @@ import {
   updateWorkspace,
 } from "@/app/api/workspaces/action"
 import { useLocalization } from "@/app/lib/i18n/provider"
+import { CURRENT_WORKSPACE_CHANGED_EVENT } from "@/app/lib/workspaces/events"
 import { WorkspaceResponse } from "@/app/lib/workspaces/definitions"
 import { Button } from "@/components/ui/button"
 import {
@@ -100,6 +101,11 @@ export function WorkspaceSwitcher({
         return
       }
 
+      window.dispatchEvent(
+        new CustomEvent(CURRENT_WORKSPACE_CHANGED_EVENT, {
+          detail: { workspaceId: workspace.id },
+        })
+      )
       toast.success(
         formatMessage(dictionary.workspace.switched, { name: workspace.name })
       )

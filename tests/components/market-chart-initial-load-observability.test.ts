@@ -41,4 +41,20 @@ describe("Market Chart initial-load observability", () => {
 
     expect(finishes).toEqual(["stale", "error"])
   })
+
+  it("binds a preloaded attempt to the workbench generation without restarting it", () => {
+    const finish = vi.fn()
+    const start = vi.fn((): ClientPerformanceMeasurement => ({ finish }))
+    const observer = createMarketChartInitialLoadObserver(start)
+
+    observer.start(0)
+
+    expect(observer.adopt(3)).toBe(true)
+    observer.finish(0, "success")
+    observer.finish(3, "success")
+
+    expect(start).toHaveBeenCalledOnce()
+    expect(finish).toHaveBeenCalledOnce()
+    expect(finish).toHaveBeenCalledWith("success")
+  })
 })
