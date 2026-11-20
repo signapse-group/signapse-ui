@@ -135,14 +135,28 @@ async function expectMarketChartFreshnessClearOfAssistant(page: Page) {
     .getByText(/^Cập nhật /)
     .locator("..")
     .boundingBox()
-  const viewportWidth = await page.evaluate(
-    () => document.documentElement.clientWidth
-  )
+  const liveStatusBounds = await page
+    .getByText("Giá trực tiếp", { exact: true })
+    .boundingBox()
+  const assistantBounds = await page
+    .getByRole("button", { name: "Ask Signapse" })
+    .boundingBox()
 
   expect(freshnessBounds).not.toBeNull()
-  expect(freshnessBounds!.x + freshnessBounds!.width).toBeLessThanOrEqual(
-    viewportWidth - 48
-  )
+  expect(liveStatusBounds).not.toBeNull()
+  expect(assistantBounds).not.toBeNull()
+
+  const overlaps = (
+    first: NonNullable<typeof freshnessBounds>,
+    second: NonNullable<typeof assistantBounds>
+  ) =>
+    first.x < second.x + second.width &&
+    first.x + first.width > second.x &&
+    first.y < second.y + second.height &&
+    first.y + first.height > second.y
+
+  expect(overlaps(freshnessBounds!, assistantBounds!)).toBe(false)
+  expect(overlaps(liveStatusBounds!, assistantBounds!)).toBe(false)
 }
 
 async function expectMarketChartReadoutShowsClose(
@@ -241,6 +255,18 @@ async function expectNoHorizontalOverflow(page: Page) {
           document.documentElement.scrollWidth <=
           document.documentElement.clientWidth
       )
+    )
+    .toBe(true)
+}
+
+async function expectMarketChartTimeAxisVisible(page: Page) {
+  await expect
+    .poll(
+      async () =>
+        (await getMarketChartCanvasText(page)).some(({ text }) =>
+          /\b\d{2}-\d{2}\s+\d{2}:\d{2}\b/.test(text)
+        ),
+      { timeout: 10_000 }
     )
     .toBe(true)
 }
@@ -814,6 +840,12 @@ test.describe("P0 market chart workbench", () => {
     await expect(status).toHaveText(latestReadout)
     await expectNoHorizontalOverflow(page)
     await expectMarketChartReadoutReflow(page, false)
+    await expectMarketChartTimeAxisVisible(page)
+    const footer = page.getByTestId("market-chart-footer")
+    await expect(footer).toBeVisible()
+    const footerBounds = await footer.boundingBox()
+    expect(footerBounds).not.toBeNull()
+    expect(footerBounds!.y + footerBounds!.height).toBeLessThanOrEqual(512)
     await testInfo.attach("sign-474-effective-viewport-760x512", {
       body: await page.screenshot({ fullPage: true }),
       contentType: "image/png",

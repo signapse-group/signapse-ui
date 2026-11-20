@@ -3117,7 +3117,10 @@ function MarketChartAnnotationControls({
   )
 
   return (
-    <div className="border-t bg-muted/10 px-3 py-1.5">
+    <div
+      data-testid="market-chart-footer"
+      className="border-t bg-muted/10 px-3 py-1.5"
+    >
       <div className="flex min-h-7 min-w-0 flex-wrap items-center gap-2 text-xs font-medium text-muted-foreground">
         {label || calendarLabel ? (
           <>
@@ -3229,7 +3232,7 @@ function MarketChartAnnotationControls({
           groups={currentGroups}
         />
         {freshnessLabel || liveStatusLabel ? (
-          <div className="ml-auto flex w-full min-w-0 flex-wrap items-center justify-end gap-x-3 gap-y-1 pr-12 text-right sm:w-auto sm:shrink-0">
+          <div className="ml-auto flex w-full min-w-0 flex-wrap items-center justify-start gap-x-3 gap-y-1 pr-48 text-left sm:w-auto sm:shrink-0 sm:justify-end sm:text-right">
             {liveStatusLabel ? (
               <span aria-live="polite" className="flex items-center gap-2">
                 <span
@@ -3248,7 +3251,11 @@ function MarketChartAnnotationControls({
               </span>
             ) : null}
             {freshnessLabel ? (
-              <AppTimeMetadata icon={RefreshCw}>
+              <AppTimeMetadata
+                icon={RefreshCw}
+                className="max-w-28 min-w-0 whitespace-normal sm:max-w-none sm:whitespace-nowrap"
+                contentClassName="min-w-0 break-words"
+              >
                 {freshnessLabel}
               </AppTimeMetadata>
             ) : null}

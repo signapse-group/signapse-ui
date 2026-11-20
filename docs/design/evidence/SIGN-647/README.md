@@ -1,6 +1,6 @@
 # SIGN-647 Market Chart layout and readout evidence
 
-The accepted source is the active 20 November 2026 design on [SIGN-121](https://signapse-group.atlassian.net/browse/SIGN-121), attachments 10294–10296. The local browser renders below use synthetic fixture candles and quotes. They show layout and formatting only; they do not verify live API behavior or coordinator acceptance.
+The accepted source is the active 20 November 2026 design on [SIGN-121](https://signapse-group.atlassian.net/browse/SIGN-121), attachments 10294–10296. The local browser renders below use synthetic BTC/USDT fixture candles and quotes. They show layout and formatting only; they do not verify live API behavior or coordinator acceptance.
 
 | SIGN-121 PNG source                                            | Local render                                                           | Render context                                           | Compared detail                                                                        |
 | -------------------------------------------------------------- | ---------------------------------------------------------------------- | -------------------------------------------------------- | -------------------------------------------------------------------------------------- |
@@ -13,17 +13,15 @@ The accepted source is the active 20 November 2026 design on [SIGN-121](https://
 
 The frame follows the current application shell. The chart toolbar sits above the plot, drawing tools stay on the left, and chart footer remains inside the frame. The native KLine legend displays time and volume before O/H/L/C; at 390px and 360px the OHLC values reflow and remain readable. The accessible status keeps full parameter names.
 
-For the native 200% capture, Chrome reported `innerWidth=760`, `devicePixelRatio=2`, and CDP `cssVisualViewport.zoom=2`; `document.documentElement.scrollWidth` stayed at or below 760. The screenshot was captured at device scale, and the full legend remained inside the chart canvas. This is an actual browser zoom check; the separate 760×512 screenshot is a CSS viewport check.
+For the native 200% capture, Chrome reported `innerWidth=760`, `innerHeight=512`, `outerWidth=1520`, `devicePixelRatio=2`, and CDP `cssVisualViewport.zoom=2`; `document.documentElement.scrollWidth` stayed at 760. The time axis and footer were visible, and the footer bottom was at 512px. The freshness label ended at x=556px while the Ask Signapse button started at x=576px. This is an actual browser zoom check; the separate 760×512 screenshot is a CSS viewport check.
 
 The linked Planning Responsive Contract URL returned HTTP 404 during this run. The equivalent versioned FE execution contract in [`docs/design/DESIGN.md`](../../DESIGN.md#responsive-contract) supplied the local viewport checks.
 
 ## Local verification
 
 - `pnpm exec vitest run tests/market-chart/market-chart-helpers.test.ts` — 39/39 passed, covering format, timeframe, precision, zero/missing volume, and zoom sizing.
-- `pnpm typecheck` — passed.
-- Focused Playwright through `/opt/apps/symphony/runtime/run-fe-browser` — 6/6 passed for responsive readout, toolbar and keyboard inspection, narrow layout, history states, quote freshness, and error/retry.
-- Separate Chrome capture at actual 200% tab zoom — readout, axes and footer stayed inside the chart at 760px effective CSS width; no page-level horizontal overflow.
-- Focused ESLint — 0 errors and 11 warnings in `market-chart-canvas.tsx`. Focused Prettier and `git diff --check` — passed.
-- Current-head PR `Verify / check` passed on rerun after one initial run failed in a calendar-loading text assertion; the isolated test passed locally and the full rerun passed. Current Vercel Preview for `signapse-ui` is READY.
+- Focused Playwright through `/opt/apps/symphony/runtime/run-fe-browser` — 7/7 cases passed for responsive readout, toolbar/keyboard, freshness, empty history, stale/closed/live error, and candle error/retry states. The evidence capture rendered Wide, Compact, Mobile, 360px and 760×512.
+- Separate Chrome capture at actual 200% tab zoom — time axis and footer visible at 760×512 effective CSS size; no horizontal overflow or freshness/launcher collision.
+- Focused ESLint, Prettier, `pnpm typecheck`, `git diff --check`, and market-chart helper tests (39/39) passed.
 
 All browser renders use local synthetic candle and quote fixtures. No live feature/API test was run. The coordinator owns live dev acceptance and delivery revision verification after review and merge.
