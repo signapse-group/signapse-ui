@@ -249,6 +249,18 @@ test("Graph View node filters support keyboard, touch, empty recovery and reload
   for (const filter of allFilters)
     await expect(filter).toHaveAttribute("aria-pressed", "true")
 
+  await article.click()
+  await expect(article).toHaveAttribute("aria-pressed", "false")
+  const workspaceSwitcher = page.locator("#workspace-switcher-trigger")
+  await workspaceSwitcher.click()
+  await page.getByRole("menuitem").filter({ hasText: "Workspace Beta" }).click()
+  await expect(workspaceSwitcher).toContainText("Workspace Beta")
+  await expect(graph).toHaveAttribute("data-layout-status", "ready", {
+    timeout: 30_000,
+  })
+  for (const filter of allFilters)
+    await expect(filter).toHaveAttribute("aria-pressed", "true")
+
   await page.goto("/vi/graph-view")
   await expect(graph).toHaveAttribute("data-layout-status", "ready", {
     timeout: 30_000,
