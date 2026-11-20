@@ -161,12 +161,15 @@ export function EventQuickDetailContent({
                 </div>
 
                 <h3 className="mt-2 text-sm font-medium break-words">
-                  {evidence.newsArticleTitle ||
-                    dictionary.events.evidenceUntitled}
+                  {evidence.newsArticleTitle?.trim()
+                    ? evidence.newsArticleTitle
+                    : dictionary.events.evidenceUntitled}
                 </h3>
                 <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                   <span>
-                    {evidence.sourceName || dictionary.newsArticles.noOutlet}
+                    {evidence.sourceName?.trim()
+                      ? evidence.sourceName
+                      : dictionary.newsArticles.noOutlet}
                   </span>
                   <AppTimeMetadata icon={Calendar}>
                     {formatDateTime(evidence.publishedAt, locale, dictionary)}

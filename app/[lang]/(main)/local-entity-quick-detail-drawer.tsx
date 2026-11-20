@@ -207,7 +207,7 @@ export function LocalEntityQuickDetailDrawer({
         ? dictionary.events.quickAccessDeniedTitle
         : dictionary.newsArticles.quickAccessDeniedTitle
       : currentState?.phase === "event"
-        ? currentState.event.title?.trim() || dictionary.common.notAvailable
+        ? currentState.event.title?.trim() || dictionary.events.untitled
         : currentState?.phase === "news-article"
           ? currentState.article.title?.trim() ||
             dictionary.newsArticles.titleUnavailable

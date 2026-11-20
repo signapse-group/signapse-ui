@@ -53,7 +53,7 @@ export function EventSearch() {
       <InputGroup>
         <InputGroupAddon>
           {isPending ? (
-            <Spinner aria-label={dictionary.events.searchPending} />
+            <Spinner aria-hidden="true" />
           ) : (
             <Search aria-hidden="true" />
           )}
@@ -61,6 +61,7 @@ export function EventSearch() {
         <InputGroupInput
           id={SEARCH_INPUT_ID}
           type="search"
+          aria-busy={isPending}
           placeholder={dictionary.events.searchPlaceholder}
           value={value}
           onChange={(event) => {
@@ -69,6 +70,9 @@ export function EventSearch() {
           }}
         />
       </InputGroup>
+      <span className="sr-only" role="status" aria-live="polite">
+        {isPending ? dictionary.events.searchPending : ""}
+      </span>
     </div>
   )
 }

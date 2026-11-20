@@ -211,7 +211,10 @@ for (const width of [1520, 1440, 1439, 1024, 768, 767, 760, 390, 360]) {
       { timeout: 30_000 }
     )
     await page.screenshot({ path: `test-results/sigma-canvas-${width}.png` })
-    await expect(page.getByRole("combobox")).toHaveCount(0)
+    const timeRange = page.getByRole("combobox", {
+      name: "Khoảng thời gian",
+    })
+    await expect(timeRange).toContainText("7 ngày qua")
     await expect(page.getByTestId("graph-demo-re-layout")).toHaveCount(0)
     await expect(
       page.getByTestId("graph-demo-edge-legend").locator('[data-slot="badge"]')
@@ -223,7 +226,7 @@ for (const width of [1520, 1440, 1439, 1024, 768, 767, 760, 390, 360]) {
       .getByTestId("graph-demo-edge-legend")
       .boundingBox())!
     const launcher = (await page
-      .getByRole("button", { name: "Mở trợ lý AI", exact: true })
+      .getByRole("button", { name: "Ask Signapse", exact: true })
       .boundingBox())!
     expect(
       legend.x + legend.width <= launcher.x ||
@@ -437,7 +440,7 @@ test("live Graph View distinguishes empty watchlist from empty graph", async ({
   await fixture.setScenario("/watchlists", "empty", "GET")
   await page.goto("/vi/graph-view")
   await expect(
-    page.getByRole("heading", { name: "Watchlist chưa có tài sản" })
+    page.getByText("Watchlist chưa có tài sản", { exact: true })
   ).toBeVisible()
   await expect(
     page.getByText("Thêm tài sản vào watchlist của workspace này", {
@@ -456,10 +459,10 @@ test("live Graph View distinguishes empty watchlist from empty graph", async ({
   await fixture.setScenario("/watchlists", "success", "GET")
   await page.goto("/vi/graph-view")
   await expect(
-    page.getByRole("heading", { name: "Chưa có dữ liệu graph liên quan" })
+    page.getByText("Không có Event trong 7 ngày qua", { exact: true })
   ).toBeVisible()
   await expect(
-    page.getByText("Điều đó không có nghĩa các tài sản không chịu ảnh hưởng.")
+    page.getByRole("combobox", { name: "Khoảng thời gian" })
   ).toBeVisible()
   await page.screenshot({
     path: "test-results/graph-state-no-related-data.png",
@@ -503,15 +506,16 @@ test("live Graph View keeps permission, transport and schema failures distinct",
   await fixture.setScenario("/watchlists", "permission-denied", "GET")
   await page.goto("/vi/graph-view")
   await expect(
-    page.getByText(
-      "Bạn cần quyền watchlist để xác định workspace này có tài sản đang theo dõi hay không."
-    )
+    page.getByText("Không có Event trong 7 ngày qua", { exact: true })
+  ).toBeVisible()
+  await expect(
+    page.getByRole("combobox", { name: "Khoảng thời gian" })
   ).toBeVisible()
   await page.screenshot({
     path: "test-results/graph-state-watchlist-permission-denied.png",
   })
   await expect(
-    page.getByRole("heading", { name: "Watchlist chưa có tài sản" })
+    page.getByText("Watchlist chưa có tài sản", { exact: true })
   ).toHaveCount(0)
 
   await fixture.reset()
@@ -519,9 +523,10 @@ test("live Graph View keeps permission, transport and schema failures distinct",
   await fixture.setScenario("/graph-view", "empty", "GET")
   await page.goto("/vi/graph-view")
   await expect(
-    page.getByText(
-      "Bạn cần quyền watchlist để xác định workspace này có tài sản đang theo dõi hay không."
-    )
+    page.getByText("Không có Event trong 7 ngày qua", { exact: true })
+  ).toBeVisible()
+  await expect(
+    page.getByRole("combobox", { name: "Khoảng thời gian" })
   ).toBeVisible()
   expect(
     (await fixture.state()).requests.some(

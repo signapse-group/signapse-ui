@@ -999,6 +999,7 @@ export const vi = {
     confidenceHigh: "Độ tin cậy cao",
     createdDateSort: "Ngày tạo",
     eventColumn: "Sự kiện",
+    untitled: "Chưa có tiêu đề",
     statusColumn: "Trạng thái",
     timeColumn: "Thời gian",
     occurredAtColumn: "Xảy ra lúc",
@@ -1007,12 +1008,19 @@ export const vi = {
     searchLabel: "Tìm sự kiện",
     searchPending: "Đang tìm kiếm",
     searchPlaceholder: "Tìm theo tiêu đề, mô tả hoặc khóa chuẩn...",
+    loading: "Đang tải sự kiện.",
     noDescription: "Chưa có mô tả ngắn.",
     detailNoDescription: "Chưa có mô tả cho sự kiện này.",
+    eventUnavailableTitle: "Sự kiện không khả dụng",
+    eventUnavailableDescription:
+      "Sự kiện không tồn tại hoặc hiện không còn khả dụng.",
     canonicalKey: "Khóa chuẩn",
     viewDetail: "Xem chi tiết sự kiện",
     emptyTitle: "Chưa có sự kiện",
     emptyDescription: "Không có sự kiện nào khớp với bộ lọc hiện tại.",
+    searchEmptyTitle: "Không tìm thấy sự kiện",
+    searchEmptyDescription: "Thử một từ khóa tìm kiếm khác.",
+    resultsStatus: "Trang {page}: {count} sự kiện.",
     confidence: "Độ tin cậy",
     occurredAt: "Xảy ra lúc",
     evidence: "Bằng chứng",
@@ -2184,6 +2192,7 @@ export const vi = {
     description:
       "Không gian này dùng để theo dõi cách sự kiện, tài sản, luận điểm, giai đoạn warm và bằng chứng kết nối với nhau trên cùng một mặt phẳng khám phá.",
     readDenied: "Bạn không có quyền truy cập biểu đồ tri thức.",
+    timeRangeInvalid: "Hãy chọn một trong các khoảng thời gian của biểu đồ.",
     responseInvalid:
       "Backend trả về dữ liệu biểu đồ tri thức không đúng định dạng mong đợi.",
     errorTitle: "Không thể tải biểu đồ tri thức",
@@ -2269,6 +2278,15 @@ export const vi = {
     demo: {
       liveDescription:
         "Khám phá tri thức liên quan đến watchlist của workspace hiện tại.",
+      timeRange: "Khoảng thời gian",
+      last7Days: "7 ngày qua",
+      last14Days: "14 ngày qua",
+      last30Days: "30 ngày qua",
+      loadingTimeRange: "Đang tải biểu đồ trong {days} ngày qua…",
+      loadedTimeRange: "Đã tải biểu đồ trong {days} ngày qua.",
+      noEvents: "Không có Event trong {days} ngày qua",
+      noEventsDescription:
+        "Hãy chọn khoảng thời gian khác để kiểm tra sự kiện.",
       relationMeaning: "Loại quan hệ",
       connectionGroup: "Nhóm kết nối",
       closeRelationship: "Đóng chi tiết quan hệ",

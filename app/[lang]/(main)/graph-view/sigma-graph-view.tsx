@@ -579,9 +579,11 @@ function GraphEdgeInspector({
 export function SigmaGraphView({
   initialEdgeCount = 400,
   graphView: liveGraphView,
+  timeRangeControl,
 }: {
   initialEdgeCount?: GraphViewDemoEdgeCount
   graphView?: GraphViewResponse
+  timeRangeControl?: ReactNode
 }) {
   const localization = useLocalization()
   const { dictionary, formatMessage, formatNumber, locale } = localization
@@ -1547,9 +1549,12 @@ export function SigmaGraphView({
         data-graph-label-obstacle
         className="pointer-events-none absolute inset-x-4 top-3 z-10 flex flex-wrap items-start justify-between gap-3 min-[1440px]:top-4"
       >
-        <h1 className="sr-only text-xl font-semibold tracking-tight min-[1440px]:not-sr-only">
-          {dictionary.graphView.title}
-        </h1>
+        <div className="pointer-events-auto flex flex-wrap items-center gap-3">
+          <h1 className="sr-only text-xl font-semibold tracking-tight min-[1440px]:not-sr-only">
+            {dictionary.graphView.title}
+          </h1>
+          {timeRangeControl}
+        </div>
         <div
           className="grid grid-cols-2 gap-2 min-[1440px]:flex"
           data-testid="graph-demo-node-legend"
@@ -1608,7 +1613,7 @@ export function SigmaGraphView({
       </p>
       <div
         data-graph-label-obstacle
-        className="pointer-events-none absolute inset-x-4 bottom-20 z-10 flex flex-col gap-3 min-[1440px]:right-20 min-[1440px]:bottom-4 min-[1440px]:flex-row min-[1440px]:items-end min-[1440px]:justify-between"
+        className="pointer-events-none absolute inset-x-4 bottom-20 z-10 flex flex-col gap-3 min-[1440px]:right-52 min-[1440px]:bottom-4 min-[1440px]:flex-row min-[1440px]:items-end min-[1440px]:justify-between"
       >
         <Badge variant="outline">
           <span data-testid="graph-demo-node-count">
