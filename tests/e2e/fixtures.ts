@@ -78,6 +78,7 @@ type FixtureController = {
       | "calendar-available"
       | "event-links"
       | "event-quick-detail-long"
+      | "event-quick-detail-no-links"
       | "event-empty-no-match"
       | "event-empty-failed"
       | "event-market-reactions"

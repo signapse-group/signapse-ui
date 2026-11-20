@@ -461,8 +461,11 @@ export function LocalEntityQuickDetailDrawer({
         <div
           ref={bodyRef}
           data-quick-detail-scroll-region
+          role="region"
+          aria-label={dictionary.quickDetail.readerRegionLabel}
+          tabIndex={0}
           className={cn(
-            "min-h-0 flex-1 overflow-y-auto p-4 motion-reduce:transition-none",
+            "min-h-0 flex-1 overflow-y-auto p-4 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset motion-reduce:transition-none",
             entity?.kind === "event" && presentation.placement === "bottom"
               ? "mx-auto w-full max-w-[64rem]"
               : null

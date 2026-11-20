@@ -327,6 +327,9 @@ describe("EventQuickDetailContent related links", () => {
     expect(
       screen.queryByRole("link", { name: viDictionary.events.viewArticle })
     ).not.toBeInTheDocument()
+    expect(
+      screen.getByText("Chưa có định danh bài viết.", { exact: true })
+    ).toBeVisible()
     const originalLinks = screen.getAllByRole("link", {
       name: viDictionary.events.openOriginal,
     })
@@ -346,5 +349,30 @@ describe("EventQuickDetailContent related links", () => {
         name: viDictionary.events.openOriginal,
       })
     ).toHaveLength(2)
+  })
+
+  it("shows a neutral missing source state while retaining the Article action", () => {
+    const event = makeEvent("ENRICHED", {
+      assets: [],
+      themes: [],
+      evidence: [
+        {
+          newsArticleId: 72,
+          newsArticleTitle: "Evidence without an original source URL",
+        },
+      ],
+    })
+
+    renderEvent(event, [], true)
+
+    expect(
+      screen.getByText("Chưa có URL nguồn.", { exact: true })
+    ).toBeVisible()
+    expect(
+      screen.getByRole("link", { name: viDictionary.events.viewArticle })
+    ).toHaveAttribute("href", "/vi/news-articles/72")
+    expect(
+      screen.queryByRole("link", { name: viDictionary.events.openOriginal })
+    ).not.toBeInTheDocument()
   })
 })

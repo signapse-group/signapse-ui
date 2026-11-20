@@ -3569,7 +3569,10 @@ Which asset did you mean? The available data is limited. Add TSLA to your watchl
           weight: 0.5,
         },
       ]
-    } else if (scenario === "event-quick-detail-long") {
+    } else if (
+      scenario === "event-quick-detail-long" ||
+      scenario === "event-quick-detail-no-links"
+    ) {
       assets = [
         {
           assetId: 103,
@@ -3772,7 +3775,8 @@ Which asset did you mean? The available data is limited. Add TSLA to your watchl
 
     const response = {
       ...event,
-      ...(scenario === "event-quick-detail-long"
+      ...(scenario === "event-quick-detail-long" ||
+      scenario === "event-quick-detail-no-links"
         ? {
             title: `Central bank signals a slower easing path ${"across global markets ".repeat(5)}`,
             description: `Synthetic long-form event description ${"with preserved market context and complete supplied wording. ".repeat(12)}`,
@@ -3782,11 +3786,17 @@ Which asset did you mean? The available data is limited. Add TSLA to your watchl
       assets,
       themes,
       evidence:
-        scenario === "event-quick-detail-long" && id === 61
+        (scenario === "event-quick-detail-long" ||
+          scenario === "event-quick-detail-no-links") &&
+        id === 61
           ? Array.from({ length: 6 }, (_, index) => ({
-              newsArticleId: 71 + index,
+              newsArticleId:
+                scenario === "event-quick-detail-no-links" ? null : 71 + index,
               newsArticleTitle: `Fixture evidence ${index + 1} ${"long title remains complete ".repeat(4)}`,
-              newsArticleUrl: `https://fixture.invalid/news/${71 + index}`,
+              newsArticleUrl:
+                scenario === "event-quick-detail-no-links"
+                  ? null
+                  : `https://fixture.invalid/news/${71 + index}`,
               sourceName: `Fixture Source ${index + 1}`,
               publishedAt: NOW,
               evidenceRole: index === 0 ? "PRIMARY" : "SUPPORTING",

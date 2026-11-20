@@ -178,20 +178,25 @@ export function EventQuickDetailContent({
                   </p>
                 ) : null}
 
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {typeof evidence.newsArticleId === "number" &&
-                  canReadNewsArticles ? (
-                    <Link
-                      href={`/news-articles/${evidence.newsArticleId}`}
-                      className={buttonVariants({
-                        size: "sm",
-                        variant: "outline",
-                      })}
-                    >
-                      <FileText aria-hidden="true" data-icon="inline-start" />
-                      {dictionary.events.viewArticle}
-                    </Link>
-                  ) : null}
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  {typeof evidence.newsArticleId === "number" ? (
+                    canReadNewsArticles ? (
+                      <Link
+                        href={`/news-articles/${evidence.newsArticleId}`}
+                        className={buttonVariants({
+                          size: "sm",
+                          variant: "outline",
+                        })}
+                      >
+                        <FileText aria-hidden="true" data-icon="inline-start" />
+                        {dictionary.events.viewArticle}
+                      </Link>
+                    ) : null
+                  ) : (
+                    <span className="text-xs text-muted-foreground">
+                      {dictionary.events.articleIdentityUnavailable}
+                    </span>
+                  )}
                   {evidence.newsArticleUrl ? (
                     <a
                       href={evidence.newsArticleUrl}
@@ -208,7 +213,11 @@ export function EventQuickDetailContent({
                       />
                       {dictionary.events.openOriginal}
                     </a>
-                  ) : null}
+                  ) : (
+                    <span className="text-xs text-muted-foreground">
+                      {dictionary.events.sourceUrlUnavailable}
+                    </span>
+                  )}
                 </div>
               </article>
             ))}

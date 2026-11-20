@@ -397,6 +397,105 @@ test.describe("P0 quick-detail overlay", () => {
     await expect(trigger).toBeFocused()
   })
 
+  test("keyboard scrolls an Event body when evidence has no Article or source links", async ({
+    page,
+    fixture,
+  }, testInfo) => {
+    await fixture.setScenario("/events", "event-quick-detail-no-links", "GET")
+    await page.setViewportSize({ width: 360, height: 900 })
+    await page.goto("/vi/dashboard")
+
+    const trigger = page.getByRole("button", {
+      name: "Mở sự kiện: Central bank signals a slower easing path",
+      exact: true,
+    })
+    await expect(trigger).toBeVisible()
+    await waitForClientHandler(trigger)
+    await trigger.click()
+
+    const dialog = page.getByRole("dialog")
+    const closeButton = dialog.getByRole("button", {
+      name: "Đóng",
+      exact: true,
+    })
+    const readerRegion = dialog.getByRole("region", {
+      name: viDictionary.quickDetail.readerRegionLabel,
+      exact: true,
+    })
+
+    await expect(dialog).toBeVisible()
+    await expect(closeButton).toBeFocused()
+    await expect(readerRegion).toHaveAttribute("tabindex", "0")
+    await expect(
+      dialog.getByRole("link", { name: viDictionary.events.viewArticle })
+    ).toHaveCount(0)
+    await expect(
+      dialog.getByRole("link", { name: viDictionary.events.openOriginal })
+    ).toHaveCount(0)
+    await expect(
+      dialog.getByText(viDictionary.events.articleIdentityUnavailable, {
+        exact: true,
+      })
+    ).toHaveCount(4)
+    await expect(
+      dialog.getByText(viDictionary.events.sourceUrlUnavailable, {
+        exact: true,
+      })
+    ).toHaveCount(4)
+    await expect
+      .poll(() =>
+        readerRegion.evaluate(
+          (element) => element.scrollHeight - element.clientHeight
+        )
+      )
+      .toBeGreaterThan(0)
+
+    await page.keyboard.press("Tab")
+    await expect(readerRegion).toBeFocused()
+    const finalEvidence = dialog.getByText(
+      `Synthetic complete evidence note 4 ${"retained inside the quick reader without truncation. ".repeat(5)}`
+    )
+    const finalEvidenceIsInReader = () =>
+      finalEvidence.evaluate((element) => {
+        const scrollRegion = element.closest(
+          "[data-quick-detail-scroll-region]"
+        )
+        if (!scrollRegion) {
+          return false
+        }
+
+        const evidenceBounds = element.getBoundingClientRect()
+        const regionBounds = scrollRegion.getBoundingClientRect()
+        return (
+          evidenceBounds.bottom > regionBounds.top &&
+          evidenceBounds.top < regionBounds.bottom
+        )
+      })
+    for (let pageDownCount = 0; pageDownCount < 6; pageDownCount += 1) {
+      if (await finalEvidenceIsInReader()) {
+        break
+      }
+
+      const previousScrollTop = await readerRegion.evaluate(
+        (element) => element.scrollTop
+      )
+      await page.keyboard.press("PageDown")
+      await expect
+        .poll(() => readerRegion.evaluate((element) => element.scrollTop))
+        .toBeGreaterThan(previousScrollTop)
+    }
+    expect(await finalEvidenceIsInReader()).toBe(true)
+    await captureQuickDetail(
+      page,
+      testInfo,
+      "event-missing-evidence-links-vi-360.png"
+    )
+
+    await page.keyboard.press("End")
+    await expect(dialog.getByText(/Cập nhật lần cuối:/).last()).toBeInViewport()
+    await captureQuickDetail(page, testInfo, "event-reader-end-vi-360.png")
+  })
+
   test("uses the shared desktop sheet from Graph View and restores inspector focus", async ({
     page,
   }) => {
