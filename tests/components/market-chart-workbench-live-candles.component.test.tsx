@@ -38,9 +38,17 @@ vi.mock("@/app/lib/i18n/dictionaries", () => ({
   hasLocale: vi.fn(),
 }))
 
-vi.mock("@/app/[lang]/(main)/market-charts/market-chart-candle-client", () => ({
-  requestMarketChartCandles: getCandles,
-}))
+vi.mock(
+  "@/app/[lang]/(main)/market-charts/market-chart-candle-client",
+  async (importOriginal) => {
+    const original =
+      await importOriginal<
+        typeof import("@/app/[lang]/(main)/market-charts/market-chart-candle-client")
+      >()
+
+    return { ...original, requestMarketChartCandles: getCandles }
+  }
+)
 
 vi.mock("@/app/api/market-charts/action", () => ({
   getMarketChartAnnotations: getAnnotations,
@@ -188,6 +196,8 @@ vi.mock(
 )
 
 import { MarketChartWorkbench } from "@/app/[lang]/(main)/market-charts/market-chart-workbench"
+import { createInitialMarketChartCandleLoad } from "@/app/[lang]/(main)/market-charts/market-chart-candle-client"
+import { createMarketChartInitialLoadObserver } from "@/app/[lang]/(main)/market-charts/market-chart-initial-load-observability"
 import { vi as viDictionary } from "@/app/lib/i18n/dictionaries/vi"
 import { LocalizationProvider } from "@/app/lib/i18n/provider"
 import type {
@@ -1947,5 +1957,59 @@ describe("Market chart quote-driven candle flow", () => {
       expect(JSON.parse(candleOnChart().textContent || "null")).toBeNull()
     })
     expect(goldSource.close).toHaveBeenCalledTimes(1)
+  })
+
+  it("uses the preloaded candle result without issuing a second request", async () => {
+    routeSearchParams.current = new URLSearchParams("timeframe=1m")
+    const candleResponse = createCandleResponse(101, "1m")
+    const fetchMock = vi.fn<typeof fetch>(
+      async () =>
+        new Response(JSON.stringify({ success: true, data: candleResponse }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        })
+    )
+    vi.stubGlobal("fetch", fetchMock)
+
+    const initialLoadObserver = createMarketChartInitialLoadObserver()
+    initialLoadObserver.start(0)
+    const initialCandleLoad = createInitialMarketChartCandleLoad({
+      workspaceId: 7,
+      assetId: 101,
+      timeframe: "1m",
+    })
+    expect(initialCandleLoad).not.toBeNull()
+    initialCandleLoad!.start({
+      loadError: "Candle request failed",
+      responseInvalid: "Candle response invalid",
+    })
+    await initialCandleLoad!.promise
+
+    render(
+      <LocalizationProvider locale="vi" dictionary={viDictionary}>
+        <MarketChartWorkbench
+          watchlistAssets={watchlistAssets}
+          watchlistError={null}
+          workspaceId={7}
+          initialCandleLoad={initialCandleLoad}
+          initialLoadObserver={initialLoadObserver}
+        />
+      </LocalizationProvider>
+    )
+
+    const candlesOnChart = await screen.findByTestId("chart-rest-candles")
+    await waitFor(() =>
+      expect(candlesOnChart).toHaveTextContent(
+        JSON.stringify(candleResponse.candles)
+      )
+    )
+    await waitFor(() =>
+      expect(routerReplace).toHaveBeenCalledWith(
+        expect.stringContaining("assetId=101"),
+        { scroll: false }
+      )
+    )
+    expect(fetchMock).toHaveBeenCalledOnce()
+    expect(getCandles).not.toHaveBeenCalled()
   })
 })

@@ -28,6 +28,14 @@ export function createMarketChartInitialLoadObserver(
       activeAttempt.measurement.finish(outcome)
       activeAttempt = undefined
     },
+    adopt(generation: number) {
+      if (!activeAttempt) {
+        return false
+      }
+
+      activeAttempt.generation = generation
+      return true
+    },
     start(generation: number) {
       activeAttempt?.measurement.finish("stale")
       activeAttempt = {
@@ -40,3 +48,7 @@ export function createMarketChartInitialLoadObserver(
     },
   }
 }
+
+export type MarketChartInitialLoadObserver = ReturnType<
+  typeof createMarketChartInitialLoadObserver
+>

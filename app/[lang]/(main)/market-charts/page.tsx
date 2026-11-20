@@ -6,7 +6,10 @@ import {
   canAccessMarketChartWorkbench,
   MARKET_CHART_WORKBENCH_PERMISSIONS,
 } from "@/app/lib/market-charts/permissions"
-import { getCurrentPermissions } from "@/app/lib/permissions-server"
+import {
+  getCurrentPermissions,
+  getCurrentWorkspaceId,
+} from "@/app/lib/permissions-server"
 import { WorkspaceWatchlistAssetListItemResponse } from "@/app/lib/watchlists/definitions"
 import { AccessDenied } from "@/components/access-denied"
 
@@ -29,9 +32,10 @@ export default function MarketChartsPage() {
 }
 
 async function MarketChartsContent() {
-  const [permissions, dictionary] = await Promise.all([
+  const [permissions, dictionary, workspaceId] = await Promise.all([
     getCurrentPermissions(),
     getServerDictionary(),
+    getCurrentWorkspaceId(),
   ])
 
   if (!canAccessMarketChartWorkbench(permissions)) {
@@ -72,6 +76,7 @@ async function MarketChartsContent() {
     <MarketChartWorkbenchClient
       watchlistAssets={watchlistAssets}
       watchlistError={watchlistError}
+      workspaceId={workspaceId}
     />
   )
 }
