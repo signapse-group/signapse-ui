@@ -70,6 +70,25 @@ function getMarketReactionSection(page: Page, heading: string) {
   })
 }
 
+async function setDesktopSidebarState(
+  page: Page,
+  state: "expanded" | "collapsed"
+) {
+  const sidebar = page.locator('[data-slot="sidebar"]')
+  await expect(sidebar).toHaveCount(1)
+
+  if ((await sidebar.getAttribute("data-state")) !== state) {
+    const toggle = page.getByRole("button", {
+      name: enDictionary.navigation.toggleSidebar,
+      exact: true,
+    })
+    await waitForClientHandler(toggle)
+    await toggle.click()
+  }
+
+  await expect(sidebar).toHaveAttribute("data-state", state)
+}
+
 function getVisibleTextOverlaps(
   cards: Locator,
   overlay: { x: number; y: number; width: number; height: number }
@@ -516,6 +535,7 @@ test.describe("Event AI forecast reactions", () => {
       )
     }
     await page.setViewportSize({ width: 1520, height: 1280 })
+    await setDesktopSidebarState(page, "expanded")
 
     const requests = (await fixture.state()).requests
     const eventRequest = requests.find(
@@ -549,6 +569,45 @@ test.describe("Event AI forecast reactions", () => {
       "event-detail-wide-light-en-1520x1280.png",
       "SIGN-291"
     )
+
+    const desktopAssistantLauncher = page.getByRole("button", {
+      name: "Ask Signapse",
+    })
+    for (const width of [1440, 1920, 2560]) {
+      await page.setViewportSize({ width, height: 1280 })
+
+      for (const sidebarState of ["expanded", "collapsed"] as const) {
+        await setDesktopSidebarState(page, sidebarState)
+        await expect(cards).toHaveCount(4)
+        for (let index = 0; index < 4; index += 1) {
+          const card = cards.nth(index)
+          await expect(card).toBeVisible()
+          await expect(
+            card.getByText("AI reasoning", { exact: true })
+          ).toBeVisible()
+        }
+        expect(
+          await reactionGrid.evaluate(
+            (grid) =>
+              getComputedStyle(grid).gridTemplateColumns.split(/\s+/).length
+          ),
+          `expected four forecast columns at ${width}px with sidebar ${sidebarState}`
+        ).toBe(4)
+        expect(
+          await page.evaluate(() => document.documentElement.scrollWidth),
+          `expected no horizontal overflow at ${width}px with sidebar ${sidebarState}`
+        ).toBeLessThanOrEqual(width)
+
+        const assistantBounds = await desktopAssistantLauncher.boundingBox()
+        if (!assistantBounds) {
+          throw new Error("Expected the assistant launcher to render")
+        }
+        expect(
+          await getVisibleTextOverlaps(cards, assistantBounds),
+          `expected forecast text to stay clear at ${width}px with sidebar ${sidebarState}`
+        ).toEqual([])
+      }
+    }
 
     // 760×512 is the effective CSS viewport for 1520×1024 at 200% zoom.
     await page.setViewportSize({ width: 760, height: 512 })
