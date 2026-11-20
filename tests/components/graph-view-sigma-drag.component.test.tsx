@@ -29,9 +29,11 @@ import type {
   ForceNode,
 } from "@/app/[lang]/(main)/graph-view/d3-layout.worker"
 
-vi.mock("@/app/api/events/action", () => ({ getEventById: vi.fn() }))
+vi.mock("@/app/api/events/action", () => ({
+  getEventByIdForQuickDetail: vi.fn(),
+}))
 vi.mock("@/app/api/news-articles/action", () => ({
-  getNewsArticleById: vi.fn(),
+  getNewsArticleByIdForQuickDetail: vi.fn(),
 }))
 vi.mock("next-themes", () => ({ useTheme: () => ({ resolvedTheme: "light" }) }))
 vi.mock("sigma/rendering", () => ({ drawStraightEdgeLabel: vi.fn() }))
@@ -44,9 +46,14 @@ vi.mock("sigma", () => ({
 }))
 
 import { SigmaGraphView } from "@/app/[lang]/(main)/graph-view/sigma-graph-view"
+import { getEventByIdForQuickDetail } from "@/app/api/events/action"
+import { getNewsArticleByIdForQuickDetail } from "@/app/api/news-articles/action"
 import { en } from "@/app/lib/i18n/dictionaries/en"
 import { vi as viDictionary } from "@/app/lib/i18n/dictionaries/vi"
+import type { EventResponse } from "@/app/lib/events/definitions"
 import { LocalizationProvider } from "@/app/lib/i18n/provider"
+import type { NewsArticleResponse } from "@/app/lib/news-articles/definitions"
+import { PermissionProvider } from "@/components/permission-provider"
 
 // Only the renderer and asynchronous worker are doubled; graph, drag handlers,
 // layout adapter, label placement, selection and inspector are the real components.
@@ -151,6 +158,47 @@ class WorkerDouble {
 
 const frames = new Map<number, FrameRequestCallback>()
 let frameId = 0
+
+const quickEvent: EventResponse = {
+  id: 1,
+  title: "Rates detail",
+  canonicalKey: "rates-detail",
+  description: "The selected event description.",
+  status: "ENRICHED",
+  confidence: 0.9,
+  occurredAt: "2026-11-20T12:00:00.000Z",
+  createdDate: "2026-11-20T12:00:00.000Z",
+  assets: [],
+  themes: [],
+  evidence: [
+    {
+      newsArticleId: 77,
+      newsArticleTitle: "Source article title",
+      newsArticleUrl: "https://source.example/article/77",
+      sourceName: "Fixture Wire",
+      publishedAt: "2026-11-20T11:00:00.000Z",
+      evidenceRole: "PRIMARY",
+      confidence: 0.82,
+      evidenceNote: "Evidence note from the selected source.",
+    },
+  ],
+  marketReactions: [],
+}
+
+const quickArticle: NewsArticleResponse = {
+  id: 4,
+  title: "Graph article detail",
+  description: "The selected article description.",
+  url: "https://source.example/article/4",
+  sourceName: "Fixture Wire",
+  publishedAt: "2026-11-20T11:00:00.000Z",
+  status: "INGESTED",
+  createdDate: "2026-11-20T11:00:00.000Z",
+  content: "The selected article body.",
+  featureImage: null,
+  linkedEvents: [],
+}
+
 function flushFrames() {
   const pending = [...frames.values()]
   frames.clear()
@@ -178,7 +226,10 @@ async function mountGraph(
   options: {
     parallel?: boolean
     includeArticle?: boolean
+    articleNodeId?: string
+    articleUrl?: string | null
     includeNarrative?: boolean
+    permissions?: string[]
     locale?: "en" | "vi"
     edgeNote?: string | null
     edges?: GraphViewEdge[]
@@ -187,7 +238,10 @@ async function mountGraph(
   const {
     parallel = false,
     includeArticle = false,
+    articleNodeId = "news-article:4",
+    articleUrl = "https://example.test/article",
     includeNarrative = false,
+    permissions = ["event:read", "news-article:read"],
     locale = "en",
     edgeNote = null,
     edges: edgeOverrides,
@@ -226,10 +280,10 @@ async function mountGraph(
       node("asset:3", "asset", "Gold"),
       ...(includeArticle
         ? [
-            node("news-article:4", "news-article", "Article", {
+            node(articleNodeId, "news-article", "Article", {
               ...metadata,
               sourceName: "Fixture Wire",
-              url: "https://example.test/article",
+              url: articleUrl,
             }),
           ]
         : []),
@@ -267,7 +321,7 @@ async function mountGraph(
             {
               id: "news-article-event:4",
               kind: "news-article-event" as const,
-              sourceNodeId: "news-article:4",
+              sourceNodeId: articleNodeId,
               targetNodeId: "event:1",
               relationType: "PRIMARY" as const,
               weight: null,
@@ -304,9 +358,11 @@ async function mountGraph(
   }
   const dictionary = locale === "vi" ? viDictionary : en
   const renderGraph = (value: GraphViewResponse) => (
-    <LocalizationProvider locale={locale} dictionary={dictionary}>
-      <SigmaGraphView graphView={value} />
-    </LocalizationProvider>
+    <PermissionProvider permissions={permissions}>
+      <LocalizationProvider locale={locale} dictionary={dictionary}>
+        <SigmaGraphView graphView={value} />
+      </LocalizationProvider>
+    </PermissionProvider>
   )
   const rendered = render(renderGraph(graphView))
   await act(async () => {
@@ -495,11 +551,130 @@ afterEach(() => {
   cleanup()
   frames.clear()
   vi.unstubAllGlobals()
+  vi.clearAllMocks()
 })
 
 describe("Sigma drag release", () => {
-  it("keeps live article source actions outside the graph inspector", async () => {
-    const { sigma } = await mountGraph({ includeArticle: true })
+  it("opens the selected live Event and keeps its source identity", async () => {
+    vi.mocked(getEventByIdForQuickDetail).mockResolvedValueOnce({
+      success: true,
+      data: quickEvent,
+    })
+    const { sigma } = await mountGraph({
+      permissions: ["graph-view:read", "event:read", "news-article:read"],
+    })
+    act(() => {
+      sigma.emit("clickNode", {
+        node: "event:1",
+        preventSigmaDefault() {},
+      })
+    })
+
+    const inspector = screen.getByTestId("graph-demo-inspector")
+    const readEvent = within(inspector).getByRole("button", {
+      name: en.graphView.inspector.readEvent,
+    })
+    fireEvent.click(readEvent)
+
+    expect(getEventByIdForQuickDetail).toHaveBeenCalledWith(1)
+    expect(
+      await screen.findByRole("heading", {
+        level: 2,
+        name: "Rates detail",
+      })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("Evidence note from the selected source.")
+    ).toBeInTheDocument()
+    expect(
+      screen
+        .getAllByRole("link")
+        .some((link) => link.getAttribute("href") === "/en/news-articles/77")
+    ).toBe(true)
+    expect(
+      screen
+        .getAllByRole("link")
+        .some(
+          (link) =>
+            link.getAttribute("href") === "https://source.example/article/77"
+        )
+    ).toBe(true)
+  })
+
+  it("opens the selected live Article by its Graph identity and source URL", async () => {
+    vi.mocked(getNewsArticleByIdForQuickDetail).mockResolvedValueOnce({
+      success: true,
+      data: quickArticle,
+    })
+    const { sigma } = await mountGraph({
+      includeArticle: true,
+      permissions: ["graph-view:read", "news-article:read"],
+    })
+    act(() => {
+      sigma.emit("clickNode", {
+        node: "news-article:4",
+        preventSigmaDefault() {},
+      })
+    })
+
+    const inspector = screen.getByTestId("graph-demo-inspector")
+    const readArticle = within(inspector).getByRole("button", {
+      name: en.graphView.inspector.readArticle,
+    })
+    expect(
+      within(inspector).getByRole("link", { name: /Open original source/ })
+    ).toHaveAttribute("href", "https://example.test/article")
+
+    fireEvent.click(readArticle)
+
+    expect(getNewsArticleByIdForQuickDetail).toHaveBeenCalledWith(4)
+    expect(
+      await screen.findByRole("heading", {
+        level: 2,
+        name: "Graph article detail",
+      })
+    ).toBeInTheDocument()
+    expect(
+      screen
+        .getAllByRole("link")
+        .some((link) => link.getAttribute("href") === "/en/news-articles/4")
+    ).toBe(true)
+    expect(
+      screen
+        .getAllByRole("link")
+        .some((link) => link.getAttribute("href") === quickArticle.url)
+    ).toBe(true)
+  })
+
+  it("keeps an original source link when the Graph Article has no Signapse identity", async () => {
+    const { sigma } = await mountGraph({
+      includeArticle: true,
+      articleNodeId: "news-article:unknown",
+    })
+    act(() => {
+      sigma.emit("clickNode", {
+        node: "news-article:unknown",
+        preventSigmaDefault() {},
+      })
+    })
+
+    const inspector = screen.getByTestId("graph-demo-inspector")
+    expect(
+      within(inspector).queryByRole("button", {
+        name: en.graphView.inspector.readArticle,
+      })
+    ).not.toBeInTheDocument()
+    expect(
+      within(inspector).getByRole("link", { name: /Open original source/ })
+    ).toHaveAttribute("href", "https://example.test/article")
+    expect(getNewsArticleByIdForQuickDetail).not.toHaveBeenCalled()
+  })
+
+  it("shows when the Graph Article has no original source URL", async () => {
+    const { sigma } = await mountGraph({
+      includeArticle: true,
+      articleUrl: null,
+    })
     act(() => {
       sigma.emit("clickNode", {
         node: "news-article:4",
@@ -509,10 +684,67 @@ describe("Sigma drag release", () => {
 
     const inspector = screen.getByTestId("graph-demo-inspector")
     expect(
-      within(inspector).queryByTestId("graph-demo-open-quick-detail")
-    ).not.toBeInTheDocument()
+      within(inspector).getByRole("button", {
+        name: en.graphView.inspector.readArticle,
+      })
+    ).toBeInTheDocument()
+    expect(
+      within(inspector).getByText(en.graphView.demo.sourceUnavailable)
+    ).toBeInTheDocument()
     expect(within(inspector).queryByRole("link")).not.toBeInTheDocument()
-    expect(inspector).not.toHaveTextContent(en.graphView.demo.sourceUnavailable)
+  })
+
+  it("does not grant Event detail access from Graph access", async () => {
+    const { sigma } = await mountGraph({ permissions: ["graph-view:read"] })
+    act(() => {
+      sigma.emit("clickNode", {
+        node: "event:1",
+        preventSigmaDefault() {},
+      })
+    })
+
+    const inspector = screen.getByTestId("graph-demo-inspector")
+    fireEvent.click(
+      within(inspector).getByRole("button", {
+        name: en.graphView.inspector.readEvent,
+      })
+    )
+
+    expect(
+      await screen.findByRole("heading", {
+        level: 2,
+        name: en.events.quickAccessDeniedTitle,
+      })
+    ).toBeInTheDocument()
+    expect(getEventByIdForQuickDetail).not.toHaveBeenCalled()
+  })
+
+  it("does not grant Article detail access from Graph access", async () => {
+    const { sigma } = await mountGraph({
+      includeArticle: true,
+      permissions: ["graph-view:read"],
+    })
+    act(() => {
+      sigma.emit("clickNode", {
+        node: "news-article:4",
+        preventSigmaDefault() {},
+      })
+    })
+
+    const inspector = screen.getByTestId("graph-demo-inspector")
+    fireEvent.click(
+      within(inspector).getByRole("button", {
+        name: en.graphView.inspector.readArticle,
+      })
+    )
+
+    expect(
+      await screen.findByRole("heading", {
+        level: 2,
+        name: en.newsArticles.quickAccessDeniedTitle,
+      })
+    ).toBeInTheDocument()
+    expect(getNewsArticleByIdForQuickDetail).not.toHaveBeenCalled()
   })
 
   it.each(["upNode", "touchend", "touchcancel", "pointercancel", "blur"])(

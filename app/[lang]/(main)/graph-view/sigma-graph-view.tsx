@@ -362,13 +362,11 @@ function DemoControlButton({
 }
 
 function DemoNodeInspector({
-  canOpenDetails,
   node,
   nodeVisuals,
   onClose,
   onOpenQuickDetail,
 }: {
-  canOpenDetails: boolean
   node: GraphViewNode
   nodeVisuals: Record<GraphViewNodeKind, GraphDemoNodeVisual>
   onClose: () => void
@@ -382,15 +380,11 @@ function DemoNodeInspector({
   const metadata = node.metadata ?? {}
   const entityId = getGraphViewNodeEntityId(node.id, node.kind)
   const quickDetailEntity =
-    canOpenDetails &&
-    entityId !== null &&
-    (node.kind === "event" || node.kind === "news-article")
+    entityId !== null && (node.kind === "event" || node.kind === "news-article")
       ? { id: entityId, kind: node.kind }
       : null
   const sourceUrl =
-    canOpenDetails &&
-    node.kind === "news-article" &&
-    /^https?:\/\//i.test(metadata.url ?? "")
+    node.kind === "news-article" && /^https?:\/\//i.test(metadata.url ?? "")
       ? metadata.url
       : null
 
@@ -467,7 +461,7 @@ function DemoNodeInspector({
             ) : null}
           </div>
         ) : null}
-        {canOpenDetails && node.kind === "news-article" && !sourceUrl ? (
+        {node.kind === "news-article" && !sourceUrl ? (
           <p className="text-xs text-muted-foreground">
             {dictionary.graphView.demo.sourceUnavailable}
           </p>
@@ -1724,7 +1718,6 @@ export function SigmaGraphView({
         </aside>
       ) : selectedNode ? (
         <DemoNodeInspector
-          canOpenDetails={!liveGraphView}
           node={selectedNode}
           nodeVisuals={nodeVisuals}
           onClose={clearSelection}

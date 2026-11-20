@@ -241,8 +241,8 @@ for (const width of [1520, 1440, 1439, 1024, 768, 767, 760, 390, 360]) {
     await expect(inspector.locator("dl")).toContainText("92%")
     await expect(inspector.locator("dl")).toContainText(/\d{2}:\d{2}/)
     await expect(
-      inspector.getByTestId("graph-demo-open-quick-detail")
-    ).toHaveCount(0)
+      inspector.getByRole("button", { name: "Đọc sự kiện", exact: true })
+    ).toBeVisible()
     await expect(inspector.getByRole("link")).toHaveCount(0)
     await expect(inspector).not.toContainText("Nút liên quan")
     await expect(inspector).not.toContainText("Cạnh liên quan")

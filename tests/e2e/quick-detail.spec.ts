@@ -607,9 +607,11 @@ test.describe("P0 quick-detail overlay", () => {
 
   test("uses the shared desktop sheet from Graph View and restores inspector focus", async ({
     page,
-  }) => {
+    fixture,
+  }, testInfo) => {
     test.setTimeout(120_000)
     await page.setViewportSize({ width: 1600, height: 900 })
+    await page.addInitScript(() => window.localStorage.setItem("theme", "dark"))
     await page.goto("/vi/graph-view")
 
     await expect(
@@ -632,12 +634,15 @@ test.describe("P0 quick-detail overlay", () => {
       exact: true,
     })
 
-    const anchorX = Number(
-      await graphCanvas.getAttribute("data-benchmark-anchor-x")
+    const anchorId = await graphCanvas.getAttribute("data-benchmark-anchor-id")
+    const anchorXValue = await graphCanvas.getAttribute(
+      "data-benchmark-anchor-x"
     )
-    const anchorY = Number(
-      await graphCanvas.getAttribute("data-benchmark-anchor-y")
+    const anchorYValue = await graphCanvas.getAttribute(
+      "data-benchmark-anchor-y"
     )
+    const anchorX = Number(anchorXValue)
+    const anchorY = Number(anchorYValue)
 
     if (!canvasBox || !Number.isFinite(anchorX) || !Number.isFinite(anchorY)) {
       throw new Error("Missing graph benchmark anchor")
@@ -658,10 +663,107 @@ test.describe("P0 quick-detail overlay", () => {
         exact: true,
       })
     ).toBeVisible()
+    await expect(
+      page.getByRole("link", {
+        name: viDictionary.events.viewArticle,
+        exact: true,
+      })
+    ).toHaveAttribute("href", "/vi/news-articles/71")
+    await expect(
+      page.getByRole("link", {
+        name: viDictionary.events.openOriginal,
+        exact: true,
+      })
+    ).toHaveAttribute("href", "https://fixture.invalid/news/61")
+
+    const state = await fixture.state()
+    expect(
+      state.requests.some(
+        (request) => request.method === "GET" && request.path === "/events/61"
+      )
+    ).toBe(true)
+    await captureQuickDetail(page, testInfo, "sign-346-graph-event-wide.png")
 
     await page.getByRole("button", { name: "Đóng", exact: true }).click()
     await expect(overlay).toBeHidden()
     await expect(openEvent).toBeFocused()
+    await expect(page).toHaveURL(/\/vi\/graph-view(?:\?.*)?$/)
+    await expect(graphCanvas).toBeVisible()
+    await expect(graphCanvas).toHaveAttribute(
+      "data-benchmark-anchor-id",
+      anchorId ?? ""
+    )
+    const restoredAnchorX = Number(
+      await graphCanvas.getAttribute("data-benchmark-anchor-x")
+    )
+    const restoredAnchorY = Number(
+      await graphCanvas.getAttribute("data-benchmark-anchor-y")
+    )
+    expect(Math.abs(restoredAnchorX - anchorX)).toBeLessThan(2)
+    expect(Math.abs(restoredAnchorY - anchorY)).toBeLessThan(2)
+  })
+
+  test("opens and closes the shared Graph Event sheet on mobile", async ({
+    page,
+  }, testInfo) => {
+    test.setTimeout(120_000)
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.addInitScript(() => window.localStorage.setItem("theme", "dark"))
+    await page.goto("/vi/graph-view")
+
+    const graph = page.getByTestId("graph-view")
+    await expect(graph).toHaveAttribute("data-layout-status", "ready", {
+      timeout: 45_000,
+    })
+    const graphCanvas = page.getByTestId("graph-demo-canvas")
+    await expect(graphCanvas).toHaveAttribute(
+      "data-benchmark-anchor-id",
+      /\S+/,
+      { timeout: 45_000 }
+    )
+    const anchor = await graphCanvas.evaluate((element) => {
+      const rect = element.getBoundingClientRect()
+      return {
+        x: rect.x + Number((element as HTMLElement).dataset.benchmarkAnchorX),
+        y: rect.y + Number((element as HTMLElement).dataset.benchmarkAnchorY),
+      }
+    })
+    const cdp = await page.context().newCDPSession(page)
+    await cdp.send("Input.dispatchTouchEvent", {
+      type: "touchStart",
+      touchPoints: [anchor],
+    })
+    await cdp.send("Input.dispatchTouchEvent", {
+      type: "touchEnd",
+      touchPoints: [],
+    })
+    await cdp.detach()
+    const openEvent = page.getByRole("button", {
+      name: viDictionary.graphView.inspector.readEvent,
+      exact: true,
+    })
+    await expect(openEvent).toBeVisible()
+    await openEvent.click()
+
+    const overlay = page.locator("[data-quick-detail-placement]")
+    await expect(overlay).toHaveAttribute(
+      "data-quick-detail-placement",
+      "bottom"
+    )
+    await expect(
+      page.getByRole("heading", {
+        name: "Central bank signals a slower easing path",
+        exact: true,
+      })
+    ).toBeVisible()
+    await captureQuickDetail(page, testInfo, "sign-346-graph-event-mobile.png")
+
+    await page.getByRole("button", { name: "Đóng", exact: true }).click()
+    await expect(overlay).toBeHidden()
+    await expect(openEvent).toBeFocused()
+    await expect(graphCanvas).toBeVisible()
+    await expect(graph).toBeVisible()
+    await expect(page).toHaveURL(/\/vi\/graph-view(?:\?.*)?$/)
   })
 
   test("uses the shared desktop sheet from Market Charts and restores annotation context", async ({
