@@ -112,6 +112,25 @@ test("Graph View node filters support keyboard, touch, empty recovery and reload
   const inspector = page.getByTestId("graph-demo-inspector")
   await expect(inspector).toBeVisible()
   await expect(inspector).toContainText("Event")
+  await fixture.setScenario("/events", "event-quick-detail-long", "GET")
+  await fixture.setPermissions([
+    "graph-view:read",
+    "event:read",
+    "news-article:read",
+  ])
+  await page.getByTestId("graph-demo-open-quick-detail").click()
+  const eventDetail = page.getByRole("dialog")
+  await expect(
+    eventDetail.getByRole("heading", { name: /Fixture evidence 1/ })
+  ).toBeVisible()
+  await expect(
+    eventDetail.getByText(/Synthetic complete evidence note 1/)
+  ).toBeVisible()
+  await eventDetail.getByRole("button", { name: /close/i }).click()
+  await expect(eventDetail).toBeHidden()
+  await expect(article).toHaveAttribute("aria-pressed", "false")
+  await expect(inspector).toBeVisible()
+  await fixture.setPermissions(["*"])
   await article.click()
   await expect(article).toHaveAttribute("aria-pressed", "true")
   await expect(inspector).toBeVisible()
@@ -251,10 +270,15 @@ test("Graph View node filters support keyboard, touch, empty recovery and reload
 
   await article.click()
   await expect(article).toHaveAttribute("aria-pressed", "false")
-  const workspaceSwitcher = page.locator("#workspace-switcher-trigger")
+  const workspaceSwitcher = page.getByRole("button", {
+    name: "Workspace Alpha",
+    exact: true,
+  })
   await workspaceSwitcher.click()
   await page.getByRole("menuitem").filter({ hasText: "Workspace Beta" }).click()
-  await expect(workspaceSwitcher).toContainText("Workspace Beta")
+  await expect(
+    page.getByRole("button", { name: "Workspace Beta", exact: true })
+  ).toBeVisible()
   await expect(graph).toHaveAttribute("data-layout-status", "ready", {
     timeout: 30_000,
   })
