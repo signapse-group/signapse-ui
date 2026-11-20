@@ -1613,6 +1613,10 @@ export function SigmaGraphView({
           {GRAPH_VIEW_NODE_KIND_ORDER.map((kind) => {
             const enabled = enabledNodeKinds.has(kind)
             const VisibilityIcon = enabled ? Eye : EyeOff
+            const label =
+              kind === "news-article"
+                ? dictionary.graphView.demo.newsArticleFilter
+                : nodeVisuals[kind].label
             return (
               <Button
                 key={kind}
@@ -1633,7 +1637,7 @@ export function SigmaGraphView({
                   className="size-1.5 shrink-0 rounded-full"
                   style={{ backgroundColor: nodeVisuals[kind].color }}
                 />
-                <span className="truncate">{nodeVisuals[kind].label}</span>
+                <span className="truncate">{label}</span>
                 <span className="text-muted-foreground tabular-nums">
                   {formatNumber(
                     sourceGraphView.nodes.filter((node) => node.kind === kind)

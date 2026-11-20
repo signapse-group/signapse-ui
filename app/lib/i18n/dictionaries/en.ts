@@ -2317,6 +2317,7 @@ export const en: Dictionary = {
       liveInteractionHint:
         "Drag to pan the graph · Select a node or relationship to inspect",
       nodeKindFilters: "Node type filters",
+      newsArticleFilter: "News Article",
       emptyFilteredNodes: "No nodes match these filters",
       emptyFilteredNodesDescription:
         "Turn on a node type above to show its nodes.",

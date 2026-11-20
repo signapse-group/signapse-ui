@@ -1,3 +1,5 @@
+import AxeBuilder from "@axe-core/playwright"
+
 import { expect, test } from "./fixtures"
 import type { Locator, Page } from "@playwright/test"
 
@@ -26,6 +28,7 @@ async function setTheme(page: Page, theme: "Dark" | "Light") {
     new RegExp(theme.toLowerCase())
   )
   await page.keyboard.press("Escape")
+  await expect(page.getByRole("menu")).toBeHidden()
 }
 
 test("Graph View node filters support keyboard, touch, empty recovery and reload", async ({
@@ -52,11 +55,28 @@ test("Graph View node filters support keyboard, touch, empty recovery and reload
   await expect(filters).toBeVisible()
   for (const filter of allFilters)
     await expect(filter).toHaveAttribute("aria-pressed", "true")
+  await expect(article).toContainText("News Article")
+  await expect(article).toHaveAccessibleName(/News Article/)
 
   await expect(event).toHaveCSS("height", "32px")
   await page.screenshot({
     path: "test-results/graph-node-filters-wide-dark-en-1520x1024.png",
   })
+  const darkFilterAccessibility = await new AxeBuilder({ page })
+    .include('[data-testid="graph-demo-node-legend"]')
+    .withTags(["wcag2a", "wcag2aa"])
+    .analyze()
+  expect(darkFilterAccessibility.violations).toEqual([])
+  await setTheme(page, "Light")
+  await page.screenshot({
+    path: "test-results/graph-node-filters-wide-light-en-1520x1024.png",
+  })
+  const lightFilterAccessibility = await new AxeBuilder({ page })
+    .include('[data-testid="graph-demo-node-legend"]')
+    .withTags(["wcag2a", "wcag2aa"])
+    .analyze()
+  expect(lightFilterAccessibility.violations).toEqual([])
+  await setTheme(page, "Dark")
   await page.context().addCookies([
     {
       name: "sidebar_state",
@@ -98,6 +118,11 @@ test("Graph View node filters support keyboard, touch, empty recovery and reload
   await page.screenshot({
     path: "test-results/graph-node-filters-compact-inspector-dark-en-1024x768.png",
   })
+  await setTheme(page, "Light")
+  await page.screenshot({
+    path: "test-results/graph-node-filters-compact-inspector-light-en-1024x768.png",
+  })
+  await setTheme(page, "Dark")
 
   let eventHasKeyboardFocus = false
   for (let tab = 0; tab < 100; tab += 1) {
@@ -141,6 +166,11 @@ test("Graph View node filters support keyboard, touch, empty recovery and reload
   await page.screenshot({
     path: "test-results/graph-node-filters-empty-mobile-dark-en-390x844.png",
   })
+  await setTheme(page, "Light")
+  await page.screenshot({
+    path: "test-results/graph-node-filters-empty-mobile-light-en-390x844.png",
+  })
+  await setTheme(page, "Dark")
   const eventBox = await event.boundingBox()
   expect(eventBox?.height).toBeGreaterThanOrEqual(44)
   await tap(page, event)
@@ -167,6 +197,21 @@ test("Graph View node filters support keyboard, touch, empty recovery and reload
     path: "test-results/graph-node-filters-mobile-recovered-dark-en-390x844.png",
   })
 
+  await page.setViewportSize({ width: 360, height: 844 })
+  await expect(event).toHaveCSS("height", "44px")
+  await tap(page, event)
+  await expect(page.getByTestId("graph-filter-empty")).toBeVisible()
+  await expect(filters).toBeVisible()
+  await expect(event).toHaveAttribute("aria-pressed", "false")
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(
+    360
+  )
+  await page.screenshot({
+    path: "test-results/graph-node-filters-empty-mobile-dark-en-360x844.png",
+  })
+  await tap(page, event)
+  await expect(page.getByTestId("graph-filter-empty")).toBeHidden()
+
   for (const width of [360, 760, 767, 768, 1439, 1440]) {
     await page.setViewportSize({ width, height: width === 760 ? 512 : 844 })
     const expectedHeight = width < 768 ? "44px" : width < 1440 ? "36px" : "32px"
@@ -190,6 +235,11 @@ test("Graph View node filters support keyboard, touch, empty recovery and reload
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth)
     ).toBe(width)
+    if (width === 760) {
+      await page.screenshot({
+        path: "test-results/graph-node-filters-effective-zoom-dark-en-760x512.png",
+      })
+    }
   }
 
   await page.reload()
@@ -198,4 +248,14 @@ test("Graph View node filters support keyboard, touch, empty recovery and reload
   })
   for (const filter of allFilters)
     await expect(filter).toHaveAttribute("aria-pressed", "true")
+
+  await page.goto("/vi/graph-view")
+  await expect(graph).toHaveAttribute("data-layout-status", "ready", {
+    timeout: 30_000,
+  })
+  const vietnameseArticle = page.getByTestId(
+    "graph-demo-node-filter-news-article"
+  )
+  await expect(vietnameseArticle).toContainText("Bài viết tin tức")
+  await expect(vietnameseArticle).toHaveAccessibleName(/Bài viết tin tức/)
 })

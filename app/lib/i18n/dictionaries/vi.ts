@@ -2297,6 +2297,7 @@ export const vi = {
       liveInteractionHint:
         "Kéo để di chuyển biểu đồ · Chọn nút hoặc quan hệ để xem thông tin",
       nodeKindFilters: "Bộ lọc loại nút",
+      newsArticleFilter: "Bài viết tin tức",
       emptyFilteredNodes: "Không có nút nào khớp với các bộ lọc",
       emptyFilteredNodesDescription: "Bật một loại nút ở trên để hiển thị lại.",
       relationshipInterpretation:
