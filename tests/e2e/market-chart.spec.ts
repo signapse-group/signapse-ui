@@ -2257,9 +2257,19 @@ test.describe("P0 market chart workbench", () => {
     })
 
     await page.setViewportSize({ width: 1520, height: 1024 })
+    const calendarEventRequestCount = async () =>
+      (await fixture.state()).requests.filter(
+        (request) => request.path === "/market-charts/economic-calendar-events"
+      ).length
+
+    const requestsBeforeKeyboardRetry = await calendarEventRequestCount()
     await historyRetry.focus()
     await page.keyboard.press("Enter")
+    await expect
+      .poll(calendarEventRequestCount)
+      .toBeGreaterThan(requestsBeforeKeyboardRetry)
     await expect(historyRetry).toBeEnabled()
+    await expect(calendarHistoryError).toHaveText(calendarError)
 
     await fixture.setScenario(
       "/market-charts/economic-calendar-events",
