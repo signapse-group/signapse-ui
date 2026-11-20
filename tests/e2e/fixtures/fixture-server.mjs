@@ -1366,12 +1366,38 @@ function graphView(state) {
 
   const event = state.events[0]
   const asset = state.assets[0]
+  const article = state.newsArticles[0]
   const currentWorkspace = state.workspaces.find(
     (item) => item.currentWorkspace
   )
 
   return {
     nodes: [
+      ...(scenario === "graph-article-node"
+        ? [
+            {
+              id: `news-article:${article.id}`,
+              kind: "news-article",
+              label: article.title,
+              secondaryLabel: article.sourceName,
+              metadata: {
+                slug: null,
+                canonicalKey: null,
+                symbol: null,
+                assetType: null,
+                sourceName: article.sourceName,
+                url: article.url,
+                occurredAt: null,
+                publishedAt: article.publishedAt,
+                status: null,
+                narrativeStatus: null,
+                confidence: null,
+                thesis: null,
+                themes: null,
+              },
+            },
+          ]
+        : []),
       {
         id: `event:${event.id}`,
         kind: "event",
@@ -1417,6 +1443,20 @@ function graphView(state) {
       },
     ],
     edges: [
+      ...(scenario === "graph-article-node"
+        ? [
+            {
+              id: `news-article-${article.id}-event-${event.id}`,
+              kind: "news-article-event",
+              sourceNodeId: `news-article:${article.id}`,
+              targetNodeId: `event:${event.id}`,
+              relationType: "PRIMARY",
+              weight: null,
+              confidence: article.linkedEvents[0]?.evidenceConfidence ?? null,
+              note: article.linkedEvents[0]?.evidenceNote ?? null,
+            },
+          ]
+        : []),
       {
         id: `event-${event.id}-asset-${asset.assetId}`,
         kind: "event-asset",
