@@ -2,14 +2,10 @@ import { Suspense, type ElementType, type ReactNode } from "react"
 import {
   ArrowLeft,
   Calendar,
-  ChevronDown,
-  Clock3,
   ExternalLink,
   FileText,
   GitBranch,
-  Hash,
   Layers3,
-  RefreshCcw,
   TrendingUp,
 } from "lucide-react"
 import { LocalizedLink as Link } from "@/components/localized-link"
@@ -676,43 +672,6 @@ async function FetchEventData({
               description={dictionary.events.noThemesDescription}
             />
           )}
-        </section>
-
-        <section className="rounded-lg border border-dashed bg-muted/10">
-          <details>
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-4 text-sm font-semibold text-muted-foreground">
-              <span className="inline-flex items-center gap-2 tracking-wide uppercase">
-                <Hash className="h-4 w-4" />
-                {dictionary.events.technicalInfo}
-              </span>
-              <ChevronDown className="h-4 w-4" />
-            </summary>
-            <div className="grid gap-4 border-t border-border p-4 sm:grid-cols-2 xl:grid-cols-3">
-              <DetailCard
-                title={dictionary.events.canonicalKey}
-                value={event.canonicalKey || dictionary.common.notAvailable}
-                icon={GitBranch}
-              />
-              <DetailCard
-                title={dictionary.events.createdAt}
-                valueNode={
-                  <AppTimeMetadata icon={Clock3}>
-                    {formatDateTime(event.createdDate, locale, dictionary)}
-                  </AppTimeMetadata>
-                }
-                icon={Clock3}
-              />
-              <DetailCard
-                title={dictionary.events.updatedAt}
-                valueNode={
-                  <AppTimeMetadata icon={RefreshCcw}>
-                    {formatDateTime(event.lastModifiedDate, locale, dictionary)}
-                  </AppTimeMetadata>
-                }
-                icon={RefreshCcw}
-              />
-            </div>
-          </details>
         </section>
       </div>
     </div>

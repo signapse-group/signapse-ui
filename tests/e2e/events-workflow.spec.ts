@@ -36,8 +36,7 @@ test.describe("Events workflow", () => {
       contentType: "image/png",
     })
     await waitForClientHandler(nextPage)
-    await nextPage.focus()
-    await nextPage.press("Enter")
+    await nextPage.click({ timeout: 10_000 })
     await expect(page).toHaveURL(/page=2/)
 
     await waitForClientHandler(search, "onChange")
@@ -202,6 +201,9 @@ test.describe("Events workflow", () => {
     await expect(
       page.getByText(viDictionary.events.detailNoDescription, { exact: true })
     ).toBeVisible()
+    await expect(
+      page.getByText(viDictionary.events.technicalInfo, { exact: true })
+    ).toHaveCount(0)
     const sourceLink = page.getByRole("link", {
       name: viDictionary.events.openOriginalLink,
       exact: true,
@@ -284,6 +286,73 @@ test.describe("Events workflow", () => {
     await expect(
       page.getByRole("link", {
         name: viDictionary.events.openOriginalLink,
+        exact: true,
+      })
+    ).toHaveCount(0)
+  })
+
+  test("does not show a previous Event during a delayed in-app detail navigation", async ({
+    page,
+    fixture,
+  }) => {
+    await fixture.setPermissions(["event:read"])
+    await fixture.setScenario("/events/62", "delayed", "GET")
+    await page.setViewportSize({ width: 1280, height: 800 })
+    await page.goto("/vi/events?size=20")
+
+    const firstEventLink = page.getByRole("link", {
+      name: "Central bank signals a slower easing path",
+      exact: true,
+    })
+    await waitForClientHandler(firstEventLink)
+    await firstEventLink.click()
+    await expect(page).toHaveURL(/\/vi\/events\/61$/)
+    await expect(
+      page.getByRole("heading", {
+        level: 1,
+        name: "Central bank signals a slower easing path",
+        exact: true,
+      })
+    ).toBeVisible()
+
+    const backToEvents = page.getByRole("link", {
+      name: viDictionary.common.back,
+      exact: true,
+    })
+    await waitForClientHandler(backToEvents)
+    await backToEvents.click()
+    await expect(page).toHaveURL(/\/vi\/events(?:\?size=20)?$/)
+
+    const destinationEventLink = page.getByRole("link", {
+      name: "Energy demand outlook revised higher",
+      exact: true,
+    })
+    await waitForClientHandler(destinationEventLink)
+    await destinationEventLink.click()
+    await expect(page).toHaveURL(/\/vi\/events\/62$/)
+    await expect
+      .poll(async () => (await fixture.state()).pendingRequests)
+      .toBeGreaterThan(0)
+    await expect(
+      page.getByRole("heading", {
+        level: 1,
+        name: "Central bank signals a slower easing path",
+        exact: true,
+      })
+    ).toHaveCount(0)
+
+    await fixture.setScenario("/events", "event-detail-denied", "GET")
+    await fixture.setScenario("/events/62", "success", "GET")
+
+    await expect(
+      page.getByRole("alert").filter({
+        hasText: viDictionary.events.detailDenied,
+      })
+    ).toContainText(viDictionary.events.detailDenied)
+    await expect(
+      page.getByRole("heading", {
+        level: 1,
+        name: "Central bank signals a slower easing path",
         exact: true,
       })
     ).toHaveCount(0)

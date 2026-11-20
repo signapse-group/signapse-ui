@@ -294,7 +294,7 @@ export function EventList({ eventPage, hasSearch }: EventListProps) {
         </AppListTable>
       )}
 
-      <AppPaginationControls page={eventPage} className="mt-4" />
+      <AppPaginationControls page={eventPage} className="mt-4 md:pr-48" />
     </div>
   )
 }
