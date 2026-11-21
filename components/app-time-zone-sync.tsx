@@ -14,7 +14,7 @@ const getServerTimeZone = () => null
 const getClientTimeZone = () =>
   typeof window === "undefined" ? null : getBrowserTimeZone()
 
-export function NewsArticleTimeZoneSync({
+export function AppTimeZoneSync({
   timeZone,
   timeZoneKnown,
   children,

@@ -1182,6 +1182,7 @@ export const vi = {
       UNKNOWN: "KHÔNG XÁC ĐỊNH",
     },
     noImpact: "CHƯA CÓ TÁC ĐỘNG",
+    timeZoneContext: "Múi giờ của bạn · {timeZone}",
     publishedAt: "Công bố {time}",
     syncedAt: "Đồng bộ {time}",
     actual: "Thực tế",

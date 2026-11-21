@@ -1188,6 +1188,7 @@ export const en: Dictionary = {
       UNKNOWN: "UNKNOWN",
     },
     noImpact: "NO IMPACT",
+    timeZoneContext: "Your time zone · {timeZone}",
     unscheduledGroup: "Unscheduled",
     scheduledTimeUnavailable: "Time unavailable",
     currencyRegionUnavailable: "Currency unavailable",

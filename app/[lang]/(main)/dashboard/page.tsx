@@ -64,7 +64,7 @@ import { TradingSnapshot, TradingSnapshotSkeleton } from "./trading-snapshot"
 import { AssetsInFocus, AssetsInFocusSkeleton } from "./assets-in-focus"
 import { EventTimeline, EventTimelineSkeleton } from "./event-timeline"
 import { LatestNews, LatestNewsSkeleton } from "./latest-news"
-import { NewsArticleTimeZoneSync } from "../news-articles/news-article-time-zone-sync"
+import { AppTimeZoneSync } from "@/components/app-time-zone-sync"
 import { MarketNarratives, MarketNarrativesSkeleton } from "./market-narratives"
 import { DashboardQuickDetailProvider } from "./dashboard-quick-detail"
 import { WorkspaceOverviewActions } from "../workspace-overview-actions"
@@ -287,7 +287,7 @@ async function loadWorkspaceOverview() {
               />
             </div>
             <div className="min-w-0 min-[1440px]:col-span-4">
-              <NewsArticleTimeZoneSync
+              <AppTimeZoneSync
                 timeZone={requestTimeZone.timeZone}
                 timeZoneKnown={requestTimeZone.known}
                 fallback={<LatestNewsSkeleton />}
@@ -300,7 +300,7 @@ async function loadWorkspaceOverview() {
                   locale={locale}
                   timeZone={requestTimeZone.timeZone}
                 />
-              </NewsArticleTimeZoneSync>
+              </AppTimeZoneSync>
             </div>
           </div>
         </DashboardQuickDetailProvider>
