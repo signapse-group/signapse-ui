@@ -1156,6 +1156,7 @@ export const vi = {
   },
   economicCalendar: {
     readDenied: "Bạn không có quyền truy cập lịch kinh tế.",
+    loadingAnnouncement: "Đang tải lịch kinh tế.",
     detailDenied: "Bạn không có quyền xem chi tiết lịch kinh tế.",
     backToList: "Quay lại lịch kinh tế",
     sortLabel: "Sắp xếp lịch kinh tế",

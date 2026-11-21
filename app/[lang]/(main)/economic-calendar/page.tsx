@@ -55,7 +55,14 @@ export default async function EconomicCalendarPage({
 
   return (
     <Suspense
-      fallback={<EconomicCalendarListSkeleton dictionary={dictionary} />}
+      fallback={
+        <>
+          <span className="sr-only" role="status">
+            {dictionary.economicCalendar.loadingAnnouncement}
+          </span>
+          <EconomicCalendarListSkeleton dictionary={dictionary} />
+        </>
+      }
     >
       <EconomicCalendarListContent
         sort={sort}
@@ -99,7 +106,12 @@ function EconomicCalendarListSkeleton({
   dictionary: Dictionary
 }) {
   return (
-    <div className="flex flex-col">
+    <div
+      aria-busy="true"
+      aria-label={dictionary.navigation.economicCalendar}
+      className="flex flex-col"
+      role="region"
+    >
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex w-full flex-1 flex-col gap-4 sm:w-auto sm:flex-row sm:items-center">
           <Skeleton className="h-9 w-full sm:w-[180px]" />

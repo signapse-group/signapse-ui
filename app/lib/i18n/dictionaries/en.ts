@@ -1161,6 +1161,7 @@ export const en: Dictionary = {
   },
   economicCalendar: {
     readDenied: "You do not have permission to access the economic calendar.",
+    loadingAnnouncement: "Loading economic calendar.",
     detailDenied:
       "You do not have permission to view economic calendar details.",
     backToList: "Back to economic calendar",

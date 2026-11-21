@@ -620,9 +620,11 @@ export function EconomicCalendarList({
                           colSpan={8}
                           className="px-3 py-3 text-sm text-muted-foreground"
                         >
-                          {hasActiveFilters
-                            ? dictionary.economicCalendar.emptyDescription
-                            : dictionary.economicCalendar.emptyDay}
+                          <div role="status">
+                            {hasActiveFilters
+                              ? dictionary.economicCalendar.emptyDescription
+                              : dictionary.economicCalendar.emptyDay}
+                          </div>
                         </TableCell>
                       </TableRow>
                     </>

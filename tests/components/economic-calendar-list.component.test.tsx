@@ -139,6 +139,9 @@ describe("EconomicCalendarList", () => {
 
   it("shows localized filtered-empty and unfiltered-day messages", () => {
     const view = renderList([], "title%5BcontainsIgnoreCase%5D=inflation")
+    expect(screen.getByRole("status")).toHaveTextContent(
+      viDictionary.economicCalendar.emptyDescription
+    )
     expect(
       screen.getByText(viDictionary.economicCalendar.emptyDescription)
     ).toBeVisible()
@@ -152,6 +155,9 @@ describe("EconomicCalendarList", () => {
           sort="scheduledAt_asc"
         />
       </LocalizationProvider>
+    )
+    expect(screen.getByRole("status")).toHaveTextContent(
+      viDictionary.economicCalendar.emptyDay
     )
     expect(
       screen.getByText(viDictionary.economicCalendar.emptyDay)

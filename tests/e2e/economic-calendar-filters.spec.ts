@@ -230,6 +230,10 @@ test("matches loading filter skeletons to the toolbar at each breakpoint", async
   await expect
     .poll(async () => (await fixture.state()).pendingRequests)
     .toBeGreaterThan(0)
+  await expect(page.getByRole("status")).toHaveText("Đang tải lịch kinh tế.")
+  await expect(
+    page.getByRole("region", { name: "Lịch kinh tế" })
+  ).toHaveAttribute("aria-busy", "true")
   await expect
     .poll(() => getToolbarSkeletonVisibility(page))
     .toEqual([true, false, false, true])
