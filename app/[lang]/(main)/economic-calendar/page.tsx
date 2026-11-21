@@ -1,12 +1,12 @@
 import { Suspense } from "react"
 
-import { getEconomicCalendarEntries } from "@/app/api/economic-calendar/action"
+import { getAllEconomicCalendarEntries } from "@/app/api/economic-calendar/action"
 import type { Dictionary } from "@/app/lib/i18n/dictionary-types"
 import { getServerDictionary } from "@/app/lib/i18n/server"
 import { ECONOMIC_CALENDAR_READ_PERMISSIONS } from "@/app/lib/economic-calendar/permissions"
 import { hasAnyPermission } from "@/app/lib/permissions"
 import { getCurrentPermissions } from "@/app/lib/permissions-server"
-import { buildFilterQuery, buildSortQuery } from "@/app/lib/utils"
+import { buildSortQuery } from "@/app/lib/utils"
 import { AccessDenied } from "@/components/access-denied"
 import {
   AppListTable,
@@ -24,10 +24,8 @@ import {
 
 import { EconomicCalendarList } from "./economic-calendar-list"
 import {
-  ECONOMIC_CALENDAR_DAY_WINDOW_SIZE,
   type EconomicCalendarScheduledSort,
-  buildScheduledAtDayFilter,
-  combineEconomicCalendarFilters,
+  buildEconomicCalendarFilter,
   getEconomicCalendarDateState,
   normalizeEconomicCalendarSort,
 } from "./economic-calendar-date"
@@ -77,27 +75,18 @@ async function EconomicCalendarListContent({
   searchParams: { [key: string]: string | string[] | undefined }
   dateState: ReturnType<typeof getEconomicCalendarDateState>
 }) {
-  const filterParams = { ...searchParams }
-  delete filterParams.date
-  delete filterParams.page
-  delete filterParams.size
-  delete filterParams.sort
-  delete filterParams.week
-  const searchFilter = buildFilterQuery(filterParams)
-  const filter = combineEconomicCalendarFilters(
-    buildScheduledAtDayFilter(dateState.selectedDate),
-    searchFilter
+  const filter = buildEconomicCalendarFilter(
+    dateState.selectedDate,
+    searchParams
   )
-  const economicCalendarPage = await getEconomicCalendarEntries({
-    page: 0,
-    size: ECONOMIC_CALENDAR_DAY_WINDOW_SIZE,
+  const economicCalendarEntries = await getAllEconomicCalendarEntries({
     filter,
     sort: buildSortQuery(sort),
   })
 
   return (
     <EconomicCalendarList
-      economicCalendarPage={economicCalendarPage}
+      economicCalendarEntries={economicCalendarEntries}
       sort={sort}
       dateState={dateState}
     />
@@ -117,6 +106,8 @@ function EconomicCalendarListSkeleton({
           <Skeleton className="h-9 w-full sm:max-w-sm" />
         </div>
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
+          <Skeleton className="h-9 w-full sm:w-[140px]" />
+          <Skeleton className="h-9 w-full sm:w-[140px]" />
           <Skeleton className="h-9 w-full sm:w-[200px]" />
         </div>
       </div>

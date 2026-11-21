@@ -3572,6 +3572,68 @@ Which asset did you mean? The available data is limited. Add TSLA to your watchl
     return { ...article, content: null }
   }
 
+  if (method === "GET" && pathname === "/economic-calendar") {
+    if (!hasFixturePermission(state, "economic-calendar:read")) {
+      return {
+        __status: 403,
+        payload: errorPayload(
+          "Economic calendar permission denied",
+          "FORBIDDEN"
+        ),
+      }
+    }
+
+    const entries = [
+      {
+        id: 8301,
+        title: "Fixture CPI release",
+        currencyCode: "USD",
+        type: "CPI",
+        impact: "HIGH",
+        forecastValue: null,
+        previousValue: "0.2%",
+        actualValue: "0",
+        description: null,
+        revision: null,
+        newsUrl: null,
+        actualBetterWorse: null,
+        revisionBetterWorse: null,
+        status: "AVAILABLE",
+        scheduledAt: "2026-11-20T17:30:00.000Z",
+        syncedAt: null,
+        createdDate: "2026-11-20T16:00:00.000Z",
+        lastModifiedDate: null,
+      },
+      {
+        id: 8302,
+        title: "Fixture employment report",
+        currencyCode: "JPY",
+        type: "EMPLOYMENT",
+        impact: "LOW",
+        forecastValue: "3.1%",
+        previousValue: null,
+        actualValue: null,
+        description: null,
+        revision: null,
+        newsUrl: null,
+        actualBetterWorse: null,
+        revisionBetterWorse: null,
+        status: "PENDING",
+        scheduledAt: "2026-11-21T16:30:00.000Z",
+        syncedAt: null,
+        createdDate: "2026-11-20T16:00:00.000Z",
+        lastModifiedDate: null,
+      },
+    ]
+
+    return page(
+      entries,
+      Number(url.searchParams.get("page") ?? 0),
+      Number(url.searchParams.get("size") ?? 20),
+      entries.length
+    )
+  }
+
   const economicCalendarDetailMatch = pathname.match(
     /^\/economic-calendar\/(\d+)$/
   )

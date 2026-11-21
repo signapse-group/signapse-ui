@@ -83,6 +83,7 @@ export const fixtureContracts = [
   { method: "PATCH", path: "/telegram/market-analysis-schedules/{id}/disable", mapping: "disableTelegramMarketAnalysisSchedule", status: 200 },
   { method: "DELETE", path: "/telegram/market-analysis-schedules/{id}", mapping: "deleteTelegramMarketAnalysisSchedule", status: 204 },
   { method: "GET", path: "/languages", mapping: "getLanguages", status: 200 },
+  { method: "GET", path: "/economic-calendar", mapping: "getEconomicCalendarEntries", status: 200 },
   { method: "GET", path: "/economic-calendar/{id}", mapping: "getEconomicCalendarEntry", status: 200 },
   { method: "GET", path: "/market-charts/candles", mapping: "getMarketChartCandles", status: 200 },
   { method: "GET", path: "/market-charts/annotations", mapping: "getMarketChartAnnotations", status: 200 },

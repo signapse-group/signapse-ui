@@ -1,17 +1,27 @@
+import { ECONOMIC_CALENDAR_IMPACT_LEVELS } from "@/app/lib/economic-calendar/definitions"
+import { buildFilterQuery } from "@/app/lib/utils"
+
 const UTC7_OFFSET_MINUTES = 7 * 60
 const UTC7_OFFSET_MS = UTC7_OFFSET_MINUTES * 60 * 1000
 const UTC7_OFFSET_LABEL = "+07:00"
 const DAY_MS = 24 * 60 * 60 * 1000
 
-export const ECONOMIC_CALENDAR_DAY_WINDOW_SIZE = 500
 export const ECONOMIC_CALENDAR_DEFAULT_SORT = "scheduledAt_asc"
 export const ECONOMIC_CALENDAR_SCHEDULED_SORTS = [
   ECONOMIC_CALENDAR_DEFAULT_SORT,
   "scheduledAt_desc",
 ] as const
+export const ECONOMIC_CALENDAR_FILTER_PARAMS = {
+  title: "title[containsIgnoreCase]",
+  currencyCode: "currencyCode[eq]",
+  impact: "impact[eq]",
+} as const
 
 export type EconomicCalendarScheduledSort =
   (typeof ECONOMIC_CALENDAR_SCHEDULED_SORTS)[number]
+export type EconomicCalendarControlFilterParam =
+  | typeof ECONOMIC_CALENDAR_FILTER_PARAMS.currencyCode
+  | typeof ECONOMIC_CALENDAR_FILTER_PARAMS.impact
 
 export interface EconomicCalendarNavigationDay {
   date: string
@@ -179,6 +189,61 @@ export function combineEconomicCalendarFilters(
   }
 
   return `${scheduledAtFilter} and ${searchFilter}`
+}
+
+function firstParamValue(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value
+}
+
+export function buildEconomicCalendarFilter(
+  date: string,
+  searchParams: Record<string, string | string[] | undefined>
+) {
+  const impactValue = firstParamValue(
+    searchParams[ECONOMIC_CALENDAR_FILTER_PARAMS.impact]
+  )
+    ?.trim()
+    .toUpperCase()
+  const impact = ECONOMIC_CALENDAR_IMPACT_LEVELS.find(
+    (level) => level === impactValue
+  )
+  const searchFilter = buildFilterQuery({
+    [ECONOMIC_CALENDAR_FILTER_PARAMS.title]: firstParamValue(
+      searchParams[ECONOMIC_CALENDAR_FILTER_PARAMS.title]
+    ),
+    [ECONOMIC_CALENDAR_FILTER_PARAMS.currencyCode]: firstParamValue(
+      searchParams[ECONOMIC_CALENDAR_FILTER_PARAMS.currencyCode]
+    ),
+    [ECONOMIC_CALENDAR_FILTER_PARAMS.impact]: impact,
+  })
+
+  return combineEconomicCalendarFilters(
+    buildScheduledAtDayFilter(date),
+    searchFilter
+  )
+}
+
+export function setEconomicCalendarFilter(
+  searchParams: URLSearchParams,
+  key: EconomicCalendarControlFilterParam,
+  value: string
+) {
+  const params = new URLSearchParams(searchParams)
+
+  if (value) {
+    params.set(key, value)
+  } else {
+    params.delete(key)
+  }
+
+  return params
+}
+
+export function clearEconomicCalendarFilters(searchParams: URLSearchParams) {
+  const params = new URLSearchParams(searchParams)
+  params.delete(ECONOMIC_CALENDAR_FILTER_PARAMS.currencyCode)
+  params.delete(ECONOMIC_CALENDAR_FILTER_PARAMS.impact)
+  return params
 }
 
 export function getEconomicCalendarDateState(
