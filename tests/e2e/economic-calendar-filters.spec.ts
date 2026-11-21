@@ -44,6 +44,11 @@ test("renders and applies economic calendar filters across responsive layouts", 
   await expect(
     page.getByText("Fixture CPI release", { exact: true })
   ).toBeVisible()
+  const sidebar = page.locator('[data-slot="sidebar"]')
+  if ((await sidebar.getAttribute("data-state")) === "collapsed") {
+    await page.locator('[data-sidebar="trigger"]').click()
+  }
+  await expect(sidebar).toHaveAttribute("data-state", "expanded")
   await expect(page.getByRole("combobox", { name: "Tiền tệ" })).toBeVisible()
   await expect(
     page.getByRole("combobox", { name: "Mức độ tác động" })
@@ -121,6 +126,51 @@ test("renders and applies economic calendar filters across responsive layouts", 
       () => document.documentElement.scrollWidth <= window.innerWidth
     )
   ).toBe(true)
+})
+
+test("moves focus to visible filters when an open mobile panel crosses 768px", async ({
+  page,
+  fixture,
+}) => {
+  await fixture.setPermissions(["economic-calendar:read"])
+  await page.setViewportSize({ width: 767, height: 844 })
+  await page.goto(
+    "/vi/economic-calendar?date=2026-11-21&title%5BcontainsIgnoreCase%5D=fixture&sort=scheduledAt_desc&currencyCode%5Beq%5D=USD&impact%5Beq%5D=HIGH"
+  )
+
+  await expect(
+    page.getByText("Fixture CPI release", { exact: true })
+  ).toBeVisible()
+
+  const filtersTrigger = page.getByRole("button", { name: "Bộ lọc (2)" })
+  const currencyFilter = page.getByRole("combobox", { name: "Tiền tệ" })
+  const impactFilter = page.getByRole("combobox", {
+    name: "Mức độ tác động",
+  })
+
+  await filtersTrigger.click()
+  await expect(filtersTrigger).toHaveAttribute("aria-expanded", "true")
+  await expect(filtersTrigger).toBeFocused()
+  await expect(currencyFilter).toContainText("USD")
+  await expect(impactFilter).toContainText("CAO")
+
+  await page.setViewportSize({ width: 768, height: 844 })
+
+  await expect(filtersTrigger).toBeHidden()
+  await expect(currencyFilter).toBeVisible()
+  await expect(impactFilter).toBeVisible()
+  await expect(currencyFilter).toBeFocused()
+  await expect(currencyFilter).toContainText("USD")
+  await expect(impactFilter).toContainText("CAO")
+
+  const currentUrl = new URL(page.url())
+  expect(currentUrl.searchParams.get("date")).toBe("2026-11-21")
+  expect(currentUrl.searchParams.get("title[containsIgnoreCase]")).toBe(
+    "fixture"
+  )
+  expect(currentUrl.searchParams.get("sort")).toBe("scheduledAt_desc")
+  expect(currentUrl.searchParams.get("currencyCode[eq]")).toBe("USD")
+  expect(currentUrl.searchParams.get("impact[eq]")).toBe("HIGH")
 })
 
 test("matches loading filter skeletons to the toolbar at each breakpoint", async ({

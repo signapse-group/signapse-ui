@@ -2,7 +2,7 @@
 
 import { ChevronDown, Filter, X } from "lucide-react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { useMemo, useRef, useState, useTransition } from "react"
+import { useEffect, useMemo, useRef, useState, useTransition } from "react"
 
 import { ECONOMIC_CALENDAR_IMPACT_LEVELS } from "@/app/lib/economic-calendar/definitions"
 import { useLocalization } from "@/app/lib/i18n/provider"
@@ -39,6 +39,10 @@ export function EconomicCalendarFilters({
   const [isPending, startTransition] = useTransition()
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
   const filtersTriggerRef = useRef<HTMLButtonElement>(null)
+  const mobileCloseButtonRef = useRef<HTMLButtonElement>(null)
+  const mobileClearFiltersRef = useRef<HTMLButtonElement>(null)
+  const currencyFilterTriggerRef = useRef<HTMLButtonElement>(null)
+  const impactFilterTriggerRef = useRef<HTMLButtonElement>(null)
 
   const currencyCode =
     searchParams.get(ECONOMIC_CALENDAR_FILTER_PARAMS.currencyCode) ?? ""
@@ -82,6 +86,38 @@ export function EconomicCalendarFilters({
     setMobileFiltersOpen(false)
     filtersTriggerRef.current?.focus()
   }
+
+  useEffect(() => {
+    if (typeof window.matchMedia !== "function") return
+
+    const layoutBreakpoint = window.matchMedia("(min-width: 768px)")
+    const moveFocusToVisibleFilter = (event: MediaQueryListEvent) => {
+      const activeElement = document.activeElement
+
+      if (
+        event.matches &&
+        (activeElement === filtersTriggerRef.current ||
+          activeElement === mobileCloseButtonRef.current ||
+          activeElement === mobileClearFiltersRef.current)
+      ) {
+        currencyFilterTriggerRef.current?.focus()
+        return
+      }
+
+      if (
+        !event.matches &&
+        !mobileFiltersOpen &&
+        (activeElement === currencyFilterTriggerRef.current ||
+          activeElement === impactFilterTriggerRef.current)
+      ) {
+        filtersTriggerRef.current?.focus()
+      }
+    }
+
+    layoutBreakpoint.addEventListener("change", moveFocusToVisibleFilter)
+    return () =>
+      layoutBreakpoint.removeEventListener("change", moveFocusToVisibleFilter)
+  }, [mobileFiltersOpen])
 
   const selectClasses =
     "min-h-11 w-full min-[768px]:min-h-9 min-[768px]:w-[140px]"
@@ -132,6 +168,7 @@ export function EconomicCalendarFilters({
             {dictionary.economicCalendar.filtersTitle}
           </h2>
           <Button
+            ref={mobileCloseButtonRef}
             type="button"
             variant="ghost"
             className="size-11 min-[768px]:size-8"
@@ -171,6 +208,7 @@ export function EconomicCalendarFilters({
               disabled={isPending}
             >
               <SelectTrigger
+                ref={currencyFilterTriggerRef}
                 className={selectClasses}
                 aria-labelledby="economic-calendar-currency-filter-label"
                 aria-busy={isPending}
@@ -224,6 +262,7 @@ export function EconomicCalendarFilters({
               disabled={isPending}
             >
               <SelectTrigger
+                ref={impactFilterTriggerRef}
                 className={selectClasses}
                 aria-labelledby="economic-calendar-impact-filter-label"
                 aria-busy={isPending}
@@ -249,6 +288,7 @@ export function EconomicCalendarFilters({
         </div>
 
         <Button
+          ref={mobileClearFiltersRef}
           type="button"
           variant="secondary"
           className="min-h-11 w-fit min-[768px]:hidden"
