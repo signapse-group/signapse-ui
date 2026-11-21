@@ -16,6 +16,12 @@ export async function getRoles(): Promise<RoleResponse[]> {
   return fetchAuthenticated<RoleResponse[]>("/roles")
 }
 
+export async function getRoleByKey(roleKey: string): Promise<RoleResponse> {
+  return fetchAuthenticated<RoleResponse>(
+    `/roles/${encodeURIComponent(roleKey)}`
+  )
+}
+
 export async function getPermissions(): Promise<PermissionResponse[]> {
   return fetchAuthenticated<PermissionResponse[]>("/permissions")
 }

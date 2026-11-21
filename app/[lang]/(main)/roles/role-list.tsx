@@ -1,10 +1,8 @@
 "use client"
 
-import { Shield, SquarePen } from "lucide-react"
-import { useState } from "react"
-
 import { useLocalization } from "@/app/lib/i18n/provider"
-import { PermissionResponse, RoleResponse } from "@/app/lib/roles/definitions"
+import type { RoleResponse } from "@/app/lib/roles/definitions"
+import { LocalizedLink } from "@/components/localized-link"
 import {
   AppListTable,
   AppListTableEmptyState,
@@ -12,7 +10,6 @@ import {
   AppListTableHeaderRow,
 } from "@/components/app-list-table"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import {
   EmptyDescription,
   EmptyHeader,
@@ -22,113 +19,90 @@ import {
 import {
   Table,
   TableBody,
+  TableCaption,
   TableCell,
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { Shield } from "lucide-react"
 
-import { RolePermissionDialog } from "./role-permission-dialog"
+import { RoleCreateLink } from "./role-create-link"
 
 interface RoleListPageProps {
   roles: RoleResponse[]
-  permissions: PermissionResponse[]
+  canCreate: boolean
 }
 
-export function RoleListPage({ roles, permissions }: RoleListPageProps) {
-  const [selectedRole, setSelectedRole] = useState<RoleResponse | null>(null)
-  const [selectedPermissionKeys, setSelectedPermissionKeys] = useState<
-    string[]
-  >([])
-  const { dictionary, formatMessage, formatNumber } = useLocalization()
+export function RoleListPage({ roles, canCreate }: RoleListPageProps) {
+  const { dictionary, formatNumber } = useLocalization()
   const t = dictionary.roles
-  const formatCount = (value: number) => formatNumber(value)
-
-  const handleEditRole = (role: RoleResponse) => {
-    setSelectedRole(role)
-    setSelectedPermissionKeys(
-      (role.permissions ?? []).map((permission) => permission.key)
-    )
-  }
 
   return (
-    <>
-      <AppListTable className="mt-0">
-        <Table>
+    <div className="min-w-0">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-semibold tracking-tight">{t.pageTitle}</h1>
+        {canCreate ? <RoleCreateLink label={t.createAction} /> : null}
+      </div>
+
+      <AppListTable className="mt-4">
+        <Table className="table-fixed">
+          <TableCaption className="sr-only">{t.pageTitle}</TableCaption>
           <TableHeader>
             <AppListTableHeaderRow>
-              <AppListTableHead className="w-56">
+              <AppListTableHead
+                scope="col"
+                className="w-[44%] whitespace-normal sm:w-[55%]"
+              >
                 {t.roleColumn}
               </AppListTableHead>
-              <AppListTableHead className="w-48">
+              <AppListTableHead
+                scope="col"
+                className="w-[30%] whitespace-normal sm:w-[25%]"
+              >
                 {t.keyColumn}
               </AppListTableHead>
-              <AppListTableHead className="w-[40%]">
-                {t.descriptionColumn}
-              </AppListTableHead>
-              <AppListTableHead className="w-28 text-center">
+              <AppListTableHead
+                scope="col"
+                className="w-[26%] text-right whitespace-normal sm:w-[20%]"
+              >
                 {t.permissionsColumn}
-              </AppListTableHead>
-              <AppListTableHead className="w-44 text-right">
-                {t.actionsColumn}
               </AppListTableHead>
             </AppListTableHeaderRow>
           </TableHeader>
           <TableBody>
             {roles.length > 0 ? (
               roles.map((role) => (
-                <TableRow
-                  key={role.id}
-                  className="border-border transition-colors hover:bg-muted/40"
-                >
-                  <TableCell className="w-56 max-w-[14rem] align-top whitespace-normal">
-                    <div className="flex min-w-0 flex-col gap-1">
-                      <span className="line-clamp-1 font-medium break-words text-foreground">
-                        {role.name}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        ID: {role.id}
-                      </span>
-                    </div>
+                <TableRow key={role.id} className="border-border">
+                  <TableCell className="max-w-0 whitespace-normal">
+                    <LocalizedLink
+                      href={`/roles/${encodeURIComponent(role.key)}`}
+                      className="rounded-sm font-medium text-foreground underline decoration-foreground/60 underline-offset-4 hover:text-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none"
+                    >
+                      <span className="break-words">{role.name}</span>
+                    </LocalizedLink>
                   </TableCell>
-                  <TableCell className="w-48 max-w-[12rem]">
-                    <Badge variant="secondary" className="max-w-full font-mono">
-                      <span className="truncate">{role.key}</span>
+                  <TableCell className="max-w-0 whitespace-normal">
+                    <Badge
+                      variant="secondary"
+                      className="h-auto min-h-5 max-w-full font-mono text-xs break-all whitespace-normal"
+                    >
+                      {role.key}
                     </Badge>
                   </TableCell>
-                  <TableCell className="w-[40%] align-top text-sm whitespace-normal text-muted-foreground">
-                    <span className="line-clamp-2 break-words">
-                      {role.description || t.noDescription}
-                    </span>
-                  </TableCell>
-                  <TableCell className="w-28 text-center">
-                    <Badge variant="outline">
-                      {formatMessage(t.permissionCount, {
-                        count: formatCount(role.permissions.length),
-                      })}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="w-44">
-                    <div className="flex justify-end">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEditRole(role)}
-                      >
-                        <SquarePen data-icon="inline-start" />
-                        {t.updatePermissions}
-                      </Button>
-                    </div>
+                  <TableCell className="text-right tabular-nums">
+                    {formatNumber(role.permissions.length)}
                   </TableCell>
                 </TableRow>
               ))
             ) : (
-              <AppListTableEmptyState colSpan={5}>
+              <AppListTableEmptyState colSpan={3}>
                 <EmptyHeader>
                   <EmptyMedia variant="icon">
                     <Shield />
                   </EmptyMedia>
-                  <EmptyTitle>{t.emptyTitle}</EmptyTitle>
+                  <EmptyTitle role="heading" aria-level={2}>
+                    {t.emptyTitle}
+                  </EmptyTitle>
                   <EmptyDescription>{t.emptyDescription}</EmptyDescription>
                 </EmptyHeader>
               </AppListTableEmptyState>
@@ -136,20 +110,6 @@ export function RoleListPage({ roles, permissions }: RoleListPageProps) {
           </TableBody>
         </Table>
       </AppListTable>
-
-      <RolePermissionDialog
-        role={selectedRole}
-        permissions={permissions}
-        selectedPermissionKeys={selectedPermissionKeys}
-        onSelectedPermissionKeysChange={setSelectedPermissionKeys}
-        open={selectedRole !== null}
-        onOpenChange={(open) => {
-          if (!open) {
-            setSelectedRole(null)
-            setSelectedPermissionKeys([])
-          }
-        }}
-      />
-    </>
+    </div>
   )
 }

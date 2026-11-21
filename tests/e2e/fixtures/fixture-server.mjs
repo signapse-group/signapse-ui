@@ -1937,6 +1937,41 @@ function hasFixturePermission(state, permission) {
   )
 }
 
+function roleReadFixtures(locale) {
+  const isVietnamese = locale?.startsWith("vi")
+  return [
+    {
+      id: 901,
+      key: "CONTENT_REVIEWER",
+      name: isVietnamese ? "Người duyệt nội dung" : "Content Reviewer",
+      description: isVietnamese
+        ? "Có thể duyệt nội dung."
+        : "Can review content.",
+      permissions: [
+        {
+          id: 1,
+          key: "news-article:read",
+          name: isVietnamese ? "Đọc bài viết tin tức" : "Read news articles",
+          description: null,
+        },
+        {
+          id: 2,
+          key: "event:read",
+          name: isVietnamese ? "Đọc sự kiện" : "Read events",
+          description: null,
+        },
+      ],
+    },
+    {
+      id: 902,
+      key: "EMPTY_READER",
+      name: isVietnamese ? "Người đọc trống" : "Empty reader",
+      description: null,
+      permissions: [],
+    },
+  ]
+}
+
 function aiTaskConfigurationRouteResult(state, method, pathname, body, url) {
   if (method === "GET" && pathname === "/ai-task-configurations") {
     if (!hasFixturePermission(state, "ai-task-configuration:read")) {
@@ -2647,6 +2682,49 @@ function responseForRoute(
 
   const smtpResult = smtpConfigurationRouteResult(state, method, pathname, body)
   if (smtpResult) return smtpResult
+
+  const roleDetailMatch = pathname.match(/^\/roles\/([^/]+)$/)
+  if (method === "GET" && (pathname === "/roles" || roleDetailMatch !== null)) {
+    const scenario = getScenario(state, method, pathname)
+    if (
+      scenario === "permission-denied" ||
+      !hasFixturePermission(state, "role:read")
+    ) {
+      return {
+        __status: 403,
+        payload: errorPayload("Role read permission denied", "FORBIDDEN"),
+      }
+    }
+    if (scenario === "outage") {
+      return {
+        __status: 503,
+        payload: errorPayload(
+          "Roles are temporarily unavailable",
+          "UNAVAILABLE"
+        ),
+      }
+    }
+    if (pathname === "/roles") {
+      return scenario === "empty" ? [] : roleReadFixtures(locale)
+    }
+
+    let roleKey = roleDetailMatch?.[1] ?? ""
+    try {
+      roleKey = decodeURIComponent(roleKey)
+    } catch {
+      return {
+        __status: 404,
+        payload: errorPayload("Role not found", "NOT_FOUND"),
+      }
+    }
+    const role = roleReadFixtures(locale).find((item) => item.key === roleKey)
+    return (
+      role ?? {
+        __status: 404,
+        payload: errorPayload("Role not found", "NOT_FOUND"),
+      }
+    )
+  }
 
   if (method === "GET" && pathname === "/me") {
     const currentWorkspace = state.workspaces.find(
