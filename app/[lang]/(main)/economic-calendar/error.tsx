@@ -13,7 +13,6 @@ import {
 } from "@/components/ui/empty"
 
 export default function Error({
-  error,
   reset,
 }: {
   error: Error & { digest?: string }
@@ -32,8 +31,8 @@ export default function Error({
             <AlertCircle />
           </EmptyMedia>
           <EmptyTitle>{dictionary.economicCalendar.errorTitle}</EmptyTitle>
-          <EmptyDescription>
-            {error.message || dictionary.economicCalendar.errorDescription}
+          <EmptyDescription role="alert">
+            {dictionary.economicCalendar.errorDescription}
           </EmptyDescription>
         </EmptyHeader>
         <div className="mt-4 flex justify-center">
