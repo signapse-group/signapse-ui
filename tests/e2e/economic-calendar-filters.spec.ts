@@ -119,6 +119,47 @@ test("renders and applies economic calendar filters across responsive layouts", 
     "economic-calendar-mobile-filters-390x844.png"
   )
 
+  await page.setViewportSize({ width: 360, height: 844 })
+  await expect(
+    page.getByRole("heading", { name: "Bộ lọc", exact: true })
+  ).toBeVisible()
+  await expect(page.getByRole("combobox", { name: "Tiền tệ" })).toBeVisible()
+  await expect(
+    page.getByRole("combobox", { name: "Mức độ tác động" })
+  ).toBeVisible()
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth
+    )
+  ).toBe(true)
+  await captureRender(
+    page,
+    testInfo,
+    "economic-calendar-mobile-filters-360x844.png"
+  )
+
+  // 760×512 CSS px is the effective viewport at 200% zoom on the 1520×1024 frame.
+  await page.setViewportSize({ width: 760, height: 512 })
+  await expect(
+    page.getByRole("heading", { name: "Bộ lọc", exact: true })
+  ).toBeVisible()
+  await expect(page.getByRole("combobox", { name: "Tiền tệ" })).toContainText(
+    "USD"
+  )
+  await expect(
+    page.getByRole("combobox", { name: "Mức độ tác động" })
+  ).toContainText("CAO")
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth
+    )
+  ).toBe(true)
+  await captureRender(
+    page,
+    testInfo,
+    "economic-calendar-filters-zoom-200-effective-760x512.png"
+  )
+
   await page.getByRole("button", { name: "Đóng bộ lọc" }).click()
   await expect(page.getByRole("button", { name: "Bộ lọc (2)" })).toBeFocused()
   expect(

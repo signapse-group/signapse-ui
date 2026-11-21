@@ -31,7 +31,7 @@ export default function Error({
             <AlertCircle />
           </EmptyMedia>
           <EmptyTitle>{dictionary.economicCalendar.errorTitle}</EmptyTitle>
-          <EmptyDescription>
+          <EmptyDescription role="alert">
             {dictionary.economicCalendar.errorDescription}
           </EmptyDescription>
         </EmptyHeader>

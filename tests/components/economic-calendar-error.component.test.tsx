@@ -20,9 +20,9 @@ describe("EconomicCalendarError", () => {
       </LocalizationProvider>
     )
 
-    expect(
-      screen.getByText(viDictionary.economicCalendar.errorDescription)
-    ).toBeVisible()
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      viDictionary.economicCalendar.errorDescription
+    )
     expect(
       screen.queryByText("internal backend detail")
     ).not.toBeInTheDocument()
