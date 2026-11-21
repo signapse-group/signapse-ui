@@ -50,6 +50,11 @@ type FixtureController = {
       | "delayed"
       | "delayed-old-workspace"
       | "delayed-outage"
+      | "drop-after-accepted"
+      | "assistant-failed"
+      | "conversation-without-id"
+      | "completed-without-content"
+      | "quota-exceeded"
       | "daily-history-retry"
       | "workspace-not-selected"
       | "outage"
@@ -71,6 +76,23 @@ type FixtureController = {
       | "calendar-upcoming-window"
       | "calendar-awaiting"
       | "calendar-available"
+      | "event-links"
+      | "event-quick-detail-long"
+      | "event-quick-detail-no-links"
+      | "event-empty-no-match"
+      | "event-empty-failed"
+      | "event-market-reactions"
+      | "event-market-reactions-empty"
+      | "event-market-reactions-missing"
+      | "event-market-reactions-null-fields"
+      | "event-list-empty"
+      | "event-list-denied"
+      | "event-list-error"
+      | "event-detail-error"
+      | "event-detail-denied"
+      | "event-detail-not-found"
+      | "event-partial"
+      | "event-partial-no-source"
       | "annotations-many"
       | "positive-out-of-range"
       | "authorized-page-two-size-twenty-101"
@@ -81,6 +103,7 @@ type FixtureController = {
       | "chart-later-page"
       | "overview-expanded"
       | "article-reader-long-content"
+      | "graph-article-node"
       | "scope-mismatch"
       | "calendar-historical",
     method?: string
@@ -100,6 +123,9 @@ type FixtureController = {
       description: string | null
       active: boolean
     }>
+    marketConversations?: Array<Record<string, unknown>>
+    marketConversationTurns?: Array<Record<string, unknown>>
+    marketConversationAttempts?: Array<Record<string, unknown>>
   }>
   setFeedbackScenario(
     scenario:

@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest"
 
 import type {
+  IdentifiedMarketConversationSummaryResponse,
   MarketChatMessageResponse,
-  MarketConversationSummaryResponse,
 } from "@/app/lib/market-query/definitions"
 import {
   buildConversationHistorySearchParams,
@@ -22,7 +22,7 @@ import { FIXED_ISO_DATE } from "@/tests/support/fixtures"
 const conversation = (
   id: number,
   title: string
-): MarketConversationSummaryResponse => ({
+): IdentifiedMarketConversationSummaryResponse => ({
   id,
   title,
   workspaceId: 1,

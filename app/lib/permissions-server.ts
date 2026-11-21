@@ -8,25 +8,34 @@ import {
 } from "@/app/lib/dev-auth-mode"
 import { hasPermission } from "@/app/lib/permissions"
 
+const getCurrentMe = cache(async () => {
+  if (isDevAuthModeEnabled() && !isP0FixtureModeEnabled()) {
+    return null
+  }
+
+  try {
+    return await getMe()
+  } catch {
+    return null
+  }
+})
+
+export const getCurrentWorkspaceId = cache(async (): Promise<number | null> => {
+  const me = await getCurrentMe()
+  return me?.currentWorkspace?.id ?? null
+})
+
 export const getCurrentPermissions = cache(async (): Promise<string[]> => {
   if (isDevAuthModeEnabled()) {
     if (isP0FixtureModeEnabled()) {
-      try {
-        const me = await getMe()
-        return me.permissions ?? []
-      } catch {
-        return []
-      }
+      const me = await getCurrentMe()
+      return me?.permissions ?? []
     }
     return getDevAuthPermissions()
   }
 
-  try {
-    const me = await getMe()
-    return me.permissions ?? []
-  } catch {
-    return []
-  }
+  const me = await getCurrentMe()
+  return me?.permissions ?? []
 })
 
 export async function userHasPermission(permission: string): Promise<boolean> {

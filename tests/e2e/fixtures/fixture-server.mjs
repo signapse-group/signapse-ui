@@ -370,11 +370,12 @@ function cronjobRecords() {
     {
       id: 1,
       jobName: "Scheduled and running",
-      jobGroup: "market",
+      jobGroup: "MarketIntelligencePipelineJobGroupWithLongMetadata",
       scheduleStatus: "SCHEDULED",
       executionStatus: "RUNNING",
-      cronExpression: "0 0/5 * * * ?",
-      description: "A recurring market refresh.",
+      cronExpression: "0 15,30 4,10 * JAN,MAR,SEP MON-FRI 2026/2",
+      description:
+        "This description contains the full operational context, recovery behavior, and source system information for the scheduled job.",
       latestResult: "SUCCESS",
       lastExecutedTime: "2026-11-05T07:00:00Z",
       nextTriggeredTime: "2026-11-05T07:05:00Z",
@@ -389,7 +390,7 @@ function cronjobRecords() {
       description: null,
       latestResult: null,
       lastExecutedTime: "2026-11-05T07:00:00Z",
-      nextTriggeredTime: null,
+      nextTriggeredTime: "2026-11-05T08:00:00Z",
     },
     {
       id: 3,
@@ -413,6 +414,32 @@ function cronjobRecords() {
       description: null,
       latestResult: null,
       lastExecutedTime: null,
+      nextTriggeredTime: null,
+    },
+  ]
+}
+
+function shortCronjobDesignRecords(cronjobs) {
+  return [
+    {
+      ...cronjobs[0],
+      jobName: "RefreshPendingNarrativesJob",
+      jobGroup: "MarketIntelligencePipelineJobGroup",
+      scheduleStatus: "SCHEDULED",
+      executionStatus: "NOT_RUNNING",
+      cronExpression: "0 */30 * * * ?",
+      description: "Refresh pending narratives from market data",
+      latestResult: "SUCCESS",
+    },
+    {
+      ...cronjobs[1],
+      jobName: "Paused after failed run",
+      jobGroup: "market",
+      scheduleStatus: "PAUSED",
+      executionStatus: "NOT_RUNNING",
+      cronExpression: "0 7/15 * * * ?",
+      description: "The last attempt failed.",
+      latestResult: "FAILED",
       nextTriggeredTime: null,
     },
   ]
@@ -488,6 +515,9 @@ function createState() {
 
   return {
     workspaces: [primaryWorkspace, secondaryWorkspace],
+    marketConversations: [],
+    marketConversationTurns: [],
+    marketConversationAttempts: [],
     notes: [note(31, "Morning brief", "Review the fixture market brief.")],
     feedback: feedbackRecords(),
     contactRequests: contactRequestRecords(),
@@ -724,6 +754,8 @@ function createState() {
       schedule: 52,
       feedback: 13,
       newsOutlet: 8,
+      conversation: 1,
+      message: 1,
     },
   }
 }
@@ -878,6 +910,46 @@ function slicePage(items, url) {
     : items
   return page(
     filtered.slice(pageNumber * size, pageNumber * size + size),
+    pageNumber,
+    size,
+    filtered.length
+  )
+}
+
+function eventsPage(items, url) {
+  const { pageNumber, size, filter } = getPageParams(url)
+  const filtered = filter.length
+    ? items.filter((event) =>
+        filter.some((term) =>
+          [event.title, event.description, event.canonicalKey].some((value) =>
+            value?.toLowerCase().includes(term)
+          )
+        )
+      )
+    : items
+  const sort = url.searchParams.get("sort")
+  const sortOptions = new Set([
+    "occurredAt,desc",
+    "occurredAt,asc",
+    "confidence,desc",
+    "createdDate,desc",
+  ])
+  const sorted = sortOptions.has(sort)
+    ? [...filtered].sort((left, right) => {
+        const [field, direction] = sort.split(",")
+        const leftValue = left[field] ?? ""
+        const rightValue = right[field] ?? ""
+        const comparison =
+          typeof leftValue === "number" && typeof rightValue === "number"
+            ? leftValue - rightValue
+            : String(leftValue).localeCompare(String(rightValue))
+
+        return direction === "asc" ? comparison : -comparison
+      })
+    : filtered
+
+  return page(
+    sorted.slice(pageNumber * size, pageNumber * size + size),
     pageNumber,
     size,
     filtered.length
@@ -1294,12 +1366,38 @@ function graphView(state) {
 
   const event = state.events[0]
   const asset = state.assets[0]
+  const article = state.newsArticles[0]
   const currentWorkspace = state.workspaces.find(
     (item) => item.currentWorkspace
   )
 
   return {
     nodes: [
+      ...(scenario === "graph-article-node"
+        ? [
+            {
+              id: `news-article:${article.id}`,
+              kind: "news-article",
+              label: article.title,
+              secondaryLabel: article.sourceName,
+              metadata: {
+                slug: null,
+                canonicalKey: null,
+                symbol: null,
+                assetType: null,
+                sourceName: article.sourceName,
+                url: article.url,
+                occurredAt: null,
+                publishedAt: article.publishedAt,
+                status: null,
+                narrativeStatus: null,
+                confidence: null,
+                thesis: null,
+                themes: null,
+              },
+            },
+          ]
+        : []),
       {
         id: `event:${event.id}`,
         kind: "event",
@@ -1345,6 +1443,20 @@ function graphView(state) {
       },
     ],
     edges: [
+      ...(scenario === "graph-article-node"
+        ? [
+            {
+              id: `news-article-${article.id}-event-${event.id}`,
+              kind: "news-article-event",
+              sourceNodeId: `news-article:${article.id}`,
+              targetNodeId: `event:${event.id}`,
+              relationType: "PRIMARY",
+              weight: null,
+              confidence: article.linkedEvents[0]?.evidenceConfidence ?? null,
+              note: article.linkedEvents[0]?.evidenceNote ?? null,
+            },
+          ]
+        : []),
       {
         id: `event-${event.id}-asset-${asset.assetId}`,
         kind: "event-asset",
@@ -2515,7 +2627,15 @@ function feedbackRouteResult(state, method, pathname, url, body) {
   return null
 }
 
-function responseForRoute(state, method, pathname, url, body, locale = "en") {
+function responseForRoute(
+  state,
+  method,
+  pathname,
+  url,
+  body,
+  locale = "en",
+  requestHeaders = {}
+) {
   const aiTaskResult = aiTaskConfigurationRouteResult(
     state,
     method,
@@ -2627,6 +2747,10 @@ function responseForRoute(state, method, pathname, url, body, locale = "en") {
       return {}
     }
 
+    if (getScenario(state, method, pathname) === "short") {
+      return slicePage(shortCronjobDesignRecords(state.cronjobs), url)
+    }
+
     return slicePage(state.cronjobs, url)
   }
 
@@ -2648,6 +2772,35 @@ function responseForRoute(state, method, pathname, url, body, locale = "en") {
       }
     }
 
+    return cronjob
+  }
+
+  const cronjobPauseMatch = pathname.match(/^\/cronjobs\/(\d+)\/pause$/)
+  if (method === "POST" && cronjobPauseMatch) {
+    if (!hasFixturePermission(state, "cronjob:pause")) {
+      return {
+        __status: 403,
+        payload: errorPayload("Cronjob pause permission denied", "FORBIDDEN"),
+      }
+    }
+
+    const id = Number(cronjobPauseMatch[1])
+    const cronjob = state.cronjobs.find((item) => item.id === id)
+    if (!cronjob) {
+      return {
+        __status: 404,
+        payload: errorPayload("Cronjob not found", "NOT_FOUND"),
+      }
+    }
+    if (cronjob.scheduleStatus !== "SCHEDULED") {
+      return {
+        __status: 409,
+        payload: errorPayload("Cronjob schedule is not active", "CONFLICT"),
+      }
+    }
+
+    cronjob.scheduleStatus = "PAUSED"
+    cronjob.nextTriggeredTime = null
     return cronjob
   }
 
@@ -2877,6 +3030,169 @@ function responseForRoute(state, method, pathname, url, body, locale = "en") {
 
   const feedbackResult = feedbackRouteResult(state, method, pathname, url, body)
   if (feedbackResult) return feedbackResult
+
+  if (method === "POST" && pathname === "/market-conversations") {
+    if (!hasFixturePermission(state, "query:execute")) {
+      return {
+        __status: 403,
+        payload: errorPayload(
+          "Market conversation permission denied",
+          "FORBIDDEN"
+        ),
+      }
+    }
+    const title = String(body?.title ?? "").trim()
+    const currentWorkspace = state.workspaces.find(
+      (item) => item.currentWorkspace
+    )
+    if (!title || !currentWorkspace) {
+      return {
+        __status: currentWorkspace ? 400 : 409,
+        payload: errorPayload(
+          currentWorkspace
+            ? "Conversation title is required"
+            : "Select a workspace first",
+          currentWorkspace ? "VALIDATION_ERROR" : "WORKSPACE_REQUIRED"
+        ),
+      }
+    }
+    const conversation = {
+      id: state.nextIds.conversation++,
+      title,
+      workspaceId: currentWorkspace.id,
+      createdDate: NOW,
+      lastModifiedDate: NOW,
+    }
+    state.marketConversations.push(conversation)
+    if (getScenario(state, method, pathname) === "conversation-without-id") {
+      return {
+        title: conversation.title,
+        workspaceId: conversation.workspaceId,
+        createdDate: conversation.createdDate,
+        lastModifiedDate: conversation.lastModifiedDate,
+      }
+    }
+    return conversation
+  }
+
+  const conversationMessageMatch = pathname.match(
+    /^\/market-conversations\/(\d+)\/messages$/
+  )
+  if (method === "POST" && conversationMessageMatch) {
+    const id = Number(conversationMessageMatch[1])
+    const conversation = state.marketConversations.find(
+      (item) => item.id === id
+    )
+    const currentWorkspace = state.workspaces.find(
+      (item) => item.currentWorkspace
+    )
+    if (!hasFixturePermission(state, "query:execute")) {
+      return {
+        __status: 403,
+        payload: errorPayload(
+          "Market conversation permission denied",
+          "FORBIDDEN"
+        ),
+      }
+    }
+    if (
+      !conversation ||
+      !currentWorkspace ||
+      conversation.workspaceId !== currentWorkspace.id
+    ) {
+      return {
+        __status: 403,
+        payload: errorPayload(
+          "Conversation workspace access denied",
+          "FORBIDDEN"
+        ),
+      }
+    }
+    const message = String(body?.message ?? "").trim()
+    const idempotencyKey = String(
+      requestHeaders["idempotency-key"] ?? ""
+    ).trim()
+    if (!message || !idempotencyKey) {
+      return {
+        __status: 400,
+        payload: errorPayload(
+          "Message and idempotency key are required",
+          "VALIDATION_ERROR"
+        ),
+      }
+    }
+
+    const existingTurn = state.marketConversationTurns.find(
+      (item) =>
+        item.conversationId === id && item.idempotencyKey === idempotencyKey
+    )
+    state.marketConversationAttempts.push({
+      conversationId: id,
+      workspaceId: currentWorkspace.id,
+      idempotencyKey,
+      replay: Boolean(existingTurn),
+    })
+    if (existingTurn) {
+      if (existingTurn.message !== message) {
+        return {
+          __status: 409,
+          payload: errorPayload(
+            "Idempotency key was reused for another message",
+            "IDEMPOTENCY_KEY_REUSED"
+          ),
+        }
+      }
+      return existingTurn.response
+    }
+
+    const userMessage = {
+      id: state.nextIds.message++,
+      role: "USER",
+      status: "COMPLETED",
+      content: message,
+      failureReason: null,
+      createdDate: NOW,
+    }
+    const scenario = getScenario(state, method, pathname)
+    const assistantMessage =
+      scenario === "assistant-failed"
+        ? {
+            id: state.nextIds.message++,
+            role: "ASSISTANT",
+            status: "FAILED",
+            content: null,
+            failureReason: "Fixture assistant failure",
+            createdDate: NOW,
+          }
+        : scenario === "completed-without-content"
+          ? {
+              id: state.nextIds.message++,
+              role: "ASSISTANT",
+              status: "COMPLETED",
+              content: null,
+              failureReason: null,
+              createdDate: NOW,
+            }
+          : {
+              id: state.nextIds.message++,
+              role: "ASSISTANT",
+              status: "COMPLETED",
+              content: `The fixture report shows BTC moved during the review period. [Market source](https://example.com/reports/btc-fixture)
+
+Which asset did you mean? The available data is limited. Add TSLA to your watchlist before continuing.`,
+              failureReason: null,
+              createdDate: NOW,
+            }
+    const response = { userMessage, assistantMessage }
+    state.marketConversationTurns.push({
+      conversationId: id,
+      workspaceId: currentWorkspace.id,
+      idempotencyKey,
+      message,
+      response,
+    })
+    return response
+  }
 
   if (method === "GET" && pathname === "/me/workspaces") {
     return slicePage(state.workspaces, url)
@@ -3256,8 +3572,107 @@ function responseForRoute(state, method, pathname, url, body, locale = "en") {
     return { ...article, content: null }
   }
 
+  const economicCalendarDetailMatch = pathname.match(
+    /^\/economic-calendar\/(\d+)$/
+  )
+  if (method === "GET" && economicCalendarDetailMatch) {
+    if (!hasFixturePermission(state, "economic-calendar:read")) {
+      return {
+        __status: 403,
+        payload: errorPayload(
+          "Economic calendar permission denied",
+          "FORBIDDEN"
+        ),
+      }
+    }
+
+    const id = Number(economicCalendarDetailMatch[1])
+    if (id === 8201) {
+      return {
+        id,
+        title: "Fixture release details",
+        currencyCode: "USD",
+        type: "CPI",
+        impact: "HIGH",
+        forecastValue: "0.1%",
+        previousValue: "0.2%",
+        actualValue: "0",
+        description: "Description in the current locale.",
+        revision: null,
+        newsUrl: null,
+        actualBetterWorse: null,
+        revisionBetterWorse: null,
+        status: "AVAILABLE",
+        scheduledAt: "2026-06-30T23:30:00.000Z",
+        syncedAt: "2026-06-30T22:45:00.000Z",
+        createdDate: "2026-06-30T20:00:00.000Z",
+        lastModifiedDate: "2026-06-30T21:15:00.000Z",
+      }
+    }
+
+    if (id === 8202) {
+      return {
+        id,
+        title: "Pending fixture release",
+        currencyCode: "USD",
+        type: "CPI",
+        impact: "LOW",
+        forecastValue: null,
+        previousValue: "0",
+        actualValue: "0",
+        description: "Mô tả trong ngôn ngữ hiện tại.",
+        revision: null,
+        newsUrl: null,
+        actualBetterWorse: null,
+        revisionBetterWorse: null,
+        status: "PENDING",
+        scheduledAt: null,
+        syncedAt: null,
+        lastModifiedDate: null,
+      }
+    }
+
+    return {
+      __status: 404,
+      payload: errorPayload("Economic calendar entry not found", "NOT_FOUND"),
+    }
+  }
+
   if (method === "GET" && pathname === "/events") {
-    return slicePage(state.events, url)
+    const scenario = getScenario(state, method, pathname)
+    if (scenario === "event-list-denied") {
+      return {
+        __status: 403,
+        payload: errorPayload("Event permission denied", "FORBIDDEN"),
+      }
+    }
+
+    if (scenario === "event-list-error") {
+      return {
+        __status: 503,
+        payload: errorPayload("Event list unavailable", "SERVICE_UNAVAILABLE"),
+      }
+    }
+
+    if (scenario === "event-list-empty") {
+      return eventsPage([], url)
+    }
+
+    const events = scenario.startsWith("event-partial")
+      ? state.events.map((event) =>
+          event.id === 62
+            ? {
+                ...event,
+                title: null,
+                description: null,
+                confidence: null,
+                occurredAt: null,
+              }
+            : event
+        )
+      : state.events
+
+    return eventsPage(events, url)
   }
 
   const eventDetailMatch = pathname.match(/^\/events\/(\d+)$/)
@@ -3272,28 +3687,352 @@ function responseForRoute(state, method, pathname, url, body, locale = "en") {
       }
     }
 
-    return {
-      ...event,
-      assets: [],
-      themes: [],
-      evidence:
-        id === 61 || id === 63
+    const scenario = getScenario(state, method, "/events")
+    const isVietnamese = String(locale ?? "en")
+      .toLowerCase()
+      .startsWith("vi")
+
+    if (scenario === "event-detail-error") {
+      return {
+        __status: 503,
+        payload: errorPayload("Event data unavailable", "SERVICE_UNAVAILABLE"),
+      }
+    }
+
+    if (scenario === "event-detail-denied") {
+      return {
+        __status: 403,
+        payload: errorPayload("Event permission denied", "FORBIDDEN"),
+      }
+    }
+
+    if (scenario === "event-detail-not-found") {
+      return {
+        __status: 404,
+        payload: errorPayload("Event not found", "NOT_FOUND"),
+      }
+    }
+
+    let status = event.status
+    let assets = []
+    let themes = []
+
+    if (scenario === "event-links") {
+      assets = [
+        {
+          assetId: 101,
+          assetName: "SPDR S&P 500 ETF Trust",
+          assetSymbol: "SPY",
+          assetType: "ETF",
+          relationType: "PRIMARY_SUBJECT",
+          weight: 1,
+        },
+        {
+          assetId: 102,
+          assetName: "JPMorgan Chase & Co.",
+          assetSymbol: "JPM",
+          assetType: "EQUITY",
+          relationType: "AFFECTED_ASSET",
+          weight: 0.65,
+        },
+        {
+          assetId: 103,
+          assetName: "US Dollar Index",
+          assetSymbol: "DXY",
+          assetType: "INDEX",
+          relationType: "REFERENCE_ASSET",
+          weight: 0.35,
+        },
+      ]
+      themes = [
+        {
+          themeId: 201,
+          themeTitle: isVietnamese ? "Lãi suất" : "Interest rates",
+          themeSlug: "interest-rates",
+          relationType: "PRIMARY_THEME",
+          weight: 0.9,
+        },
+        {
+          themeId: 202,
+          themeTitle: isVietnamese
+            ? "Thị trường trái phiếu"
+            : "Treasury markets",
+          themeSlug: "treasury-markets",
+          relationType: "SECONDARY_THEME",
+          weight: 0.5,
+        },
+      ]
+    } else if (
+      scenario === "event-quick-detail-long" ||
+      scenario === "event-quick-detail-no-links"
+    ) {
+      assets = [
+        {
+          assetId: 103,
+          assetName: "US Dollar Index",
+          assetSymbol: "DXY",
+          assetType: "INDEX",
+          relationType: "REFERENCE_ASSET",
+          weight: 0.8,
+        },
+        {
+          assetId: 101,
+          assetName: "Bitcoin",
+          assetSymbol: "BTC/USDT",
+          assetType: "CRYPTO",
+          relationType: "PRIMARY_SUBJECT",
+          weight: 1,
+        },
+        {
+          assetId: 104,
+          assetName: "Akamai Technologies",
+          assetSymbol: "AKAM",
+          assetType: "EQUITY",
+          relationType: "AFFECTED_ASSET",
+          weight: 0.65,
+        },
+        {
+          assetId: 102,
+          assetName: "Gold",
+          assetSymbol: "XAUUSD",
+          assetType: "COMMODITY",
+          relationType: "REFERENCE_ASSET",
+          weight: 0.35,
+        },
+        {
+          assetId: 105,
+          assetName: "Microsoft",
+          assetSymbol: "MSFT",
+          assetType: "EQUITY",
+          relationType: "REFERENCE_ASSET",
+          weight: 0.25,
+        },
+        {
+          assetId: 106,
+          assetName: "SPDR S&P 500 ETF Trust",
+          assetSymbol: "SPY",
+          assetType: "ETF",
+          relationType: "REFERENCE_ASSET",
+          weight: 0.15,
+        },
+      ]
+      themes = [
+        {
+          themeId: 201,
+          themeTitle: isVietnamese ? "Lãi suất" : "Interest rates",
+          themeSlug: "interest-rates",
+          relationType: "PRIMARY_THEME",
+          weight: 0.9,
+        },
+        {
+          themeId: 202,
+          themeTitle: isVietnamese
+            ? "Thị trường trái phiếu"
+            : "Treasury markets",
+          themeSlug: "treasury-markets",
+          relationType: "SECONDARY_THEME",
+          weight: 0.5,
+        },
+      ]
+    } else if (scenario === "event-empty-no-match") {
+      status = "ENRICHMENT_NO_MATCH"
+    } else if (scenario === "event-empty-failed") {
+      status = "ENRICHMENT_FAILED"
+    } else if (
+      scenario === "event-market-reactions" ||
+      scenario === "event-market-reactions-null-fields"
+    ) {
+      assets = [
+        {
+          assetId: 101,
+          assetName: "Akamai Technologies",
+          assetSymbol: "AKAM",
+          assetType: "EQUITY",
+          relationType: "PRIMARY_SUBJECT",
+          weight: 1,
+        },
+        {
+          assetId: 102,
+          assetName: "First Trust Cloud Computing ETF",
+          assetSymbol: "SKYY",
+          assetType: "ETF",
+          relationType: "AFFECTED_ASSET",
+          weight: 0.65,
+        },
+        {
+          assetId: 103,
+          assetName: "Microsoft",
+          assetSymbol: "MSFT",
+          assetType: "EQUITY",
+          relationType: "REFERENCE_ASSET",
+          weight: 0.35,
+        },
+        {
+          assetId: 104,
+          assetName: "US Dollar Index",
+          assetSymbol: "DXY",
+          assetType: "INDEX",
+          relationType: "REFERENCE_ASSET",
+          weight: 0.2,
+        },
+      ]
+      themes = [
+        {
+          themeId: 201,
+          themeTitle: isVietnamese ? "Công nghệ" : "Technology",
+          themeSlug: "technology",
+          relationType: "PRIMARY_THEME",
+          weight: 0.9,
+        },
+      ]
+    }
+
+    const marketReactions =
+      id !== 61
+        ? []
+        : scenario === "event-market-reactions"
           ? [
               {
-                newsArticleId: 71,
-                newsArticleTitle: "Fixture market update",
-                newsArticleUrl: "https://fixture.invalid/news/71",
-                sourceName: "Fixture Wire",
-                publishedAt: NOW,
-                evidenceRole: "PRIMARY",
-                confidence: 0.92,
-                evidenceNote:
-                  "Synthetic evidence for the browser quality gate.",
+                id: 701,
+                assetId: 101,
+                assetName: "Akamai Technologies",
+                assetSymbol: "AKAM",
+                assetType: "EQUITY",
+                direction: "BULLISH",
+                timeHorizon: "SHORT_TERM",
+                confidence: 0.84,
+                reasoning: isVietnamese
+                  ? "Hợp đồng điện toán đám mây dài hạn có thể cải thiện khả năng dự đoán doanh thu của Akamai, hỗ trợ triển vọng tăng trong ngắn hạn."
+                  : "The long-term cloud contract could improve Akamai’s revenue visibility, supporting a bullish short-term outlook.",
+                observedAt: "2026-11-18T08:00:00.000Z",
+              },
+              {
+                id: 702,
+                assetId: 102,
+                assetName: "First Trust Cloud Computing ETF",
+                assetSymbol: "SKYY",
+                assetType: "ETF",
+                direction: "NEUTRAL",
+                timeHorizon: "MEDIUM_TERM",
+                confidence: 0.64,
+                reasoning: isVietnamese
+                  ? "Thỏa thuận có thể hỗ trợ nhu cầu năng lực điện toán đám mây, trong khi ETF đa dạng hóa làm giảm tác động của một hợp đồng riêng lẻ."
+                  : "The agreement could support demand for cloud capacity, while the diversified ETF limits the impact of a single deal.",
+                observedAt: "2026-11-18T08:00:00.000Z",
+              },
+              {
+                id: 703,
+                assetId: 103,
+                assetName: "Microsoft",
+                assetSymbol: "MSFT",
+                assetType: "EQUITY",
+                direction: "BEARISH",
+                timeHorizon: "SHORT_TERM",
+                confidence: 0.68,
+                reasoning: isVietnamese
+                  ? "Cạnh tranh gia tăng trong lĩnh vực điện toán đám mây có thể gây áp lực lên biên lợi nhuận ngắn hạn của Microsoft."
+                  : "More competition for cloud workloads could pressure Microsoft’s near-term margins.",
+                observedAt: "2026-11-18T08:00:00.000Z",
+              },
+              {
+                id: 704,
+                assetId: 102,
+                assetName: "First Trust Cloud Computing ETF",
+                assetSymbol: "SKYY",
+                assetType: "ETF",
+                direction: "MIXED",
+                timeHorizon: "LONG_TERM",
+                confidence: 0.61,
+                reasoning: isVietnamese
+                  ? "Nhu cầu điện toán đám mây có thể hỗ trợ các công ty trong ETF, nhưng chi phí hạ tầng tăng cũng có thể gây áp lực lên biên lợi nhuận."
+                  : "Cloud demand could lift holdings, while higher infrastructure costs could pressure margins.",
+                observedAt: "2026-11-18T08:00:00.000Z",
               },
             ]
-          : [],
-      marketReactions: [],
+          : scenario === "event-market-reactions-null-fields"
+            ? [
+                {
+                  id: 705,
+                  assetId: 101,
+                  assetName: "",
+                  assetSymbol: "",
+                  assetType: "EQUITY",
+                  direction: "MIXED",
+                  timeHorizon: "LONG_TERM",
+                  confidence: null,
+                  reasoning: null,
+                  observedAt: null,
+                },
+              ]
+            : []
+
+    const response = {
+      ...event,
+      ...(scenario === "event-quick-detail-long" ||
+      scenario === "event-quick-detail-no-links"
+        ? {
+            title: `Central bank signals a slower easing path ${"across global markets ".repeat(5)}`,
+            description: `Synthetic long-form event description ${"with preserved market context and complete supplied wording. ".repeat(12)}`,
+          }
+        : {}),
+      status,
+      assets,
+      themes,
+      evidence:
+        (scenario === "event-quick-detail-long" ||
+          scenario === "event-quick-detail-no-links") &&
+        id === 61
+          ? Array.from({ length: 6 }, (_, index) => ({
+              newsArticleId:
+                scenario === "event-quick-detail-no-links" ? null : 71 + index,
+              newsArticleTitle: `Fixture evidence ${index + 1} ${"long title remains complete ".repeat(4)}`,
+              newsArticleUrl:
+                scenario === "event-quick-detail-no-links"
+                  ? null
+                  : `https://fixture.invalid/news/${71 + index}`,
+              sourceName: `Fixture Source ${index + 1}`,
+              publishedAt: NOW,
+              evidenceRole: index === 0 ? "PRIMARY" : "SUPPORTING",
+              confidence: 0.92 - index * 0.05,
+              evidenceNote: `Synthetic complete evidence note ${index + 1} ${"retained inside the quick reader without truncation. ".repeat(5)}`,
+            }))
+          : id === 61 ||
+              id === 63 ||
+              (id === 62 && scenario.startsWith("event-partial"))
+            ? [
+                {
+                  newsArticleId: 71,
+                  newsArticleTitle: id === 62 ? null : "Fixture market update",
+                  newsArticleUrl:
+                    id === 62 && scenario === "event-partial-no-source"
+                      ? null
+                      : `https://fixture.invalid/news/${id}`,
+                  sourceName: "Fixture Wire",
+                  publishedAt: NOW,
+                  evidenceRole: "PRIMARY",
+                  confidence: id === 62 ? null : 0.92,
+                  evidenceNote:
+                    id === 62
+                      ? null
+                      : "Synthetic evidence for the browser quality gate.",
+                },
+              ]
+            : [],
+      marketReactions,
     }
+
+    if (id === 62 && scenario.startsWith("event-partial")) {
+      response.title = null
+      response.description = null
+      response.confidence = null
+      response.occurredAt = null
+    }
+
+    if (scenario === "event-market-reactions-missing") {
+      delete response.marketReactions
+    }
+
+    return response
   }
 
   if (method === "GET" && pathname === "/me/notes") {
@@ -3705,6 +4444,16 @@ async function handleControl(request, response, url, body) {
       permissions: state.permissions,
       aiTaskConfigurations: state.aiTaskConfigurations,
       newsOutlets: state.newsOutlets,
+      marketConversations: state.marketConversations,
+      marketConversationTurns: state.marketConversationTurns.map(
+        ({ conversationId, workspaceId, idempotencyKey, response }) => ({
+          conversationId,
+          workspaceId,
+          idempotencyKey,
+          response,
+        })
+      ),
+      marketConversationAttempts: state.marketConversationAttempts,
       smtpConfiguration: smtpConfigurationResponse(state.smtpConfiguration),
       streamConnections: state.streamConnections,
       pendingRequests: state.pendingRequests.size,
@@ -3817,6 +4566,20 @@ const server = createServer(async (request, response) => {
     getScenario(state, method, url.pathname) === "delayed-old-workspace"
       ? responseForRoute(state, method, url.pathname, url, body)
       : undefined
+  const delayedMarketConversationResult =
+    method === "POST" &&
+    /^\/market-conversations\/\d+\/messages$/.test(url.pathname) &&
+    getScenario(state, method, url.pathname) === "delayed-old-workspace"
+      ? responseForRoute(
+          state,
+          method,
+          url.pathname,
+          url,
+          body,
+          String(request.headers["accept-language"] ?? "en"),
+          request.headers
+        )
+      : undefined
 
   if (isPending(state, method, url.pathname)) {
     const released = await holdResponse(state, response, method, url.pathname)
@@ -3924,6 +4687,21 @@ const server = createServer(async (request, response) => {
     )
     return
   }
+  if (
+    scenario === "quota-exceeded" &&
+    method === "POST" &&
+    /^\/market-conversations\/\d+\/messages$/.test(url.pathname)
+  ) {
+    sendJson(
+      response,
+      409,
+      errorPayload(
+        "You have exceeded the monthly AI turn allowance.",
+        "AI_MONTHLY_TURN_QUOTA_EXCEEDED"
+      )
+    )
+    return
+  }
 
   if (method === "GET" && url.pathname === "/market-charts/live") {
     await streamLive(response, state, url, scenario)
@@ -3931,6 +4709,7 @@ const server = createServer(async (request, response) => {
   }
 
   const result =
+    delayedMarketConversationResult ??
     delayedGraphResult ??
     responseForRoute(
       state,
@@ -3938,9 +4717,20 @@ const server = createServer(async (request, response) => {
       url.pathname,
       url,
       body,
-      String(request.headers["accept-language"] ?? "en")
+      String(request.headers["accept-language"] ?? "en"),
+      request.headers
     )
   const status = result?.__status ?? 200
+  if (
+    scenario === "drop-after-accepted" &&
+    method === "POST" &&
+    /^\/market-conversations\/\d+\/messages$/.test(url.pathname) &&
+    status < 400
+  ) {
+    state.scenarios[`POST ${url.pathname}`] = "success"
+    response.destroy()
+    return
+  }
   if (status === 204) {
     sendEmpty(response, 204)
     return

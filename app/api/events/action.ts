@@ -39,6 +39,27 @@ export async function getEventById(id: number): Promise<EventResponse> {
   return fetchAuthenticated<EventResponse>(`/events/${id}`)
 }
 
+function getQuickDetailErrorStatus(error: unknown): number | null {
+  if (typeof error !== "object" || error === null || !("status" in error)) {
+    return null
+  }
+
+  return typeof error.status === "number" ? error.status : null
+}
+
+export async function getEventByIdForQuickDetail(
+  id: number
+): Promise<
+  | { success: true; data: EventResponse }
+  | { success: false; status: number | null }
+> {
+  try {
+    return { success: true, data: await getEventById(id) }
+  } catch (error: unknown) {
+    return { success: false, status: getQuickDetailErrorStatus(error) }
+  }
+}
+
 export async function enrichEventAssetsAndThemes(
   id: number
 ): Promise<ActionResult<EventEnrichmentResult>> {

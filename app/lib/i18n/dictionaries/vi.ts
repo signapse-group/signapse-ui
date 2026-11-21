@@ -73,7 +73,6 @@ export const vi = {
     breadcrumb: "Đường dẫn điều hướng",
     feedbackReview: "Duyệt phản hồi",
     contactRequests: "Yêu cầu liên hệ",
-    apiAccessToken: "Token truy cập API",
   },
   feedback: {
     composeAction: "Gửi phản hồi",
@@ -643,6 +642,7 @@ export const vi = {
     loadMore: "Xem thêm",
   },
   quickDetail: {
+    readerRegionLabel: "Nội dung chi tiết nhanh",
     notFoundTitle: "Không tìm thấy chi tiết",
     notFoundDescription:
       "Nội dung được chọn không còn tồn tại hoặc bạn không thể truy cập.",
@@ -999,6 +999,7 @@ export const vi = {
     confidenceHigh: "Độ tin cậy cao",
     createdDateSort: "Ngày tạo",
     eventColumn: "Sự kiện",
+    untitled: "Chưa có tiêu đề",
     statusColumn: "Trạng thái",
     timeColumn: "Thời gian",
     occurredAtColumn: "Xảy ra lúc",
@@ -1007,12 +1008,19 @@ export const vi = {
     searchLabel: "Tìm sự kiện",
     searchPending: "Đang tìm kiếm",
     searchPlaceholder: "Tìm theo tiêu đề, mô tả hoặc khóa chuẩn...",
+    loading: "Đang tải sự kiện.",
     noDescription: "Chưa có mô tả ngắn.",
     detailNoDescription: "Chưa có mô tả cho sự kiện này.",
+    eventUnavailableTitle: "Sự kiện không khả dụng",
+    eventUnavailableDescription:
+      "Sự kiện không tồn tại hoặc hiện không còn khả dụng.",
     canonicalKey: "Khóa chuẩn",
     viewDetail: "Xem chi tiết sự kiện",
     emptyTitle: "Chưa có sự kiện",
     emptyDescription: "Không có sự kiện nào khớp với bộ lọc hiện tại.",
+    searchEmptyTitle: "Không tìm thấy sự kiện",
+    searchEmptyDescription: "Thử một từ khóa tìm kiếm khác.",
+    resultsStatus: "Trang {page}: {count} sự kiện.",
     confidence: "Độ tin cậy",
     occurredAt: "Xảy ra lúc",
     evidence: "Bằng chứng",
@@ -1028,18 +1036,26 @@ export const vi = {
     confidencePrefix: "Độ tin cậy: {value}",
     trusted: "Tin cậy {value}",
     viewArticle: "Xem bài viết",
+    articleIdentityUnavailable: "Chưa có định danh bài viết.",
+    sourceUrlUnavailable: "Chưa có URL nguồn.",
     openOriginalLink: "Mở liên kết gốc",
     openOriginal: "Mở nguồn gốc",
-    marketReactions: "Tác động thị trường",
-    reactionCount: "{count} tác động",
+    marketReactions: "Phản ứng thị trường · Dự báo AI",
+    marketReactionsDisclosure:
+      "Đây là dự báo AI dựa trên ngữ cảnh sự kiện và bằng chứng hiện có, không phải phản ứng giá đã đo. Độ tin cậy thể hiện mức tự tin của AI, không phải tỷ lệ thắng giao dịch đã kiểm chứng.",
+    marketReactionsUnavailableTitle: "Dữ liệu dự báo không khả dụng",
+    marketReactionsUnavailableDescription:
+      "Dữ liệu dự báo hiện không khả dụng. Hãy tải lại sự kiện để thử lại.",
+    marketReactionReasoning: "Diễn giải của AI",
+    reactionCount: "Tổng {count}",
     reactionCountByDirection: "{count} {direction}",
-    noMarketReactionsTitle: "Chưa có tác động thị trường",
-    noMarketReactionsDescription:
-      "Sự kiện này chưa có kết quả suy luận hướng phản ứng theo từng tài sản.",
+    noMarketReactionsTitle: "Chưa có dự báo AI",
+    noMarketReactionsDescription: "Sự kiện này chưa có dự báo AI nào được lưu.",
     relatedAssets: "Tài sản liên quan",
     noAssetsTitle: "Chưa có tài sản liên quan",
     noAssetsDescription:
       "Sự kiện này chưa có liên kết tài sản trong dữ liệu hiện tại.",
+    assetIdFallback: "Mã tài sản {id}",
     relatedThemes: "Chủ đề liên quan",
     noThemesTitle: "Chưa có chủ đề liên quan",
     noThemesDescription:
@@ -1049,8 +1065,8 @@ export const vi = {
     noThemeName: "Chưa có tên chủ đề",
     noThemeSlug: "Chưa có slug",
     weight: "Trọng số: {value}",
-    noReasoning: "Chưa có diễn giải chi tiết cho tác động này.",
-    observedAt: "Quan sát lúc: {time}",
+    noReasoning:
+      "Chưa có phần diễn giải AI cho dự báo này trong ngôn ngữ đã chọn.",
     technicalInfo: "Thông tin kỹ thuật",
     createdAt: "Tạo lúc",
     updatedAt: "Cập nhật",
@@ -1086,6 +1102,8 @@ export const vi = {
     assetTypeLabels: {
       COMMODITY: "Hàng hóa",
       CRYPTO: "Tiền mã hóa",
+      EQUITY: "Cổ phiếu",
+      ETF: "ETF",
       FX: "Ngoại hối",
       INDEX: "Chỉ số",
     },
@@ -1164,6 +1182,7 @@ export const vi = {
       UNKNOWN: "KHÔNG XÁC ĐỊNH",
     },
     noImpact: "CHƯA CÓ TÁC ĐỘNG",
+    timeZoneContext: "Múi giờ của bạn · {timeZone}",
     publishedAt: "Công bố {time}",
     syncedAt: "Đồng bộ {time}",
     actual: "Thực tế",
@@ -1745,11 +1764,13 @@ export const vi = {
   },
   aiAssistant: {
     open: "Mở trợ lý AI",
+    launcher: "Ask Signapse",
     loading: "Đang tải trợ lý AI",
     error: "Không thể tải trợ lý AI.",
   },
   demoConversation: {
     title: "Cuộc trò chuyện mới",
+    aiNotice: "AI can make mistakes. Please verify important information.",
     newConversation: "Hội thoại mới",
     expandConversation: "Mở rộng cửa sổ hội thoại",
     collapseConversation: "Thu gọn cửa sổ hội thoại",
@@ -2172,6 +2193,7 @@ export const vi = {
     description:
       "Không gian này dùng để theo dõi cách sự kiện, tài sản, luận điểm, giai đoạn warm và bằng chứng kết nối với nhau trên cùng một mặt phẳng khám phá.",
     readDenied: "Bạn không có quyền truy cập biểu đồ tri thức.",
+    timeRangeInvalid: "Hãy chọn một trong các khoảng thời gian của biểu đồ.",
     responseInvalid:
       "Backend trả về dữ liệu biểu đồ tri thức không đúng định dạng mong đợi.",
     errorTitle: "Không thể tải biểu đồ tri thức",
@@ -2187,9 +2209,30 @@ export const vi = {
     },
     edgeKinds: {
       "event-asset": "Sự kiện → tài sản",
-      "news-article-event": "Bằng chứng → sự kiện",
+      "news-article-event": "Bài viết → sự kiện",
       "narrative-event": "Luận điểm → sự kiện",
       "narrative-asset": "Luận điểm → tài sản",
+    },
+    edgeRelationTypes: {
+      "event-asset": {
+        PRIMARY_SUBJECT: "Chủ thể chính",
+        AFFECTED_ASSET: "Tài sản bị ảnh hưởng",
+        REFERENCE_ASSET: "Tài sản tham chiếu",
+      },
+      "news-article-event": {
+        PRIMARY: "Bài viết chính",
+        SUPPORTING: "Bài viết hỗ trợ",
+        UPDATE: "Cập nhật sự kiện",
+        CONTRADICTING: "Bài viết mâu thuẫn",
+      },
+      "narrative-event": {
+        DRIVER: "Sự kiện dẫn dắt",
+        AFFECTED: "Sự kiện chịu ảnh hưởng",
+      },
+      "narrative-asset": {
+        DRIVER: "Tài sản dẫn dắt",
+        AFFECTED: "Tài sản chịu ảnh hưởng",
+      },
     },
     relationTypes: {
       DRIVER: "Sự kiện góp phần hình thành luận điểm",
@@ -2236,6 +2279,15 @@ export const vi = {
     demo: {
       liveDescription:
         "Khám phá tri thức liên quan đến watchlist của workspace hiện tại.",
+      timeRange: "Khoảng thời gian",
+      last7Days: "7 ngày qua",
+      last14Days: "14 ngày qua",
+      last30Days: "30 ngày qua",
+      loadingTimeRange: "Đang tải biểu đồ trong {days} ngày qua…",
+      loadedTimeRange: "Đã tải biểu đồ trong {days} ngày qua.",
+      noEvents: "Không có Event trong {days} ngày qua",
+      noEventsDescription:
+        "Hãy chọn khoảng thời gian khác để kiểm tra sự kiện.",
       relationMeaning: "Loại quan hệ",
       connectionGroup: "Nhóm kết nối",
       closeRelationship: "Đóng chi tiết quan hệ",
@@ -2244,7 +2296,11 @@ export const vi = {
       interactionHint:
         "Kéo để di chuyển · Chọn nút hoặc đường nối để xem chi tiết",
       liveInteractionHint:
-        "Kéo để di chuyển biểu đồ · Chọn nút để xem thông tin",
+        "Kéo để di chuyển biểu đồ · Chọn nút hoặc quan hệ để xem thông tin",
+      nodeKindFilters: "Bộ lọc loại nút",
+      newsArticleFilter: "Bài viết tin tức",
+      emptyFilteredNodes: "Không có nút nào khớp với các bộ lọc",
+      emptyFilteredNodesDescription: "Bật một loại nút ở trên để hiển thị lại.",
       relationshipInterpretation:
         "Kết nối thể hiện mối liên hệ được ghi nhận, không khẳng định quan hệ nhân quả.",
       sourceUnavailable: "Chưa có liên kết đến bài báo gốc.",
@@ -2303,33 +2359,6 @@ export const vi = {
       unsupportedTitle: "Không thể hiển thị biểu đồ",
       readyForBenchmark: "Sẵn sàng benchmark",
     },
-  },
-  developerToken: {
-    unavailable: "Không có",
-    tokenFetched: "Đã lấy token.",
-    sessionNotFound: "Không tìm thấy phiên đăng nhập.",
-    fetchFailed: "Không thể lấy token.",
-    copied: "Đã sao chép token.",
-    usageTitle: "Hướng dẫn sử dụng",
-    usageDescription:
-      "Clerk token là JWT (JSON Web Token). Hãy gửi token này trong header của mỗi request khi gọi trực tiếp Backend API.",
-    headerFormat: "Định dạng header",
-    tokenLifespan:
-      "Token có thời hạn ngắn, thường khoảng 1 phút. Hãy lấy token mới nếu nhận lỗi 401.",
-    testingTools:
-      "Dùng token này để kiểm thử bằng Postman, Insomnia hoặc cURL.",
-    toolkitTitle: "Công cụ",
-    tokenReady: "Token sẵn sàng",
-    fetchNewToken: "Lấy token mới",
-    generateToken: "Tạo token kiểm thử",
-    copyToClipboard: "Sao chép vào clipboard",
-    rawToken: "Token thô",
-    encodedBase64: "Base64 đã mã hóa",
-    header: "Header",
-    payload: "Payload",
-    subject: "Subject (User ID)",
-    issuedAt: "Phát hành lúc",
-    expiresAt: "Hết hạn lúc",
   },
   editor: {
     moreFormatting: "Định dạng khác",
@@ -2855,6 +2884,8 @@ export const vi = {
     searchPlaceholder: "Tìm theo tên tác vụ...",
     emptyTitle: "Chưa có tác vụ định kỳ",
     emptyDescription: "Chưa có tác vụ hệ thống nào được backend cung cấp.",
+    noSearchResultsTitle: "Không tìm thấy tác vụ phù hợp",
+    noSearchResultsDescription: "Hãy thử tên tác vụ khác.",
     loadingList: "Đang tải danh sách tác vụ định kỳ",
     paginationUnavailable: "Không thể hiển thị thông tin phân trang.",
     detailTitle: "Chi tiết tác vụ",
@@ -2867,28 +2898,68 @@ export const vi = {
     descriptionLabel: "Mô tả",
     scheduleLabel: "Lịch",
     executionLabel: "Thực thi",
+    executionIdleStatus: "Không chạy",
     latestResultLabel: "Kết quả gần nhất",
     lastExecutedTimeLabel: "Lần thực thi gần nhất (UTC)",
+    nextRunListColumn: "Lần chạy kế tiếp",
+    noNextRunList: "Không có lần chạy kế tiếp",
     noNextRun: "Không có lần chạy kế tiếp",
     noPreviousExecution: "Chưa có lần thực thi trước đó",
+    noLatestResultList: "Chưa có kết quả",
     noLatestResult: "Chưa có kết quả",
     unknownStatus: "Chưa xác định",
     cronRequired: "Biểu thức cron là bắt buộc.",
-    cronTooLong: "Biểu thức cron quá dài.",
     cronUpdated: "Đã cập nhật lịch chạy cronjob.",
     cronUpdateError: "Không thể cập nhật lịch chạy cronjob.",
+    cronInvalidExpression:
+      "Biểu thức Quartz không hợp lệ. Lịch đã lưu chưa bị thay đổi.",
+    cronUpdateUnauthorized:
+      "Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại để cập nhật lịch này.",
+    cronUpdatePermissionDenied: "Bạn không có quyền cập nhật lịch cronjob này.",
+    cronUpdateNotFound: "Cronjob này không còn tồn tại.",
+    cronUpdateConflict: "Cronjob đang chạy nên lịch chưa được thay đổi.",
+    cronUpdateProvisioningPending:
+      "Tài khoản đang được thiết lập. Lịch chưa bị thay đổi.",
+    cronUpdateUnconfirmed:
+      "Chưa xác nhận được lịch yêu cầu. Lịch mới nhất đã đọc lại đang được hiển thị.",
+    cronUpdateReadbackUnavailable:
+      "Chưa xác nhận được lịch mới có được áp dụng hay không. Chưa xác minh được lịch đang có hiệu lực. Hãy tải lại trang để kiểm tra.",
+    lastConfirmedSchedule: "Lịch đã xác nhận gần nhất",
+    effectiveScheduleUnverified: "Chưa xác minh được lịch đang có hiệu lực.",
+    savedSchedule: "Lịch đã lưu",
+    cronExpressionPlaceholder: "VD: 0 0 8 * * ?",
+    invalidCronjobId: "Mã cronjob không hợp lệ.",
     editCron: "Chỉnh sửa biểu thức cron",
     saveCron: "Lưu biểu thức cron",
     cancelEdit: "Hủy chỉnh sửa",
     start: "Khởi chạy",
-    started: "Đã khởi chạy cronjob.",
+    starting: "Đang gửi yêu cầu…",
+    startAccepted: "Đã tiếp nhận yêu cầu chạy ngay.",
     startError: "Không thể khởi chạy cronjob.",
+    statusReadError:
+      "Chưa xác nhận được trạng thái hiện tại. Lần đọc thất bại lúc {time}; thông tin đang hiển thị có thể đã cũ. Hãy tải lại trang để kiểm tra.",
     pause: "Tạm dừng",
+    pausing: "Đang tạm dừng…",
     paused: "Đã tạm dừng cronjob.",
+    pausePermissionDenied: "Bạn không có quyền tạm dừng cronjob này.",
+    provisioningRejected:
+      "Tài khoản của bạn chưa được thiết lập để thực hiện thao tác này. Hãy liên hệ quản trị viên.",
+    pauseNotFound: "Cronjob này không còn tồn tại.",
     pauseError: "Không thể tạm dừng cronjob.",
+    pauseNotConfirmed:
+      "Chưa xác nhận được thao tác tạm dừng. Trạng thái lịch mới nhất đang được hiển thị.",
+    pauseReadError:
+      "Chưa xác nhận được trạng thái hiện tại. Lần đọc sau yêu cầu tạm dừng thất bại lúc {time}; thông tin đang hiển thị có thể đã cũ. Hãy tải lại trang để kiểm tra.",
     resume: "Tiếp tục",
+    resuming: "Đang tiếp tục…",
     resumed: "Đã tiếp tục cronjob.",
     resumeError: "Không thể tiếp tục cronjob.",
+    resumeNotConfirmed:
+      "Chưa xác nhận được thao tác tiếp tục. Trạng thái lịch mới nhất đang được hiển thị.",
+    resumePermissionError: "Bạn không có quyền tiếp tục cronjob này.",
+    resumeMissingError: "Cronjob này không còn tồn tại.",
+    resumeConflictError:
+      "Trạng thái cronjob đã thay đổi trước khi hoàn tất thao tác tiếp tục.",
     errorTitle: "Đã có lỗi xảy ra",
     errorDescription: "Không thể tải dữ liệu tác vụ định kỳ lúc này.",
     scheduleStatuses: {

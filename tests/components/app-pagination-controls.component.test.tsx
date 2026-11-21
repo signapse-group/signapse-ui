@@ -90,7 +90,7 @@ describe("AppPaginationControls", () => {
       screen.getByRole("combobox", { name: viDictionary.pagination.pageSize })
     )
     expect(
-      screen.getAllByRole("option").map((option) => option.textContent)
+      (await screen.findAllByRole("option")).map((option) => option.textContent)
     ).toEqual(["10 / trang", "20 / trang", "50 / trang", "100 / trang"])
     const pageSizeTrigger = screen.getByRole("combobox", {
       name: viDictionary.pagination.pageSize,

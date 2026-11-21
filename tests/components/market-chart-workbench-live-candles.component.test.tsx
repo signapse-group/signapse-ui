@@ -38,8 +38,19 @@ vi.mock("@/app/lib/i18n/dictionaries", () => ({
   hasLocale: vi.fn(),
 }))
 
+vi.mock(
+  "@/app/[lang]/(main)/market-charts/market-chart-candle-client",
+  async (importOriginal) => {
+    const original =
+      await importOriginal<
+        typeof import("@/app/[lang]/(main)/market-charts/market-chart-candle-client")
+      >()
+
+    return { ...original, requestMarketChartCandles: getCandles }
+  }
+)
+
 vi.mock("@/app/api/market-charts/action", () => ({
-  getMarketChartCandles: getCandles,
   getMarketChartAnnotations: getAnnotations,
   getMarketChartEconomicCalendarEvents: getCalendarEvents,
 }))
@@ -105,14 +116,24 @@ vi.mock(
         ),
       MarketChartCanvas: ({
         candles,
+        annotations,
+        calendarEvents,
         liveCandle,
         liveQuote,
         liveQuoteIsLive,
+        onLoadOlderCandles,
+        onLoadedDataChange,
       }: {
         candles: unknown[]
+        annotations: Array<{ id?: string; time?: string }>
+        calendarEvents: Array<{ id?: number; title?: string | null }>
         liveCandle: MarketChartCandleItemResponse | null
         liveQuote: { assetId: number; price: number } | null
         liveQuoteIsLive: boolean
+        onLoadOlderCandles: (
+          request: MarketChartCandleRequest
+        ) => Promise<{ success: boolean; data?: MarketChartLoadedData }>
+        onLoadedDataChange: (data: MarketChartLoadedData) => void
       }) => {
         return React.createElement(
           React.Fragment,
@@ -135,7 +156,39 @@ vi.mock(
                 ? "live"
                 : "neutral"
               : "none",
-          })
+          }),
+          React.createElement(
+            "output",
+            { "data-testid": "chart-annotations" },
+            JSON.stringify(annotations)
+          ),
+          React.createElement(
+            "output",
+            { "data-testid": "chart-calendar-events" },
+            JSON.stringify(calendarEvents)
+          ),
+          React.createElement(
+            "button",
+            {
+              type: "button",
+              onClick: async () => {
+                const result = await onLoadOlderCandles({
+                  assetId: 101,
+                  countBack: 100,
+                  timeframe: "1h",
+                  to: "2026-08-19T10:00:00.000Z",
+                })
+
+                if (result.success && result.data) {
+                  onLoadedDataChange(result.data)
+                  window.dispatchEvent(
+                    new Event("market-chart-fixture-older-page-complete")
+                  )
+                }
+              },
+            },
+            "Load older fixture"
+          )
         )
       },
     }
@@ -143,15 +196,30 @@ vi.mock(
 )
 
 import { MarketChartWorkbench } from "@/app/[lang]/(main)/market-charts/market-chart-workbench"
+import { createInitialMarketChartCandleLoad } from "@/app/[lang]/(main)/market-charts/market-chart-candle-client"
+import { createMarketChartInitialLoadObserver } from "@/app/[lang]/(main)/market-charts/market-chart-initial-load-observability"
 import { vi as viDictionary } from "@/app/lib/i18n/dictionaries/vi"
 import { LocalizationProvider } from "@/app/lib/i18n/provider"
 import type {
+  MarketChartAnnotationResponse,
   MarketChartCandleItemResponse,
+  MarketChartCandleRequest,
+  MarketChartEconomicCalendarEventResponse,
   MarketChartTimeframe,
 } from "@/app/lib/market-charts/definitions"
+import type { MarketChartLoadedData } from "@/app/[lang]/(main)/market-charts/market-chart-canvas"
 import type { WorkspaceWatchlistAssetListItemResponse } from "@/app/lib/watchlists/definitions"
 
 type EventListener = (event: Event) => void
+
+function createDeferred<T>() {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>((resolvePromise) => {
+    resolve = resolvePromise
+  })
+
+  return { promise, resolve }
+}
 
 class FakeEventSource {
   static readonly CONNECTING = 0
@@ -274,6 +342,32 @@ function createNextEvent(
     status: "PENDING" as const,
     time: scheduledAt,
     title,
+  }
+}
+
+function createHotAnnotation(
+  id: string,
+  time: string,
+  assetId = 101
+): MarketChartAnnotationResponse {
+  return {
+    id,
+    assetId,
+    time,
+    annotationType: "HOT_EVENT",
+    hotEvent: {
+      eventId: 1,
+      severity: "HIGH",
+      direction: "BULLISH",
+      title: null,
+      summary: null,
+      confidence: null,
+      topMarketReaction: null,
+      marketReactions: [],
+      evidence: [],
+      links: { eventDetail: "/events/1" },
+    },
+    warmEpisode: null,
   }
 }
 
@@ -503,6 +597,793 @@ describe("Market chart quote-driven candle flow", () => {
       expect(FakeEventSource.instances).toHaveLength(sourceCount)
     }
   )
+
+  it("shows valid candles while annotations and historical events are pending", async () => {
+    const annotationRequest = createDeferred<{
+      success: boolean
+      data: []
+    }>()
+    const calendarRequest = createDeferred<{
+      success: boolean
+      data: []
+    }>()
+    let historicalCalendarRequested = false
+    let candleResponseAt = 0
+    let candlePaintAt = 0
+    let annotationSettled = false
+    let calendarSettled = false
+    getCandles.mockImplementation(async () => {
+      candleResponseAt = performance.now()
+      return { success: true, data: createCandleResponse(101, "1m") }
+    })
+    getAnnotations.mockImplementation(() => annotationRequest.promise)
+    getCalendarEvents.mockImplementation((request) => {
+      if (Date.parse(request.to) > Date.now()) {
+        return Promise.resolve({ success: true, data: [] })
+      }
+
+      historicalCalendarRequested = true
+      return calendarRequest.promise
+    })
+
+    const view = render(
+      <LocalizationProvider locale="vi" dictionary={viDictionary}>
+        <MarketChartWorkbench
+          watchlistAssets={watchlistAssets}
+          watchlistError={null}
+        />
+      </LocalizationProvider>
+    )
+
+    const mobileStatusRegion = await waitFor(() => {
+      const statusRegion = Array.from(
+        view.container.querySelectorAll("span.sr-only")
+      ).find((status) => status.classList.contains("sm:hidden"))
+
+      expect(statusRegion).toBeInTheDocument()
+      return statusRegion
+    })
+    expect(mobileStatusRegion).toHaveAttribute("role", "status")
+    expect(mobileStatusRegion).toHaveAttribute("aria-live", "polite")
+    expect(mobileStatusRegion).toHaveAttribute("aria-atomic", "true")
+    expect(mobileStatusRegion).toHaveTextContent(
+      viDictionary.marketCharts.annotations.loadingEvents
+    )
+    expect(mobileStatusRegion).toHaveTextContent(
+      viDictionary.marketCharts.calendar.loadingEvents
+    )
+
+    await waitFor(() => {
+      expect(getAnnotations).toHaveBeenCalledOnce()
+      expect(historicalCalendarRequested).toBe(true)
+    })
+
+    const expectedCandles = JSON.stringify(
+      createRestCandles([
+        "2026-08-23T00:00:00.000Z",
+        "2026-08-23T00:01:00.000Z",
+      ])
+    )
+    const candlesAreVisible = () => {
+      const element = screen.queryByTestId("chart-rest-candles")
+
+      return Boolean(
+        element?.textContent === expectedCandles &&
+        element.parentElement?.classList.contains("visible")
+      )
+    }
+    let visibleWhileSupplementsPending = false
+    try {
+      await waitFor(
+        () => {
+          expect(candlesAreVisible()).toBe(true)
+          candlePaintAt ||= performance.now()
+        },
+        { interval: 5, timeout: 120 }
+      )
+      visibleWhileSupplementsPending = true
+    } catch {
+      // Resolve the controlled requests below so the baseline can be timed.
+    }
+    const supplementsPendingAtCandlePaint =
+      !annotationSettled && !calendarSettled
+
+    annotationSettled = true
+    calendarSettled = true
+    await act(async () => {
+      annotationRequest.resolve({ success: true, data: [] })
+      calendarRequest.resolve({ success: true, data: [] })
+    })
+    await waitFor(() => {
+      const candlesOnChart = screen.getByTestId("chart-rest-candles")
+      expect(candlesOnChart).toHaveTextContent(expectedCandles)
+      expect(candlesOnChart.parentElement).toHaveClass("visible")
+      expect(mobileStatusRegion).toHaveTextContent(
+        viDictionary.marketCharts.annotations.noEvents
+      )
+      expect(mobileStatusRegion).toHaveTextContent(
+        viDictionary.marketCharts.calendar.noEvents
+      )
+      candlePaintAt ||= performance.now()
+    })
+
+    const firstCandleAfterResponseMs = candlePaintAt - candleResponseAt
+    console.info(
+      `MARKET_CHART_FIRST_CANDLE_MS=${firstCandleAfterResponseMs.toFixed(1)}; supplements_pending_at_paint=${supplementsPendingAtCandlePaint}`
+    )
+
+    expect(visibleWhileSupplementsPending).toBe(true)
+  })
+
+  it("keeps event counts scoped to a selection with a known candle range", async () => {
+    const firstCandleRequest = createDeferred<{
+      success: true
+      data: ReturnType<typeof createCandleResponse>
+    }>()
+    const nextCandleRequest = createDeferred<{
+      success: true
+      data: ReturnType<typeof createCandleResponse>
+    }>()
+    const priorEventTime = "2026-08-23T00:01:00.000Z"
+    const priorEvent: MarketChartEconomicCalendarEventResponse = {
+      id: 101,
+      assetId: 101,
+      time: priorEventTime,
+      scheduledAt: priorEventTime,
+      title: "Prior selection event",
+      impact: "HIGH",
+      status: "AVAILABLE",
+    }
+
+    window.localStorage.setItem(
+      "signapse:market-charts:calendar-layer:v1",
+      "true"
+    )
+    getCandles
+      .mockImplementationOnce(() => firstCandleRequest.promise)
+      .mockImplementationOnce(() => nextCandleRequest.promise)
+    getAnnotations.mockResolvedValueOnce({
+      success: true,
+      data: [createHotAnnotation("prior-selection", priorEventTime)],
+    })
+    getCalendarEvents.mockImplementation(async (request) =>
+      Date.parse(request.to) > Date.now()
+        ? { success: true, data: [] }
+        : request.assetId === 101
+          ? { success: true, data: [priorEvent] }
+          : { success: true, data: [] }
+    )
+
+    const view = render(
+      <LocalizationProvider locale="vi" dictionary={viDictionary}>
+        <MarketChartWorkbench
+          watchlistAssets={watchlistAssets}
+          watchlistError={null}
+        />
+      </LocalizationProvider>
+    )
+
+    const annotationLoading =
+      viDictionary.marketCharts.annotations.loadingEvents
+    const calendarLoading = viDictionary.marketCharts.calendar.loadingEvents
+    expect(await screen.findByText(annotationLoading)).toBeVisible()
+    expect(screen.getByText(calendarLoading)).toBeVisible()
+    expect(
+      screen.queryByText(viDictionary.marketCharts.annotations.noEvents)
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByText(viDictionary.marketCharts.calendar.noEvents)
+    ).not.toBeInTheDocument()
+
+    await act(async () => {
+      firstCandleRequest.resolve({
+        success: true,
+        data: createCandleResponse(101, "1m"),
+      })
+    })
+    expect(await screen.findAllByText(/1 mốc sự kiện/)).not.toHaveLength(0)
+    expect(
+      await screen.findAllByText(/1 sự kiện lịch kinh tế/)
+    ).not.toHaveLength(0)
+
+    routeSearchParams.current = new URLSearchParams("assetId=102&timeframe=5m")
+    view.rerender(
+      <LocalizationProvider locale="vi" dictionary={viDictionary}>
+        <MarketChartWorkbench
+          watchlistAssets={watchlistAssets}
+          watchlistError={null}
+        />
+      </LocalizationProvider>
+    )
+
+    await waitFor(() => expect(getCandles).toHaveBeenCalledTimes(2))
+    expect(screen.getByText(annotationLoading)).toBeVisible()
+    expect(screen.getByText(calendarLoading)).toBeVisible()
+    expect(screen.queryByText(/1 mốc sự kiện/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/1 sự kiện lịch kinh tế/)).not.toBeInTheDocument()
+    expect(
+      screen.queryByText(viDictionary.marketCharts.annotations.noEvents)
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByText(viDictionary.marketCharts.calendar.noEvents)
+    ).not.toBeInTheDocument()
+
+    await act(async () => {
+      nextCandleRequest.resolve({
+        success: true,
+        data: createCandleResponse(102, "5m"),
+      })
+    })
+    expect(
+      await screen.findAllByText(viDictionary.marketCharts.annotations.noEvents)
+    ).not.toHaveLength(0)
+    expect(
+      await screen.findAllByText(viDictionary.marketCharts.calendar.noEvents)
+    ).not.toHaveLength(0)
+  })
+
+  it("keeps candles when each supplemental source fails and retries independently", async () => {
+    const annotationRequest = createDeferred<{
+      success: boolean
+      error?: string | null
+      data?: []
+    }>()
+    const calendarRequest = createDeferred<{
+      success: boolean
+      error?: string | null
+      data?: []
+    }>()
+    let historicalCalendarRequested = false
+    getCandles.mockResolvedValue({
+      success: true,
+      data: createCandleResponse(101, "1m"),
+    })
+    getAnnotations.mockImplementation(() => annotationRequest.promise)
+    getCalendarEvents.mockImplementation((request) => {
+      if (Date.parse(request.to) > Date.now()) {
+        return Promise.resolve({ success: true, data: [] })
+      }
+
+      historicalCalendarRequested = true
+      return calendarRequest.promise
+    })
+
+    window.localStorage.setItem(
+      "signapse:market-charts:calendar-layer:v1",
+      "true"
+    )
+    const view = render(
+      <LocalizationProvider locale="vi" dictionary={viDictionary}>
+        <MarketChartWorkbench
+          watchlistAssets={watchlistAssets}
+          watchlistError={null}
+        />
+      </LocalizationProvider>
+    )
+
+    await waitFor(() => {
+      expect(getAnnotations).toHaveBeenCalledOnce()
+      expect(historicalCalendarRequested).toBe(true)
+      expect(screen.getByTestId("chart-rest-candles")).toHaveTextContent(
+        "2026-08-23T00:00:00.000Z"
+      )
+    })
+
+    await act(async () => {
+      annotationRequest.resolve({ success: false, error: "annotation error" })
+      calendarRequest.resolve({ success: false, error: "calendar error" })
+    })
+
+    const annotationError = viDictionary.marketCharts.annotations.loadError
+    const calendarError = viDictionary.marketCharts.calendar.loadError
+    const refreshLabel = viDictionary.marketCharts.controls.refreshLatestData
+    const annotationRetry = await screen.findByRole("button", {
+      name: `${annotationError} ${refreshLabel}`,
+    })
+    const calendarRetry = await screen.findByRole("button", {
+      name: `${calendarError} ${refreshLabel}`,
+    })
+    const mobileStatusRegion = Array.from(
+      view.container.querySelectorAll("span.sr-only")
+    ).find((status) => status.classList.contains("sm:hidden"))
+    expect(mobileStatusRegion).toHaveAttribute("aria-hidden", "true")
+    const candles = screen.getByTestId("chart-rest-candles")
+    const originalCandles = candles.textContent
+
+    getAnnotations.mockResolvedValue({ success: true, data: [] })
+    fireEvent.click(annotationRetry)
+    await waitFor(() => {
+      expect(getAnnotations).toHaveBeenCalledTimes(2)
+      expect(
+        screen.queryByRole("button", {
+          name: `${annotationError} ${refreshLabel}`,
+        })
+      ).not.toBeInTheDocument()
+      expect(
+        screen.getByRole("button", {
+          name: `${calendarError} ${refreshLabel}`,
+        })
+      ).toBeInTheDocument()
+      expect(candles).toHaveTextContent(originalCandles || "")
+    })
+
+    getCalendarEvents.mockResolvedValue({ success: true, data: [] })
+    fireEvent.click(calendarRetry)
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("button", {
+          name: `${calendarError} ${refreshLabel}`,
+        })
+      ).not.toBeInTheDocument()
+      expect(candles).toHaveTextContent(originalCandles || "")
+    })
+  })
+
+  it("ignores supplemental responses from a previous asset and timeframe", async () => {
+    const staleAnnotationRequest = createDeferred<{
+      success: boolean
+      error?: string | null
+      data?: MarketChartAnnotationResponse[]
+    }>()
+    const staleCalendarRequest = createDeferred<{
+      success: boolean
+      error?: string | null
+      data?: MarketChartEconomicCalendarEventResponse[]
+    }>()
+    const currentAnnotation = createHotAnnotation(
+      "current-selection",
+      "2026-08-23T00:05:00.000Z",
+      102
+    )
+    const currentEvent: MarketChartEconomicCalendarEventResponse = {
+      id: 202,
+      assetId: 102,
+      time: "2026-08-23T00:05:00.000Z",
+      scheduledAt: "2026-08-23T00:05:00.000Z",
+      title: "Current selection event",
+      impact: "HIGH",
+      status: "AVAILABLE",
+    }
+    const staleAnnotation = createHotAnnotation(
+      "stale-selection",
+      "2026-08-23T00:01:00.000Z"
+    )
+    const staleEvent: MarketChartEconomicCalendarEventResponse = {
+      id: 101,
+      assetId: 101,
+      time: "2026-08-23T00:01:00.000Z",
+      scheduledAt: "2026-08-23T00:01:00.000Z",
+      title: "Stale selection event",
+      impact: "HIGH",
+      status: "AVAILABLE",
+    }
+    let currentHistoricalCalendarRequested = false
+    getCandles.mockImplementation(async () => ({
+      success: true,
+      data:
+        getCandles.mock.calls.length === 1
+          ? createCandleResponse(101, "1m")
+          : createCandleResponse(102, "5m"),
+    }))
+    getAnnotations.mockImplementation((request) =>
+      request.assetId === 101
+        ? staleAnnotationRequest.promise
+        : Promise.resolve({ success: true, data: [currentAnnotation] })
+    )
+    getCalendarEvents.mockImplementation((request) => {
+      if (Date.parse(request.to) > Date.now()) {
+        return Promise.resolve({ success: true, data: [] })
+      }
+
+      if (request.assetId === 101) {
+        return staleCalendarRequest.promise
+      }
+
+      currentHistoricalCalendarRequested = true
+      return Promise.resolve({ success: true, data: [currentEvent] })
+    })
+
+    const view = render(
+      <LocalizationProvider locale="vi" dictionary={viDictionary}>
+        <MarketChartWorkbench
+          watchlistAssets={watchlistAssets}
+          watchlistError={null}
+        />
+      </LocalizationProvider>
+    )
+
+    await waitFor(() => {
+      expect(getAnnotations).toHaveBeenCalledOnce()
+      expect(staleCalendarRequest.promise).toBeDefined()
+    })
+    routeSearchParams.current = new URLSearchParams("assetId=102&timeframe=5m")
+    view.rerender(
+      <LocalizationProvider locale="vi" dictionary={viDictionary}>
+        <MarketChartWorkbench
+          watchlistAssets={watchlistAssets}
+          watchlistError={null}
+        />
+      </LocalizationProvider>
+    )
+
+    await waitFor(() => {
+      expect(getCandles).toHaveBeenCalledTimes(2)
+      expect(getAnnotations).toHaveBeenCalledTimes(2)
+      expect(currentHistoricalCalendarRequested).toBe(true)
+      expect(screen.getByTestId("chart-rest-candles")).toHaveTextContent(
+        JSON.stringify(
+          createRestCandles([
+            "2026-08-23T00:00:00.000Z",
+            "2026-08-23T00:05:00.000Z",
+          ])
+        )
+      )
+    })
+
+    await act(async () => {
+      staleAnnotationRequest.resolve({ success: true, data: [staleAnnotation] })
+      staleCalendarRequest.resolve({ success: true, data: [staleEvent] })
+    })
+
+    await waitFor(() => {
+      expect(screen.getByTestId("chart-annotations")).toHaveTextContent(
+        "current-selection"
+      )
+      expect(screen.getByTestId("chart-annotations")).not.toHaveTextContent(
+        "stale-selection"
+      )
+      expect(screen.getByTestId("chart-calendar-events")).toHaveTextContent(
+        "Current selection event"
+      )
+      expect(screen.getByTestId("chart-calendar-events")).not.toHaveTextContent(
+        "Stale selection event"
+      )
+      expect(
+        screen.queryByRole("alert", {
+          name: viDictionary.marketCharts.annotations.loadError,
+        })
+      ).not.toBeInTheDocument()
+    })
+  })
+
+  it("keeps the active candle response when URL sync acknowledges a selection", async () => {
+    const previousCandleRequest = createDeferred<{
+      success: true
+      data: ReturnType<typeof createCandleResponse>
+    }>()
+    const selectedCandleRequest = createDeferred<{
+      success: true
+      data: ReturnType<typeof createCandleResponse>
+    }>()
+    getCandles
+      .mockImplementationOnce(() => previousCandleRequest.promise)
+      .mockImplementationOnce(() => selectedCandleRequest.promise)
+
+    const view = render(
+      <LocalizationProvider locale="vi" dictionary={viDictionary}>
+        <MarketChartWorkbench
+          watchlistAssets={watchlistAssets}
+          watchlistError={null}
+        />
+      </LocalizationProvider>
+    )
+
+    await waitFor(() => expect(getCandles).toHaveBeenCalledTimes(1))
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: viDictionary.marketCharts.timeframes["5m"],
+      })
+    )
+    await waitFor(() => expect(getCandles).toHaveBeenCalledTimes(2))
+
+    routeSearchParams.current = new URLSearchParams("assetId=101&timeframe=5m")
+    view.rerender(
+      <LocalizationProvider locale="vi" dictionary={viDictionary}>
+        <MarketChartWorkbench
+          watchlistAssets={watchlistAssets}
+          watchlistError={null}
+        />
+      </LocalizationProvider>
+    )
+    await act(async () => {
+      await new Promise((resolve) => window.setTimeout(resolve, 1))
+    })
+
+    await act(async () => {
+      selectedCandleRequest.resolve({
+        success: true,
+        data: createCandleResponse(101, "5m"),
+      })
+    })
+
+    const candles = screen.getByTestId("chart-rest-candles")
+    const selectedCandles = JSON.stringify(
+      createRestCandles([
+        "2026-08-23T00:00:00.000Z",
+        "2026-08-23T00:05:00.000Z",
+      ])
+    )
+    await waitFor(() => {
+      expect(candles).toHaveTextContent(selectedCandles)
+      expect(candles.parentElement).toHaveClass("visible")
+      expect(
+        screen.getByTestId("market-chart-toolbar").parentElement?.parentElement
+      ).toHaveAttribute("aria-busy", "false")
+    })
+
+    await act(async () => {
+      previousCandleRequest.resolve({
+        success: true,
+        data: createCandleResponse(101, "1m"),
+      })
+    })
+    expect(candles).toHaveTextContent(selectedCandles)
+    expect(candles.parentElement).toHaveClass("visible")
+  })
+
+  it("loads backfill candles and supplemental ranges through the page gap", async () => {
+    routeSearchParams.current = new URLSearchParams("assetId=101&timeframe=1h")
+    const joinAnnotation = createHotAnnotation(
+      "join-10",
+      "2026-08-19T10:00:00.000Z"
+    )
+    const gapAnnotation = createHotAnnotation(
+      "gap-09",
+      "2026-08-19T09:00:00.000Z"
+    )
+    const olderAnnotations = createDeferred<{
+      success: boolean
+      data: MarketChartAnnotationResponse[]
+    }>()
+    const olderCalendar = createDeferred<{
+      success: boolean
+      data: MarketChartEconomicCalendarEventResponse[]
+    }>()
+    const initialResponse = {
+      ...createCandleResponse(101, "1h"),
+      from: "2026-08-19T10:00:00.000Z",
+      to: "2026-08-19T11:00:00.000Z",
+      candles: createRestCandles([
+        "2026-08-19T10:00:00.000Z",
+        "2026-08-19T11:00:00.000Z",
+      ]),
+    }
+    const olderResponse = {
+      ...initialResponse,
+      from: "2026-08-19T07:00:00.000Z",
+      to: "2026-08-19T10:00:00.000Z",
+      candles: [
+        {
+          time: "2026-08-19T07:00:00.000Z",
+          open: 4200,
+          high: 4210,
+          low: 4190,
+          close: 4205,
+        },
+      ],
+    }
+    getCandles.mockImplementation(async () =>
+      getCandles.mock.calls.length === 1
+        ? { success: true, data: initialResponse }
+        : { success: true, data: olderResponse }
+    )
+    getAnnotations.mockImplementation((request) =>
+      request.from === "2026-08-19T07:00:00.000Z"
+        ? olderAnnotations.promise
+        : Promise.resolve({ success: true, data: [joinAnnotation] })
+    )
+    getCalendarEvents.mockImplementation((request) => {
+      if (Date.parse(request.to) > Date.now()) {
+        return Promise.resolve({ success: true, data: [] })
+      }
+
+      return request.from === "2026-08-19T07:00:00.000Z"
+        ? olderCalendar.promise
+        : Promise.resolve({ success: true, data: [] })
+    })
+
+    render(
+      <LocalizationProvider locale="vi" dictionary={viDictionary}>
+        <MarketChartWorkbench
+          watchlistAssets={watchlistAssets}
+          watchlistError={null}
+        />
+      </LocalizationProvider>
+    )
+
+    await screen.findByText("Load older fixture")
+    await waitFor(() => {
+      expect(getAnnotations).toHaveBeenCalledOnce()
+      expect(
+        screen.getByTestId("chart-rest-candles").parentElement
+      ).toHaveClass("visible")
+    })
+    const expectedAnnotationRange = {
+      assetId: 101,
+      from: "2026-08-19T07:00:00.000Z",
+      to: "2026-08-19T10:00:00.000Z",
+    }
+    const expectedCalendarRange = {
+      ...expectedAnnotationRange,
+      to: "2026-08-19T08:00:00.000Z",
+    }
+    const olderPageComplete = new Promise<void>((resolve) => {
+      window.addEventListener(
+        "market-chart-fixture-older-page-complete",
+        () => resolve(),
+        { once: true }
+      )
+    })
+    await act(async () => {
+      fireEvent.click(screen.getByText("Load older fixture"))
+      await olderPageComplete
+    })
+    await waitFor(() => {
+      expect(getCandles).toHaveBeenCalledTimes(2)
+      expect(getAnnotations).toHaveBeenCalledWith(expectedAnnotationRange)
+      expect(getCalendarEvents).toHaveBeenCalledWith({
+        ...expectedCalendarRange,
+        impact: ["HIGH"],
+      })
+      expect(screen.getByTestId("chart-rest-candles")).toHaveTextContent(
+        "2026-08-19T07:00:00.000Z"
+      )
+      expect(screen.getByTestId("chart-rest-candles")).toHaveTextContent(
+        "2026-08-19T10:00:00.000Z"
+      )
+    })
+
+    await act(async () => {
+      olderAnnotations.resolve({
+        success: true,
+        data: [gapAnnotation, joinAnnotation],
+      })
+      olderCalendar.resolve({ success: true, data: [] })
+    })
+
+    await waitFor(() => {
+      const annotations = JSON.parse(
+        screen.getByTestId("chart-annotations").textContent || "[]"
+      ) as Array<{ id: string; time: string }>
+      expect(annotations.map(({ id }) => id)).toEqual(["gap-09", "join-10"])
+      expect(annotations.find(({ id }) => id === "gap-09")?.time).toBe(
+        "2026-08-19T09:00:00.000Z"
+      )
+      expect(annotations.filter(({ id }) => id === "join-10")).toHaveLength(1)
+      expect(annotations.find(({ id }) => id === "join-10")?.time).toBe(
+        "2026-08-19T10:00:00.000Z"
+      )
+    })
+  })
+
+  it("reloads all selected calendar impacts after rapid filter changes", async () => {
+    const initialHigh = createDeferred<{
+      success: true
+      data: MarketChartEconomicCalendarEventResponse[]
+    }>()
+    const highAndMedium = createDeferred<{
+      success: true
+      data: MarketChartEconomicCalendarEventResponse[]
+    }>()
+    const mediumOnly = createDeferred<{
+      success: true
+      data: MarketChartEconomicCalendarEventResponse[]
+    }>()
+    const historicalEvent = (
+      id: number,
+      title: string,
+      impact: "HIGH" | "MEDIUM"
+    ): MarketChartEconomicCalendarEventResponse => ({
+      id,
+      assetId: 101,
+      impact,
+      scheduledAt: "2026-08-23T00:00:30.000Z",
+      status: "AVAILABLE",
+      time: "2026-08-23T00:00:30.000Z",
+      title,
+    })
+    const currentMedium = historicalEvent(701, "Current medium", "MEDIUM")
+    const staleMedium = historicalEvent(702, "Stale medium", "MEDIUM")
+    const staleHigh = historicalEvent(703, "Stale high", "HIGH")
+
+    getCandles.mockResolvedValue({
+      success: true,
+      data: createCandleResponse(101, "1m"),
+    })
+    getCalendarEvents.mockImplementation((request) => {
+      if (Date.parse(request.to) > Date.now()) {
+        return Promise.resolve({ success: true, data: [] })
+      }
+
+      switch (request.impact.join(",")) {
+        case "HIGH":
+          return initialHigh.promise
+        case "HIGH,MEDIUM":
+          return highAndMedium.promise
+        case "MEDIUM":
+          return mediumOnly.promise
+        default:
+          throw new Error(`Unexpected impact filter: ${request.impact}`)
+      }
+    })
+
+    render(
+      <LocalizationProvider locale="vi" dictionary={viDictionary}>
+        <MarketChartWorkbench
+          watchlistAssets={watchlistAssets}
+          watchlistError={null}
+        />
+      </LocalizationProvider>
+    )
+
+    const historicalRequests = () =>
+      getCalendarEvents.mock.calls
+        .map(([request]) => request)
+        .filter((request) => Date.parse(request.to) <= Date.now())
+
+    await waitFor(() => {
+      expect(
+        historicalRequests().some(
+          (request) => request.impact.join(",") === "HIGH"
+        )
+      ).toBe(true)
+    })
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: viDictionary.marketCharts.controls.eventSettingsAria,
+      })
+    )
+    fireEvent.click(
+      screen.getByRole("checkbox", {
+        name: viDictionary.marketCharts.controls.impactOptionLabels.MEDIUM,
+      })
+    )
+
+    await waitFor(() => {
+      expect(
+        historicalRequests().some(
+          (request) => request.impact.join(",") === "HIGH,MEDIUM"
+        )
+      ).toBe(true)
+    })
+
+    fireEvent.click(
+      screen.getByRole("checkbox", {
+        name: viDictionary.marketCharts.controls.impactOptionLabels.HIGH,
+      })
+    )
+
+    await waitFor(() => {
+      expect(
+        historicalRequests().some(
+          (request) => request.impact.join(",") === "MEDIUM"
+        )
+      ).toBe(true)
+    })
+
+    await act(async () => {
+      mediumOnly.resolve({ success: true, data: [currentMedium] })
+    })
+
+    await waitFor(() => {
+      expect(screen.getByTestId("chart-calendar-events")).toHaveTextContent(
+        "Current medium"
+      )
+    })
+
+    await act(async () => {
+      highAndMedium.resolve({ success: true, data: [staleMedium, staleHigh] })
+      initialHigh.resolve({ success: true, data: [staleHigh] })
+    })
+
+    await waitFor(() => {
+      const events = JSON.parse(
+        screen.getByTestId("chart-calendar-events").textContent || "[]"
+      ) as MarketChartEconomicCalendarEventResponse[]
+      expect(events.map((event) => event.title)).toEqual(["Current medium"])
+    })
+  })
 
   it("loads the Next event independently while candle history is pending", async () => {
     const event = createNextEvent(151, "US Natural Gas Storage")
@@ -1014,7 +1895,8 @@ describe("Market chart quote-driven candle flow", () => {
 
     await waitFor(() => {
       expect(getCandles).toHaveBeenLastCalledWith(
-        expect.objectContaining({ assetId: 102, timeframe: "1m" })
+        expect.objectContaining({ assetId: 102, timeframe: "1m" }),
+        expect.any(Object)
       )
       expect(FakeEventSource.current).not.toBe(bitcoinSource)
       expect(
@@ -1064,7 +1946,8 @@ describe("Market chart quote-driven candle flow", () => {
 
     await waitFor(() => {
       expect(getCandles).toHaveBeenLastCalledWith(
-        expect.objectContaining({ assetId: 102, timeframe: "5m" })
+        expect.objectContaining({ assetId: 102, timeframe: "5m" }),
+        expect.any(Object)
       )
       expect(FakeEventSource.current).not.toBe(goldSource)
       expect(
@@ -1074,5 +1957,59 @@ describe("Market chart quote-driven candle flow", () => {
       expect(JSON.parse(candleOnChart().textContent || "null")).toBeNull()
     })
     expect(goldSource.close).toHaveBeenCalledTimes(1)
+  })
+
+  it("uses the preloaded candle result without issuing a second request", async () => {
+    routeSearchParams.current = new URLSearchParams("timeframe=1m")
+    const candleResponse = createCandleResponse(101, "1m")
+    const fetchMock = vi.fn<typeof fetch>(
+      async () =>
+        new Response(JSON.stringify({ success: true, data: candleResponse }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        })
+    )
+    vi.stubGlobal("fetch", fetchMock)
+
+    const initialLoadObserver = createMarketChartInitialLoadObserver()
+    initialLoadObserver.start(0)
+    const initialCandleLoad = createInitialMarketChartCandleLoad({
+      workspaceId: 7,
+      assetId: 101,
+      timeframe: "1m",
+    })
+    expect(initialCandleLoad).not.toBeNull()
+    initialCandleLoad!.start({
+      loadError: "Candle request failed",
+      responseInvalid: "Candle response invalid",
+    })
+    await initialCandleLoad!.promise
+
+    render(
+      <LocalizationProvider locale="vi" dictionary={viDictionary}>
+        <MarketChartWorkbench
+          watchlistAssets={watchlistAssets}
+          watchlistError={null}
+          workspaceId={7}
+          initialCandleLoad={initialCandleLoad}
+          initialLoadObserver={initialLoadObserver}
+        />
+      </LocalizationProvider>
+    )
+
+    const candlesOnChart = await screen.findByTestId("chart-rest-candles")
+    await waitFor(() =>
+      expect(candlesOnChart).toHaveTextContent(
+        JSON.stringify(candleResponse.candles)
+      )
+    )
+    await waitFor(() =>
+      expect(routerReplace).toHaveBeenCalledWith(
+        expect.stringContaining("assetId=101"),
+        { scroll: false }
+      )
+    )
+    expect(fetchMock).toHaveBeenCalledOnce()
+    expect(getCandles).not.toHaveBeenCalled()
   })
 })

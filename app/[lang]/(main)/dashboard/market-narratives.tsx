@@ -45,10 +45,7 @@ import {
 } from "@/components/ui/item"
 import { Skeleton } from "@/components/ui/skeleton"
 
-import {
-  OverviewModuleAction,
-  OverviewModuleHeader,
-} from "./overview-module-header"
+import { OverviewModuleHeader } from "./overview-module-header"
 
 const lifecycleVariants = {
   ACTIVE: "active",
@@ -77,12 +74,11 @@ export function MarketNarratives({
     <section aria-labelledby="dashboard-market-narratives-title">
       <Card className="min-w-0">
         <OverviewModuleHeader>
-          <CardTitle>
-            <h2 id="dashboard-market-narratives-title">{t.title}</h2>
-          </CardTitle>
-          <CardDescription>{t.description}</CardDescription>
-          {showGraphView ? (
-            <OverviewModuleAction>
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <CardTitle>
+              <h2 id="dashboard-market-narratives-title">{t.title}</h2>
+            </CardTitle>
+            {showGraphView ? (
               <LocalizedLink
                 href="/graph-view"
                 aria-label={t.graphView}
@@ -91,8 +87,9 @@ export function MarketNarratives({
                 <WaypointsIcon data-icon="inline-start" />
                 {t.graphView}
               </LocalizedLink>
-            </OverviewModuleAction>
-          ) : null}
+            ) : null}
+          </div>
+          <CardDescription>{t.description}</CardDescription>
         </OverviewModuleHeader>
         <CardContent>
           {error || !metric ? (
@@ -133,15 +130,15 @@ export function MarketNarrativesSkeleton() {
     <section aria-hidden="true">
       <Card className="min-w-0">
         <OverviewModuleHeader>
-          <CardTitle>
-            <Skeleton className="h-5 w-40 motion-reduce:animate-none" />
-          </CardTitle>
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <CardTitle>
+              <Skeleton className="h-5 w-40 motion-reduce:animate-none" />
+            </CardTitle>
+            <Skeleton className="h-9 w-32 motion-reduce:animate-none" />
+          </div>
           <CardDescription>
             <Skeleton className="h-4 w-72 max-w-full motion-reduce:animate-none" />
           </CardDescription>
-          <OverviewModuleAction>
-            <Skeleton className="h-9 w-32 motion-reduce:animate-none" />
-          </OverviewModuleAction>
         </OverviewModuleHeader>
         <CardContent>
           <ItemGroup className="gap-0">

@@ -30,41 +30,50 @@ function MarketChartToolbarSkeleton() {
   )
 }
 
-function MarketChartPlotSkeleton() {
+function MarketChartDrawingToolbarSkeleton() {
   return (
-    <div className="relative mt-3 min-h-0 flex-1 overflow-hidden rounded-lg border border-border/50 bg-muted/20">
-      <div className="absolute inset-x-6 top-1/4 h-px bg-border/70" />
-      <div className="absolute inset-x-6 top-1/2 h-px bg-border/70" />
-      <div className="absolute inset-x-6 top-3/4 h-px bg-border/70" />
-      <div className="absolute inset-y-6 left-1/4 w-px bg-border/70" />
-      <div className="absolute inset-y-6 left-1/2 w-px bg-border/70" />
-      <div className="absolute inset-y-6 left-3/4 w-px bg-border/70" />
-      <Skeleton className="absolute top-[28%] left-[14%] h-16 w-24 rounded-lg opacity-60" />
-      <Skeleton className="absolute top-[42%] left-[36%] h-24 w-28 rounded-lg opacity-70" />
-      <Skeleton className="absolute top-[24%] right-[18%] h-20 w-24 rounded-lg opacity-60" />
-      <Skeleton className="absolute right-6 bottom-6 h-3 w-20 rounded-full" />
+    <div
+      aria-hidden="true"
+      data-testid="market-chart-drawing-toolbar-skeleton"
+      className="flex shrink-0 flex-col items-center gap-1 overflow-hidden border-r bg-card p-1"
+    >
+      {Array.from({ length: 7 }, (_, index) => (
+        <Skeleton key={index} className="size-8 rounded-lg" />
+      ))}
     </div>
   )
 }
 
-function MarketChartVolumeSkeleton() {
+function MarketChartPlotSkeleton() {
   return (
-    <div className="mt-3 border-t border-border/60 pt-3">
-      <div className="flex flex-wrap gap-3">
-        <Skeleton className="h-3 w-24 rounded-full" />
-        <Skeleton className="h-3 w-16 rounded-full" />
-        <Skeleton className="h-3 w-16 rounded-full" />
-        <Skeleton className="h-3 w-20 rounded-full" />
+    <div className="relative min-h-0 min-w-0 flex-1 overflow-hidden bg-card">
+      <div className="absolute inset-x-0 top-1/4 h-px bg-border/70" />
+      <div className="absolute inset-x-0 top-1/2 h-px bg-border/70" />
+      <div className="absolute inset-x-0 top-3/4 h-px bg-border/70" />
+      <div className="absolute inset-y-0 left-1/4 w-px bg-border/70" />
+      <div className="absolute inset-y-0 left-1/2 w-px bg-border/70" />
+      <div className="absolute inset-y-0 left-3/4 w-px bg-border/70" />
+      <div className="absolute top-3 left-3 z-10 flex max-w-[calc(100%-1.5rem)] flex-wrap items-center gap-2">
+        <Skeleton className="h-3 w-32 rounded-full" />
+        <Skeleton className="h-3 w-12 rounded-full" />
+        <Skeleton className="h-3 w-8 rounded-full" />
+        <Skeleton className="h-3 w-8 rounded-full" />
+        <Skeleton className="h-3 w-8 rounded-full" />
+        <Skeleton className="h-3 w-8 rounded-full" />
       </div>
-      <div className="mt-3 flex h-20 items-end gap-1.5 rounded-lg bg-muted/20 px-3 pb-2">
-        {["h-6", "h-10", "h-4", "h-14", "h-8", "h-12", "h-5", "h-16"].map(
-          (height, index) => (
-            <Skeleton
-              key={`${height}-${index}`}
-              className={cn("w-3 rounded-sm", height)}
-            />
-          )
-        )}
+      <Skeleton className="absolute top-[28%] left-[14%] h-16 w-24 rounded-lg opacity-60" />
+      <Skeleton className="absolute top-[42%] left-[36%] h-24 w-28 rounded-lg opacity-70" />
+      <Skeleton className="absolute top-[24%] right-[18%] h-20 w-24 rounded-lg opacity-60" />
+      <div className="absolute inset-y-0 right-0 flex w-16 flex-col items-center justify-evenly border-l border-border/60 py-6">
+        <Skeleton className="h-3 w-10 rounded-full" />
+        <Skeleton className="h-3 w-10 rounded-full" />
+        <Skeleton className="h-3 w-10 rounded-full" />
+        <Skeleton className="h-3 w-10 rounded-full" />
+      </div>
+      <div className="absolute inset-x-0 bottom-0 flex h-7 items-center justify-around border-t border-border/60">
+        <Skeleton className="h-3 w-12 rounded-full" />
+        <Skeleton className="h-3 w-12 rounded-full" />
+        <Skeleton className="h-3 w-12 rounded-full" />
       </div>
     </div>
   )
@@ -84,17 +93,8 @@ function MarketChartStatusRailSkeleton() {
 
 function MarketChartSkeletonContent({ className }: { className?: string }) {
   return (
-    <div className={cn("flex h-full min-h-0 flex-col p-3", className)}>
-      <div className="flex flex-wrap gap-4 px-1">
-        <Skeleton className="h-3 w-36 rounded-full" />
-        <Skeleton className="h-3 w-20 rounded-full" />
-        <Skeleton className="h-3 w-20 rounded-full" />
-        <Skeleton className="h-3 w-20 rounded-full" />
-        <Skeleton className="h-3 w-20 rounded-full" />
-        <Skeleton className="h-3 w-24 rounded-full" />
-      </div>
+    <div className={cn("flex h-full min-h-0 min-w-0 flex-col", className)}>
       <MarketChartPlotSkeleton />
-      <MarketChartVolumeSkeleton />
     </div>
   )
 }
@@ -109,24 +109,27 @@ function MarketChartSurfaceSkeleton({
   showStatusRail?: boolean
 }) {
   if (embedded) {
-    return <MarketChartSkeletonContent className={cn("h-full", className)} />
+    return (
+      <div className={cn("flex h-full min-h-0 min-w-0", className)}>
+        <MarketChartDrawingToolbarSkeleton />
+        <MarketChartSkeletonContent className="min-w-0 flex-1" />
+      </div>
+    )
   }
 
   return (
     <section
       className={cn(
-        "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-border bg-card",
+        "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-card",
         className
       )}
     >
       <MarketChartToolbarSkeleton />
-      <div
-        className={cn(
-          "min-h-[20rem] flex-1 bg-card p-2",
-          showStatusRail ? "rounded-t-xl" : "rounded-xl"
-        )}
-      >
-        <MarketChartSkeletonContent />
+      <div className="relative min-h-0 min-w-0 flex-1 overflow-hidden bg-card">
+        <div className="flex h-full min-h-0 min-w-0">
+          <MarketChartDrawingToolbarSkeleton />
+          <MarketChartSkeletonContent className="flex-1" />
+        </div>
       </div>
       {showStatusRail ? <MarketChartStatusRailSkeleton /> : null}
     </section>

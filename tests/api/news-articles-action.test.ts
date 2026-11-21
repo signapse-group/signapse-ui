@@ -26,7 +26,10 @@ vi.mock("@/app/lib/observability/server", () => ({
 }))
 
 import { fetchAuthenticated } from "@/app/api/auth/action"
-import { getNewsArticleById } from "@/app/api/news-articles/action"
+import {
+  getNewsArticleById,
+  getNewsArticleByIdForQuickDetail,
+} from "@/app/api/news-articles/action"
 
 describe("getNewsArticleById", () => {
   beforeEach(() => {
@@ -100,4 +103,25 @@ describe("getNewsArticleById", () => {
       ]
     )
   })
+})
+
+describe("getNewsArticleByIdForQuickDetail", () => {
+  beforeEach(() => {
+    vi.mocked(fetchAuthenticated).mockReset()
+    reportValidationFailure.mockReset()
+  })
+
+  it.each([401, 403, 404])(
+    "returns the serializable HTTP %i status for the quick reader",
+    async (status) => {
+      vi.mocked(fetchAuthenticated).mockRejectedValueOnce(
+        Object.assign(new Error("private backend detail"), { status })
+      )
+
+      await expect(getNewsArticleByIdForQuickDetail(71)).resolves.toEqual({
+        success: false,
+        status,
+      })
+    }
+  )
 })

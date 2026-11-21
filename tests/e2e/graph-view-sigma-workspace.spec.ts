@@ -7,7 +7,10 @@ async function clickGraphAnchor(page: Page) {
 }
 
 async function tapGraphAnchor(page: Page) {
-  const point = await graphAnchorPoint(page)
+  await tapGraphPoint(page, await graphAnchorPoint(page))
+}
+
+async function tapGraphPoint(page: Page, point: { x: number; y: number }) {
   const cdp = await page.context().newCDPSession(page)
   await cdp.send("Input.dispatchTouchEvent", {
     type: "touchStart",
@@ -49,23 +52,22 @@ for (const locale of ["vi", "en"] as const) {
       const hint = page.getByTestId("graph-view-interaction-hint")
       await expect(hint).toHaveText(
         locale === "vi"
-          ? "Kéo để di chuyển biểu đồ · Chọn nút để xem thông tin"
-          : "Drag to pan the graph · Select a node to view its information"
+          ? "Kéo để di chuyển biểu đồ · Chọn nút hoặc quan hệ để xem thông tin"
+          : "Drag to pan the graph · Select a node or relationship to inspect"
       )
-      await expect(hint).not.toContainText(/đường nối|connection/i)
 
       const edgeLegend = page.getByTestId("graph-demo-edge-legend")
       const edgeLabels =
         locale === "vi"
           ? [
               "Sự kiện → tài sản",
-              "Bằng chứng → sự kiện",
+              "Bài viết → sự kiện",
               "Luận điểm → sự kiện",
               "Luận điểm → tài sản",
             ]
           : [
               "Event → asset",
-              "Evidence → event",
+              "News article → event",
               "Narrative → event",
               "Narrative → asset",
             ]
@@ -186,12 +188,14 @@ test("canvas click keeps layout still and mouse/touch drag wakes forces", async 
   await cdp.detach()
 })
 
-for (const width of [1520, 1024, 390, 360]) {
+// 760×512 is the effective CSS viewport at 200% zoom from 1520×1024.
+for (const width of [1520, 1440, 1439, 1024, 768, 767, 760, 390, 360]) {
   test(`Sigma workspace graph keeps its watchlist context at ${width}px`, async ({
     page,
     fixture,
   }) => {
-    const height = width === 1520 ? 1024 : width === 1024 ? 768 : 844
+    const height =
+      width === 1520 ? 1024 : width === 760 ? 512 : width === 1024 ? 768 : 844
     await page.setViewportSize({ width, height })
     await page.goto("/vi/graph-view")
     if (width >= 768) {
@@ -207,7 +211,10 @@ for (const width of [1520, 1024, 390, 360]) {
       { timeout: 30_000 }
     )
     await page.screenshot({ path: `test-results/sigma-canvas-${width}.png` })
-    await expect(page.getByRole("combobox")).toHaveCount(0)
+    const timeRange = page.getByRole("combobox", {
+      name: "Khoảng thời gian",
+    })
+    await expect(timeRange).toContainText("7 ngày qua")
     await expect(page.getByTestId("graph-demo-re-layout")).toHaveCount(0)
     await expect(
       page.getByTestId("graph-demo-edge-legend").locator('[data-slot="badge"]')
@@ -219,7 +226,7 @@ for (const width of [1520, 1024, 390, 360]) {
       .getByTestId("graph-demo-edge-legend")
       .boundingBox())!
     const launcher = (await page
-      .getByRole("button", { name: "Mở trợ lý AI", exact: true })
+      .getByRole("button", { name: "Ask Signapse", exact: true })
       .boundingBox())!
     expect(
       legend.x + legend.width <= launcher.x ||
@@ -233,7 +240,9 @@ for (const width of [1520, 1024, 390, 360]) {
     )
     await expect(inspector.locator("dl")).toContainText("92%")
     await expect(inspector.locator("dl")).toContainText(/\d{2}:\d{2}/)
-    await expect(inspector.getByTestId("graph-demo-open-quick-detail")).toHaveCount(0)
+    await expect(
+      inspector.getByRole("button", { name: "Đọc sự kiện", exact: true })
+    ).toBeVisible()
     await expect(inspector.getByRole("link")).toHaveCount(0)
     await expect(inspector).not.toContainText("Nút liên quan")
     await expect(inspector).not.toContainText("Cạnh liên quan")
@@ -271,18 +280,50 @@ for (const width of [1520, 1024, 390, 360]) {
           y: r.y + (Number(data.benchmarkAnchorY) + Number(data.neighborY)) / 2,
         }
       })
-    const edge = page.getByTestId("graph-demo-edge-inspector")
+    const edge = page.getByTestId("graph-edge-inspector")
     const canvas = page.getByTestId("graph-demo-canvas")
-    await page.mouse.move(midpoint.x, midpoint.y + 6)
-    await expect(canvas).toHaveAttribute("data-hovered-edge-id", /.+/)
-    await expect(edge).toHaveCount(0)
+    if (width <= 390) {
+      await tapGraphPoint(page, { x: midpoint.x, y: midpoint.y + 6 })
+    } else {
+      await page.mouse.move(midpoint.x, midpoint.y + 6)
+      await expect(canvas).toHaveAttribute("data-hovered-edge-id", /.+/)
+      await expect(edge).toHaveCount(0)
+      await page.screenshot({
+        path: `test-results/sigma-edge-hover-${width}.png`,
+      })
+      await page.mouse.move(midpoint.x, midpoint.y + 24)
+      await expect(canvas).toHaveAttribute("data-hovered-edge-id", "")
+      await page.mouse.click(midpoint.x, midpoint.y + 6)
+    }
+    await expect(edge).toBeVisible()
+    await expect(edge).toContainText("Nguồn · Sự kiện")
+    await expect(edge).toContainText("Đích · Tài sản")
+    await expect(edge).toContainText("Sự kiện → tài sản")
+    await expect(edge).toContainText("Tài sản bị ảnh hưởng")
+    await expect(edge).not.toContainText("Ghi chú")
     await page.screenshot({
-      path: `test-results/sigma-edge-hover-${width}.png`,
+      path: `test-results/sigma-edge-selected-${width}.png`,
     })
-    await page.mouse.move(midpoint.x, midpoint.y + 24)
-    await expect(canvas).toHaveAttribute("data-hovered-edge-id", "")
-    await page.mouse.click(midpoint.x, midpoint.y + 6)
-    await expect(edge).toHaveCount(0)
+    if (width === 760) {
+      const relation = edge.getByText("Tài sản bị ảnh hưởng", { exact: true })
+      await relation.scrollIntoViewIfNeeded()
+      await expect(relation).toBeInViewport()
+      await page.screenshot({
+        path: "test-results/sigma-edge-selected-760-scrolled.png",
+      })
+    }
+    if (width === 390) {
+      await page.getByRole("button", { name: "Chọn giao diện" }).click()
+      await page.getByRole("menuitem", { name: "Tối", exact: true }).click()
+      await expect(page.locator("html")).toHaveClass(/dark/)
+      await expect(
+        page.getByRole("menuitem", { name: "Tối", exact: true })
+      ).toBeHidden()
+      await expect(edge).toBeVisible()
+      await page.screenshot({
+        path: "test-results/sigma-edge-selected-dark.png",
+      })
+    }
     const state = await fixture.state()
     expect(
       state.requests.some((request) => request.path === "/graph-view")
@@ -359,9 +400,9 @@ test("live Graph View controls work from the keyboard with visible focus", async
     }
   }
   expect(zoomInHasKeyboardFocus).toBe(true)
-  expect(await zoomIn.evaluate((element) => element.matches(":focus-visible"))).toBe(
-    true
-  )
+  expect(
+    await zoomIn.evaluate((element) => element.matches(":focus-visible"))
+  ).toBe(true)
 
   const canvas = page.getByTestId("graph-demo-canvas")
   const ratioBefore = await canvas.getAttribute("data-camera-ratio")
@@ -399,7 +440,7 @@ test("live Graph View distinguishes empty watchlist from empty graph", async ({
   await fixture.setScenario("/watchlists", "empty", "GET")
   await page.goto("/vi/graph-view")
   await expect(
-    page.getByRole("heading", { name: "Watchlist chưa có tài sản" })
+    page.getByText("Watchlist chưa có tài sản", { exact: true })
   ).toBeVisible()
   await expect(
     page.getByText("Thêm tài sản vào watchlist của workspace này", {
@@ -418,10 +459,10 @@ test("live Graph View distinguishes empty watchlist from empty graph", async ({
   await fixture.setScenario("/watchlists", "success", "GET")
   await page.goto("/vi/graph-view")
   await expect(
-    page.getByRole("heading", { name: "Chưa có dữ liệu graph liên quan" })
+    page.getByText("Không có Event trong 7 ngày qua", { exact: true })
   ).toBeVisible()
   await expect(
-    page.getByText("Điều đó không có nghĩa các tài sản không chịu ảnh hưởng.")
+    page.getByRole("combobox", { name: "Khoảng thời gian" })
   ).toBeVisible()
   await page.screenshot({
     path: "test-results/graph-state-no-related-data.png",
@@ -465,15 +506,16 @@ test("live Graph View keeps permission, transport and schema failures distinct",
   await fixture.setScenario("/watchlists", "permission-denied", "GET")
   await page.goto("/vi/graph-view")
   await expect(
-    page.getByText(
-      "Bạn cần quyền watchlist để xác định workspace này có tài sản đang theo dõi hay không."
-    )
+    page.getByText("Không có Event trong 7 ngày qua", { exact: true })
+  ).toBeVisible()
+  await expect(
+    page.getByRole("combobox", { name: "Khoảng thời gian" })
   ).toBeVisible()
   await page.screenshot({
     path: "test-results/graph-state-watchlist-permission-denied.png",
   })
   await expect(
-    page.getByRole("heading", { name: "Watchlist chưa có tài sản" })
+    page.getByText("Watchlist chưa có tài sản", { exact: true })
   ).toHaveCount(0)
 
   await fixture.reset()
@@ -481,9 +523,10 @@ test("live Graph View keeps permission, transport and schema failures distinct",
   await fixture.setScenario("/graph-view", "empty", "GET")
   await page.goto("/vi/graph-view")
   await expect(
-    page.getByText(
-      "Bạn cần quyền watchlist để xác định workspace này có tài sản đang theo dõi hay không."
-    )
+    page.getByText("Không có Event trong 7 ngày qua", { exact: true })
+  ).toBeVisible()
+  await expect(
+    page.getByRole("combobox", { name: "Khoảng thời gian" })
   ).toBeVisible()
   expect(
     (await fixture.state()).requests.some(

@@ -14,7 +14,7 @@ When framework versions, the UI preset, CI, or repository ownership change, refr
 - When a task spans multiple domains, read every applicable scoped instruction file.
 - Scoped instructions extend this file; the more specific instruction wins when guidance conflicts.
 - `.agents/skills` holds repository-specific or non-overlapping recipes.
-- For assigned Jira/Symphony work, read and follow the phase selected by [WORKFLOW.md](WORKFLOW.md). Planning owns project hierarchy, routing and acceptance; ordinary requests do not activate tracker lifecycle actions.
+- For assigned Jira/Symphony work, use the phase grant and skill selected by [WORKFLOW.md](WORKFLOW.md). Planning owns project hierarchy, routing and acceptance. Ordinary requests use their direct-work grant.
 - Choose technical skills when the change or review needs them; skills do not grant workflow permissions or add lifecycle gates. Relevant techniques include:
 - `shadcn`: adding, fixing, composing shadcn components, wrappers, CLI, docs, presets, and styling rules.
 - Overlay hydration mismatches: use the Hydration section in `components/AGENTS.override.md`.
@@ -28,7 +28,7 @@ Live Subtask/parent, accepted decisions, dependencies and explicit assignment re
 
 ## Dev handoff boundary
 
-CI runs quality checks on PRs and pushes to dev/main. Feature/fix PRs target dev; main is reserved for a future production release. Reviewers confirm dev Vercel delivery from their workspace under [delivery guidance](docs/delivery.md) and the assigned Review runbook.
+CI runs quality checks on PRs and pushes to dev/main. Feature/fix PRs target dev. Main is reserved for a future production release. The assigned [Review skill](.agents/skills/code-review/SKILL.md#verify-the-delivered-build) uses the [delivery guidance](docs/delivery.md) to confirm dev Vercel delivery from the reviewer's workspace.
 
 For direct work, complete the requested output with applicable verification under CONTRIBUTING. An accepted local request needs no Jira ticket as a prerequisite. Tracker/review/PR/CI lifecycle and publication activate only when assigned; ordinary requests and no-PR operations retain their requested boundary. Assigned execution follows WORKFLOW, including its phase-specific permissions and stopping point.
 

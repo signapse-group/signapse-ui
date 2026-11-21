@@ -386,12 +386,8 @@ test.describe("P0 sidebar navigation", () => {
     )
 
     await sidebar.getByRole("button", { name: /Signapse Developer/ }).click()
-    const tokenMenuItem = page.getByRole("menuitem", {
-      name: "Token truy cập API",
-      exact: true,
-    })
-    await expect(tokenMenuItem).toBeVisible()
-    await expect(tokenMenuItem).toHaveAttribute("href", "/vi/developer-token")
+    await expect(page.locator('[role="menu"] a[href$="/developer-token"]'))
+      .toHaveCount(0)
 
     const axe = await new AxeBuilder({ page })
       .withTags(["wcag2a", "wcag2aa"])
@@ -454,12 +450,8 @@ test.describe("P0 sidebar navigation", () => {
     await expect(overview).toHaveClass(/ring-sidebar-ring/)
 
     await sidebar.getByRole("button", { name: /Signapse Developer/ }).click()
-    const tokenMenuItem = page.getByRole("menuitem", {
-      name: "API access token",
-      exact: true,
-    })
-    await expect(tokenMenuItem).toBeVisible()
-    await expect(tokenMenuItem).toHaveAttribute("href", "/en/developer-token")
+    await expect(page.locator('[role="menu"] a[href$="/developer-token"]'))
+      .toHaveCount(0)
 
     const axe = await new AxeBuilder({ page })
       .withTags(["wcag2a", "wcag2aa"])

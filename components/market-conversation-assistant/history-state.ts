@@ -1,8 +1,8 @@
 import type { SearchParams } from "@/app/lib/definitions"
 import type { Dictionary } from "@/app/lib/i18n/dictionary-types"
 import type {
+  IdentifiedMarketConversationSummaryResponse,
   MarketChatMessageResponse,
-  MarketConversationSummaryResponse,
 } from "@/app/lib/market-query/definitions"
 
 export const HISTORY_PAGE_SIZE = 10
@@ -44,10 +44,10 @@ export function buildConversationHistorySearchParams(
 }
 
 export function mergeConversationHistory(
-  current: MarketConversationSummaryResponse[],
-  incoming: MarketConversationSummaryResponse[],
+  current: IdentifiedMarketConversationSummaryResponse[],
+  incoming: IdentifiedMarketConversationSummaryResponse[],
   page: number
-) {
+): IdentifiedMarketConversationSummaryResponse[] {
   if (page === 0) {
     return incoming
   }

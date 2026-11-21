@@ -2,7 +2,15 @@
 
 import { cleanup, render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest"
 
 const {
   createMarketConversation,
@@ -29,6 +37,7 @@ vi.mock("sonner", () => ({
 
 import { vi as viDictionary } from "@/app/lib/i18n/dictionaries/vi"
 import { LocalizationProvider } from "@/app/lib/i18n/provider"
+import { SidebarProvider } from "@/components/ui/sidebar"
 import { MarketConversationAssistant } from "@/components/market-conversation-assistant/market-conversation-assistant"
 
 const conversation = {
@@ -42,7 +51,9 @@ const conversation = {
 function renderAssistant() {
   return render(
     <LocalizationProvider locale="vi" dictionary={viDictionary}>
-      <MarketConversationAssistant displayName="Tam" workspaceId={7} />
+      <SidebarProvider defaultOpen>
+        <MarketConversationAssistant displayName="Tam" workspaceId={7} />
+      </SidebarProvider>
     </LocalizationProvider>
   )
 }
@@ -50,7 +61,7 @@ function renderAssistant() {
 async function openAndSubmit(message: string) {
   const user = userEvent.setup()
   await user.click(
-    screen.getByRole("button", { name: viDictionary.aiAssistant.open })
+    screen.getByRole("button", { name: viDictionary.aiAssistant.launcher })
   )
   const composer = screen.getByRole("textbox", {
     name: viDictionary.demoConversation.persistedComposerLabel,
@@ -68,6 +79,22 @@ describe("MarketConversationAssistant submission contract", () => {
       configurable: true,
       value: MouseEvent,
     })
+    Object.defineProperty(window, "matchMedia", {
+      configurable: true,
+      value: vi.fn(
+        (media: string) =>
+          ({
+            matches: media.includes("prefers-reduced-motion"),
+            media,
+            onchange: null,
+            addListener: vi.fn(),
+            removeListener: vi.fn(),
+            addEventListener: vi.fn(),
+            removeEventListener: vi.fn(),
+            dispatchEvent: vi.fn(),
+          }) as MediaQueryList
+      ),
+    })
   })
 
   beforeEach(() => {
@@ -82,6 +109,23 @@ describe("MarketConversationAssistant submission contract", () => {
   })
 
   afterEach(cleanup)
+
+  it("renders the approved launcher pill and AI notice", async () => {
+    renderAssistant()
+    const user = userEvent.setup()
+    const launcher = screen.getByRole("button", {
+      name: "Ask Signapse",
+    })
+
+    expect(launcher).toHaveTextContent("Ask Signapse")
+    await user.click(launcher)
+    expect(
+      screen.getByText(
+        "AI can make mistakes. Please verify important information.",
+        { exact: true }
+      )
+    ).toBeVisible()
+  })
 
   it("retries a connection failure with the same request identity", async () => {
     submitMarketConversationMessage.mockResolvedValue({

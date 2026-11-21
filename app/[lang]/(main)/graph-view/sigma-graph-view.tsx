@@ -12,6 +12,9 @@ import { GraphNodeInspectorMetadata } from "./graph-node-inspector-metadata"
 import {
   ArrowDown,
   ExternalLink,
+  Eye,
+  EyeOff,
+  ListFilter,
   LocateFixed,
   Minus,
   Plus,
@@ -42,8 +45,8 @@ import {
   writeGraphViewDemoLayoutCache,
 } from "@/app/lib/graph-view/demo-layout-cache"
 import {
+  getGraphViewEdgeRelationLabel,
   getGraphViewNodeEntityId,
-  getGraphViewRelationLabel,
   type GraphViewEdge,
   type GraphViewNode,
   type GraphViewNodeKind,
@@ -55,6 +58,13 @@ import type { NewsArticleResponse } from "@/app/lib/news-articles/definitions"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { ButtonGroup } from "@/components/ui/button-group"
 import { Badge } from "@/components/ui/badge"
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty"
 import { cn } from "@/lib/utils"
 
 import {
@@ -62,6 +72,11 @@ import {
   type LocalQuickDetailEntity,
   type LocalQuickDetailFixture,
 } from "../local-entity-quick-detail-drawer"
+import {
+  filterGraphViewByNodeKind,
+  GRAPH_VIEW_NODE_KIND_ORDER,
+  toggleGraphViewNodeKind,
+} from "./graph-view-node-filter"
 import {
   getGraphViewEdgeVisuals,
   getGraphViewNodeVisuals,
@@ -95,19 +110,13 @@ type GraphDemoEdgeVisual = {
 
 const GRAPH_DEMO_ZOOM_RANGE = [1 / 2.2, 1 / 0.45] as const
 const GRAPH_DEMO_ZOOM_FACTOR = 1.18
-const GRAPH_DEMO_NODE_KIND_ORDER = [
-  "event",
-  "asset",
-  "news-article",
-  "narrative",
-] as const satisfies readonly GraphViewNodeKind[]
 const GRAPH_DEMO_EDGE_KIND_ORDER = [
   "event-asset",
   "news-article-event",
   "narrative-event",
   "narrative-asset",
 ] as const
-const GRAPH_DEMO_INSPECTOR_CLASS_NAME =
+const GRAPH_VIEW_INSPECTOR_CLASS_NAME =
   "pointer-events-auto absolute inset-x-4 bottom-4 z-20 flex max-h-[min(60%,calc(100%_-_16rem))] flex-col overflow-hidden rounded-2xl border border-border/80 bg-popover/95 text-popover-foreground shadow-xl backdrop-blur-md min-[1440px]:inset-x-auto min-[1440px]:top-16 min-[1440px]:right-4 min-[1440px]:bottom-auto min-[1440px]:max-h-[calc(100%-5rem)] min-[1440px]:w-[22rem]"
 
 function createGraphDemoPalette(mode: GraphDemoThemeMode): GraphDemoPalette {
@@ -295,6 +304,7 @@ function getDemoQuickDetailFixture(
       evidence: [],
       id: entityId,
       lastModifiedDate: now,
+      marketReactions: [],
       status: "ENRICHED",
       themes: [],
       title: node.label,
@@ -361,13 +371,11 @@ function DemoControlButton({
 }
 
 function DemoNodeInspector({
-  canOpenDetails,
   node,
   nodeVisuals,
   onClose,
   onOpenQuickDetail,
 }: {
-  canOpenDetails: boolean
   node: GraphViewNode
   nodeVisuals: Record<GraphViewNodeKind, GraphDemoNodeVisual>
   onClose: () => void
@@ -381,15 +389,11 @@ function DemoNodeInspector({
   const metadata = node.metadata ?? {}
   const entityId = getGraphViewNodeEntityId(node.id, node.kind)
   const quickDetailEntity =
-    canOpenDetails &&
-    entityId !== null &&
-    (node.kind === "event" || node.kind === "news-article")
+    entityId !== null && (node.kind === "event" || node.kind === "news-article")
       ? { id: entityId, kind: node.kind }
       : null
   const sourceUrl =
-    canOpenDetails &&
-    node.kind === "news-article" &&
-    /^https?:\/\//i.test(metadata.url ?? "")
+    node.kind === "news-article" && /^https?:\/\//i.test(metadata.url ?? "")
       ? metadata.url
       : null
 
@@ -398,7 +402,7 @@ function DemoNodeInspector({
       aria-label={dictionary.graphView.demo.selectedNode}
       data-graph-label-obstacle
       data-graph-inspector
-      className={GRAPH_DEMO_INSPECTOR_CLASS_NAME}
+      className={GRAPH_VIEW_INSPECTOR_CLASS_NAME}
       data-testid="graph-demo-inspector"
     >
       <div className="flex items-start gap-3 border-b border-border/70 p-4">
@@ -466,7 +470,7 @@ function DemoNodeInspector({
             ) : null}
           </div>
         ) : null}
-        {canOpenDetails && node.kind === "news-article" && !sourceUrl ? (
+        {node.kind === "news-article" && !sourceUrl ? (
           <p className="text-xs text-muted-foreground">
             {dictionary.graphView.demo.sourceUnavailable}
           </p>
@@ -476,7 +480,7 @@ function DemoNodeInspector({
   )
 }
 
-function DemoEdgeInspector({
+function GraphEdgeInspector({
   edge,
   edgeVisuals,
   onClose,
@@ -498,10 +502,10 @@ function DemoEdgeInspector({
     },
     {
       label: dictionary.graphView.demo.relationMeaning,
-      value: getGraphViewRelationLabel(edge.relationType, dictionary),
+      value: getGraphViewEdgeRelationLabel(edge, dictionary),
     },
     ...(edge.note?.trim()
-      ? [{ label: dictionary.graphView.demo.note, value: edge.note }]
+      ? [{ label: dictionary.graphView.demo.note, value: edge.note.trim() }]
       : []),
   ]
   return (
@@ -509,8 +513,9 @@ function DemoEdgeInspector({
       aria-label={dictionary.graphView.demo.selectedEdge}
       data-graph-label-obstacle
       data-graph-inspector
-      className={GRAPH_DEMO_INSPECTOR_CLASS_NAME}
-      data-testid="graph-demo-edge-inspector"
+      className={GRAPH_VIEW_INSPECTOR_CLASS_NAME}
+      data-testid="graph-edge-inspector"
+      aria-live="polite"
     >
       <div className="flex items-center justify-between gap-3 border-b border-border/70 p-4">
         <h2 className="text-base font-semibold">
@@ -519,7 +524,7 @@ function DemoEdgeInspector({
         <Button
           aria-label={dictionary.graphView.demo.closeRelationship}
           className="size-11 min-[1440px]:size-8"
-          data-testid="graph-demo-close-edge-inspector"
+          data-testid="graph-close-edge-inspector"
           size="icon"
           type="button"
           variant="ghost"
@@ -577,14 +582,24 @@ function DemoEdgeInspector({
 export function SigmaGraphView({
   initialEdgeCount = 400,
   graphView: liveGraphView,
+  timeRangeControl,
+  enabledNodeKinds: providedEnabledNodeKinds,
+  onToggleNodeKind,
 }: {
   initialEdgeCount?: GraphViewDemoEdgeCount
   graphView?: GraphViewResponse
+  enabledNodeKinds?: ReadonlySet<GraphViewNodeKind>
+  onToggleNodeKind?: (kind: GraphViewNodeKind) => void
+  timeRangeControl?: ReactNode
 }) {
   const localization = useLocalization()
   const { dictionary, formatMessage, formatNumber, locale } = localization
   const { resolvedTheme } = useTheme()
   const edgeCount = initialEdgeCount
+  const [localEnabledNodeKinds, setLocalEnabledNodeKinds] = useState<
+    ReadonlySet<GraphViewNodeKind>
+  >(() => new Set(GRAPH_VIEW_NODE_KIND_ORDER))
+  const enabledNodeKinds = providedEnabledNodeKinds ?? localEnabledNodeKinds
   const [layoutStatus, setLayoutStatus] =
     useState<GraphDemoLayoutStatus>("seed")
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
@@ -635,9 +650,13 @@ export function SigmaGraphView({
       sigma.refresh()
     }
   }, [graphPalette])
-  const graphView = useMemo(
+  const sourceGraphView = useMemo(
     () => liveGraphView ?? createGraphViewDemoFixture(edgeCount, locale),
     [liveGraphView, edgeCount, locale]
+  )
+  const graphView = useMemo(
+    () => filterGraphViewByNodeKind(sourceGraphView, enabledNodeKinds),
+    [sourceGraphView, enabledNodeKinds]
   )
   const nodeVisuals = useMemo(
     () => getGraphViewNodeVisuals(dictionary),
@@ -653,12 +672,19 @@ export function SigmaGraphView({
   const selectedEdge = selectedEdgeId
     ? (graphView.edges.find((edge) => edge.id === selectedEdgeId) ?? null)
     : null
+  const quickDetailSourceNode = quickDetailEntity
+    ? (sourceGraphView.nodes.find(
+        (node) =>
+          node.kind === quickDetailEntity.kind &&
+          getGraphViewNodeEntityId(node.id, node.kind) === quickDetailEntity.id
+      ) ?? null)
+    : null
   const quickDetailFixture = useMemo(
     () =>
-      !liveGraphView && selectedNode
-        ? getDemoQuickDetailFixture(selectedNode, locale)
+      !liveGraphView && quickDetailSourceNode
+        ? getDemoQuickDetailFixture(quickDetailSourceNode, locale)
         : null,
-    [liveGraphView, locale, selectedNode]
+    [liveGraphView, locale, quickDetailSourceNode]
   )
   const layoutStatusLabel = getDemoStatusLabel(layoutStatus, dictionary)
 
@@ -747,7 +773,8 @@ export function SigmaGraphView({
       container.dataset.benchmarkAnchorId = nodeId
       container.dataset.benchmarkAnchorX = String(viewportPosition.x)
       container.dataset.benchmarkAnchorY = String(viewportPosition.y)
-      const neighbor = sigma.getNodeDisplayData(nodeIds[1])
+      const neighborId = nodeIds[1]
+      const neighbor = neighborId ? sigma.getNodeDisplayData(neighborId) : null
       if (neighbor) {
         const point = sigma.framedGraphToViewport(neighbor)
         container.dataset.neighborX = String(point.x)
@@ -775,11 +802,24 @@ export function SigmaGraphView({
     setEdgeChoices([])
     setQuickDetailEntity((entity) =>
       entity &&
-      graphView.nodes.some((node) => node.id === entity.kind + ":" + entity.id)
+      sourceGraphView.nodes.some(
+        (node) =>
+          node.kind === entity.kind &&
+          getGraphViewNodeEntityId(node.id, node.kind) === entity.id
+      )
         ? entity
         : null
     )
     setRenderError(false)
+
+    if (graphView.nodes.length === 0) {
+      window.queueMicrotask(() => {
+        if (!isDisposed) {
+          setLayoutStatus("ready")
+        }
+      })
+      return
+    }
 
     if (!canUseWebGL()) {
       window.queueMicrotask(() => {
@@ -1443,7 +1483,18 @@ export function SigmaGraphView({
     graphView,
     liveGraphView,
     nodeVisuals,
+    sourceGraphView,
   ])
+
+  const handleNodeKindToggle = (kind: GraphViewNodeKind) => {
+    if (onToggleNodeKind) {
+      onToggleNodeKind(kind)
+      return
+    }
+    setLocalEnabledNodeKinds((current) =>
+      toggleGraphViewNodeKind(current, kind)
+    )
+  }
 
   const handleZoom = (direction: "in" | "out") => {
     clearHoverRef.current?.()
@@ -1497,6 +1548,8 @@ export function SigmaGraphView({
   }
 
   const statusIsBlocking = layoutStatus === "unsupported" || renderError
+  const isFilterEmpty =
+    sourceGraphView.nodes.length > 0 && graphView.nodes.length === 0
 
   const clearSelection = () => {
     selectTargetRef.current?.(null, null)
@@ -1514,10 +1567,10 @@ export function SigmaGraphView({
       data-testid="graph-view"
     >
       <div
-        aria-hidden={statusIsBlocking}
+        aria-hidden={statusIsBlocking || isFilterEmpty}
         className={cn(
           "size-full min-h-[24rem] max-w-full min-[1440px]:min-h-[36rem]",
-          statusIsBlocking && "invisible"
+          (statusIsBlocking || isFilterEmpty) && "invisible"
         )}
         data-engine-canvas="sigma"
         data-testid="graph-demo-canvas"
@@ -1545,101 +1598,163 @@ export function SigmaGraphView({
         data-graph-label-obstacle
         className="pointer-events-none absolute inset-x-4 top-3 z-10 flex flex-wrap items-start justify-between gap-3 min-[1440px]:top-4"
       >
-        <h1 className="sr-only text-xl font-semibold tracking-tight min-[1440px]:not-sr-only">
-          {dictionary.graphView.title}
-        </h1>
+        <div className="pointer-events-auto flex flex-wrap items-center gap-3">
+          <h1 className="sr-only text-xl font-semibold tracking-tight min-[1440px]:not-sr-only">
+            {dictionary.graphView.title}
+          </h1>
+          {timeRangeControl}
+        </div>
         <div
-          className="grid grid-cols-2 gap-2 min-[1440px]:flex"
+          className="pointer-events-auto grid grid-cols-2 gap-2 min-[1440px]:flex"
           data-testid="graph-demo-node-legend"
+          role="group"
+          aria-label={dictionary.graphView.demo.nodeKindFilters}
         >
-          {GRAPH_DEMO_NODE_KIND_ORDER.map((kind) => (
-            <Badge key={kind} variant="outline">
-              <span
-                aria-hidden="true"
-                className="size-1.5 shrink-0 rounded-full"
-                style={{ backgroundColor: nodeVisuals[kind].color }}
-              />
-              {nodeVisuals[kind].label}{" "}
-              {formatNumber(
-                graphView.nodes.filter((node) => node.kind === kind).length
-              )}
-            </Badge>
-          ))}
+          {GRAPH_VIEW_NODE_KIND_ORDER.map((kind) => {
+            const enabled = enabledNodeKinds.has(kind)
+            const VisibilityIcon = enabled ? Eye : EyeOff
+            const label =
+              kind === "news-article"
+                ? dictionary.graphView.demo.newsArticleFilter
+                : nodeVisuals[kind].label
+            return (
+              <Button
+                key={kind}
+                type="button"
+                variant="outline"
+                size="sm"
+                aria-pressed={enabled}
+                data-state={enabled ? "on" : "off"}
+                data-testid={`graph-demo-node-filter-${kind}`}
+                className={cn(
+                  "h-11 min-h-11 w-full min-w-0 justify-start gap-2 rounded-full px-3 text-left min-[768px]:h-9 min-[768px]:min-h-9 min-[1440px]:h-8 min-[1440px]:min-h-8 min-[1440px]:w-auto",
+                  !enabled && "text-muted-foreground"
+                )}
+                onClick={() => handleNodeKindToggle(kind)}
+              >
+                <span
+                  aria-hidden="true"
+                  className="size-1.5 shrink-0 rounded-full"
+                  style={{ backgroundColor: nodeVisuals[kind].color }}
+                />
+                <span className="truncate">{label}</span>
+                <span className="text-muted-foreground tabular-nums">
+                  {formatNumber(
+                    sourceGraphView.nodes.filter((node) => node.kind === kind)
+                      .length
+                  )}
+                </span>
+                <VisibilityIcon
+                  aria-hidden="true"
+                  className="size-4 shrink-0"
+                  data-icon="inline-end"
+                />
+              </Button>
+            )
+          })}
         </div>
       </div>
-      <div
-        data-graph-label-obstacle
-        className="pointer-events-auto absolute top-24 left-4 z-10 min-[1440px]:top-16"
-      >
-        <ButtonGroup orientation="vertical">
-          <DemoControlButton
-            aria-label={dictionary.graphView.controls.zoomOut}
-            testId="graph-demo-zoom-out"
-            onClick={() => handleZoom("out")}
+      {isFilterEmpty ? (
+        <div className="pointer-events-none absolute inset-x-4 top-1/2 z-10 -translate-y-1/2">
+          <Empty
+            className="min-h-[11.25rem] w-full max-w-2xl gap-3 rounded-2xl border border-solid border-border/80 bg-background/85 p-6 shadow-sm backdrop-blur"
+            data-testid="graph-filter-empty"
+            role="status"
+            aria-live="polite"
           >
-            <Minus aria-hidden="true" data-icon="inline-start" />
-          </DemoControlButton>
-          <DemoControlButton
-            aria-label={dictionary.graphView.controls.recenter}
-            testId="graph-demo-recenter"
-            onClick={handleRecenter}
+            <EmptyMedia variant="default" className="text-muted-foreground">
+              <ListFilter aria-hidden="true" className="size-6" />
+            </EmptyMedia>
+            <EmptyHeader>
+              <EmptyTitle>
+                {dictionary.graphView.demo.emptyFilteredNodes}
+              </EmptyTitle>
+              <EmptyDescription>
+                {dictionary.graphView.demo.emptyFilteredNodesDescription}
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        </div>
+      ) : null}
+      {!isFilterEmpty ? (
+        <>
+          <div
+            data-graph-label-obstacle
+            className="pointer-events-auto absolute top-44 left-4 z-10 min-[768px]:top-24 min-[1440px]:top-16"
           >
-            <LocateFixed aria-hidden="true" data-icon="inline-start" />
-          </DemoControlButton>
-          <DemoControlButton
-            aria-label={dictionary.graphView.controls.zoomIn}
-            testId="graph-demo-zoom-in"
-            onClick={() => handleZoom("in")}
+            <ButtonGroup orientation="vertical">
+              <DemoControlButton
+                aria-label={dictionary.graphView.controls.zoomOut}
+                testId="graph-demo-zoom-out"
+                onClick={() => handleZoom("out")}
+              >
+                <Minus aria-hidden="true" data-icon="inline-start" />
+              </DemoControlButton>
+              <DemoControlButton
+                aria-label={dictionary.graphView.controls.recenter}
+                testId="graph-demo-recenter"
+                onClick={handleRecenter}
+              >
+                <LocateFixed aria-hidden="true" data-icon="inline-start" />
+              </DemoControlButton>
+              <DemoControlButton
+                aria-label={dictionary.graphView.controls.zoomIn}
+                testId="graph-demo-zoom-in"
+                onClick={() => handleZoom("in")}
+              >
+                <Plus aria-hidden="true" data-icon="inline-start" />
+              </DemoControlButton>
+            </ButtonGroup>
+          </div>
+          <p
+            data-testid="graph-view-interaction-hint"
+            data-graph-label-obstacle
+            className="pointer-events-none absolute top-44 right-4 left-18 z-10 text-xs leading-5 text-muted-foreground min-[768px]:top-24 min-[1440px]:top-16"
           >
-            <Plus aria-hidden="true" data-icon="inline-start" />
-          </DemoControlButton>
-        </ButtonGroup>
-      </div>
-      <p
-        data-testid="graph-view-interaction-hint"
-        data-graph-label-obstacle
-        className="pointer-events-none absolute top-24 right-4 left-18 z-10 text-xs leading-5 text-muted-foreground min-[1440px]:top-16"
-      >
-        {liveGraphView
-          ? dictionary.graphView.demo.liveInteractionHint
-          : dictionary.graphView.demo.interactionHint}
-      </p>
-      <div
-        data-graph-label-obstacle
-        className="pointer-events-none absolute inset-x-4 bottom-20 z-10 flex flex-col gap-3 min-[1440px]:right-20 min-[1440px]:bottom-4 min-[1440px]:flex-row min-[1440px]:items-end min-[1440px]:justify-between"
-      >
-        <Badge variant="outline">
-          <span data-testid="graph-demo-node-count">
-            {formatMessage(dictionary.graphView.demo.nodeCount, {
-              count: formatNumber(graphView.nodes.length),
-            })}
-          </span>
-          <span aria-hidden="true"> · </span>
-          <span data-testid="graph-demo-edge-count">
-            {formatMessage(dictionary.graphView.demo.edgeCount, {
-              count: formatNumber(graphView.edges.length),
-            })}
-          </span>
-        </Badge>
+            {liveGraphView
+              ? dictionary.graphView.demo.liveInteractionHint
+              : dictionary.graphView.demo.interactionHint}
+          </p>
+        </>
+      ) : null}
+      {!isFilterEmpty ? (
         <div
-          className="grid w-fit grid-cols-2 gap-2 min-[1440px]:flex"
-          data-testid="graph-demo-edge-legend"
+          data-graph-label-obstacle
+          className="pointer-events-none absolute inset-x-4 bottom-20 z-10 flex flex-col gap-3 min-[1440px]:right-52 min-[1440px]:bottom-4 min-[1440px]:flex-row min-[1440px]:items-end min-[1440px]:justify-between"
         >
-          {GRAPH_DEMO_EDGE_KIND_ORDER.map((kind) => (
-            <Badge key={kind} variant="outline">
-              <span
-                aria-hidden="true"
-                className="size-1.5 shrink-0 rounded-full"
-                style={{ backgroundColor: edgeVisuals[kind].color }}
-              />
-              {edgeVisuals[kind].label}{" "}
-              {formatNumber(
-                graphView.edges.filter((edge) => edge.kind === kind).length
-              )}
-            </Badge>
-          ))}
+          <Badge variant="outline">
+            <span data-testid="graph-demo-node-count">
+              {formatMessage(dictionary.graphView.demo.nodeCount, {
+                count: formatNumber(graphView.nodes.length),
+              })}
+            </span>
+            <span aria-hidden="true"> · </span>
+            <span data-testid="graph-demo-edge-count">
+              {formatMessage(dictionary.graphView.demo.edgeCount, {
+                count: formatNumber(graphView.edges.length),
+              })}
+            </span>
+          </Badge>
+          <div
+            className="grid w-fit grid-cols-2 gap-2 min-[1440px]:flex"
+            data-testid="graph-demo-edge-legend"
+          >
+            {GRAPH_DEMO_EDGE_KIND_ORDER.map((kind) => (
+              <Badge key={kind} variant="outline">
+                <span
+                  aria-hidden="true"
+                  className="size-1.5 shrink-0 rounded-full"
+                  style={{ backgroundColor: edgeVisuals[kind].color }}
+                />
+                {edgeVisuals[kind].label}{" "}
+                {formatNumber(
+                  graphView.edges.filter((edge) => edge.kind === kind).length
+                )}
+              </Badge>
+            ))}
+          </div>
         </div>
-      </div>
+      ) : null}
       <span
         aria-live="polite"
         className="sr-only"
@@ -1653,8 +1768,8 @@ export function SigmaGraphView({
           aria-label={dictionary.graphView.demo.chooseRelationship}
           data-graph-label-obstacle
           data-graph-inspector
-          className={GRAPH_DEMO_INSPECTOR_CLASS_NAME}
-          data-testid="graph-demo-edge-choices"
+          className={GRAPH_VIEW_INSPECTOR_CLASS_NAME}
+          data-testid="graph-edge-choices"
           onKeyDown={(event) => {
             if (event.key === "Escape") {
               event.stopPropagation()
@@ -1668,9 +1783,12 @@ export function SigmaGraphView({
             </h2>
             <Button
               ref={edgeChoicesCloseRef}
-              size="icon-sm"
+              className="size-11 min-[1440px]:size-8"
+              size="icon"
               variant="ghost"
+              type="button"
               aria-label={dictionary.graphView.demo.closeRelationshipChoices}
+              data-testid="graph-close-edge-choices"
               onClick={() => setEdgeChoices([])}
             >
               <X aria-hidden="true" data-icon="inline-start" />
@@ -1700,11 +1818,11 @@ export function SigmaGraphView({
                   </span>
                   <span className="text-xs text-muted-foreground">
                     {edgeVisuals[edge.kind].label} ·{" "}
-                    {getGraphViewRelationLabel(edge.relationType, dictionary)}
+                    {getGraphViewEdgeRelationLabel(edge, dictionary)}
                   </span>
-                  {edge.note?.trim() && !liveGraphView ? (
+                  {edge.note?.trim() ? (
                     <span className="w-full text-xs font-normal break-words text-muted-foreground">
-                      {edge.note}
+                      {dictionary.graphView.demo.note}: {edge.note.trim()}
                     </span>
                   ) : null}
                 </Button>
@@ -1714,14 +1832,13 @@ export function SigmaGraphView({
         </aside>
       ) : selectedNode ? (
         <DemoNodeInspector
-          canOpenDetails={!liveGraphView}
           node={selectedNode}
           nodeVisuals={nodeVisuals}
           onClose={clearSelection}
           onOpenQuickDetail={handleOpenQuickDetail}
         />
-      ) : selectedEdge && !liveGraphView ? (
-        <DemoEdgeInspector
+      ) : selectedEdge ? (
+        <GraphEdgeInspector
           graphView={graphView}
           edge={selectedEdge}
           edgeVisuals={edgeVisuals}

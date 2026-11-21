@@ -6,6 +6,7 @@ import { getDictionary } from "@/app/lib/i18n/dictionaries"
 import { getRequestLocale } from "@/app/lib/i18n/server"
 import {
   CreateMarketConversationRequest,
+  IdentifiedMarketConversationSummaryResponse,
   MarketConversationDetailResponse,
   MarketConversationMessagePageResponse,
   MarketConversationSummaryResponse,
@@ -65,7 +66,7 @@ export async function getMarketConversations(
 
 export async function createMarketConversation(
   request: CreateMarketConversationRequest
-): Promise<ActionResult<MarketConversationSummaryResponse>> {
+): Promise<ActionResult<IdentifiedMarketConversationSummaryResponse>> {
   const dictionary = await getMarketConversationDictionary()
   const parsedRequest =
     getCreateMarketConversationSchema(dictionary).safeParse(request)
@@ -93,7 +94,11 @@ export async function createMarketConversation(
       dictionary.marketConversations.responseInvalid
     )
 
-    return { success: true, data: conversation }
+    if (typeof conversation.id !== "number") {
+      throw new Error(dictionary.marketConversations.responseInvalid)
+    }
+
+    return { success: true, data: { ...conversation, id: conversation.id } }
   } catch (error: unknown) {
     return {
       success: false,

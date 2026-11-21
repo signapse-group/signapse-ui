@@ -6,98 +6,85 @@ export type EventStatus =
   | "ARCHIVED"
 
 export type EventEnrichmentStatus =
-  | "PENDING"
-  | "SUCCESS"
-  | "NO_MATCH"
-  | "FAILED"
+  "PENDING" | "SUCCESS" | "NO_MATCH" | "FAILED"
 
-export type EventAssetType = "COMMODITY" | "CRYPTO" | "FX" | "INDEX"
+export type EventAssetType =
+  "COMMODITY" | "CRYPTO" | "EQUITY" | "ETF" | "FX" | "INDEX"
 
 export type EventMarketReactionDirection =
-  | "BULLISH"
-  | "BEARISH"
-  | "MIXED"
-  | "NEUTRAL"
+  "BULLISH" | "BEARISH" | "MIXED" | "NEUTRAL"
 
 export type EventMarketReactionTimeHorizon =
-  | "INTRADAY"
-  | "SHORT_TERM"
-  | "MEDIUM_TERM"
-  | "LONG_TERM"
+  "INTRADAY" | "SHORT_TERM" | "MEDIUM_TERM" | "LONG_TERM"
 
 export type EventAssetRelationType =
-  | "PRIMARY_SUBJECT"
-  | "AFFECTED_ASSET"
-  | "REFERENCE_ASSET"
+  "PRIMARY_SUBJECT" | "AFFECTED_ASSET" | "REFERENCE_ASSET"
 
 export type EventThemeRelationType = "PRIMARY_THEME" | "SECONDARY_THEME"
 
 export type EventEvidenceRole =
-  | "PRIMARY"
-  | "SUPPORTING"
-  | "UPDATE"
-  | "CONTRADICTING"
+  "PRIMARY" | "SUPPORTING" | "UPDATE" | "CONTRADICTING"
 
 export type EventEnrichmentOutcome = EventStatus
 
 export interface EventListResponse {
   id: number
-  title: string
-  canonicalKey?: string
-  description?: string
+  title: string | null
+  canonicalKey: string | null
+  description: string | null
   status: EventStatus
-  confidence?: number
-  occurredAt?: string
-  createdDate: string
+  confidence: number | null
+  occurredAt: string | null
+  createdDate?: string
   lastModifiedDate?: string
 }
 
 export interface EventAssetSummaryResponse {
-  assetId?: number
-  assetName?: string
-  assetSymbol?: string
-  assetType?: EventAssetType
-  relationType?: EventAssetRelationType
-  weight?: number
+  assetId: number
+  assetName: string
+  assetSymbol: string
+  assetType: EventAssetType
+  relationType: EventAssetRelationType
+  weight: number | null
 }
 
 export interface EventThemeSummaryResponse {
-  themeId?: number
-  themeTitle?: string
-  themeSlug?: string
-  relationType?: EventThemeRelationType
-  weight?: number
+  themeId: number
+  themeTitle: string | null
+  themeSlug: string
+  relationType: EventThemeRelationType
+  weight: number | null
 }
 
 export interface EventEvidenceSummaryResponse {
-  newsArticleId?: number
-  newsArticleTitle?: string
-  newsArticleUrl?: string
-  sourceName?: string
-  publishedAt?: string | null
-  evidenceRole?: EventEvidenceRole
-  confidence?: number
-  evidenceNote?: string
+  newsArticleId: number
+  newsArticleTitle: string | null
+  newsArticleUrl: string | null
+  sourceName: string | null
+  publishedAt: string | null
+  evidenceRole: EventEvidenceRole
+  confidence: number | null
+  evidenceNote: string | null
 }
 
 export interface EventMarketReactionSummaryResponse {
-  id?: number
-  assetId?: number
-  assetName?: string
-  assetSymbol?: string
-  assetType?: EventAssetType
-  direction?: EventMarketReactionDirection
-  timeHorizon?: EventMarketReactionTimeHorizon
-  confidence?: number
-  reasoning?: string
-  observedAt?: string | null
+  id: number
+  assetId: number
+  assetName: string
+  assetSymbol: string
+  assetType: EventAssetType
+  direction: EventMarketReactionDirection
+  timeHorizon: EventMarketReactionTimeHorizon
+  confidence: number | null
+  reasoning: string | null
+  observedAt: string | null
 }
 
 export interface EventResponse extends EventListResponse {
   assets: EventAssetSummaryResponse[]
   themes: EventThemeSummaryResponse[]
   evidence: EventEvidenceSummaryResponse[]
-  marketReactions?: EventMarketReactionSummaryResponse[]
+  marketReactions: EventMarketReactionSummaryResponse[]
 }
 
 export interface EventEnrichmentResult {

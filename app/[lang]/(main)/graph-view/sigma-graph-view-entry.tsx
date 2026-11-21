@@ -1,9 +1,13 @@
 "use client"
 
 import dynamic from "next/dynamic"
+import type { ReactNode } from "react"
 
 import type { GraphViewDemoEdgeCount } from "@/app/lib/graph-view/demo-fixture"
-import type { GraphViewResponse } from "@/app/lib/graph-view/definitions"
+import type {
+  GraphViewNodeKind,
+  GraphViewResponse,
+} from "@/app/lib/graph-view/definitions"
 
 const SigmaGraphView = dynamic(
   () => import("./sigma-graph-view").then((module) => module.SigmaGraphView),
@@ -18,11 +22,23 @@ const SigmaGraphView = dynamic(
 export function SigmaGraphViewEntry({
   initialEdgeCount,
   graphView,
+  enabledNodeKinds,
+  onToggleNodeKind,
+  timeRangeControl,
 }: {
   initialEdgeCount?: GraphViewDemoEdgeCount
   graphView?: GraphViewResponse
+  enabledNodeKinds?: ReadonlySet<GraphViewNodeKind>
+  onToggleNodeKind?: (kind: GraphViewNodeKind) => void
+  timeRangeControl?: ReactNode
 }) {
   return (
-    <SigmaGraphView initialEdgeCount={initialEdgeCount} graphView={graphView} />
+    <SigmaGraphView
+      initialEdgeCount={initialEdgeCount}
+      graphView={graphView}
+      enabledNodeKinds={enabledNodeKinds}
+      onToggleNodeKind={onToggleNodeKind}
+      timeRangeControl={timeRangeControl}
+    />
   )
 }

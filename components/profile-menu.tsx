@@ -10,7 +10,6 @@ import {
   ClipboardListIcon,
   ChevronsUpDownIcon,
   Gauge,
-  KeyRound,
   LogOutIcon,
   MessageSquareText,
   RotateCcw,
@@ -181,10 +180,6 @@ export function ProfileMenu({
               <DropdownMenuLinkItem render={<Link href="/account" />}>
                 <BadgeCheckIcon aria-hidden="true" />
                 {dictionary.auth.account}
-              </DropdownMenuLinkItem>
-              <DropdownMenuLinkItem render={<Link href="/developer-token" />}>
-                <KeyRound aria-hidden="true" />
-                {dictionary.navigation.apiAccessToken}
               </DropdownMenuLinkItem>
               <DropdownMenuItem>
                 <BellIcon aria-hidden="true" />

@@ -6,7 +6,6 @@ import remarkGfm from "remark-gfm"
 import { useDebouncedCallback } from "use-debounce"
 import {
   ArrowUpIcon,
-  BotMessageSquareIcon,
   ChevronDownIcon,
   CopyIcon,
   ClockIcon,
@@ -28,10 +27,10 @@ import {
 import { useLocalization } from "@/app/lib/i18n/provider"
 import {
   deriveMarketConversationTitle,
+  type IdentifiedMarketConversationSummaryResponse,
   normalizeMarketConversationMessages,
   reconcileMarketConversationMessages,
   type MarketChatMessageResponse,
-  type MarketConversationSummaryResponse,
 } from "@/app/lib/market-query/definitions"
 import { buildFilterQuery } from "@/app/lib/utils"
 import { Logo } from "@/components/logo"
@@ -87,6 +86,11 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { PopoverContentInOverlay } from "@/components/ui/popover-content-in-overlay"
+import {
+  SIDEBAR_WIDTH,
+  SIDEBAR_WIDTH_ICON,
+  useSidebar,
+} from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
 import { Spinner } from "@/components/ui/spinner"
 import { Tooltip, TooltipTrigger } from "@/components/ui/tooltip"
@@ -150,8 +154,10 @@ export function MarketConversationAssistant({
   workspaceId,
 }: MarketConversationAssistantProps) {
   const { dictionary } = useLocalization()
+  const { isMobile, open: isSidebarOpen } = useSidebar()
   const labels = dictionary.demoConversation
   const [open, setOpen] = React.useState(false)
+  const composerRef = React.useRef<HTMLTextAreaElement>(null)
   const [isExpanded, setIsExpanded] = React.useState(false)
   const [messages, setMessages] = React.useState<MarketChatMessageResponse[]>(
     []
@@ -159,14 +165,14 @@ export function MarketConversationAssistant({
   const [historyOpen, setHistoryOpen] = React.useState(false)
   const [historyQuery, setHistoryQuery] = React.useState("")
   const [historyConversations, setHistoryConversations] = React.useState<
-    MarketConversationSummaryResponse[]
+    IdentifiedMarketConversationSummaryResponse[]
   >([])
   const [historyPage, setHistoryPage] = React.useState(0)
   const [hasMoreHistory, setHasMoreHistory] = React.useState(false)
   const [isHistoryLoading, setIsHistoryLoading] = React.useState(false)
   const [historyError, setHistoryError] = React.useState<string | null>(null)
   const [selectedConversation, setSelectedConversation] =
-    React.useState<MarketConversationSummaryResponse | null>(null)
+    React.useState<IdentifiedMarketConversationSummaryResponse | null>(null)
   const [isMessagesLoading, setIsMessagesLoading] = React.useState(false)
   const [isOlderMessagesLoading, setIsOlderMessagesLoading] =
     React.useState(false)
@@ -212,6 +218,7 @@ export function MarketConversationAssistant({
   const renderableMessages = getRenderableConversationMessages(displayMessages)
   const currentTitle = selectedConversation?.title ?? labels.title
   const isRequestPending = isCreating || isSubmitting
+  const isFullMode = isExpanded && !isMobile
   const isRevealing = responseReveal !== null
   const isBusy = isRequestPending || isRevealing
   const composerDisabled = workspaceId == null || isMessagesLoading || isBusy
@@ -287,8 +294,16 @@ export function MarketConversationAssistant({
           return
         }
 
+        const conversations = result.content.map((conversation) => {
+          if (typeof conversation.id !== "number") {
+            throw new Error(labels.historyError)
+          }
+
+          return { ...conversation, id: conversation.id }
+        })
+
         setHistoryConversations((current) =>
-          mergeConversationHistory(current, result.content, page)
+          mergeConversationHistory(current, conversations, page)
         )
         setHistoryPage(page)
         setHasMoreHistory(!result.last)
@@ -314,7 +329,7 @@ export function MarketConversationAssistant({
   }, 300)
 
   const loadConversation = React.useCallback(
-    async (conversation: MarketConversationSummaryResponse) => {
+    async (conversation: IdentifiedMarketConversationSummaryResponse) => {
       if (workspaceId == null) {
         return
       }
@@ -616,45 +631,87 @@ export function MarketConversationAssistant({
   }
 
   return (
-    <Popover modal={false} open={open} onOpenChange={setAssistantOpen}>
+    <Popover
+      modal={false}
+      open={open}
+      onOpenChange={setAssistantOpen}
+      onOpenChangeComplete={(nextOpen) => {
+        if (nextOpen) composerRef.current?.focus()
+      }}
+    >
       <PopoverTrigger
         render={
           <Button
             type="button"
-            size="icon-lg"
-            className="fixed end-4 bottom-4 size-11 [&_svg:not([class*='size-'])]:size-5"
-            aria-label={dictionary.aiAssistant.open}
-          />
+            variant="outline"
+            size="lg"
+            className={cn(
+              "fixed end-4 bottom-4 h-12 w-[10.5rem] justify-start rounded-2xl px-4 text-base has-data-[icon=inline-start]:pl-4",
+              open && "invisible"
+            )}
+            aria-label={dictionary.aiAssistant.launcher}
+            aria-hidden={open}
+            tabIndex={open ? -1 : undefined}
+          >
+            <span
+              aria-hidden="true"
+              className="inline-flex size-7 shrink-0 items-center justify-center"
+              data-icon="inline-start"
+            >
+              <Logo width={28} height={28} />
+            </span>
+            <span>{dictionary.aiAssistant.launcher}</span>
+          </Button>
         }
-      >
-        <BotMessageSquareIcon data-icon="inline-start" />
-      </PopoverTrigger>
+      />
       <PopoverContentInOverlay
         side="top"
         align="end"
         sideOffset={12}
         collisionPadding={16}
+        positionMethod="fixed"
+        positionerClassName={
+          isFullMode ? styles.fullModePositioner : styles.compactModePositioner
+        }
+        positionerStyle={
+          isFullMode
+            ? ({
+                "--assistant-sidebar-width": isSidebarOpen
+                  ? SIDEBAR_WIDTH
+                  : SIDEBAR_WIDTH_ICON,
+              } as React.CSSProperties)
+            : undefined
+        }
         aria-label={currentTitle}
         className={cn(
-          "max-h-[var(--available-height)] w-[calc(100vw-2rem)] gap-0 overflow-hidden rounded-2xl",
-          isExpanded
-            ? "max-w-[min(64rem,var(--available-width))]"
-            : "max-w-xl sm:max-w-xl"
+          isFullMode ? styles.fullModePopup : undefined,
+          "max-h-[var(--available-height)] w-full gap-0 overflow-hidden rounded-2xl",
+          isFullMode
+            ? "h-full max-h-none w-full max-w-full"
+            : isExpanded
+              ? "max-w-[min(64rem,var(--available-width))]"
+              : "max-w-full"
         )}
       >
         <MessageScrollerProvider autoScroll>
           <div
             className={cn(
               "relative flex min-h-0 flex-col",
-              isExpanded
-                ? "h-[min(48rem,calc(var(--available-height)-1.25rem))]"
-                : "h-[min(36rem,calc(var(--available-height)-1.25rem))]"
+              isFullMode
+                ? "h-full"
+                : isExpanded
+                  ? "h-[min(48rem,calc(var(--available-height)-1.25rem))]"
+                  : "h-[min(36rem,calc(var(--available-height)-1.25rem))]"
             )}
           >
             <div
               className={cn(
                 "mx-auto flex min-h-0 w-full flex-1",
-                isExpanded ? "max-w-5xl" : "max-w-xl"
+                isFullMode
+                  ? "max-w-none"
+                  : isExpanded
+                    ? "max-w-5xl"
+                    : "max-w-xl"
               )}
             >
               <div className="flex h-full min-h-0 w-full flex-col">
@@ -740,7 +797,7 @@ export function MarketConversationAssistant({
                                 {historyConversations.map((conversation) => (
                                   <CommandItem
                                     key={conversation.id}
-                                    value={`${conversation.title} ${conversation.id}`}
+                                    value={`${conversation.title ?? ""} ${conversation.id}`}
                                     aria-selected={
                                       selectedConversation?.id ===
                                       conversation.id
@@ -763,7 +820,7 @@ export function MarketConversationAssistant({
                                     }}
                                   >
                                     <span className="min-w-0 truncate">
-                                      {conversation.title}
+                                      {conversation.title ?? labels.title}
                                     </span>
                                   </CommandItem>
                                 ))}
@@ -1019,6 +1076,7 @@ export function MarketConversationAssistant({
                   >
                     <InputGroup className="rounded-xl border-0">
                       <InputGroupTextarea
+                        ref={composerRef}
                         value={draft}
                         rows={2}
                         placeholder={labels.persistedComposerPlaceholder}
@@ -1061,6 +1119,9 @@ export function MarketConversationAssistant({
                       </InputGroupAddon>
                     </InputGroup>
                   </form>
+                  <p className="pt-2 text-center text-xs leading-4 text-muted-foreground">
+                    {labels.aiNotice}
+                  </p>
                 </footer>
               </div>
             </div>
@@ -1294,21 +1355,25 @@ function DemoMessage({
     hasContent &&
     accessibleText === undefined
   const canCopy = isUser ? hasContent : hasStableAssistantContent
-  const createdAt = useLocalization().formatDateTime(
-    message.createdDate,
-    { weekday: "short", hour: "2-digit", minute: "2-digit" },
-    "-"
-  )
-  const timeMetadata = (
-    <AppTimeMetadata icon={ClockIcon}>
-      <time
-        aria-label={`${labels.createdAt}: ${createdAt}`}
-        dateTime={message.createdDate}
-      >
-        {createdAt}
-      </time>
-    </AppTimeMetadata>
-  )
+  const { formatDateTime } = useLocalization()
+  const createdAt = message.createdDate
+    ? formatDateTime(
+        message.createdDate,
+        { weekday: "short", hour: "2-digit", minute: "2-digit" },
+        "-"
+      )
+    : null
+  const timeMetadata =
+    message.createdDate && createdAt ? (
+      <AppTimeMetadata icon={ClockIcon}>
+        <time
+          aria-label={`${labels.createdAt}: ${createdAt}`}
+          dateTime={message.createdDate}
+        >
+          {createdAt}
+        </time>
+      </AppTimeMetadata>
+    ) : null
 
   async function handleCopy() {
     try {

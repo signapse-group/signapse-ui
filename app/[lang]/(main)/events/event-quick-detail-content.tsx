@@ -15,15 +15,16 @@ import {
   formatDateTime as formatLocalizedDateTime,
   formatPercent,
 } from "@/app/lib/i18n/format"
-import { EventResponse } from "@/app/lib/events/definitions"
+import type { EventResponse } from "@/app/lib/events/definitions"
 import { Badge } from "@/components/ui/badge"
 import { buttonVariants } from "@/components/ui/button"
 import { AppTimeMetadata } from "@/components/app-time-metadata"
 
 import {
-  getEventStatusLabel,
-  getEventStatusVariant,
+  getEventAssetRelationVariant,
+  selectQuickEventAssets,
 } from "./event-presentation"
+import { EventSectionEmpty } from "./event-section-empty"
 
 function formatDateTime(
   value: string | null | undefined,
@@ -49,7 +50,7 @@ function formatDateTime(
 }
 
 function formatConfidence(
-  value: number | undefined,
+  value: number | null | undefined,
   locale: AppLocale,
   dictionary: Dictionary
 ) {
@@ -90,26 +91,22 @@ export function EventQuickDetailContent({
   dictionary,
   event,
   locale,
+  watchlistAssetIds = [],
 }: {
   canReadNewsArticles: boolean
   dictionary: Dictionary
   event: EventResponse
   locale: AppLocale
+  watchlistAssetIds?: readonly number[]
 }) {
   const evidenceItems = event.evidence ?? []
-  const assets = event.assets ?? []
-  const primaryAssets = assets.slice(0, 4)
+  const primaryAssets = selectQuickEventAssets(event.assets, watchlistAssetIds)
+  const themes = event.themes ?? []
 
   return (
     <div className="flex flex-col gap-5">
       <section className="flex flex-col gap-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge variant={getEventStatusVariant(event.status)}>
-            {getEventStatusLabel(event.status, dictionary)}
-          </Badge>
-        </div>
-
-        <p className="text-sm leading-6 text-muted-foreground">
+        <p className="text-sm leading-6 break-words text-muted-foreground">
           {event.description?.trim() || dictionary.events.detailNoDescription}
         </p>
       </section>
@@ -130,10 +127,10 @@ export function EventQuickDetailContent({
       </dl>
 
       <section className="flex flex-col gap-3">
-        <div className="flex items-center gap-2 text-sm font-semibold">
-          <GitBranch className="size-4 text-muted-foreground" />
+        <h3 className="flex items-center gap-2 text-sm font-semibold tracking-wide text-muted-foreground uppercase">
+          <GitBranch aria-hidden="true" className="size-4" />
           {dictionary.events.mainEvidence}
-        </div>
+        </h3>
 
         {evidenceItems.length ? (
           <div className="flex flex-col gap-3">
@@ -163,38 +160,46 @@ export function EventQuickDetailContent({
                   </Badge>
                 </div>
 
-                <h3 className="mt-2 line-clamp-2 text-sm font-medium">
-                  {evidence.newsArticleTitle ||
-                    dictionary.events.evidenceUntitled}
+                <h3 className="mt-2 text-sm font-medium break-words">
+                  {evidence.newsArticleTitle?.trim()
+                    ? evidence.newsArticleTitle
+                    : dictionary.events.evidenceUntitled}
                 </h3>
                 <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                   <span>
-                    {evidence.sourceName || dictionary.newsArticles.noOutlet}
+                    {evidence.sourceName?.trim()
+                      ? evidence.sourceName
+                      : dictionary.newsArticles.noOutlet}
                   </span>
                   <AppTimeMetadata icon={Calendar}>
                     {formatDateTime(evidence.publishedAt, locale, dictionary)}
                   </AppTimeMetadata>
                 </div>
                 {evidence.evidenceNote?.trim() ? (
-                  <p className="mt-2 line-clamp-3 text-sm leading-6 text-muted-foreground">
+                  <p className="mt-2 text-sm leading-6 break-words text-muted-foreground">
                     {evidence.evidenceNote}
                   </p>
                 ) : null}
 
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {typeof evidence.newsArticleId === "number" &&
-                  canReadNewsArticles ? (
-                    <Link
-                      href={`/news-articles/${evidence.newsArticleId}`}
-                      className={buttonVariants({
-                        size: "sm",
-                        variant: "outline",
-                      })}
-                    >
-                      <FileText aria-hidden="true" data-icon="inline-start" />
-                      {dictionary.events.viewArticle}
-                    </Link>
-                  ) : null}
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  {typeof evidence.newsArticleId === "number" ? (
+                    canReadNewsArticles ? (
+                      <Link
+                        href={`/news-articles/${evidence.newsArticleId}`}
+                        className={buttonVariants({
+                          size: "sm",
+                          variant: "outline",
+                        })}
+                      >
+                        <FileText aria-hidden="true" data-icon="inline-start" />
+                        {dictionary.events.viewArticle}
+                      </Link>
+                    ) : null
+                  ) : (
+                    <span className="text-xs text-muted-foreground">
+                      {dictionary.events.articleIdentityUnavailable}
+                    </span>
+                  )}
                   {evidence.newsArticleUrl ? (
                     <a
                       href={evidence.newsArticleUrl}
@@ -211,7 +216,11 @@ export function EventQuickDetailContent({
                       />
                       {dictionary.events.openOriginal}
                     </a>
-                  ) : null}
+                  ) : (
+                    <span className="text-xs text-muted-foreground">
+                      {dictionary.events.sourceUrlUnavailable}
+                    </span>
+                  )}
                 </div>
               </article>
             ))}
@@ -223,12 +232,12 @@ export function EventQuickDetailContent({
         )}
       </section>
 
-      {primaryAssets.length ? (
-        <section className="flex flex-col gap-3">
-          <div className="flex items-center gap-2 text-sm font-semibold">
-            <Layers3 className="size-4 text-muted-foreground" />
-            {dictionary.events.relatedAssets}
-          </div>
+      <section className="flex flex-col gap-3">
+        <h3 className="flex items-center gap-2 text-sm font-semibold tracking-wide text-muted-foreground uppercase">
+          <Layers3 aria-hidden="true" className="size-4" />
+          {dictionary.events.relatedAssets}
+        </h3>
+        {primaryAssets.length ? (
           <div className="grid gap-2 sm:grid-cols-2">
             {primaryAssets.map((asset, index) => (
               <div
@@ -242,7 +251,9 @@ export function EventQuickDetailContent({
                     </Badge>
                   ) : null}
                   {asset.relationType ? (
-                    <Badge variant="secondary">
+                    <Badge
+                      variant={getEventAssetRelationVariant(asset.relationType)}
+                    >
                       {
                         dictionary.events.assetRelationLabels[
                           asset.relationType
@@ -251,21 +262,60 @@ export function EventQuickDetailContent({
                     </Badge>
                   ) : null}
                 </div>
-                <div className="mt-2 text-sm font-medium">
+                <div className="mt-2 text-sm font-medium break-words">
                   {asset.assetSymbol ||
                     asset.assetName ||
                     dictionary.events.noAssetName}
                 </div>
                 {asset.assetName ? (
-                  <div className="mt-1 text-xs text-muted-foreground">
+                  <div className="mt-1 text-xs break-words text-muted-foreground">
                     {asset.assetName}
                   </div>
                 ) : null}
               </div>
             ))}
           </div>
-        </section>
-      ) : null}
+        ) : (
+          <EventSectionEmpty
+            title={dictionary.events.noAssetsTitle}
+            description={dictionary.events.noAssetsDescription}
+          />
+        )}
+      </section>
+
+      <section className="flex flex-col gap-3">
+        <h3 className="flex items-center gap-2 text-sm font-semibold tracking-wide text-muted-foreground uppercase">
+          <Layers3 aria-hidden="true" className="size-4" />
+          {dictionary.events.relatedThemes}
+        </h3>
+        {themes.length ? (
+          <div className="grid gap-2 sm:grid-cols-2">
+            {themes.map((theme, index) => (
+              <div
+                key={`${theme.themeId}-${index}`}
+                className="rounded-lg border bg-muted/20 p-3"
+              >
+                {theme.relationType ? (
+                  <Badge variant="secondary">
+                    {dictionary.events.themeRelationLabels[theme.relationType]}
+                  </Badge>
+                ) : null}
+                <div className="mt-2 text-sm font-medium break-words">
+                  {theme.themeTitle || dictionary.events.noThemeName}
+                </div>
+                <div className="mt-1 text-xs break-words text-muted-foreground">
+                  {theme.themeSlug || dictionary.events.noThemeSlug}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <EventSectionEmpty
+            title={dictionary.events.noThemesTitle}
+            description={dictionary.events.noThemesDescription}
+          />
+        )}
+      </section>
 
       <section className="rounded-lg border bg-muted/20 p-3">
         <AppTimeMetadata icon={Calendar}>

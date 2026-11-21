@@ -4,7 +4,7 @@ This reference owns CI/Vercel integration facts, operator setup and verifier beh
 
 ## CI and Vercel setup
 
-[Verify](../.github/workflows/verify.yml) runs `check` on PRs into dev/main and pushes to dev/main. Feature-branch pushes do not duplicate PR runs. Manual dispatch on dev/main reruns quality checks; it does not deploy. Deployment confirmation runs in the reviewer's workspace under the [Review runbook](runbooks/review-and-delivery.md#verify-the-delivered-build), without a waiting GitHub Actions job.
+[Verify](../.github/workflows/verify.yml) runs `check` on PRs into dev/main and pushes to dev/main. Feature-branch pushes do not duplicate PR runs. Manual dispatch on dev/main only reruns quality checks. Deployment confirmation runs outside GitHub Actions in the reviewer's workspace under the [Review skill](../.agents/skills/code-review/SKILL.md#verify-the-delivered-build).
 
 [vercel.json](../vercel.json) skips builds of `main` when Vercel classifies them as Preview. A push to `main` builds Production in `signapse-prod`. Feature and fix PRs target `dev`, which remains the source for worker policy and the dev dashboard. Dev/main push concurrency groups include the commit SHA so queued runs for different merges are retained. PR runs still cancel obsolete heads.
 
@@ -30,7 +30,7 @@ The script:
 - GETs only `https://dev-dashboard.signapse.cloud/api/build-revision`, with a 20-second request timeout, no cache and no redirect following. Bypass is sent only to this fixed origin.
 - Requires HTTP 200, JSON and a full 40-character revision. HTTP 429/503 remain pending; redirects, invalid JSON or invalid revisions fail without logging response bodies or secrets.
 - Requires the live revision to equal or contain the merge, be contained in dev, and have a successful latest dev-push quality check. Older/unrelated builds, main-only checks or failed checks never pass.
-- Polls every 30 seconds for up to 30 minutes; consecutive network/GitHub read errors fail after three attempts. The Review runbook's saved deadline also bounds the process across resumes.
+- Polls every 30 seconds for up to 30 minutes. Consecutive network or GitHub read errors fail after three attempts. The [Review skill's saved deadline](../.agents/skills/code-review/SKILL.md#verify-the-delivered-build) also bounds the process across resumes.
 - Prints PASS with merge/live SHA, dev revision URL and confirmation time. Save the result and quality-run link in existing PR/delivery evidence.
 
 This confirms the build served by the dev domain at that time. It does not certify login, feature behavior or later rollbacks; owner/QA acceptance remains separate. Vercel still performs Git builds; deployment-status records alone are not the completion gate.
