@@ -2,30 +2,28 @@
 
 ## Accepted source and candidate
 
-The accepted direction is [SIGN-45](https://signapse-group.atlassian.net/browse/SIGN-45): keep the existing calendar list and place Currency and Impact controls in the desktop toolbar and mobile Filters panel. I inspected the current Jira design attachments 10288 (desktop list), 10290 (mobile list), and 10293 (mobile Filters panel).
+The accepted direction is [SIGN-45](https://signapse-group.atlassian.net/browse/SIGN-45): keep the economic calendar list and place Currency and Impact in the desktop toolbar and mobile Filters panel. I checked the approved Jira attachments 10288 (`economic-calendar-list-desktop-v1.png`), 10290 (`economic-calendar-list-mobile-v1.png`), and 10293 (`economic-calendar-filters-mobile-v1.png`).
 
-The implementation candidate is commit [`7e67034b`](https://github.com/signapse-group/signapse-ui/commit/7e67034b) on `codex/SIGN-364-economic-calendar-filters`, based on `origin/dev` at `726923112a0d49a3bc8404fdb50d2e400bda1199`.
+The rendered implementation candidate is commit [`d5465bc4`](https://github.com/signapse-group/signapse-ui/commit/d5465bc4ed498344d174736afd302b220e7a32d0), based on `origin/dev` at `726923112a0d49a3bc8404fdb50d2e400bda1199`. The screenshots below were captured from that candidate. The evidence-record commit that follows changes this README only.
 
-## Candidate renders
+## Rendered comparison
 
-Both captures use the Vietnamese locale, dark theme, local P0 fixtures, and the candidate code above. The fixture contains synthetic releases; it does not represent live producer data.
+Captures use Vietnamese, dark theme, and local fixture data.
 
-- Desktop list, 1520×1024: [candidate render](economic-calendar-desktop-1520x1024.png). The existing search, weekly navigation, and grouped list remain in place; Currency and Impact sit before the scheduled-date sort. The fixture has read permission only, so the existing permission-gated Sync control is not shown.
-- Mobile Filters panel, 390×844: [candidate render](economic-calendar-mobile-filters-390x844.png). The count, labeled controls, selected values, and Clear action appear in the existing list layout.
+- Desktop list, 1520×1024, expanded sidebar: [candidate render](economic-calendar-desktop-1520x1024.png). Currency and Impact remain in the existing toolbar between search and sort; the weekly navigation and date/time/currency-grouped list remain in place. The fixture has read permission only, so the existing Sync action is not shown.
+- Mobile Filters panel, 390×844: [candidate render](economic-calendar-mobile-filters-390x844.png). The button shows the count of two selected filters; the open panel contains labeled Currency and Impact controls and Clear filters, above the existing date navigation and grouped list.
 
-The fixture-backed Chromium check confirmed no page-level horizontal overflow at both viewports and returned focus to the Filters button after closing the panel. The API request retained date and title and combined both selected filters. Currency choices came from returned `currencyCode` values; no currency was inferred from country.
+The desktop and mobile list captures preserve the existing fixed grouping and Actual/Forecast/Previous presentation from attachments 10288 and 10290. The Filters panel follows attachment 10293's count, control order, and clear action. Currency choices use returned `currencyCode` values; no currency is inferred from country.
 
-## Loading state
+## Responsive and focus behavior
 
-The delayed fixture response keeps the Suspense fallback visible while Chromium checks the toolbar at 390px, 767px, 768px, and 1520px. Below 768px, one filter-button skeleton and the sort skeleton remain visible. From 768px, two select skeletons and the sort skeleton remain visible. Both captures use the dark Vietnamese context. The 390px capture has the mobile sidebar hidden; the 1520px capture keeps the sidebar collapsed after resizing from mobile. The loaded desktop render above shows the expanded sidebar.
+The delayed fixture response checks toolbar loading placeholders at 390, 767, 768, and 1520 CSS pixels. Below 768px the toolbar shows one Filters-button placeholder and the sort placeholder; from 768px it shows the two filter-select placeholders and sort. Captures: [mobile loading, 390×844](economic-calendar-loading-mobile-390x844.png) and [desktop loading, 1520×1024](economic-calendar-loading-desktop-1520x1024.png). The desktop loading capture keeps the sidebar collapsed after resizing from mobile; the loaded desktop capture above uses the expanded sidebar.
 
-- Mobile loading toolbar, 390×844 viewport (390×913 full-page capture): [candidate render](economic-calendar-loading-mobile-390x844.png).
-- Desktop loading toolbar, 1520×1024 viewport: [candidate render](economic-calendar-loading-desktop-1520x1024.png).
+The browser assertion opens the mobile panel at 767px with focus on its Filters trigger, then resizes to 768px. Focus moves to the visible Currency control while USD, HIGH, date, title, and sort remain selected in the UI/URL. The same run checks mobile filter interactions, the combined HTTP query, page overflow, and read-permission denial.
 
 ## Verification and limits
 
-- Focused Vitest: 6 files, 13 tests passed; covers filter URL retention/removal, UTC+07 day boundaries, query serialization, pagination through `Page.last`, permission denial, grouping, missing versus zero, empty, and safe error copy.
-- `/opt/apps/symphony/runtime/run-fe-browser "$PWD" tests/e2e/economic-calendar-filters.spec.ts --retries=0 --workers=1` with `SIGN364_CAPTURE_EVIDENCE=1` — 3 passed; local fixture-backed SSR/render, mobile filter interaction and focus restoration, request query, read permission, and loading toolbar reflow at 767/768px.
-- `pnpm typecheck`, targeted ESLint, `pnpm test:contract` — passed; fixture consistency covered 90 operations.
-
-These checks do not exercise live authentication or live feature data. QA/coordinator owns live feature acceptance under the existing workflow.
+- `pnpm typecheck`, focused ESLint, and Prettier checks passed.
+- Focused economic-calendar Vitest: 6 files, 13 tests passed. API contract guard Vitest: 20 tests passed. `pnpm test:contract` fixture consistency passed for 90 operations.
+- `SIGN364_CAPTURE_EVIDENCE=1 /opt/apps/symphony/runtime/run-fe-browser "$PWD" tests/e2e/economic-calendar-filters.spec.ts --retries=0 --workers=1` — 4 passed. This run captured the renders above and exercised the 767→768 focus transfer.
+- Checks use local fixtures and do not exercise live authentication or live economic-calendar data. QA/coordinator owns live feature acceptance under the existing workflow.
