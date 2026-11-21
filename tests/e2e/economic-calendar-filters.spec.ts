@@ -21,6 +21,14 @@ async function captureRender(page: Page, testInfo: TestInfo, filename: string) {
   }
 }
 
+async function getToolbarSkeletonVisibility(page: Page) {
+  return page
+    .locator('[data-slot="app-list-toolbar-trailing"] > [data-slot="skeleton"]')
+    .evaluateAll((skeletons) =>
+      skeletons.map((skeleton) => getComputedStyle(skeleton).display !== "none")
+    )
+}
+
 test("renders and applies economic calendar filters across responsive layouts", async ({
   page,
   fixture,
@@ -113,6 +121,57 @@ test("renders and applies economic calendar filters across responsive layouts", 
       () => document.documentElement.scrollWidth <= window.innerWidth
     )
   ).toBe(true)
+})
+
+test("matches loading filter skeletons to the toolbar at each breakpoint", async ({
+  page,
+  fixture,
+}, testInfo) => {
+  await fixture.setPermissions(["economic-calendar:read"])
+  await fixture.setScenario("/economic-calendar", "delayed", "GET")
+  await page.emulateMedia({ colorScheme: "dark" })
+  await page.addInitScript(() => window.localStorage.setItem("theme", "dark"))
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto("/vi/economic-calendar?date=2026-11-21", {
+    waitUntil: "commit",
+  })
+
+  await expect
+    .poll(async () => (await fixture.state()).pendingRequests)
+    .toBeGreaterThan(0)
+  await expect
+    .poll(() => getToolbarSkeletonVisibility(page))
+    .toEqual([true, false, false, true])
+  await captureRender(
+    page,
+    testInfo,
+    "economic-calendar-loading-mobile-390x844.png"
+  )
+
+  await page.setViewportSize({ width: 767, height: 844 })
+  await expect
+    .poll(() => getToolbarSkeletonVisibility(page))
+    .toEqual([true, false, false, true])
+
+  await page.setViewportSize({ width: 768, height: 844 })
+  await expect
+    .poll(() => getToolbarSkeletonVisibility(page))
+    .toEqual([false, true, true, true])
+
+  await page.setViewportSize({ width: 1520, height: 1024 })
+  await expect
+    .poll(() => getToolbarSkeletonVisibility(page))
+    .toEqual([false, true, true, true])
+  await captureRender(
+    page,
+    testInfo,
+    "economic-calendar-loading-desktop-1520x1024.png"
+  )
+
+  await fixture.setScenario("/economic-calendar", "success", "GET")
+  await expect(
+    page.getByText("Fixture CPI release", { exact: true })
+  ).toBeVisible()
 })
 
 test("keeps economic calendar requests behind read permission", async ({

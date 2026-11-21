@@ -15,10 +15,17 @@ Both captures use the Vietnamese locale, dark theme, local P0 fixtures, and the 
 
 The fixture-backed Chromium check confirmed no page-level horizontal overflow at both viewports and returned focus to the Filters button after closing the panel. The API request retained date and title and combined both selected filters. Currency choices came from returned `currencyCode` values; no currency was inferred from country.
 
+## Loading state
+
+The delayed fixture response keeps the Suspense fallback visible while Chromium checks the toolbar at 390px, 767px, 768px, and 1520px. Below 768px, one filter-button skeleton and the sort skeleton remain visible. From 768px, two select skeletons and the sort skeleton remain visible. Both captures use the dark Vietnamese context. The 390px capture has the mobile sidebar hidden; the 1520px capture keeps the sidebar collapsed after resizing from mobile. The loaded desktop render above shows the expanded sidebar.
+
+- Mobile loading toolbar, 390×844 viewport (390×913 full-page capture): [candidate render](economic-calendar-loading-mobile-390x844.png).
+- Desktop loading toolbar, 1520×1024 viewport: [candidate render](economic-calendar-loading-desktop-1520x1024.png).
+
 ## Verification and limits
 
 - Focused Vitest: 6 files, 13 tests passed; covers filter URL retention/removal, UTC+07 day boundaries, query serialization, pagination through `Page.last`, permission denial, grouping, missing versus zero, empty, and safe error copy.
-- `/opt/apps/symphony/runtime/run-fe-browser "$PWD" tests/e2e/economic-calendar-filters.spec.ts --retries=0 --workers=1` with `SIGN364_CAPTURE_EVIDENCE=1` — 2 passed; local fixture-backed SSR/render, mobile filter interaction and focus restoration, request query, and read permission.
+- `/opt/apps/symphony/runtime/run-fe-browser "$PWD" tests/e2e/economic-calendar-filters.spec.ts --retries=0 --workers=1` with `SIGN364_CAPTURE_EVIDENCE=1` — 3 passed; local fixture-backed SSR/render, mobile filter interaction and focus restoration, request query, read permission, and loading toolbar reflow at 767/768px.
 - `pnpm typecheck`, targeted ESLint, `pnpm test:contract` — passed; fixture consistency covered 90 operations.
 
 These checks do not exercise live authentication or live feature data. QA/coordinator owns live feature acceptance under the existing workflow.

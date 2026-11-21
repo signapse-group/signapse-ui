@@ -105,9 +105,13 @@ function EconomicCalendarListSkeleton({
           <Skeleton className="h-9 w-full sm:w-[180px]" />
           <Skeleton className="h-9 w-full sm:max-w-sm" />
         </div>
-        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
-          <Skeleton className="h-9 w-full sm:w-[140px]" />
-          <Skeleton className="h-9 w-full sm:w-[140px]" />
+        <div
+          data-slot="app-list-toolbar-trailing"
+          className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:justify-end"
+        >
+          <Skeleton className="h-11 w-full min-[768px]:hidden" />
+          <Skeleton className="hidden h-9 w-[140px] min-[768px]:block" />
+          <Skeleton className="hidden h-9 w-[140px] min-[768px]:block" />
           <Skeleton className="h-9 w-full sm:w-[200px]" />
         </div>
       </div>
