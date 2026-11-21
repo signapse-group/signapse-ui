@@ -28,8 +28,11 @@ import type { Dictionary } from "@/app/lib/i18n/dictionary-types"
 import { formatMessage } from "@/app/lib/i18n/messages"
 import { formatDateTime as formatLocalizedDateTime } from "@/app/lib/i18n/format"
 import { getRequestLocale, getServerDictionary } from "@/app/lib/i18n/server"
+import { formatTimeZoneOffset } from "@/app/lib/i18n/time-zone"
+import { getRequestTimeZone } from "@/app/lib/i18n/time-zone-server"
 import { hasAnyPermission } from "@/app/lib/permissions"
 import { getCurrentPermissions } from "@/app/lib/permissions-server"
+import { AppTimeZoneSync } from "@/components/app-time-zone-sync"
 import { AccessDenied } from "@/components/access-denied"
 import { AppTimeMetadata } from "@/components/app-time-metadata"
 import { Badge } from "@/components/ui/badge"
@@ -45,7 +48,8 @@ type ApiLikeError = Error & { status?: number }
 function formatDateTime(
   value: string | null | undefined,
   locale: AppLocale,
-  dictionary: Dictionary
+  dictionary: Dictionary,
+  timeZone: string
 ) {
   if (!value) {
     return dictionary.common.notAvailable
@@ -60,6 +64,7 @@ function formatDateTime(
       day: "2-digit",
       hour: "2-digit",
       minute: "2-digit",
+      timeZone,
     },
     dictionary.common.notAvailable
   )
@@ -130,6 +135,8 @@ export default async function EconomicCalendarDetailPage({
     notFound()
   }
 
+  const { timeZone, known: timeZoneKnown } = await getRequestTimeZone()
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center">
@@ -147,11 +154,18 @@ export default async function EconomicCalendarDetailPage({
       </div>
 
       <Suspense fallback={<EconomicCalendarDetailSkeleton />}>
-        <FetchEconomicCalendarEntryData
-          id={entryId}
-          dictionary={dictionary}
-          locale={locale}
-        />
+        <AppTimeZoneSync
+          timeZone={timeZone}
+          timeZoneKnown={timeZoneKnown}
+          fallback={<EconomicCalendarDetailSkeleton />}
+        >
+          <FetchEconomicCalendarEntryData
+            id={entryId}
+            dictionary={dictionary}
+            locale={locale}
+            timeZone={timeZone}
+          />
+        </AppTimeZoneSync>
       </Suspense>
     </div>
   )
@@ -161,10 +175,12 @@ async function FetchEconomicCalendarEntryData({
   id,
   dictionary,
   locale,
+  timeZone,
 }: {
   id: number
   dictionary: Dictionary
   locale: AppLocale
+  timeZone: string
 }) {
   let entry: EconomicCalendarResponse
 
@@ -179,6 +195,15 @@ async function FetchEconomicCalendarEntryData({
   }
 
   const description = entry.description?.trim()
+  const timeZoneReferenceTime = [
+    entry.scheduledAt,
+    entry.syncedAt,
+    entry.createdDate,
+    entry.lastModifiedDate,
+  ].find((value) => value?.trim())
+  const timeZoneOffset = timeZoneReferenceTime
+    ? formatTimeZoneOffset(timeZoneReferenceTime, timeZone)
+    : null
 
   return (
     <div className="flex flex-col gap-6">
@@ -211,10 +236,22 @@ async function FetchEconomicCalendarEntryData({
               </AppTimeMetadata>
               <AppTimeMetadata icon={CalendarClock} className="text-sm">
                 {formatMessage(dictionary.economicCalendar.publishedAt, {
-                  time: formatDateTime(entry.scheduledAt, locale, dictionary),
+                  time: formatDateTime(
+                    entry.scheduledAt,
+                    locale,
+                    dictionary,
+                    timeZone
+                  ),
                 })}
               </AppTimeMetadata>
             </div>
+            {timeZoneOffset ? (
+              <p className="pt-1 text-xs text-muted-foreground">
+                {formatMessage(dictionary.economicCalendar.timeZoneContext, {
+                  timeZone: timeZoneOffset,
+                })}
+              </p>
+            ) : null}
             {description ? (
               <p className="max-w-4xl pt-1 text-sm leading-6 text-muted-foreground">
                 {description}
@@ -254,7 +291,7 @@ async function FetchEconomicCalendarEntryData({
             title={dictionary.economicCalendar.syncedNewest}
             valueNode={
               <AppTimeMetadata icon={RefreshCcw}>
-                {formatDateTime(entry.syncedAt, locale, dictionary)}
+                {formatDateTime(entry.syncedAt, locale, dictionary, timeZone)}
               </AppTimeMetadata>
             }
             icon={RefreshCcw}
@@ -285,7 +322,12 @@ async function FetchEconomicCalendarEntryData({
                 title={dictionary.economicCalendar.createdAt}
                 valueNode={
                   <AppTimeMetadata icon={Clock3}>
-                    {formatDateTime(entry.createdDate, locale, dictionary)}
+                    {formatDateTime(
+                      entry.createdDate,
+                      locale,
+                      dictionary,
+                      timeZone
+                    )}
                   </AppTimeMetadata>
                 }
                 icon={Clock3}
@@ -294,7 +336,12 @@ async function FetchEconomicCalendarEntryData({
                 title={dictionary.economicCalendar.updatedAt}
                 valueNode={
                   <AppTimeMetadata icon={RefreshCcw}>
-                    {formatDateTime(entry.lastModifiedDate, locale, dictionary)}
+                    {formatDateTime(
+                      entry.lastModifiedDate,
+                      locale,
+                      dictionary,
+                      timeZone
+                    )}
                   </AppTimeMetadata>
                 }
                 icon={RefreshCcw}

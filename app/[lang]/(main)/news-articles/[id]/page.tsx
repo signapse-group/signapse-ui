@@ -24,7 +24,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { NewsArticleMarkdown } from "../news-article-markdown"
 import { NewsArticleLinkedEvents } from "../news-article-linked-events"
 import { NewsArticleStatusBadge } from "../news-article-status-badge"
-import { NewsArticleTimeZoneSync } from "../news-article-time-zone-sync"
+import { AppTimeZoneSync } from "@/components/app-time-zone-sync"
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -79,7 +79,7 @@ export default async function NewsArticleDetailPage({ params }: PageProps) {
       </div>
 
       <Suspense fallback={<NewsArticleDetailSkeleton />}>
-        <NewsArticleTimeZoneSync
+        <AppTimeZoneSync
           timeZone={timeZone}
           timeZoneKnown={timeZoneKnown}
           fallback={<NewsArticleDetailSkeleton />}
@@ -91,7 +91,7 @@ export default async function NewsArticleDetailPage({ params }: PageProps) {
             timeZone={timeZone}
             canReadEvents={canReadEvents}
           />
-        </NewsArticleTimeZoneSync>
+        </AppTimeZoneSync>
       </Suspense>
     </div>
   )

@@ -3572,6 +3572,72 @@ Which asset did you mean? The available data is limited. Add TSLA to your watchl
     return { ...article, content: null }
   }
 
+  const economicCalendarDetailMatch = pathname.match(
+    /^\/economic-calendar\/(\d+)$/
+  )
+  if (method === "GET" && economicCalendarDetailMatch) {
+    if (!hasFixturePermission(state, "economic-calendar:read")) {
+      return {
+        __status: 403,
+        payload: errorPayload(
+          "Economic calendar permission denied",
+          "FORBIDDEN"
+        ),
+      }
+    }
+
+    const id = Number(economicCalendarDetailMatch[1])
+    if (id === 8201) {
+      return {
+        id,
+        title: "Fixture release details",
+        currencyCode: "USD",
+        type: "CPI",
+        impact: "HIGH",
+        forecastValue: "0.1%",
+        previousValue: "0.2%",
+        actualValue: "0",
+        description: "Description in the current locale.",
+        revision: null,
+        newsUrl: null,
+        actualBetterWorse: null,
+        revisionBetterWorse: null,
+        status: "AVAILABLE",
+        scheduledAt: "2026-06-30T23:30:00.000Z",
+        syncedAt: "2026-06-30T22:45:00.000Z",
+        createdDate: "2026-06-30T20:00:00.000Z",
+        lastModifiedDate: "2026-06-30T21:15:00.000Z",
+      }
+    }
+
+    if (id === 8202) {
+      return {
+        id,
+        title: "Pending fixture release",
+        currencyCode: "USD",
+        type: "CPI",
+        impact: "LOW",
+        forecastValue: null,
+        previousValue: "0",
+        actualValue: "0",
+        description: "Mô tả trong ngôn ngữ hiện tại.",
+        revision: null,
+        newsUrl: null,
+        actualBetterWorse: null,
+        revisionBetterWorse: null,
+        status: "PENDING",
+        scheduledAt: null,
+        syncedAt: null,
+        lastModifiedDate: null,
+      }
+    }
+
+    return {
+      __status: 404,
+      payload: errorPayload("Economic calendar entry not found", "NOT_FOUND"),
+    }
+  }
+
   if (method === "GET" && pathname === "/events") {
     const scenario = getScenario(state, method, pathname)
     if (scenario === "event-list-denied") {
