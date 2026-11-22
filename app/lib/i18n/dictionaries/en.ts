@@ -75,6 +75,7 @@ export const en: Dictionary = {
     breadcrumb: "Breadcrumb navigation",
     feedbackReview: "Feedback review",
     contactRequests: "Contact requests",
+    skipToMainContent: "Skip to main content",
   },
   feedback: {
     composeAction: "Send feedback",

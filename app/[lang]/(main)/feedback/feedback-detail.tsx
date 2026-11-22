@@ -265,7 +265,7 @@ export function FeedbackDetailPage({
       </div>
 
       <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(18rem,24rem)]">
-        <main className="flex min-w-0 flex-col gap-6">
+        <div className="flex min-w-0 flex-col gap-6">
           <section className="min-w-0 rounded-xl border bg-card p-5">
             <h2 className="text-base font-semibold">{t.detailContent}</h2>
             <p className="mt-5 text-sm leading-6 break-words whitespace-pre-wrap text-foreground/90">
@@ -364,7 +364,7 @@ export function FeedbackDetailPage({
               </p>
             </section>
           ) : null}
-        </main>
+        </div>
 
         <aside className="flex min-w-0 flex-col gap-4">
           <section className="rounded-xl border bg-muted/20 p-5">

@@ -73,6 +73,7 @@ export const vi = {
     breadcrumb: "Đường dẫn điều hướng",
     feedbackReview: "Duyệt phản hồi",
     contactRequests: "Yêu cầu liên hệ",
+    skipToMainContent: "Bỏ qua điều hướng, đến nội dung chính",
   },
   feedback: {
     composeAction: "Gửi phản hồi",
