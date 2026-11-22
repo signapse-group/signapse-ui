@@ -1282,6 +1282,7 @@ export const vi = {
   roles: {
     accessDeniedDescription:
       "Bạn không có quyền xem hoặc cập nhật danh mục vai trò.",
+    loading: "Đang tải danh sách vai trò",
     roleColumn: "Vai trò",
     keyColumn: "Key",
     descriptionColumn: "Mô tả",

@@ -14,11 +14,14 @@ export default async function RolesPage() {
 
   if (!hasPermission(currentPermissions, "role:update")) {
     return (
-      <AccessDenied
-        title={dictionary.errors.accessDeniedTitle}
-        description={dictionary.roles.accessDeniedDescription}
-        permission="role:update"
-      />
+      <>
+        <h1 className="sr-only">{dictionary.navigation.roles}</h1>
+        <AccessDenied
+          title={dictionary.errors.accessDeniedTitle}
+          description={dictionary.roles.accessDeniedDescription}
+          permission="role:update"
+        />
+      </>
     )
   }
 
@@ -27,5 +30,10 @@ export default async function RolesPage() {
     getPermissions(),
   ])
 
-  return <RoleListPage roles={roles} permissions={permissionCatalog} />
+  return (
+    <>
+      <h1 className="sr-only">{dictionary.navigation.roles}</h1>
+      <RoleListPage roles={roles} permissions={permissionCatalog} />
+    </>
+  )
 }

@@ -1968,6 +1968,21 @@ function hasFixturePermission(state, permission) {
   )
 }
 
+const FIXTURE_ROLE_PERMISSIONS = [
+  {
+    id: 1,
+    key: "role:read",
+    name: "Read roles",
+    description: "View roles and their permission assignments.",
+  },
+  {
+    id: 2,
+    key: "role:update",
+    name: "Update roles",
+    description: "Manage role permission assignments.",
+  },
+]
+
 function aiTaskConfigurationRouteResult(state, method, pathname, body, url) {
   if (method === "GET" && pathname === "/ai-task-configurations") {
     if (!hasFixturePermission(state, "ai-task-configuration:read")) {
@@ -2764,6 +2779,57 @@ function responseForRoute(
     return Number(url.searchParams.get("size")) === 50
       ? { content: pageResponse.content }
       : pageResponse
+  }
+
+  if (method === "GET" && pathname === "/blogs") {
+    if (!hasFixturePermission(state, "blog:read")) {
+      return {
+        __status: 403,
+        payload: errorPayload("Blog permission denied", "FORBIDDEN"),
+      }
+    }
+    return slicePage([], url)
+  }
+
+  if (method === "GET" && pathname === "/users") {
+    if (!hasFixturePermission(state, "user:search")) {
+      return {
+        __status: 403,
+        payload: errorPayload("User permission denied", "FORBIDDEN"),
+      }
+    }
+    return slicePage([], url)
+  }
+
+  if (method === "GET" && pathname === "/roles") {
+    if (!hasFixturePermission(state, "role:read")) {
+      return {
+        __status: 403,
+        payload: errorPayload("Role permission denied", "FORBIDDEN"),
+      }
+    }
+    if (getScenario(state, method, pathname) === "empty") {
+      return []
+    }
+    return [
+      {
+        id: 1,
+        key: "fixture-admin",
+        name: "Administrator",
+        description: "Fixture role for sidebar navigation checks.",
+        permissions: FIXTURE_ROLE_PERMISSIONS,
+      },
+    ]
+  }
+
+  if (method === "GET" && pathname === "/permissions") {
+    if (!hasFixturePermission(state, "role:update")) {
+      return {
+        __status: 403,
+        payload: errorPayload("Role permission denied", "FORBIDDEN"),
+      }
+    }
+    return FIXTURE_ROLE_PERMISSIONS
   }
 
   if (method === "GET" && pathname === "/cronjobs") {

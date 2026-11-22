@@ -1289,6 +1289,7 @@ export const en: Dictionary = {
   roles: {
     accessDeniedDescription:
       "You do not have permission to view or update role management.",
+    loading: "Loading roles",
     roleColumn: "Role",
     keyColumn: "Key",
     descriptionColumn: "Description",
