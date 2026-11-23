@@ -4,6 +4,10 @@
 
 The dialog references are attached to [SIGN-31](https://signapse-group.atlassian.net/browse/SIGN-31): attachment 10310 (`telegram-connect-bot-desktop-20261123-v2.png`) and attachment 10311 (`telegram-connect-bot-mobile-20261123-v2.png`). The settings surface references are attached to [SIGN-32](https://signapse-group.atlassian.net/browse/SIGN-32): attachments 10308 (`telegram-settings-wide-20261123-v2.png`), 10312 (`telegram-settings-compact-20261123-v2.png`), and 10309 (`telegram-settings-mobile-20261123-v2.png`). The responsive rules come from the [Responsive Contract](https://github.com/signapse-group/signapse-planing/blob/main/ui-design/references/DESIGN.md#responsive-contract).
 
+## API contract
+
+Fetched the producer-published [dev OpenAPI](https://dev-api.signapse.cloud/v3/api-docs) at `2026-11-23T10:54:15Z`. `info.version` is `v0`; `x-build-revision` is `5003e943810f4027154ef0ccb4343aa1a322777e`, matching the delivered SIGN-328 handoff revision. `POST /telegram/bot-connections` requires `telegram-bot-connection:create`: 201 is a new safe connection (`ACTIVE` after webhook registration or `INVALID` with safe `failureReason`), while 200 is the caller's stored connection and unchanged status. Token verification errors return 400; cross-owner duplicates return generic 409 without owner details. `GET /telegram/bot-connections` requires `telegram-bot-connection:read` and returns caller-owned metadata without bot tokens. The P0 server below is a local fixture and does not establish live integration.
+
 ## Candidate renders
 
 Captured from the `codex/SIGN-329-connect-bot` working tree based on `fd9ba256091a259bd968c6f29a5eb169d004a736` (`origin/dev`) by the P0 Playwright fixture run. Wide captures use a 1520×1024 CSS viewport with the sidebar expanded. The compact capture uses 1024×768 with the sidebar collapsed. Mobile captures use 390×844 and 360×780 with the sidebar closed.
