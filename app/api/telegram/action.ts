@@ -23,6 +23,8 @@ import {
   getUpdateTelegramFeatureSettingSchema,
   normalizeSaveTelegramMarketAnalysisScheduleRequest,
   SaveTelegramMarketAnalysisScheduleRequest,
+  telegramBotConnectionResponseSchema,
+  telegramBotConnectionsResponseSchema,
   TelegramBotConnectionResponse,
   TelegramDestinationResponse,
   TelegramFeatureSettingResponse,
@@ -97,9 +99,16 @@ function revalidateTelegramConfiguration() {
 export async function getTelegramBotConnections(): Promise<
   TelegramBotConnectionResponse[]
 > {
-  return fetchAuthenticated<TelegramBotConnectionResponse[]>(
+  const response = await fetchAuthenticated<unknown>(
     "/telegram/bot-connections"
   )
+  const parsed = telegramBotConnectionsResponseSchema.safeParse(response)
+
+  if (!parsed.success) {
+    throw new Error("Invalid Telegram bot connections response")
+  }
+
+  return parsed.data
 }
 
 export async function getTelegramDestinations(): Promise<
@@ -146,18 +155,21 @@ export async function createTelegramBotConnection(
   }
 
   try {
-    const response =
-      await fetchAuthenticatedWithStatus<TelegramBotConnectionResponse>(
-        "/telegram/bot-connections",
-        {
-          method: "POST",
-          body: JSON.stringify(parsed.data),
-        }
-      )
+    const response = await fetchAuthenticatedWithStatus<unknown>(
+      "/telegram/bot-connections",
+      {
+        method: "POST",
+        body: JSON.stringify(parsed.data),
+      }
+    )
+
+    const connection = telegramBotConnectionResponseSchema.safeParse(
+      response.data
+    )
 
     if (
       (response.status !== 200 && response.status !== 201) ||
-      !response.data
+      !connection.success
     ) {
       return {
         success: false,
@@ -170,7 +182,7 @@ export async function createTelegramBotConnection(
     return {
       success: true,
       data: {
-        connection: response.data,
+        connection: connection.data,
         created: response.status === 201,
       },
     }

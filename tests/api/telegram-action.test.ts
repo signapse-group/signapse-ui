@@ -57,6 +57,7 @@ import {
   createTelegramMarketAnalysisSchedule,
   deleteTelegramMarketAnalysisSchedule,
   disableTelegramMarketAnalysisSchedule,
+  getTelegramBotConnections,
   updateTelegramMarketAnalysisSchedule,
   updateTelegramFeatureSetting,
 } from "@/app/api/telegram/action"
@@ -257,7 +258,12 @@ describe("Telegram bot connection creation", () => {
 
   it("uses the create endpoint and distinguishes new connections from caller duplicates", async () => {
     vi.mocked(fetchAuthenticatedWithStatus).mockResolvedValueOnce({
-      data: botConnectionResponse,
+      data: {
+        ...botConnectionResponse,
+        botToken: "must-not-reach-the-client",
+        ownerId: 987,
+        ownerEmail: "other-owner@example.test",
+      },
       status: 201,
     })
 
@@ -279,7 +285,12 @@ describe("Telegram bot connection creation", () => {
     vi.mocked(fetchAuthenticatedWithStatus).mockReset()
     vi.mocked(revalidatePath).mockClear()
     vi.mocked(fetchAuthenticatedWithStatus).mockResolvedValueOnce({
-      data: { ...botConnectionResponse, status: "INVALID" },
+      data: {
+        ...botConnectionResponse,
+        status: "INVALID",
+        botToken: "must-not-reach-the-client",
+        ownerId: 987,
+      },
       status: 200,
     })
 
@@ -293,6 +304,25 @@ describe("Telegram bot connection creation", () => {
       },
     })
     expect(revalidatePath).toHaveBeenCalledWith("/telegram")
+  })
+
+  it("fails closed when the create response has an invalid saved status", async () => {
+    vi.mocked(fetchAuthenticatedWithStatus).mockResolvedValueOnce({
+      data: {
+        ...botConnectionResponse,
+        status: "UNKNOWN",
+        botToken: "must-not-reach-the-client",
+      },
+      status: 201,
+    })
+
+    await expect(
+      createTelegramBotConnection({ botToken: "fake-token" })
+    ).resolves.toEqual({
+      success: false,
+      error: testDictionary.telegram.bot.createError,
+    })
+    expect(revalidatePath).not.toHaveBeenCalled()
   })
 
   it("returns localized backend verification, permission, and conflict errors", async () => {
@@ -335,5 +365,24 @@ describe("Telegram bot connection creation", () => {
       error: "Enter the bot token.",
     })
     expect(fetchAuthenticatedWithStatus).not.toHaveBeenCalled()
+  })
+})
+
+describe("Telegram bot connection read", () => {
+  it("projects the saved response to allowlisted metadata", async () => {
+    vi.mocked(fetchAuthenticated).mockReset()
+    vi.mocked(fetchAuthenticated).mockResolvedValueOnce([
+      {
+        ...botConnectionResponse,
+        botToken: "must-not-reach-the-client",
+        ownerId: 987,
+        ownerEmail: "other-owner@example.test",
+      },
+    ])
+
+    await expect(getTelegramBotConnections()).resolves.toEqual([
+      botConnectionResponse,
+    ])
+    expect(fetchAuthenticated).toHaveBeenCalledWith("/telegram/bot-connections")
   })
 })

@@ -744,6 +744,10 @@ describe("Telegram bot connections", () => {
 
     const dialog = await screen.findByRole("dialog")
     const token = screen.getByLabelText(viDictionary.telegram.bot.tokenLabel)
+    const closeButtons = within(dialog).getAllByRole("button", {
+      name: viDictionary.common.close,
+    })
+    expect(closeButtons).toHaveLength(2)
     await waitFor(() => expect(token).toHaveFocus())
     expect(token).toHaveAttribute("type", "password")
 
@@ -765,7 +769,7 @@ describe("Telegram bot connections", () => {
     )
     await waitFor(() => expect(token).toHaveFocus())
 
-    await user.keyboard("{Escape}")
+    await user.click(closeButtons[1])
     await waitFor(() =>
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
     )

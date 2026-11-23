@@ -10,6 +10,7 @@ import {
   RefreshCw,
   Send,
   Trash2,
+  X,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -367,7 +368,7 @@ function ConnectBotDialog() {
         <Bot data-icon="inline-start" />
         {t.bot.connect}
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent showCloseButton={false}>
         <DialogHeader>
           <DialogTitle>{t.bot.createTitle}</DialogTitle>
           <DialogDescription>{t.bot.createDescription}</DialogDescription>
@@ -422,6 +423,18 @@ function ConnectBotDialog() {
             </Button>
           </DialogFooter>
         </form>
+        <DialogClose
+          render={
+            <Button
+              aria-label={dictionary.common.close}
+              variant="ghost"
+              className="absolute top-2 right-2"
+              size="icon-sm"
+            />
+          }
+        >
+          <X aria-hidden="true" />
+        </DialogClose>
       </DialogContent>
     </Dialog>
   )

@@ -86,3 +86,22 @@ Verification from the issue workspace:
 - `/opt/apps/symphony/runtime/run-fe-browser /opt/apps/symphony/workspaces-fe-jira/SIGN-329 tests/e2e/telegram.spec.ts --grep 'P0 Telegram operations' --retries=0` — **3 passed**. The flow asserts no list request for create-only, safe readback only with read permission, both INVALID readback permission states, keyboard/focus, open-dialog resize, localized feedback, duplicates and rejected requests.
 
 The P0 captures use the local fixture and are not live authentication, persistence, Telegram delivery, or dev QA evidence. The Next.js development overlay badge appears in some full-page captures but is outside the Telegram UI and does not obscure the INVALID row in this set.
+
+## Follow-up after PR #158 feedback #4
+
+Fetched the producer-published [dev OpenAPI](https://dev-api.signapse.cloud/v3/api-docs) at `2026-11-23T14:30:40Z`. Its `x-build-revision` remains `23bdeade727a8df776331339c9968bcb10019835`, matching the SIGN-336 handoff (PR #217, deploy run `45159828023`). The current `GET /telegram/bot-connections` still requires `telegram-bot-connection:read` and excludes tokens; `POST /telegram/bot-connections` still requires `telegram-bot-connection:create`, returns 201 for a new connection and 200 for an unchanged caller duplicate, and documents 400 verification errors plus a generic cross-owner 409. `TelegramBotConnectionResponse` remains the contract schema. `failureReason` remains a string without a locale guarantee.
+
+The FE now validates and projects both list and create payloads through this response allowlist before they reach the UI. Unknown token/owner fields are stripped; malformed IDs or statuses fail closed. Action fixtures inject token and owner fields on GET, POST 201 and POST 200 and assert that only safe response properties are returned. A malformed status returns the localized create fallback without revalidation.
+
+Compared the dialog against [SIGN-31 attachment 10310](https://signapse-group.atlassian.net/browse/SIGN-31) (`telegram-connect-bot-desktop-20261123-v2.png`) and attachment 10311 (`telegram-connect-bot-mobile-20261123-v2.png`). The icon close button keeps its visible placement, size and chrome; only its accessible name now comes from the active locale dictionary. The component test confirms both visible and icon close controls have the Vietnamese accessible name and that the icon closes the dialog. The P0 browser check confirms the two names at 360×780; the existing 1520×1024, 760×512-open-dialog, 390×844 and 360×780 renders remain visually valid because the fixes change response projection and the invisible accessible name only.
+
+Verification from the issue workspace:
+
+- `pnpm exec vitest run tests/api/telegram-action.test.ts tests/components/telegram-configuration.component.test.tsx` — **27 passed**.
+- `/opt/apps/symphony/runtime/run-fe-browser /opt/apps/symphony/workspaces-fe-jira/SIGN-329 tests/e2e/telegram.spec.ts --grep 'P0 Telegram operations' --retries=0` — **3 passed**. The run covers create-only access without GET, create/read response status and readback, token/owner omission, localized verification/permission/conflict feedback, keyboard opening and focus restoration, both Vietnamese close names, and responsive behavior including resize while the dialog and token draft stay open at effective 200% width.
+- `pnpm typecheck` — pass.
+- ESLint on the six changed TS/TSX files — pass.
+- Prettier on the six changed TS/TSX files — pass after formatting.
+- `git diff --check` — pass.
+
+These checks use local fixtures and do not verify live authentication, persistence or Telegram delivery. QA/coordinator own the feature check on dev and Story acceptance.

@@ -458,7 +458,9 @@ test.describe("P0 Telegram operations", () => {
     await page.setViewportSize({ width: 360, height: 780 })
     await connectTrigger.click()
     const mobileDialog = page.getByRole("dialog")
-    const closeButton = mobileDialog.getByRole("button", { name: "Đóng" })
+    const closeButtons = mobileDialog.getByRole("button", { name: "Đóng" })
+    await expect(closeButtons).toHaveCount(2)
+    const closeButton = closeButtons.first()
     const submitButton = mobileDialog.getByRole("button", {
       name: "Kết nối bot",
     })

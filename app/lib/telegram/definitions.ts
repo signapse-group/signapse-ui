@@ -13,37 +13,46 @@ export const TELEGRAM_FEATURE_KEYS = [
 
 export type TelegramFeatureKey = (typeof TELEGRAM_FEATURE_KEYS)[number]
 
-export type TelegramConnectionStatus =
-  | "ACTIVE"
-  | "DISABLED"
-  | "REMOVED"
-  | "INVALID"
+export const telegramConnectionStatusSchema = z.enum([
+  "ACTIVE",
+  "DISABLED",
+  "REMOVED",
+  "INVALID",
+])
+
+export type TelegramConnectionStatus = z.infer<
+  typeof telegramConnectionStatusSchema
+>
 
 export type TelegramDestinationStatus = "ACTIVE" | "DISABLED" | "REMOVED"
 export type TelegramScheduleStatus = "ACTIVE" | "DISABLED" | "REMOVED"
 
 export type TelegramChatType =
-  | "PRIVATE"
-  | "GROUP"
-  | "SUPERGROUP"
-  | "CHANNEL"
-  | "UNKNOWN"
+  "PRIVATE" | "GROUP" | "SUPERGROUP" | "CHANNEL" | "UNKNOWN"
 
-export interface TelegramBotConnectionResponse {
-  id: number
-  botId?: number
-  botUsername?: string
-  botFirstName?: string
-  displayLabel?: string
-  status: TelegramConnectionStatus
-  webhookUrl?: string
-  failureReason?: string
-  verifiedAt?: string
-  lastValidatedAt?: string
-  lastWebhookRegisteredAt?: string
-  createdDate?: string
-  lastModifiedDate?: string
-}
+export const telegramBotConnectionResponseSchema = z.object({
+  id: z.number().int(),
+  botId: z.number().int().optional(),
+  botUsername: z.string().optional(),
+  botFirstName: z.string().optional(),
+  displayLabel: z.string().optional(),
+  status: telegramConnectionStatusSchema,
+  webhookUrl: z.string().optional(),
+  failureReason: z.string().optional(),
+  verifiedAt: z.string().optional(),
+  lastValidatedAt: z.string().optional(),
+  lastWebhookRegisteredAt: z.string().optional(),
+  createdDate: z.string().optional(),
+  lastModifiedDate: z.string().optional(),
+})
+
+export const telegramBotConnectionsResponseSchema = z.array(
+  telegramBotConnectionResponseSchema
+)
+
+export type TelegramBotConnectionResponse = z.infer<
+  typeof telegramBotConnectionResponseSchema
+>
 
 export interface TelegramDestinationResponse {
   id: number
