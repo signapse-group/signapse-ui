@@ -317,9 +317,19 @@ test.describe("P0 Telegram operations", () => {
       (botBox?.y ?? 0) + (botBox?.height ?? 0) - 8
     )
     await expect(incompleteBot).toContainText("Thiết lập bot chưa hoàn tất.")
-    await incompleteBot.scrollIntoViewIfNeeded()
-    await testInfo.attach("sign329-compact-readback.png", {
-      body: await page.screenshot({ type: "png" }),
+    await incompleteBot.evaluate((element) =>
+      element.scrollIntoView({ block: "start" })
+    )
+    await testInfo.attach(
+      "sign329-compact-invalid-row-without-update-permission.png",
+      {
+        body: await incompleteBot.screenshot({ type: "png" }),
+        contentType: "image/png",
+      }
+    )
+    await page.evaluate(() => window.scrollTo(0, 0))
+    await testInfo.attach("sign329-compact-readback-without-update.png", {
+      body: await page.screenshot({ type: "png", fullPage: true }),
       contentType: "image/png",
     })
 
@@ -358,9 +368,19 @@ test.describe("P0 Telegram operations", () => {
       mobileDimensions.clientWidth
     )
     await expect(incompleteBot).toContainText("Thiết lập bot chưa hoàn tất.")
-    await incompleteBot.scrollIntoViewIfNeeded()
-    await testInfo.attach("sign329-mobile-readback.png", {
-      body: await page.screenshot({ type: "png" }),
+    await incompleteBot.evaluate((element) =>
+      element.scrollIntoView({ block: "start" })
+    )
+    await testInfo.attach(
+      "sign329-mobile-invalid-row-without-update-permission.png",
+      {
+        body: await incompleteBot.screenshot({ type: "png" }),
+        contentType: "image/png",
+      }
+    )
+    await page.evaluate(() => window.scrollTo(0, 0))
+    await testInfo.attach("sign329-mobile-readback-without-update.png", {
+      body: await page.screenshot({ type: "png", fullPage: true }),
       contentType: "image/png",
     })
 
@@ -375,63 +395,65 @@ test.describe("P0 Telegram operations", () => {
       "Dùng Reconnect trên hàng của bot này để hoàn tất thiết lập.",
       { exact: true }
     )
-    await expect(reconnectGuidance).toBeVisible()
-    await expect(incompleteBot).toContainText(
+    await expect(reconnectGuidance).toHaveCount(0)
+    await expect(incompleteBot).toContainText("Thiết lập bot chưa hoàn tất.")
+    await expect(incompleteBot).not.toContainText(
       "Dùng Reconnect trên hàng của bot này để hoàn tất thiết lập."
     )
-    await reconnectGuidance.scrollIntoViewIfNeeded()
-    await testInfo.attach("sign329-compact-invalid-row-with-reconnect.png", {
-      body: await incompleteBot.screenshot({ type: "png" }),
-      contentType: "image/png",
-    })
-    const guidanceLines = await reconnectGuidance.evaluate((element) => {
-      const range = document.createRange()
-      range.selectNodeContents(element)
-      return range.getClientRects().length
-    })
-    expect(guidanceLines).toBeGreaterThan(0)
-    const [compactGuidanceBox, compactBotBox] = await Promise.all([
-      reconnectGuidance.boundingBox(),
-      botCard.boundingBox(),
-    ])
-    expect(compactGuidanceBox).not.toBeNull()
-    expect(compactBotBox).not.toBeNull()
-    expect(compactGuidanceBox?.x).toBeGreaterThanOrEqual(compactBotBox?.x ?? 0)
-    expect(
-      (compactGuidanceBox?.x ?? 0) + (compactGuidanceBox?.width ?? 0)
-    ).toBeLessThanOrEqual((compactBotBox?.x ?? 0) + (compactBotBox?.width ?? 0))
-    const compactDimensionsWithReconnect = await page.evaluate(() => ({
+    await incompleteBot.evaluate((element) =>
+      element.scrollIntoView({ block: "start" })
+    )
+    await testInfo.attach(
+      "sign329-compact-invalid-row-update-permission-before-reconnect.png",
+      {
+        body: await incompleteBot.screenshot({ type: "png" }),
+        contentType: "image/png",
+      }
+    )
+    const compactDimensionsWithUpdate = await page.evaluate(() => ({
       clientWidth: document.documentElement.clientWidth,
       scrollWidth: document.documentElement.scrollWidth,
     }))
-    expect(compactDimensionsWithReconnect.scrollWidth).toBeLessThanOrEqual(
-      compactDimensionsWithReconnect.clientWidth
+    expect(compactDimensionsWithUpdate.scrollWidth).toBeLessThanOrEqual(
+      compactDimensionsWithUpdate.clientWidth
     )
-    await testInfo.attach("sign329-compact-readback-with-reconnect.png", {
-      body: await page.screenshot({ type: "png" }),
-      contentType: "image/png",
-    })
+    await page.evaluate(() => window.scrollTo(0, 0))
+    await testInfo.attach(
+      "sign329-compact-readback-update-permission-before-reconnect.png",
+      {
+        body: await page.screenshot({ type: "png", fullPage: true }),
+        contentType: "image/png",
+      }
+    )
 
     await page.setViewportSize({ width: 390, height: 844 })
-    const mobileDimensionsWithReconnect = await page.evaluate(() => ({
+    const mobileDimensionsWithUpdate = await page.evaluate(() => ({
       clientWidth: document.documentElement.clientWidth,
       scrollWidth: document.documentElement.scrollWidth,
     }))
-    expect(mobileDimensionsWithReconnect.scrollWidth).toBeLessThanOrEqual(
-      mobileDimensionsWithReconnect.clientWidth
+    expect(mobileDimensionsWithUpdate.scrollWidth).toBeLessThanOrEqual(
+      mobileDimensionsWithUpdate.clientWidth
     )
-    await expect(reconnectGuidance).toBeVisible()
-    await reconnectGuidance.scrollIntoViewIfNeeded()
-    const mobileGuidanceLines = await reconnectGuidance.evaluate((element) => {
-      const range = document.createRange()
-      range.selectNodeContents(element)
-      return range.getClientRects().length
-    })
-    expect(mobileGuidanceLines).toBeGreaterThan(1)
-    await testInfo.attach("sign329-mobile-readback-with-reconnect.png", {
-      body: await page.screenshot({ type: "png" }),
-      contentType: "image/png",
-    })
+    await expect(reconnectGuidance).toHaveCount(0)
+    await expect(incompleteBot).toContainText("Thiết lập bot chưa hoàn tất.")
+    await incompleteBot.evaluate((element) =>
+      element.scrollIntoView({ block: "start" })
+    )
+    await testInfo.attach(
+      "sign329-mobile-invalid-row-update-permission-before-reconnect.png",
+      {
+        body: await incompleteBot.screenshot({ type: "png" }),
+        contentType: "image/png",
+      }
+    )
+    await page.evaluate(() => window.scrollTo(0, 0))
+    await testInfo.attach(
+      "sign329-mobile-readback-update-permission-before-reconnect.png",
+      {
+        body: await page.screenshot({ type: "png", fullPage: true }),
+        contentType: "image/png",
+      }
+    )
 
     await page.setViewportSize({ width: 360, height: 780 })
     await connectTrigger.click()

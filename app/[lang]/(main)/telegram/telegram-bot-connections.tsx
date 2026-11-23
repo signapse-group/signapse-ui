@@ -91,13 +91,11 @@ export function BotConnectionsCard({
   canRead,
   canManage,
   canCreate,
-  canReconnect,
 }: {
   botConnections: TelegramBotConnectionResponse[]
   canRead: boolean
   canManage: boolean
   canCreate: boolean
-  canReconnect: boolean
 }) {
   const { dictionary, formatDateTime, formatMessage } = useLocalization()
   const t = dictionary.telegram
@@ -136,7 +134,6 @@ export function BotConnectionsCard({
                     key={connection.id}
                     connection={connection}
                     canManage={canManage}
-                    canReconnect={canReconnect}
                     formatTime={formatTime}
                     formatMessage={formatMessage}
                     dictionary={dictionary}
@@ -164,14 +161,12 @@ export function BotConnectionsCard({
 function BotConnectionItem({
   connection,
   canManage,
-  canReconnect,
   formatTime,
   formatMessage,
   dictionary,
 }: {
   connection: TelegramBotConnectionResponse
   canManage: boolean
-  canReconnect: boolean
   formatTime: (value?: string) => string
   formatMessage: ReturnType<typeof useLocalization>["formatMessage"]
   dictionary: Dictionary
@@ -223,11 +218,6 @@ function BotConnectionItem({
               <p className="text-xs text-muted-foreground">
                 {t.bot.setupIncomplete}
               </p>
-              {canReconnect ? (
-                <p className="text-xs text-muted-foreground">
-                  {t.bot.reconnectGuidance}
-                </p>
-              ) : null}
             </div>
           ) : null}
         </ItemContent>

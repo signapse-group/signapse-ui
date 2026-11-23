@@ -14,7 +14,6 @@ import { getCurrentPermissions } from "@/app/lib/permissions-server"
 import {
   canAccessTelegramConfiguration,
   TELEGRAM_BOT_CONNECTION_CREATE_PERMISSION,
-  TELEGRAM_BOT_CONNECTION_UPDATE_PERMISSION,
   getTelegramManageAccess,
   getTelegramSectionAccess,
 } from "@/app/lib/telegram/permissions"
@@ -45,11 +44,6 @@ export default async function TelegramPage() {
     permissions,
     TELEGRAM_BOT_CONNECTION_CREATE_PERMISSION
   )
-  const canReconnectBotConnections = hasPermission(
-    permissions,
-    TELEGRAM_BOT_CONNECTION_UPDATE_PERMISSION
-  )
-
   if (!canAccessTelegramConfiguration(permissions)) {
     return (
       <AccessDenied
@@ -66,7 +60,6 @@ export default async function TelegramPage() {
         manageAccess={manageAccess}
         canReadWorkspace={hasPermission(permissions, "workspace:read")}
         canCreateBotConnections={canCreateBotConnections}
-        canReconnectBotConnections={canReconnectBotConnections}
       />
     </Suspense>
   )
@@ -77,13 +70,11 @@ async function TelegramConfigurationContent({
   manageAccess,
   canReadWorkspace,
   canCreateBotConnections,
-  canReconnectBotConnections,
 }: {
   sectionAccess: ReturnType<typeof getTelegramSectionAccess>
   manageAccess: ReturnType<typeof getTelegramManageAccess>
   canReadWorkspace: boolean
   canCreateBotConnections: boolean
-  canReconnectBotConnections: boolean
 }) {
   const currentWorkspace = canReadWorkspace
     ? await getActiveWorkspaceForCurrentUser()
@@ -136,7 +127,6 @@ async function TelegramConfigurationContent({
         manageAccess,
       }}
       canCreateBotConnections={canCreateBotConnections}
-      canReconnectBotConnections={canReconnectBotConnections}
     />
   )
 }

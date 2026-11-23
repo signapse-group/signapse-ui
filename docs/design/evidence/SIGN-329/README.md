@@ -36,6 +36,8 @@ The new 760×512 capture also contains the local Next.js development overlay's r
 
 ## Follow-up after PR #158 feedback #2
 
+Historical capture note: this render set is superseded. Review found the Compact permission labels did not match the screenshots: the read-only capture included Reconnect guidance, and the update-permission capture did not show the INVALID row. The corrected evidence is recorded in the follow-up below.
+
 Rechecked the live dev OpenAPI at `2026-11-23T12:58Z`. Its `x-build-revision` is `23bdeade727a8df776331339c9968bcb10019835`, matching the SIGN-336 producer handoff. The GET and POST operations still publish the required auth/error responses and the contract's caller/read, create, duplicate and ownership rules. The fixture now exercises POST 201 ACTIVE/INVALID, duplicate 200 ACTIVE/INVALID, invalid-token 400, generic conflict 409, and create-denied 403. It verifies that create-only access makes no list request, read access enables safe metadata readback, duplicate results leave stored state unchanged, and the response/UI expose neither token nor owner data.
 
 The Compact layout now places Feature Routing and Scheduled Analysis at left, with Bot Connections and Destinations stacked at right. At 390×844, Feature Routing precedes the infrastructure cards. The INVALID row uses localized webhook-failure copy; Reconnect guidance appears only after granting update permission. Raw fixture failure details remain hidden. The responsive check verifies the guidance stays inside the Compact Bot card, wraps on Mobile, and does not create horizontal page overflow.
@@ -59,3 +61,28 @@ Verification from the issue workspace:
 - `git diff --check` — pass.
 
 These remain local-fixture checks. They do not verify live authentication, persistence or Telegram delivery; QA/coordinator own testing on dev and Story acceptance. The captures include the local development overlay's red “1 Issue” badge, which is outside the Telegram UI.
+
+## Follow-up after PR #158 feedback #3
+
+Fetched the producer-published [dev OpenAPI](https://dev-api.signapse.cloud/v3/api-docs) at `2026-11-23T13:29:58.563Z`. Its `x-build-revision` remains `23bdeade727a8df776331339c9968bcb10019835`, matching the SIGN-336 handoff (PR #217, deploy run `45159828023`). The GET/POST permission, response-status, duplicate, ownership, and safe-metadata semantics remain unchanged. `failureReason` is a safe string without a locale guarantee, so the UI shows localized webhook-failure and incomplete-setup copy and omits the raw value.
+
+The INVALID row displays the actual saved status, localized webhook-failure copy, and setup-incomplete copy. SIGN-329 does not implement the Reconnect row action; SIGN-338 owns it and is blocked by this Subtask. Until that row action is present, update permission alone does not show Reconnect guidance. Component and P0 browser checks assert the guidance is absent with and without update permission. The two Compact page captures render identically because update permission does not expose an action in this candidate.
+
+Compared the Compact composition with [SIGN-32 attachment 10312](https://signapse-group.atlassian.net/browse/SIGN-32) (`telegram-settings-compact-20261123-v2.png`) and the Mobile order with attachment 10309 (`telegram-settings-mobile-20261123-v2.png`). The current fixture renders include the INVALID row in both permission states; the row crop shows localized status/setup copy with no raw failure detail or premature Reconnect guidance. Full-page captures use the 1024×768 Compact and 390×844 Mobile CSS viewports. The dialog captures show 1520×1024 Wide, 760×512 effective 200% width while open with a token draft, and 360×780 Mobile. The resize check keeps the draft and focus, keeps the dialog inside the viewport, and reports no page-level horizontal overflow. The 760×512 case is an effective-width simulation, not native browser zoom.
+
+- [Compact readback, dark, without update permission](readback-compact-dark-1024x768.png)
+- [Compact readback, dark, with update permission before the Reconnect row action](readback-compact-update-permission-before-reconnect-dark-1024x768.png)
+- [INVALID row crop before the Reconnect row action](compact-invalid-row-before-reconnect-action.png)
+- [Mobile readback, dark, without update permission](readback-mobile-dark-390x844.png)
+- [Mobile readback, dark, with update permission before the Reconnect row action](readback-mobile-update-permission-before-reconnect-dark-390x844.png)
+- [Mobile INVALID row crop before the Reconnect row action](mobile-invalid-row-before-reconnect-action.png)
+- [Current Connect dialog, dark, 1520×1024](connect-dialog-desktop-dark-1520x1024.png)
+- [Current Connect dialog, dark, open at effective 200% width, 760×512](connect-dialog-effective-200-percent-760x512.png)
+- [Current Connect dialog, dark, 360×780 mobile](connect-dialog-small-mobile-dark-360x780.png)
+
+Verification from the issue workspace:
+
+- `pnpm exec vitest run tests/components/telegram-configuration.component.test.tsx` — **17 passed**.
+- `/opt/apps/symphony/runtime/run-fe-browser /opt/apps/symphony/workspaces-fe-jira/SIGN-329 tests/e2e/telegram.spec.ts --grep 'P0 Telegram operations' --retries=0` — **3 passed**. The flow asserts no list request for create-only, safe readback only with read permission, both INVALID readback permission states, keyboard/focus, open-dialog resize, localized feedback, duplicates and rejected requests.
+
+The P0 captures use the local fixture and are not live authentication, persistence, Telegram delivery, or dev QA evidence. The Next.js development overlay badge appears in some full-page captures but is outside the Telegram UI and does not obscure the INVALID row in this set.

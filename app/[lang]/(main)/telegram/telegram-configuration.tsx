@@ -129,11 +129,9 @@ function getRouteDefinitions(dictionary: Dictionary): RouteDefinition[] {
 export function TelegramConfigurationPage({
   data,
   canCreateBotConnections = false,
-  canReconnectBotConnections = false,
 }: {
   data: TelegramConfigurationData
   canCreateBotConnections?: boolean
-  canReconnectBotConnections?: boolean
 }) {
   const { dictionary } = useLocalization()
   const featureSettings = data.currentWorkspace
@@ -198,7 +196,6 @@ export function TelegramConfigurationPage({
               canRead={data.sectionAccess.botConnections}
               canManage={data.manageAccess.botConnections}
               canCreate={canCreateBotConnections}
-              canReconnect={canReconnectBotConnections}
             />
             <DestinationsCard
               destinations={data.destinations}

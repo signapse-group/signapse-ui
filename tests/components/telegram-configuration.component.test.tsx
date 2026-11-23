@@ -156,7 +156,6 @@ function renderConfiguration(
   configurationData: TelegramConfigurationData = data,
   access: {
     canCreateBotConnections?: boolean
-    canReconnectBotConnections?: boolean
   } = {}
 ) {
   return render(
@@ -179,13 +178,11 @@ function renderBotConnectionsCard({
   canRead = false,
   canManage = false,
   canCreate = false,
-  canReconnect = false,
 }: {
   botConnections?: TelegramBotConnectionResponse[]
   canRead?: boolean
   canManage?: boolean
   canCreate?: boolean
-  canReconnect?: boolean
 } = {}) {
   return render(
     <LocalizationProvider locale="vi" dictionary={viDictionary}>
@@ -194,7 +191,6 @@ function renderBotConnectionsCard({
         canRead={canRead}
         canManage={canManage}
         canCreate={canCreate}
-        canReconnect={canReconnect}
       />
     </LocalizationProvider>
   )
@@ -880,7 +876,7 @@ describe("Telegram bot connections", () => {
     }
   )
 
-  it("shows localized incomplete-setup guidance only to users with reconnect access", () => {
+  it("keeps reconnect guidance hidden until the row action is available", () => {
     const invalidConnection = {
       ...botConnection,
       status: "INVALID" as const,
@@ -889,6 +885,7 @@ describe("Telegram bot connections", () => {
     renderBotConnectionsCard({
       botConnections: [invalidConnection],
       canRead: true,
+      canManage: true,
     })
 
     expect(
@@ -906,15 +903,5 @@ describe("Telegram bot connections", () => {
     expect(
       screen.queryByText(viDictionary.telegram.bot.reconnectGuidance)
     ).not.toBeInTheDocument()
-
-    cleanup()
-    renderBotConnectionsCard({
-      botConnections: [invalidConnection],
-      canRead: true,
-      canReconnect: true,
-    })
-    expect(
-      screen.getByText(viDictionary.telegram.bot.reconnectGuidance)
-    ).toBeVisible()
   })
 })
