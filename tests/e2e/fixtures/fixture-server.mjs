@@ -590,6 +590,20 @@ function createState() {
         createdDate: "2025-01-02T08:00:00.000Z",
         lastModifiedDate: NOW,
       },
+      {
+        id: 12,
+        botId: 10012,
+        botUsername: "signapse_incomplete_fixture_bot",
+        botFirstName: "Incomplete Fixture",
+        displayLabel: "Incomplete fixture bot",
+        status: "INVALID",
+        failureReason: "Webhook registration failed: stored fixture detail.",
+        webhookUrl: "https://fixture.invalid/telegram/webhook/12",
+        verifiedAt: NOW,
+        lastValidatedAt: NOW,
+        createdDate: "2025-01-03T08:00:00.000Z",
+        lastModifiedDate: NOW,
+      },
     ],
     destinations: [
       destination,
@@ -4137,8 +4151,22 @@ Which asset did you mean? The available data is limited. Add TSLA to your watchl
     return created
   }
 
-  if (method === "GET" && pathname === "/telegram/bot-connections")
-    return state.botConnections
+  if (method === "GET" && pathname === "/telegram/bot-connections") {
+    if (!hasFixturePermission(state, "telegram-bot-connection:read")) {
+      return {
+        __status: 403,
+        payload: errorPayload(
+          locale.startsWith("vi")
+            ? "Bạn không có quyền xem kết nối bot Telegram."
+            : "Telegram bot connection read permission denied.",
+          "FORBIDDEN"
+        ),
+      }
+    }
+    return state.botConnections.filter(
+      (connection) => connection.status !== "REMOVED"
+    )
+  }
   if (method === "GET" && pathname === "/telegram/destinations")
     return state.destinations
   if (method === "GET" && pathname === "/telegram/feature-settings")
@@ -4154,16 +4182,69 @@ Which asset did you mean? The available data is limited. Add TSLA to your watchl
   }
 
   if (method === "POST" && pathname === "/telegram/bot-connections") {
+    if (!hasFixturePermission(state, "telegram-bot-connection:create")) {
+      return {
+        __status: 403,
+        payload: errorPayload(
+          locale.startsWith("vi")
+            ? "Bạn không có quyền kết nối bot Telegram."
+            : "Telegram bot connection create permission denied.",
+          "FORBIDDEN"
+        ),
+      }
+    }
+
+    if (body?.botToken === "fixture-invalid-token") {
+      return {
+        __status: 400,
+        payload: errorPayload(
+          locale.startsWith("vi")
+            ? "Token bot Telegram không hợp lệ."
+            : "The Telegram bot token is invalid.",
+          "INVALID_TELEGRAM_BOT_TOKEN"
+        ),
+      }
+    }
+
+    if (body?.botToken === "fixture-owner-conflict-token") {
+      return {
+        __status: 409,
+        payload: errorPayload(
+          locale.startsWith("vi")
+            ? "Bot Telegram này đã được kết nối."
+            : "This Telegram bot is already connected.",
+          "TELEGRAM_BOT_CONNECTION_ALREADY_EXISTS"
+        ),
+      }
+    }
+
+    if (body?.botToken === "fixture-duplicate-active-token") {
+      const connection = state.botConnections.find((item) => item.id === 11)
+      return { __status: 200, payload: connection }
+    }
+
+    if (body?.botToken === "fixture-duplicate-invalid-token") {
+      const connection = state.botConnections.find((item) => item.id === 12)
+      return { __status: 200, payload: connection }
+    }
+
+    const invalid = body?.botToken === "fixture-webhook-failed-token"
+    const id = Math.max(0, ...state.botConnections.map((item) => item.id)) + 1
     const item = {
-      id: 12,
-      botId: 1012,
-      botUsername: "new_fixture_bot",
-      botFirstName: "New Fixture",
-      displayLabel: "New fixture bot",
-      status: "ACTIVE",
+      id,
+      botId: 10000 + id,
+      botUsername: invalid ? "incomplete_fixture_bot" : "new_fixture_bot",
+      botFirstName: invalid ? "Incomplete Fixture" : "New Fixture",
+      displayLabel: invalid ? "New incomplete fixture bot" : "New fixture bot",
+      status: invalid ? "INVALID" : "ACTIVE",
+      ...(invalid
+        ? {
+            failureReason:
+              "Webhook registration failed: fixture provider detail.",
+          }
+        : { lastWebhookRegisteredAt: NOW }),
       verifiedAt: NOW,
       lastValidatedAt: NOW,
-      lastWebhookRegisteredAt: NOW,
       createdDate: NOW,
       lastModifiedDate: NOW,
     }

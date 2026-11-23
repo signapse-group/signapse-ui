@@ -168,46 +168,48 @@ export function TelegramConfigurationPage({
         activeBotCount={activeBotConnections.length}
         activeDestinationCount={activeDestinations.length}
       />
-      <section
-        className="flex min-w-0 flex-col gap-4"
-        aria-labelledby="telegram-infrastructure"
-      >
-        <SectionHeader
-          id="telegram-infrastructure"
-          title={dictionary.telegram.infrastructureTitle}
-          description={dictionary.telegram.infrastructureDescription}
+      <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+        <FeatureRoutingSection
+          routes={routes}
+          schedules={schedules}
+          activeDestinations={activeDestinations}
+          currentWorkspace={data.currentWorkspace}
+          watchlistAssets={data.watchlistAssets}
+          languages={data.languages}
+          languageCatalogError={data.languageCatalogError}
+          scheduleLoadError={data.scheduleLoadError}
+          canReadFeatureSettings={data.sectionAccess.featureSettings}
+          canUpdateFeatureSettings={data.manageAccess.featureSettings}
+          canReadSchedules={data.sectionAccess.schedules}
+          canManageSchedules={data.manageAccess.schedules}
         />
-        <div className="grid min-w-0 gap-4 lg:grid-cols-2">
-          <BotConnectionsCard
-            botConnections={data.botConnections}
-            canRead={data.sectionAccess.botConnections}
-            canManage={data.manageAccess.botConnections}
-            canCreate={canCreateBotConnections}
-            canReconnect={canReconnectBotConnections}
+        <section
+          className="flex min-w-0 flex-col gap-4"
+          aria-labelledby="telegram-infrastructure"
+        >
+          <SectionHeader
+            id="telegram-infrastructure"
+            title={dictionary.telegram.infrastructureTitle}
+            description={dictionary.telegram.infrastructureDescription}
           />
-          <DestinationsCard
-            destinations={data.destinations}
-            activeBotConnections={activeBotConnections}
-            canRead={data.sectionAccess.destinations}
-            canReadBotConnections={data.sectionAccess.botConnections}
-            canManage={data.manageAccess.destinations}
-          />
-        </div>
-      </section>
-      <FeatureRoutingSection
-        routes={routes}
-        schedules={schedules}
-        activeDestinations={activeDestinations}
-        currentWorkspace={data.currentWorkspace}
-        watchlistAssets={data.watchlistAssets}
-        languages={data.languages}
-        languageCatalogError={data.languageCatalogError}
-        scheduleLoadError={data.scheduleLoadError}
-        canReadFeatureSettings={data.sectionAccess.featureSettings}
-        canUpdateFeatureSettings={data.manageAccess.featureSettings}
-        canReadSchedules={data.sectionAccess.schedules}
-        canManageSchedules={data.manageAccess.schedules}
-      />
+          <div className="flex min-w-0 flex-col gap-4">
+            <BotConnectionsCard
+              botConnections={data.botConnections}
+              canRead={data.sectionAccess.botConnections}
+              canManage={data.manageAccess.botConnections}
+              canCreate={canCreateBotConnections}
+              canReconnect={canReconnectBotConnections}
+            />
+            <DestinationsCard
+              destinations={data.destinations}
+              activeBotConnections={activeBotConnections}
+              canRead={data.sectionAccess.destinations}
+              canReadBotConnections={data.sectionAccess.botConnections}
+              canManage={data.manageAccess.destinations}
+            />
+          </div>
+        </section>
+      </div>
     </div>
   )
 }
@@ -228,100 +230,115 @@ export function TelegramConfigurationSkeleton() {
           </Card>
         ))}
       </div>
-      <div className="grid min-w-0 gap-4 lg:grid-cols-2">
-        {Array.from({ length: 2 }).map((_, cardIndex) => (
-          <Card key={cardIndex} className="min-w-0">
-            <CardHeader>
-              <Skeleton className="h-5 w-32" />
-              <Skeleton className="h-4 w-full" />
-              <CardAction>
-                <Skeleton className="h-9 w-28" />
-              </CardAction>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-3">
-              {Array.from({ length: 2 }).map((__, itemIndex) => (
-                <Item key={itemIndex} variant="outline" className="items-start">
-                  <ItemContent className="min-w-0 gap-2">
-                    <Skeleton className="h-5 w-40" />
-                    <Skeleton className="h-4 w-56 max-w-full" />
-                    <Skeleton className="h-4 w-32" />
-                  </ItemContent>
-                  <ItemActions
-                    className={cn(
-                      "ms-auto self-start",
-                      cardIndex === 1 && "basis-full justify-end sm:basis-auto"
-                    )}
-                  >
-                    {cardIndex === 1 ? <Skeleton className="h-8 w-24" /> : null}
-                    <Skeleton className="size-8" />
-                  </ItemActions>
-                </Item>
+      <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+        <AppListTable className="mt-0">
+          <Table>
+            <TableHeader>
+              <AppListTableHeaderRow>
+                <AppListTableHead>
+                  <Skeleton className="h-4 w-24" />
+                </AppListTableHead>
+                <AppListTableHead>
+                  <Skeleton className="h-4 w-28" />
+                </AppListTableHead>
+                <AppListTableHead>
+                  <Skeleton className="h-4 w-20" />
+                </AppListTableHead>
+                <AppListTableHead>
+                  <Skeleton className="h-4 w-16" />
+                </AppListTableHead>
+                <AppListTableHead>
+                  <Skeleton className="h-4 w-24" />
+                </AppListTableHead>
+              </AppListTableHeaderRow>
+            </TableHeader>
+            <TableBody>
+              {Array.from({ length: 3 }).map((_, rowIndex) => (
+                <TableRow key={rowIndex}>
+                  <TableCell>
+                    <Skeleton className="h-5 w-44" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-5 w-32" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-5 w-24" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-5 w-28" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="mx-auto h-5 w-20" />
+                  </TableCell>
+                </TableRow>
               ))}
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-      <AppListTable className="mt-0">
-        <Table>
-          <TableHeader>
-            <AppListTableHeaderRow>
-              <AppListTableHead>
-                <Skeleton className="h-4 w-24" />
-              </AppListTableHead>
-              <AppListTableHead>
-                <Skeleton className="h-4 w-28" />
-              </AppListTableHead>
-              <AppListTableHead>
-                <Skeleton className="h-4 w-20" />
-              </AppListTableHead>
-              <AppListTableHead>
-                <Skeleton className="h-4 w-16" />
-              </AppListTableHead>
-              <AppListTableHead>
-                <Skeleton className="h-4 w-24" />
-              </AppListTableHead>
-            </AppListTableHeaderRow>
-          </TableHeader>
-          <TableBody>
-            {Array.from({ length: 3 }).map((_, rowIndex) => (
-              <TableRow key={rowIndex}>
-                <TableCell>
-                  <Skeleton className="h-5 w-44" />
-                </TableCell>
-                <TableCell>
-                  <Skeleton className="h-5 w-32" />
-                </TableCell>
-                <TableCell>
-                  <Skeleton className="h-5 w-24" />
-                </TableCell>
-                <TableCell>
-                  <Skeleton className="h-5 w-28" />
-                </TableCell>
-                <TableCell>
-                  <Skeleton className="mx-auto h-5 w-20" />
-                </TableCell>
-              </TableRow>
-            ))}
-            <TableRow>
-              <TableCell colSpan={5} className="p-4">
-                <div className="flex flex-col gap-4 rounded-lg border bg-muted/20 p-4">
-                  <div className="flex items-center justify-between gap-4">
-                    <Skeleton className="h-5 w-36" />
-                    <Skeleton className="h-9 w-24" />
-                  </div>
-                  <div className="overflow-x-auto">
-                    <div className="grid min-w-[72rem] grid-cols-8 gap-3">
-                      {Array.from({ length: 8 }).map((__, columnIndex) => (
-                        <Skeleton key={columnIndex} className="h-10 w-full" />
-                      ))}
+              <TableRow>
+                <TableCell colSpan={5} className="p-4">
+                  <div className="flex flex-col gap-4 rounded-lg border bg-muted/20 p-4">
+                    <div className="flex items-center justify-between gap-4">
+                      <Skeleton className="h-5 w-36" />
+                      <Skeleton className="h-9 w-24" />
+                    </div>
+                    <div className="overflow-x-auto">
+                      <div className="grid min-w-[72rem] grid-cols-8 gap-3">
+                        {Array.from({ length: 8 }).map((__, columnIndex) => (
+                          <Skeleton key={columnIndex} className="h-10 w-full" />
+                        ))}
+                      </div>
                     </div>
                   </div>
-                </div>
-              </TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
-      </AppListTable>
+                </TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </AppListTable>
+        <section className="flex min-w-0 flex-col gap-4">
+          <div className="flex flex-col gap-2">
+            <Skeleton className="h-6 w-44" />
+            <Skeleton className="h-4 w-full" />
+          </div>
+          <div className="flex min-w-0 flex-col gap-4">
+            {Array.from({ length: 2 }).map((_, cardIndex) => (
+              <Card key={cardIndex} className="min-w-0">
+                <CardHeader>
+                  <Skeleton className="h-5 w-32" />
+                  <Skeleton className="h-4 w-full" />
+                  <CardAction>
+                    <Skeleton className="h-9 w-28" />
+                  </CardAction>
+                </CardHeader>
+                <CardContent className="flex flex-col gap-3">
+                  {Array.from({ length: 2 }).map((__, itemIndex) => (
+                    <Item
+                      key={itemIndex}
+                      variant="outline"
+                      className="items-start"
+                    >
+                      <ItemContent className="min-w-0 gap-2">
+                        <Skeleton className="h-5 w-40" />
+                        <Skeleton className="h-4 w-56 max-w-full" />
+                        <Skeleton className="h-4 w-32" />
+                      </ItemContent>
+                      <ItemActions
+                        className={cn(
+                          "ms-auto self-start",
+                          cardIndex === 1 &&
+                            "basis-full justify-end sm:basis-auto"
+                        )}
+                      >
+                        {cardIndex === 1 ? (
+                          <Skeleton className="h-8 w-24" />
+                        ) : null}
+                        <Skeleton className="size-8" />
+                      </ItemActions>
+                    </Item>
+                  ))}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </section>
+      </div>
     </div>
   )
 }
@@ -462,7 +479,10 @@ function FeatureRoutingSection({
   const t = dictionary.telegram
 
   return (
-    <section className="flex flex-col gap-4" aria-labelledby="telegram-routing">
+    <section
+      className="flex min-w-0 flex-col gap-4"
+      aria-labelledby="telegram-routing"
+    >
       <SectionHeader
         id="telegram-routing"
         title={t.routing.sectionTitle}

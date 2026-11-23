@@ -33,3 +33,29 @@ Compared the Connect dialog with [SIGN-31 attachment 10310](https://signapse-gro
 - `pnpm exec vitest run tests/api/auth-action.test.ts tests/api/telegram-action.test.ts tests/components/telegram-configuration.component.test.tsx tests/core/telegram-permissions.test.ts` — **36 passed**.
 
 The new 760×512 capture also contains the local Next.js development overlay's red “1 Issue” badge noted above. It is outside the Telegram UI; the browser run reported no page or console errors.
+
+## Follow-up after PR #158 feedback #2
+
+Rechecked the live dev OpenAPI at `2026-11-23T12:58Z`. Its `x-build-revision` is `23bdeade727a8df776331339c9968bcb10019835`, matching the SIGN-336 producer handoff. The GET and POST operations still publish the required auth/error responses and the contract's caller/read, create, duplicate and ownership rules. The fixture now exercises POST 201 ACTIVE/INVALID, duplicate 200 ACTIVE/INVALID, invalid-token 400, generic conflict 409, and create-denied 403. It verifies that create-only access makes no list request, read access enables safe metadata readback, duplicate results leave stored state unchanged, and the response/UI expose neither token nor owner data.
+
+The Compact layout now places Feature Routing and Scheduled Analysis at left, with Bot Connections and Destinations stacked at right. At 390×844, Feature Routing precedes the infrastructure cards. The INVALID row uses localized webhook-failure copy; Reconnect guidance appears only after granting update permission. Raw fixture failure details remain hidden. The responsive check verifies the guidance stays inside the Compact Bot card, wraps on Mobile, and does not create horizontal page overflow.
+
+- [Compact readback, 1024×768, without update permission](readback-compact-dark-1024x768.png)
+- [Mobile readback, 390×844, without update permission](readback-mobile-dark-390x844.png)
+- [Compact readback, 1024×768, with update permission](readback-compact-with-reconnect-dark-1024x768.png)
+- [Compact INVALID row showing update-only Reconnect guidance](compact-invalid-row-with-reconnect.png)
+- [Mobile readback, 390×844, with update permission](readback-mobile-with-reconnect-dark-390x844.png)
+
+Rendered comparison uses the accepted [SIGN-32 Compact attachment 10312](https://signapse-group.atlassian.net/browse/SIGN-32) (`telegram-settings-compact-20261123-v2.png`) and [Mobile attachment 10309](https://signapse-group.atlassian.net/browse/SIGN-32) (`telegram-settings-mobile-20261123-v2.png`). At Compact width, the section grouping and stacked infrastructure cards now match the approved composition; at Mobile width, the groups follow the approved order and the Reconnect guidance wraps within the row.
+
+Verification from the issue workspace:
+
+- `/opt/apps/symphony/runtime/run-fe-browser /opt/apps/symphony/workspaces-fe-jira/SIGN-329 tests/e2e/telegram.spec.ts --grep 'P0 Telegram operations' --retries=0` — **3 passed**.
+- `pnpm exec vitest run tests/api/auth-action.test.ts tests/api/telegram-action.test.ts tests/components/telegram-configuration.component.test.tsx tests/core/telegram-permissions.test.ts` — **36 passed**.
+- `pnpm test:contract -- --scope 'GET /telegram/bot-connections,POST /telegram/bot-connections'` — fixture consistency passed for both operations.
+- `pnpm typecheck` — pass.
+- ESLint on the changed TS/TSX/MJS files — pass.
+- Prettier check on the changed TS/TSX/MJS files — pass.
+- `git diff --check` — pass.
+
+These remain local-fixture checks. They do not verify live authentication, persistence or Telegram delivery; QA/coordinator own testing on dev and Story acceptance. The captures include the local development overlay's red “1 Issue” badge, which is outside the Telegram UI.

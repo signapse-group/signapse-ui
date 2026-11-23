@@ -275,6 +275,16 @@ test.describe("P0 Telegram operations", () => {
     expect(savedBot).toBeDefined()
     expect(savedBot).not.toHaveProperty("botToken")
     expect(savedBot).not.toHaveProperty("ownerId")
+    const incompleteBot = botCard
+      .getByRole("listitem")
+      .filter({ hasText: "Incomplete fixture bot" })
+    await expect(incompleteBot).toContainText("Không hợp lệ")
+    await expect(incompleteBot).toContainText("Đăng ký webhook thất bại.")
+    await expect(incompleteBot).toContainText("Thiết lập bot chưa hoàn tất.")
+    await expect(incompleteBot).not.toContainText("stored fixture detail")
+    await expect(incompleteBot).not.toContainText(
+      "Dùng Reconnect trên hàng của bot này để hoàn tất thiết lập."
+    )
 
     await page.setViewportSize({ width: 1024, height: 768 })
     await page.locator('[data-slot="sidebar-trigger"]').click()
@@ -286,18 +296,28 @@ test.describe("P0 Telegram operations", () => {
         async () => (await sidebarContainer.boundingBox())?.width ?? Infinity
       )
       .toBeLessThan(80)
-    const [botBox, destinationBox] = await Promise.all([
-      botCard.boundingBox(),
-      destinationCard.boundingBox(),
-    ])
+    const featureRoutingRegion = page.getByRole("region", {
+      name: "Định tuyến tính năng",
+    })
+    const [featureRoutingBox, infrastructureBox, botBox, destinationBox] =
+      await Promise.all([
+        featureRoutingRegion.boundingBox(),
+        infrastructureRegion.boundingBox(),
+        botCard.boundingBox(),
+        destinationCard.boundingBox(),
+      ])
+    expect(featureRoutingBox).not.toBeNull()
+    expect(infrastructureBox).not.toBeNull()
     expect(botBox).not.toBeNull()
     expect(destinationBox).not.toBeNull()
-    expect(Math.abs((botBox?.y ?? 0) - (destinationBox?.y ?? 0))).toBeLessThan(
-      8
+    expect(
+      (featureRoutingBox?.x ?? 0) + (featureRoutingBox?.width ?? 0)
+    ).toBeLessThanOrEqual(infrastructureBox?.x ?? Infinity)
+    expect(destinationBox?.y).toBeGreaterThan(
+      (botBox?.y ?? 0) + (botBox?.height ?? 0) - 8
     )
-    expect((botBox?.x ?? 0) + (botBox?.width ?? 0)).toBeLessThan(
-      destinationBox?.x ?? 0
-    )
+    await expect(incompleteBot).toContainText("Thiết lập bot chưa hoàn tất.")
+    await incompleteBot.scrollIntoViewIfNeeded()
     await testInfo.attach("sign329-compact-readback.png", {
       body: await page.screenshot({ type: "png" }),
       contentType: "image/png",
@@ -313,12 +333,20 @@ test.describe("P0 Telegram operations", () => {
     )
 
     await page.setViewportSize({ width: 390, height: 844 })
+    await page.evaluate(() => window.scrollTo(0, 0))
+    const mobileFeatureBox = await page
+      .getByRole("region", { name: "Định tuyến tính năng" })
+      .boundingBox()
     const [mobileBotBox, mobileDestinationBox] = await Promise.all([
       botCard.boundingBox(),
       destinationCard.boundingBox(),
     ])
+    expect(mobileFeatureBox).not.toBeNull()
     expect(mobileBotBox).not.toBeNull()
     expect(mobileDestinationBox).not.toBeNull()
+    expect(mobileBotBox?.y).toBeGreaterThan(
+      (mobileFeatureBox?.y ?? 0) + (mobileFeatureBox?.height ?? 0) - 8
+    )
     expect(mobileDestinationBox?.y).toBeGreaterThan(
       (mobileBotBox?.y ?? 0) + (mobileBotBox?.height ?? 0) - 8
     )
@@ -329,7 +357,78 @@ test.describe("P0 Telegram operations", () => {
     expect(mobileDimensions.scrollWidth).toBeLessThanOrEqual(
       mobileDimensions.clientWidth
     )
+    await expect(incompleteBot).toContainText("Thiết lập bot chưa hoàn tất.")
+    await incompleteBot.scrollIntoViewIfNeeded()
     await testInfo.attach("sign329-mobile-readback.png", {
+      body: await page.screenshot({ type: "png" }),
+      contentType: "image/png",
+    })
+
+    await fixture.setPermissions([
+      "telegram-bot-connection:create",
+      "telegram-bot-connection:read",
+      "telegram-bot-connection:update",
+    ])
+    await page.setViewportSize({ width: 1024, height: 768 })
+    await page.reload()
+    const reconnectGuidance = page.getByText(
+      "Dùng Reconnect trên hàng của bot này để hoàn tất thiết lập.",
+      { exact: true }
+    )
+    await expect(reconnectGuidance).toBeVisible()
+    await expect(incompleteBot).toContainText(
+      "Dùng Reconnect trên hàng của bot này để hoàn tất thiết lập."
+    )
+    await reconnectGuidance.scrollIntoViewIfNeeded()
+    await testInfo.attach("sign329-compact-invalid-row-with-reconnect.png", {
+      body: await incompleteBot.screenshot({ type: "png" }),
+      contentType: "image/png",
+    })
+    const guidanceLines = await reconnectGuidance.evaluate((element) => {
+      const range = document.createRange()
+      range.selectNodeContents(element)
+      return range.getClientRects().length
+    })
+    expect(guidanceLines).toBeGreaterThan(0)
+    const [compactGuidanceBox, compactBotBox] = await Promise.all([
+      reconnectGuidance.boundingBox(),
+      botCard.boundingBox(),
+    ])
+    expect(compactGuidanceBox).not.toBeNull()
+    expect(compactBotBox).not.toBeNull()
+    expect(compactGuidanceBox?.x).toBeGreaterThanOrEqual(compactBotBox?.x ?? 0)
+    expect(
+      (compactGuidanceBox?.x ?? 0) + (compactGuidanceBox?.width ?? 0)
+    ).toBeLessThanOrEqual((compactBotBox?.x ?? 0) + (compactBotBox?.width ?? 0))
+    const compactDimensionsWithReconnect = await page.evaluate(() => ({
+      clientWidth: document.documentElement.clientWidth,
+      scrollWidth: document.documentElement.scrollWidth,
+    }))
+    expect(compactDimensionsWithReconnect.scrollWidth).toBeLessThanOrEqual(
+      compactDimensionsWithReconnect.clientWidth
+    )
+    await testInfo.attach("sign329-compact-readback-with-reconnect.png", {
+      body: await page.screenshot({ type: "png" }),
+      contentType: "image/png",
+    })
+
+    await page.setViewportSize({ width: 390, height: 844 })
+    const mobileDimensionsWithReconnect = await page.evaluate(() => ({
+      clientWidth: document.documentElement.clientWidth,
+      scrollWidth: document.documentElement.scrollWidth,
+    }))
+    expect(mobileDimensionsWithReconnect.scrollWidth).toBeLessThanOrEqual(
+      mobileDimensionsWithReconnect.clientWidth
+    )
+    await expect(reconnectGuidance).toBeVisible()
+    await reconnectGuidance.scrollIntoViewIfNeeded()
+    const mobileGuidanceLines = await reconnectGuidance.evaluate((element) => {
+      const range = document.createRange()
+      range.selectNodeContents(element)
+      return range.getClientRects().length
+    })
+    expect(mobileGuidanceLines).toBeGreaterThan(1)
+    await testInfo.attach("sign329-mobile-readback-with-reconnect.png", {
       body: await page.screenshot({ type: "png" }),
       contentType: "image/png",
     })
@@ -370,5 +469,147 @@ test.describe("P0 Telegram operations", () => {
     await page.keyboard.press("Escape")
     await expect(mobileDialog).toBeHidden()
     await expect(connectTrigger).toBeFocused()
+  })
+
+  test("uses API statuses to report created, duplicate, and rejected bots", async ({
+    page,
+    fixture,
+  }) => {
+    await fixture.setPermissions([
+      "telegram-bot-connection:create",
+      "telegram-bot-connection:read",
+    ])
+    await page.setViewportSize({ width: 1520, height: 1024 })
+    await page.goto("/vi/telegram")
+
+    const connectTrigger = page.getByRole("button", {
+      name: "Kết nối bot mới",
+    })
+    const botCard = page
+      .getByRole("region", { name: "Hạ tầng Telegram" })
+      .locator('[data-slot="card"]')
+      .filter({ hasText: "Bot Telegram" })
+    const dialog = page.getByRole("dialog")
+    const tokenInput = dialog.getByLabel("Token bot")
+    const savedBots = async () => (await fixture.state()).botConnections ?? []
+    const countRequests = async (method: string) =>
+      (await fixture.state()).requests.filter(
+        (request) =>
+          request.method === method &&
+          request.path === "/telegram/bot-connections"
+      ).length
+
+    await expect(connectTrigger).toBeVisible()
+    await expect(
+      botCard
+        .getByRole("listitem")
+        .filter({ hasText: "Fixture operations bot" })
+    ).toBeVisible()
+    const initialBots = await savedBots()
+    const initialGets = await countRequests("GET")
+    const initialPosts = await countRequests("POST")
+
+    await connectTrigger.click()
+    await tokenInput.fill("fixture-webhook-failed-token")
+    await dialog.getByRole("button", { name: "Kết nối bot" }).click()
+    await expect(dialog).toBeHidden()
+    await expect(
+      page.getByText(
+        "Bot đã được thêm với trạng thái Không hợp lệ, nhưng đăng ký webhook thất bại. Thiết lập chưa hoàn tất.",
+        { exact: true }
+      )
+    ).toBeVisible()
+    await expect(
+      page.getByText("Đã kết nối bot Telegram.", { exact: true })
+    ).toHaveCount(0)
+    await expect(
+      botCard
+        .getByRole("listitem")
+        .filter({ hasText: "New incomplete fixture bot" })
+        .getByText("Không hợp lệ", { exact: true })
+    ).toBeVisible()
+    const createdInvalidBots = await savedBots()
+    const createdInvalid = createdInvalidBots.find(
+      (connection) => connection.displayLabel === "New incomplete fixture bot"
+    )
+    expect(createdInvalid).toMatchObject({ status: "INVALID" })
+    expect(createdInvalid).not.toHaveProperty("botToken")
+    expect(createdInvalid).not.toHaveProperty("ownerId")
+    expect(createdInvalidBots).toHaveLength(initialBots.length + 1)
+    expect(await countRequests("POST")).toBe(initialPosts + 1)
+    await expect.poll(() => countRequests("GET")).toBeGreaterThan(initialGets)
+
+    const getsBeforeActiveDuplicate = await countRequests("GET")
+    await connectTrigger.click()
+    await tokenInput.fill("fixture-duplicate-active-token")
+    await dialog.getByRole("button", { name: "Kết nối bot" }).click()
+    await expect(dialog).toBeHidden()
+    await expect(
+      page.getByText(
+        "Bot này đã có trong danh sách kết nối. Trạng thái đã lưu: Đang hoạt động.",
+        { exact: true }
+      )
+    ).toBeVisible()
+    await expect(
+      page.getByText("Đã kết nối bot Telegram.", { exact: true })
+    ).toHaveCount(0)
+    expect(await savedBots()).toEqual(createdInvalidBots)
+    expect(await countRequests("POST")).toBe(initialPosts + 2)
+    await expect
+      .poll(() => countRequests("GET"))
+      .toBeGreaterThan(getsBeforeActiveDuplicate)
+
+    const getsBeforeInvalidDuplicate = await countRequests("GET")
+    await connectTrigger.click()
+    await tokenInput.fill("fixture-duplicate-invalid-token")
+    await dialog.getByRole("button", { name: "Kết nối bot" }).click()
+    await expect(dialog).toBeHidden()
+    await expect(
+      page.getByText(
+        "Bot này đã có trong danh sách kết nối với trạng thái Không hợp lệ, nhưng thiết lập chưa hoàn tất. Đăng ký webhook thất bại.",
+        { exact: true }
+      )
+    ).toBeVisible()
+    const duplicatedInvalid = botCard
+      .getByRole("listitem")
+      .filter({ hasText: "@signapse_incomplete_fixture_bot" })
+    await expect(duplicatedInvalid).toContainText(
+      "Thiết lập bot chưa hoàn tất."
+    )
+    await expect(duplicatedInvalid).not.toContainText("stored fixture detail")
+    expect(await savedBots()).toEqual(createdInvalidBots)
+    expect(await countRequests("POST")).toBe(initialPosts + 3)
+    await expect
+      .poll(() => countRequests("GET"))
+      .toBeGreaterThan(getsBeforeInvalidDuplicate)
+
+    await connectTrigger.click()
+    await tokenInput.fill("fixture-invalid-token")
+    await dialog.getByRole("button", { name: "Kết nối bot" }).click()
+    await expect(dialog.getByRole("alert")).toHaveText(
+      "Token bot Telegram không hợp lệ."
+    )
+    await expect(tokenInput).toHaveValue("fixture-invalid-token")
+    expect(await savedBots()).toEqual(createdInvalidBots)
+
+    await tokenInput.fill("fixture-owner-conflict-token")
+    await dialog.getByRole("button", { name: "Kết nối bot" }).click()
+    await expect(dialog.getByRole("alert")).toHaveText(
+      "Bot Telegram này đã được kết nối."
+    )
+    const conflictPageText = await page.locator("body").innerText()
+    expect(conflictPageText).not.toMatch(
+      /ownerId|another owner|chủ sở hữu khác/i
+    )
+    expect(await savedBots()).toEqual(createdInvalidBots)
+
+    await fixture.setPermissions(["telegram-bot-connection:read"])
+    await tokenInput.fill("fixture-forbidden-token")
+    await dialog.getByRole("button", { name: "Kết nối bot" }).click()
+    await expect(dialog.getByRole("alert")).toHaveText(
+      "Bạn không có quyền kết nối bot Telegram."
+    )
+    expect(await savedBots()).toEqual(createdInvalidBots)
+    expect(await countRequests("POST")).toBe(initialPosts + 6)
   })
 })
