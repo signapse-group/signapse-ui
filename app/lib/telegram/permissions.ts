@@ -10,8 +10,12 @@ import {
 
 export const TELEGRAM_BOT_CONNECTION_READ_PERMISSION =
   "telegram-bot-connection:read"
+export const TELEGRAM_BOT_CONNECTION_CREATE_PERMISSION =
+  "telegram-bot-connection:create"
 export const TELEGRAM_BOT_CONNECTION_MANAGE_PERMISSION =
   "telegram-bot-connection:manage"
+export const TELEGRAM_BOT_CONNECTION_UPDATE_PERMISSION =
+  "telegram-bot-connection:update"
 export const TELEGRAM_DESTINATION_READ_PERMISSION = "telegram-destination:read"
 export const TELEGRAM_DESTINATION_MANAGE_PERMISSION =
   "telegram-destination:manage"
@@ -31,12 +35,15 @@ export const TELEGRAM_READ_PERMISSIONS = [
   TELEGRAM_MARKET_ANALYSIS_SCHEDULE_READ_PERMISSION,
 ] as const
 
-export const TELEGRAM_NAV_PERMISSIONS = TELEGRAM_READ_PERMISSIONS
+export const TELEGRAM_NAV_PERMISSIONS = [
+  ...TELEGRAM_READ_PERMISSIONS,
+  TELEGRAM_BOT_CONNECTION_CREATE_PERMISSION,
+] as const
 
-export function canReadTelegramConfiguration(
+export function canAccessTelegramConfiguration(
   permissions: PermissionCollection
 ): boolean {
-  return hasAnyPermission(permissions, TELEGRAM_READ_PERMISSIONS)
+  return hasAnyPermission(permissions, TELEGRAM_NAV_PERMISSIONS)
 }
 
 export function getTelegramSectionAccess(

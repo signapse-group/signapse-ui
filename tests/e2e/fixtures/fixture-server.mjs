@@ -4154,14 +4154,21 @@ Which asset did you mean? The available data is limited. Add TSLA to your watchl
   }
 
   if (method === "POST" && pathname === "/telegram/bot-connections") {
-    return {
+    const item = {
       id: 12,
+      botId: 1012,
       botUsername: "new_fixture_bot",
+      botFirstName: "New Fixture",
       displayLabel: "New fixture bot",
       status: "ACTIVE",
+      verifiedAt: NOW,
+      lastValidatedAt: NOW,
+      lastWebhookRegisteredAt: NOW,
       createdDate: NOW,
       lastModifiedDate: NOW,
     }
+    state.botConnections.unshift(item)
+    return { __status: 201, payload: item }
   }
 
   if (
@@ -4516,6 +4523,35 @@ async function handleControl(request, response, url, body) {
         })
       ),
       marketConversationAttempts: state.marketConversationAttempts,
+      botConnections: state.botConnections.map(
+        ({
+          id,
+          botId,
+          botUsername,
+          botFirstName,
+          displayLabel,
+          status,
+          failureReason,
+          verifiedAt,
+          lastValidatedAt,
+          lastWebhookRegisteredAt,
+          createdDate,
+          lastModifiedDate,
+        }) => ({
+          id,
+          botId,
+          botUsername,
+          botFirstName,
+          displayLabel,
+          status,
+          failureReason,
+          verifiedAt,
+          lastValidatedAt,
+          lastWebhookRegisteredAt,
+          createdDate,
+          lastModifiedDate,
+        })
+      ),
       smtpConfiguration: smtpConfigurationResponse(state.smtpConfiguration),
       streamConnections: state.streamConnections,
       pendingRequests: state.pendingRequests.size,

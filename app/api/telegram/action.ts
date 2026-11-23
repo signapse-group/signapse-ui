@@ -3,7 +3,11 @@
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
 
-import { fetchAuthenticated } from "@/app/api/auth/action"
+import {
+  type BackendApiError,
+  fetchAuthenticated,
+  fetchAuthenticatedWithStatus,
+} from "@/app/api/auth/action"
 import { getLanguages } from "@/app/api/languages/action"
 import { ActionResult } from "@/app/lib/definitions"
 import { getDictionary } from "@/app/lib/i18n/dictionaries"
@@ -37,6 +41,17 @@ function getValidationError(error: z.ZodError, dictionary: Dictionary): string {
 
 function getActionError(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback
+}
+
+function getCreateBotActionError(error: unknown, fallback: string): string {
+  if (error instanceof Error) {
+    const status = (error as BackendApiError).status
+    if (typeof status === "number" && status >= 400) {
+      return error.message
+    }
+  }
+
+  return fallback
 }
 
 async function validateScheduleRequest(
@@ -113,7 +128,12 @@ export async function getTelegramMarketAnalysisSchedules(): Promise<
 
 export async function createTelegramBotConnection(
   request: CreateTelegramBotConnectionRequest
-): Promise<ActionResult<TelegramBotConnectionResponse>> {
+): Promise<
+  ActionResult<{
+    connection: TelegramBotConnectionResponse
+    created: boolean
+  }>
+> {
   const dictionary = await getTelegramDictionary()
   const parsed =
     getCreateTelegramBotConnectionSchema(dictionary).safeParse(request)
@@ -126,21 +146,41 @@ export async function createTelegramBotConnection(
   }
 
   try {
-    const data = await fetchAuthenticated<TelegramBotConnectionResponse>(
-      "/telegram/bot-connections",
-      {
-        method: "POST",
-        body: JSON.stringify(parsed.data),
+    const response =
+      await fetchAuthenticatedWithStatus<TelegramBotConnectionResponse>(
+        "/telegram/bot-connections",
+        {
+          method: "POST",
+          body: JSON.stringify(parsed.data),
+        }
+      )
+
+    if (
+      (response.status !== 200 && response.status !== 201) ||
+      !response.data
+    ) {
+      return {
+        success: false,
+        error: dictionary.telegram.bot.createError,
       }
-    )
+    }
 
     revalidateTelegramConfiguration()
 
-    return { success: true, data }
+    return {
+      success: true,
+      data: {
+        connection: response.data,
+        created: response.status === 201,
+      },
+    }
   } catch (error: unknown) {
     return {
       success: false,
-      error: getActionError(error, dictionary.telegram.bot.createError),
+      error: getCreateBotActionError(
+        error,
+        dictionary.telegram.bot.createError
+      ),
     }
   }
 }

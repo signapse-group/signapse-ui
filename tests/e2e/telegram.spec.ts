@@ -136,4 +136,211 @@ test.describe("P0 Telegram operations", () => {
       })
     ).toHaveCount(0)
   })
+
+  test("connects with create-only access and reads the saved state only with read access", async ({
+    page,
+    fixture,
+  }, testInfo) => {
+    await fixture.setPermissions(["telegram-bot-connection:create"])
+    await page.setViewportSize({ width: 1520, height: 1024 })
+    await page.goto("/vi/telegram")
+
+    await expect(
+      page.getByRole("heading", { name: "Hạ tầng Telegram" })
+    ).toBeVisible()
+    const connectTrigger = page.getByRole("button", {
+      name: "Kết nối bot mới",
+    })
+    await expect(connectTrigger).toBeVisible()
+    await waitForClientHandler(connectTrigger)
+    await testInfo.attach("sign329-wide-create-only.png", {
+      body: await page.screenshot({ type: "png" }),
+      contentType: "image/png",
+    })
+    const themeToggle = page.getByRole("button", { name: "Chọn giao diện" })
+    await waitForClientHandler(themeToggle)
+    await themeToggle.click()
+    await page.getByRole("menuitem", { name: "Tối", exact: true }).click()
+    await expect(page.locator("html")).toHaveClass(/dark/)
+
+    expect(
+      (await fixture.state()).requests.filter(
+        (request) =>
+          request.method === "GET" &&
+          request.path === "/telegram/bot-connections"
+      )
+    ).toHaveLength(0)
+
+    await connectTrigger.focus()
+    await page.keyboard.press("Enter")
+    const dialog = page.getByRole("dialog")
+    const tokenInput = dialog.getByLabel("Token bot")
+    await expect(dialog).toBeVisible()
+    await expect(tokenInput).toBeFocused()
+    await expect(tokenInput).toHaveAttribute("type", "password")
+    await testInfo.attach("sign329-wide-dialog.png", {
+      body: await page.screenshot({ type: "png" }),
+      contentType: "image/png",
+    })
+
+    await tokenInput.fill("fixture-only-token")
+    await tokenInput.press("Enter")
+    await expect(dialog).toBeHidden()
+    await expect(
+      page.getByText("Đã kết nối bot Telegram.", { exact: true })
+    ).toBeVisible()
+    await expect(
+      page.getByText("fixture-only-token", { exact: true })
+    ).toHaveCount(0)
+
+    const createOnlyState = await fixture.state()
+    expect(
+      createOnlyState.requests.filter(
+        (request) =>
+          request.method === "POST" &&
+          request.path === "/telegram/bot-connections"
+      )
+    ).toHaveLength(1)
+    expect(
+      createOnlyState.requests.filter(
+        (request) =>
+          request.method === "GET" &&
+          request.path === "/telegram/bot-connections"
+      )
+    ).toHaveLength(0)
+
+    await fixture.setPermissions([
+      "telegram-bot-connection:create",
+      "telegram-bot-connection:read",
+    ])
+    await page.reload()
+    await expect(
+      page.getByText("New fixture bot", { exact: true })
+    ).toBeVisible()
+    const infrastructureRegion = page.getByRole("region", {
+      name: "Hạ tầng Telegram",
+    })
+    const botCard = infrastructureRegion
+      .locator('[data-slot="card"]')
+      .filter({ hasText: "Bot Telegram" })
+    const destinationCard = infrastructureRegion
+      .locator('[data-slot="card"]')
+      .filter({ hasText: "Điểm nhận" })
+    await expect(
+      botCard
+        .getByRole("listitem")
+        .filter({ hasText: "New fixture bot" })
+        .getByText("Đang hoạt động", { exact: true })
+    ).toBeVisible()
+
+    const readbackState = await fixture.state()
+    expect(
+      readbackState.requests.filter(
+        (request) =>
+          request.method === "GET" &&
+          request.path === "/telegram/bot-connections"
+      )
+    ).toHaveLength(1)
+    const savedBot = readbackState.botConnections?.find(
+      (connection) => connection.displayLabel === "New fixture bot"
+    )
+    expect(savedBot).toBeDefined()
+    expect(savedBot).not.toHaveProperty("botToken")
+    expect(savedBot).not.toHaveProperty("ownerId")
+
+    await page.setViewportSize({ width: 1024, height: 768 })
+    await page.locator('[data-slot="sidebar-trigger"]').click()
+    const sidebarContainer = page
+      .locator('[data-slot="sidebar-container"]')
+      .first()
+    await expect
+      .poll(
+        async () => (await sidebarContainer.boundingBox())?.width ?? Infinity
+      )
+      .toBeLessThan(80)
+    const [botBox, destinationBox] = await Promise.all([
+      botCard.boundingBox(),
+      destinationCard.boundingBox(),
+    ])
+    expect(botBox).not.toBeNull()
+    expect(destinationBox).not.toBeNull()
+    expect(Math.abs((botBox?.y ?? 0) - (destinationBox?.y ?? 0))).toBeLessThan(
+      8
+    )
+    expect((botBox?.x ?? 0) + (botBox?.width ?? 0)).toBeLessThan(
+      destinationBox?.x ?? 0
+    )
+    await testInfo.attach("sign329-compact-readback.png", {
+      body: await page.screenshot({ type: "png" }),
+      contentType: "image/png",
+    })
+
+    await page.setViewportSize({ width: 760, height: 512 })
+    const zoomEquivalentDimensions = await page.evaluate(() => ({
+      clientWidth: document.documentElement.clientWidth,
+      scrollWidth: document.documentElement.scrollWidth,
+    }))
+    expect(zoomEquivalentDimensions.scrollWidth).toBeLessThanOrEqual(
+      zoomEquivalentDimensions.clientWidth
+    )
+
+    await page.setViewportSize({ width: 390, height: 844 })
+    const [mobileBotBox, mobileDestinationBox] = await Promise.all([
+      botCard.boundingBox(),
+      destinationCard.boundingBox(),
+    ])
+    expect(mobileBotBox).not.toBeNull()
+    expect(mobileDestinationBox).not.toBeNull()
+    expect(mobileDestinationBox?.y).toBeGreaterThan(
+      (mobileBotBox?.y ?? 0) + (mobileBotBox?.height ?? 0) - 8
+    )
+    const mobileDimensions = await page.evaluate(() => ({
+      clientWidth: document.documentElement.clientWidth,
+      scrollWidth: document.documentElement.scrollWidth,
+    }))
+    expect(mobileDimensions.scrollWidth).toBeLessThanOrEqual(
+      mobileDimensions.clientWidth
+    )
+    await testInfo.attach("sign329-mobile-readback.png", {
+      body: await page.screenshot({ type: "png" }),
+      contentType: "image/png",
+    })
+
+    await page.setViewportSize({ width: 360, height: 780 })
+    await connectTrigger.click()
+    const mobileDialog = page.getByRole("dialog")
+    const closeButton = mobileDialog.getByRole("button", { name: "Đóng" })
+    const submitButton = mobileDialog.getByRole("button", {
+      name: "Kết nối bot",
+    })
+    const [closeBox, submitBox, dialogBox] = await Promise.all([
+      closeButton.boundingBox(),
+      submitButton.boundingBox(),
+      mobileDialog.boundingBox(),
+    ])
+    expect(closeBox).not.toBeNull()
+    expect(submitBox).not.toBeNull()
+    expect(dialogBox).not.toBeNull()
+    expect(closeBox?.y).toBeLessThan(submitBox?.y ?? 0)
+    expect(
+      Math.abs((closeBox?.width ?? 0) - (submitBox?.width ?? 0))
+    ).toBeLessThan(2)
+    expect((dialogBox?.x ?? 0) + (dialogBox?.width ?? 0)).toBeLessThanOrEqual(
+      360
+    )
+    const smallMobileDimensions = await page.evaluate(() => ({
+      clientWidth: document.documentElement.clientWidth,
+      scrollWidth: document.documentElement.scrollWidth,
+    }))
+    expect(smallMobileDimensions.scrollWidth).toBeLessThanOrEqual(
+      smallMobileDimensions.clientWidth
+    )
+    await testInfo.attach("sign329-mobile-dialog.png", {
+      body: await page.screenshot({ type: "png" }),
+      contentType: "image/png",
+    })
+    await page.keyboard.press("Escape")
+    await expect(mobileDialog).toBeHidden()
+    await expect(connectTrigger).toBeFocused()
+  })
 })

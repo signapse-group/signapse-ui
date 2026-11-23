@@ -126,6 +126,20 @@ type FixtureController = {
     marketConversations?: Array<Record<string, unknown>>
     marketConversationTurns?: Array<Record<string, unknown>>
     marketConversationAttempts?: Array<Record<string, unknown>>
+    botConnections?: Array<{
+      id: number
+      botId?: number
+      botUsername?: string
+      botFirstName?: string
+      displayLabel?: string
+      status: string
+      failureReason?: string
+      verifiedAt?: string
+      lastValidatedAt?: string
+      lastWebhookRegisteredAt?: string
+      createdDate?: string
+      lastModifiedDate?: string
+    }>
   }>
   setFeedbackScenario(
     scenario:

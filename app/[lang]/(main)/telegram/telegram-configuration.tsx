@@ -128,8 +128,12 @@ function getRouteDefinitions(dictionary: Dictionary): RouteDefinition[] {
 
 export function TelegramConfigurationPage({
   data,
+  canCreateBotConnections = false,
+  canReconnectBotConnections = false,
 }: {
   data: TelegramConfigurationData
+  canCreateBotConnections?: boolean
+  canReconnectBotConnections?: boolean
 }) {
   const { dictionary } = useLocalization()
   const featureSettings = data.currentWorkspace
@@ -173,11 +177,13 @@ export function TelegramConfigurationPage({
           title={dictionary.telegram.infrastructureTitle}
           description={dictionary.telegram.infrastructureDescription}
         />
-        <div className="grid min-w-0 gap-4 xl:grid-cols-2">
+        <div className="grid min-w-0 gap-4 lg:grid-cols-2">
           <BotConnectionsCard
             botConnections={data.botConnections}
             canRead={data.sectionAccess.botConnections}
             canManage={data.manageAccess.botConnections}
+            canCreate={canCreateBotConnections}
+            canReconnect={canReconnectBotConnections}
           />
           <DestinationsCard
             destinations={data.destinations}
@@ -222,7 +228,7 @@ export function TelegramConfigurationSkeleton() {
           </Card>
         ))}
       </div>
-      <div className="grid min-w-0 gap-4 xl:grid-cols-2">
+      <div className="grid min-w-0 gap-4 lg:grid-cols-2">
         {Array.from({ length: 2 }).map((_, cardIndex) => (
           <Card key={cardIndex} className="min-w-0">
             <CardHeader>
@@ -502,7 +508,7 @@ function FeatureRoutingSection({
                           <span className="text-sm text-muted-foreground">
                             {route.description}
                           </span>
-                            <code className="w-fit rounded bg-muted px-1.5 py-0.5 text-xs text-foreground">
+                          <code className="w-fit rounded bg-muted px-1.5 py-0.5 text-xs text-foreground">
                             {route.featureKey}
                           </code>
                         </div>
@@ -832,8 +838,7 @@ function FeatureRouteControls({
   const [isPending, startTransition] = useTransition()
   const { dictionary, formatMessage } = useLocalization()
   const t = dictionary.telegram
-  const routeSupportsLanguage =
-    route.featureKey !== "SCHEDULED_MARKET_ANALYSIS"
+  const routeSupportsLanguage = route.featureKey !== "SCHEDULED_MARKET_ANALYSIS"
   const hasDestination = activeDestinations.some(
     (destination) => destination.id.toString() === destinationId
   )
@@ -890,8 +895,7 @@ function FeatureRouteControls({
   function handleLanguageChange(value: string | null) {
     if (value === null || !routeSupportsLanguage) return
 
-    const nextLanguage =
-      value === DEFAULT_FEATURE_LANGUAGE_VALUE ? "" : value
+    const nextLanguage = value === DEFAULT_FEATURE_LANGUAGE_VALUE ? "" : value
     setOutputLanguageIsoCode(nextLanguage)
     updateRoute(
       { outputLanguageIsoCode: nextLanguage || undefined },

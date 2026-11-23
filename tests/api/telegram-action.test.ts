@@ -4,6 +4,10 @@ const { testDictionary } = vi.hoisted(() => ({
   testDictionary: {
     telegram: {
       validationInvalid: "Telegram validation failed",
+      botTokenRequired: "Enter the bot token.",
+      bot: {
+        createError: "Could not connect the Telegram bot.",
+      },
       scheduleNameRequired: "Schedule name is required",
       localTimeInvalid: "Local time is invalid",
       outputLanguageRequired: "Output language is required",
@@ -26,6 +30,7 @@ const { testDictionary } = vi.hoisted(() => ({
 
 vi.mock("@/app/api/auth/action", () => ({
   fetchAuthenticated: vi.fn(),
+  fetchAuthenticatedWithStatus: vi.fn(),
 }))
 
 vi.mock("@/app/api/languages/action", () => ({
@@ -45,8 +50,10 @@ vi.mock("next/cache", () => ({
 }))
 
 import { fetchAuthenticated } from "@/app/api/auth/action"
+import { fetchAuthenticatedWithStatus } from "@/app/api/auth/action"
 import { getLanguages } from "@/app/api/languages/action"
 import {
+  createTelegramBotConnection,
   createTelegramMarketAnalysisSchedule,
   deleteTelegramMarketAnalysisSchedule,
   disableTelegramMarketAnalysisSchedule,
@@ -73,6 +80,20 @@ const scheduleResponse = {
   timezone: "Asia/Bangkok",
   localTimes: ["09:00", "18:00"],
   status: "ACTIVE" as const,
+}
+
+const botConnectionResponse = {
+  id: 12,
+  botId: 1012,
+  botUsername: "new_fixture_bot",
+  displayLabel: "New fixture bot",
+  status: "ACTIVE" as const,
+}
+
+function backendError(message: string, status: number) {
+  const error = new Error(message) as Error & { status: number }
+  error.status = status
+  return error
 }
 
 describe("Telegram scheduled asset analysis actions", () => {
@@ -225,5 +246,94 @@ describe("Telegram scheduled asset analysis actions", () => {
     )
     expect(failed).toEqual({ success: false, error: "Backend unavailable" })
     expect(revalidatePath).not.toHaveBeenCalled()
+  })
+})
+
+describe("Telegram bot connection creation", () => {
+  beforeEach(() => {
+    vi.mocked(fetchAuthenticatedWithStatus).mockReset()
+    vi.mocked(revalidatePath).mockClear()
+  })
+
+  it("uses the create endpoint and distinguishes new connections from caller duplicates", async () => {
+    vi.mocked(fetchAuthenticatedWithStatus).mockResolvedValueOnce({
+      data: botConnectionResponse,
+      status: 201,
+    })
+
+    await expect(
+      createTelegramBotConnection({ botToken: "  fake-token  " })
+    ).resolves.toEqual({
+      success: true,
+      data: { connection: botConnectionResponse, created: true },
+    })
+    expect(fetchAuthenticatedWithStatus).toHaveBeenCalledWith(
+      "/telegram/bot-connections",
+      {
+        method: "POST",
+        body: JSON.stringify({ botToken: "fake-token" }),
+      }
+    )
+    expect(revalidatePath).toHaveBeenCalledWith("/telegram")
+
+    vi.mocked(fetchAuthenticatedWithStatus).mockReset()
+    vi.mocked(revalidatePath).mockClear()
+    vi.mocked(fetchAuthenticatedWithStatus).mockResolvedValueOnce({
+      data: { ...botConnectionResponse, status: "INVALID" },
+      status: 200,
+    })
+
+    await expect(
+      createTelegramBotConnection({ botToken: "fake-token" })
+    ).resolves.toEqual({
+      success: true,
+      data: {
+        connection: { ...botConnectionResponse, status: "INVALID" },
+        created: false,
+      },
+    })
+    expect(revalidatePath).toHaveBeenCalledWith("/telegram")
+  })
+
+  it("returns localized backend verification, permission, and conflict errors", async () => {
+    for (const [status, message] of [
+      [400, "Token verification failed."],
+      [403, "You cannot create Telegram bot connections."],
+      [409, "This Telegram bot is already connected."],
+    ] as const) {
+      vi.mocked(fetchAuthenticatedWithStatus).mockRejectedValueOnce(
+        backendError(message, status)
+      )
+
+      await expect(
+        createTelegramBotConnection({ botToken: "fake-token" })
+      ).resolves.toEqual({ success: false, error: message })
+    }
+
+    expect(revalidatePath).not.toHaveBeenCalled()
+  })
+
+  it("uses the localized fallback for transport failures", async () => {
+    vi.mocked(fetchAuthenticatedWithStatus).mockRejectedValueOnce(
+      new Error("fetch failed")
+    )
+
+    await expect(
+      createTelegramBotConnection({ botToken: "fake-token" })
+    ).resolves.toEqual({
+      success: false,
+      error: testDictionary.telegram.bot.createError,
+    })
+    expect(revalidatePath).not.toHaveBeenCalled()
+  })
+
+  it("rejects an empty token before calling the backend", async () => {
+    await expect(
+      createTelegramBotConnection({ botToken: "   " })
+    ).resolves.toEqual({
+      success: false,
+      error: "Enter the bot token.",
+    })
+    expect(fetchAuthenticatedWithStatus).not.toHaveBeenCalled()
   })
 })

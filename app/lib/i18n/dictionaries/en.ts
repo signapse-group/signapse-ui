@@ -2496,8 +2496,15 @@ export const en: Dictionary = {
       lastValidated: "Last validated {time}",
       readOnlyDescription:
         "You can view these bots, but bot management permission is required for changes.",
-      replacementGuidance:
-        "To replace this bot, connect a new token, relink dependent destinations, and review routing and schedules before removing this record.",
+      webhookRegistrationFailed: "Webhook registration failed.",
+      webhookFailureReason: "Reason: {reason}",
+      setupIncomplete: "The bot setup is incomplete.",
+      reconnectGuidance:
+        "Use Reconnect on this bot's row to finish setting it up.",
+      alreadyConnected:
+        "This bot is already in your connections. Its saved status is {status}.",
+      alreadyConnectedIncomplete:
+        "This bot is already in your connections with status {status}, but its setup is incomplete.",
       emptyTitle: "No Telegram bots yet",
       emptyDescription:
         "Connect a bot you created in BotFather to start sending notifications.",
@@ -2511,17 +2518,18 @@ export const en: Dictionary = {
         "This action unlinks the bot from Signapse and may affect related destinations.",
       deleteAction: "Delete bot",
       deleteSuccess: "Telegram bot deleted.",
-      connect: "Connect bot",
+      connect: "Connect new bot",
       createTitle: "Connect Telegram bot",
       createDescription:
         "Paste the token issued by BotFather so Signapse can verify the bot and register a webhook.",
       tokenLabel: "Bot token",
-      tokenPlaceholder: "123456:ABC...",
-      tokenDescription:
-        "The token is only sent once when creating the connection.",
+      tokenPlaceholder: "Enter BotFather token",
+      tokenDescription: "This token won't be shown again after you connect.",
       connectBot: "Connect bot",
       invalidData: "Bot data is invalid.",
       createSuccess: "Telegram bot connected.",
+      createIncomplete:
+        "The bot was added with status {status}, but webhook registration failed. Setup is incomplete.",
       createError: "Could not connect the Telegram bot.",
       disableError: "Could not disable the Telegram bot.",
       deleteError: "Could not delete the Telegram bot.",

@@ -2476,8 +2476,15 @@ export const vi = {
       lastValidated: "Xác thực gần nhất {time}",
       readOnlyDescription:
         "Bạn có thể xem các bot này, nhưng cần quyền quản lý bot để thay đổi.",
-      replacementGuidance:
-        "Để thay bot này, hãy kết nối token mới, liên kết lại các điểm nhận phụ thuộc và rà soát định tuyến cùng lịch gửi trước khi xóa bản ghi này.",
+      webhookRegistrationFailed: "Đăng ký webhook thất bại.",
+      webhookFailureReason: "Lý do: {reason}",
+      setupIncomplete: "Thiết lập bot chưa hoàn tất.",
+      reconnectGuidance:
+        "Dùng Reconnect trên hàng của bot này để hoàn tất thiết lập.",
+      alreadyConnected:
+        "Bot này đã có trong danh sách kết nối. Trạng thái đã lưu: {status}.",
+      alreadyConnectedIncomplete:
+        "Bot này đã có trong danh sách kết nối với trạng thái {status}, nhưng thiết lập chưa hoàn tất.",
       emptyTitle: "Chưa có bot Telegram",
       emptyDescription:
         "Kết nối bot do bạn tạo trong BotFather để bắt đầu gửi thông báo.",
@@ -2491,16 +2498,18 @@ export const vi = {
         "Hành động này hủy liên kết bot khỏi Signapse và có thể ảnh hưởng các điểm nhận liên quan.",
       deleteAction: "Xóa bot",
       deleteSuccess: "Đã xóa bot Telegram.",
-      connect: "Kết nối bot",
+      connect: "Kết nối bot mới",
       createTitle: "Kết nối bot Telegram",
       createDescription:
         "Dán token bot do BotFather cấp để Signapse xác thực và đăng ký webhook.",
       tokenLabel: "Token bot",
-      tokenPlaceholder: "123456:ABC...",
-      tokenDescription: "Token chỉ gửi một lần khi tạo kết nối.",
+      tokenPlaceholder: "Dán token BotFather",
+      tokenDescription: "Token này sẽ không hiển thị lại sau khi kết nối.",
       connectBot: "Kết nối bot",
       invalidData: "Dữ liệu bot không hợp lệ.",
       createSuccess: "Đã kết nối bot Telegram.",
+      createIncomplete:
+        "Bot đã được thêm với trạng thái {status}, nhưng đăng ký webhook thất bại. Thiết lập chưa hoàn tất.",
       createError: "Không thể kết nối bot Telegram.",
       disableError: "Không thể vô hiệu hóa bot Telegram.",
       deleteError: "Không thể xóa bot Telegram.",
