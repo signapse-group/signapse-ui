@@ -220,13 +220,6 @@ function BotConnectionItem({
               <p className="text-sm text-destructive">
                 {t.bot.webhookRegistrationFailed}
               </p>
-              {connection.failureReason ? (
-                <p className="text-xs text-muted-foreground">
-                  {formatMessage(t.bot.webhookFailureReason, {
-                    reason: connection.failureReason,
-                  })}
-                </p>
-              ) : null}
               <p className="text-xs text-muted-foreground">
                 {t.bot.setupIncomplete}
               </p>
@@ -355,12 +348,9 @@ function ConnectBotDialog() {
             { status: statusLabel }
           )
           toast.warning(
-            connection.failureReason
-              ? `${incompleteMessage} ${formatMessage(
-                  t.bot.webhookFailureReason,
-                  { reason: connection.failureReason }
-                )}`
-              : incompleteMessage
+            created
+              ? incompleteMessage
+              : `${incompleteMessage} ${t.bot.webhookRegistrationFailed}`
           )
         } else if (!created) {
           toast.info(

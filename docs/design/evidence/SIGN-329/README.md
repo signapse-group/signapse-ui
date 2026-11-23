@@ -21,3 +21,15 @@ Captured from the `codex/SIGN-329-connect-bot` working tree based on `fd9ba25609
 The fixture verifies create-only access without a list read, keyboard opening/submission and focus restoration, POST/readback of safe metadata, and responsive layout at 1520×1024, 1024×768, effective CSS width 760×512, 390×844, and 360×780. It asserts no token or owner data is exposed in fixture readback and reported no browser console or page errors. The 760×512 case simulates the layout width associated with 200% zoom; it is not native browser zoom and has no separate screenshot.
 
 A red “1 Issue” badge appears in the lower-left of some captures from the local Next.js development overlay. It persisted with zero page/console errors and is not part of the Telegram UI. These are fixture renders only: they do not claim live API, authentication, QA, or dev deployment acceptance.
+
+## Follow-up after PR #158 feedback
+
+Re-fetched the producer-published [dev OpenAPI](https://dev-api.signapse.cloud/v3/api-docs) at `2026-11-23T11:29:30Z`. Its `x-build-revision` `23bdeade727a8df776331339c9968bcb10019835` matches the SIGN-336 handoff (PR #217, deploy run `45159828023`). The create/read operation semantics above remain unchanged. `failureReason` is still a safe string without a language guarantee, so the UI now uses the localized webhook-failure message and does not display the raw value in the INVALID row or toast.
+
+Compared the Connect dialog with [SIGN-31 attachment 10310](https://signapse-group.atlassian.net/browse/SIGN-31) (`telegram-connect-bot-desktop-20261123-v2.png`): title, explanatory copy, visible token label, close control, and horizontal footer remain aligned with the accepted desktop pattern. The 360×780 dark mobile capture continues to match attachment 10311's stacked footer. In the fixture browser check, the dark create-only page opened the dialog at 1520×1024, entered a masked token draft, then resized to 760×512 while the dialog stayed open. The draft and input focus remained; the dialog stayed inside the viewport and the page had no horizontal overflow. The viewport was restored before submit. The effective 760×512 CSS width represents the layout width at 200% zoom; native browser zoom was not used.
+
+- [Connect dialog, dark, open at effective 200% width, 760×512](connect-dialog-effective-200-percent-760x512.png)
+- `/opt/apps/symphony/runtime/run-fe-browser /opt/apps/symphony/workspaces-fe-jira/SIGN-329 tests/e2e/telegram.spec.ts --grep 'connects with create-only access and reads the saved state only with read access' --retries=0` — **1 passed**. This P0 check uses the local fixture; it does not verify live authentication or feature APIs.
+- `pnpm exec vitest run tests/api/auth-action.test.ts tests/api/telegram-action.test.ts tests/components/telegram-configuration.component.test.tsx tests/core/telegram-permissions.test.ts` — **36 passed**.
+
+The new 760×512 capture also contains the local Next.js development overlay's red “1 Issue” badge noted above. It is outside the Telegram UI; the browser run reported no page or console errors.

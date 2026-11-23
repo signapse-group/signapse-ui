@@ -2477,7 +2477,6 @@ export const vi = {
       readOnlyDescription:
         "Bạn có thể xem các bot này, nhưng cần quyền quản lý bot để thay đổi.",
       webhookRegistrationFailed: "Đăng ký webhook thất bại.",
-      webhookFailureReason: "Lý do: {reason}",
       setupIncomplete: "Thiết lập bot chưa hoàn tất.",
       reconnectGuidance:
         "Dùng Reconnect trên hàng của bot này để hoàn tất thiết lập.",

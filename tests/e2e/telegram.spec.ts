@@ -184,6 +184,34 @@ test.describe("P0 Telegram operations", () => {
     })
 
     await tokenInput.fill("fixture-only-token")
+    await page.setViewportSize({ width: 760, height: 512 })
+    await expect(dialog).toBeVisible()
+    await expect(tokenInput).toHaveValue("fixture-only-token")
+    await expect(tokenInput).toBeFocused()
+    const effectiveZoomDialogBox = await dialog.boundingBox()
+    expect(effectiveZoomDialogBox).not.toBeNull()
+    expect(effectiveZoomDialogBox?.x).toBeGreaterThanOrEqual(0)
+    expect(
+      (effectiveZoomDialogBox?.x ?? 0) + (effectiveZoomDialogBox?.width ?? 0)
+    ).toBeLessThanOrEqual(760)
+    const openDialogDimensions = await page.evaluate(() => ({
+      clientWidth: document.documentElement.clientWidth,
+      scrollWidth: document.documentElement.scrollWidth,
+    }))
+    expect(openDialogDimensions.scrollWidth).toBeLessThanOrEqual(
+      openDialogDimensions.clientWidth
+    )
+    await testInfo.attach(
+      "sign329-open-dialog-200-percent-effective-width.png",
+      {
+        body: await page.screenshot({ type: "png" }),
+        contentType: "image/png",
+      }
+    )
+
+    await page.setViewportSize({ width: 1520, height: 1024 })
+    await expect(tokenInput).toHaveValue("fixture-only-token")
+    await expect(tokenInput).toBeFocused()
     await tokenInput.press("Enter")
     await expect(dialog).toBeHidden()
     await expect(

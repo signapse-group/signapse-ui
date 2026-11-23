@@ -2497,7 +2497,6 @@ export const en: Dictionary = {
       readOnlyDescription:
         "You can view these bots, but bot management permission is required for changes.",
       webhookRegistrationFailed: "Webhook registration failed.",
-      webhookFailureReason: "Reason: {reason}",
       setupIncomplete: "The bot setup is incomplete.",
       reconnectGuidance:
         "Use Reconnect on this bot's row to finish setting it up.",

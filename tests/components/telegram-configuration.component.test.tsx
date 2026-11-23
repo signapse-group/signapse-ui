@@ -788,16 +788,10 @@ describe("Telegram bot connections", () => {
       created: true,
       status: "INVALID",
       toastKind: "warning",
-      expected:
-        viDictionary.telegram.bot.createIncomplete.replace(
-          "{status}",
-          viDictionary.telegram.statuses.INVALID
-        ) +
-        " " +
-        viDictionary.telegram.bot.webhookFailureReason.replace(
-          "{reason}",
-          "Telegram webhook service is unavailable."
-        ),
+      expected: viDictionary.telegram.bot.createIncomplete.replace(
+        "{status}",
+        viDictionary.telegram.statuses.INVALID
+      ),
     },
     {
       created: false,
@@ -818,10 +812,7 @@ describe("Telegram bot connections", () => {
           viDictionary.telegram.statuses.INVALID
         ) +
         " " +
-        viDictionary.telegram.bot.webhookFailureReason.replace(
-          "{reason}",
-          "Telegram webhook service is unavailable."
-        ),
+        viDictionary.telegram.bot.webhookRegistrationFailed,
     },
     {
       created: false,
@@ -843,7 +834,10 @@ describe("Telegram bot connections", () => {
             ...botConnection,
             status,
             ...(status === "INVALID"
-              ? { failureReason: "Telegram webhook service is unavailable." }
+              ? {
+                  failureReason:
+                    "Webhook registration failed: upstream returned 502.",
+                }
               : {}),
           },
           created,
@@ -890,7 +884,7 @@ describe("Telegram bot connections", () => {
     const invalidConnection = {
       ...botConnection,
       status: "INVALID" as const,
-      failureReason: "Telegram webhook service is unavailable.",
+      failureReason: "Webhook registration failed: upstream returned 502.",
     }
     renderBotConnectionsCard({
       botConnections: [invalidConnection],
@@ -904,13 +898,8 @@ describe("Telegram bot connections", () => {
       screen.getByText(viDictionary.telegram.bot.webhookRegistrationFailed)
     ).toBeVisible()
     expect(
-      screen.getByText(
-        viDictionary.telegram.bot.webhookFailureReason.replace(
-          "{reason}",
-          invalidConnection.failureReason
-        )
-      )
-    ).toBeVisible()
+      screen.queryByText(/Webhook registration failed: upstream returned 502\./)
+    ).not.toBeInTheDocument()
     expect(
       screen.getByText(viDictionary.telegram.bot.setupIncomplete)
     ).toBeVisible()
