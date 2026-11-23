@@ -23,7 +23,6 @@ import { useLocalization } from "@/app/lib/i18n/provider"
 import { isSelectableLanguage } from "@/app/lib/languages/definitions"
 import type { LanguageResponse } from "@/app/lib/languages/definitions"
 import {
-  TELEGRAM_FEATURE_KEYS,
   TelegramConfigurationData,
   TelegramDestinationResponse,
   TelegramFeatureKey,
@@ -162,167 +161,182 @@ export function TelegramConfigurationPage({
   )
 
   return (
-    <div className="flex w-full flex-col gap-6">
-      <ReadinessSummary
-        data={data}
-        routes={routes}
-        schedules={schedules}
-        activeBotCount={activeBotConnections.length}
-        activeDestinationCount={activeDestinations.length}
-      />
-      <section
-        className="flex min-w-0 flex-col gap-4"
-        aria-labelledby="telegram-infrastructure"
-      >
-        <SectionHeader
-          id="telegram-infrastructure"
-          title={dictionary.telegram.infrastructureTitle}
-          description={dictionary.telegram.infrastructureDescription}
+    <div className="grid w-full min-w-0 gap-6 min-[1440px]:grid-cols-[minmax(0,1.5fr)_minmax(22rem,1fr)] lg:grid-cols-[minmax(0,1.15fr)_minmax(20rem,1fr)]">
+      <div className="min-w-0">
+        <FeatureRoutingSection
+          routes={routes}
+          schedules={schedules}
+          activeDestinations={activeDestinations}
+          currentWorkspace={data.currentWorkspace}
+          watchlistAssets={data.watchlistAssets}
+          languages={data.languages}
+          languageCatalogError={data.languageCatalogError}
+          scheduleLoadError={data.scheduleLoadError}
+          canUpdateFeatureSettings={data.manageAccess.featureSettings}
+          canUpdateMarketNewsRouting={data.manageAccess.marketNewsRouting}
+          canReadDestinations={data.sectionAccess.destinations}
+          canReadSchedules={data.sectionAccess.schedules}
+          canManageSchedules={data.manageAccess.schedules}
         />
-        <div className="grid min-w-0 gap-4 xl:grid-cols-2">
-          <BotConnectionsCard
-            botConnections={data.botConnections}
-            canRead={data.sectionAccess.botConnections}
-            canManage={data.manageAccess.botConnections}
+      </div>
+      <div className="flex min-w-0 flex-col gap-6">
+        <section
+          className="flex min-w-0 flex-col gap-4"
+          aria-labelledby="telegram-infrastructure"
+        >
+          <SectionHeader
+            id="telegram-infrastructure"
+            title={dictionary.telegram.infrastructureTitle}
+            description={dictionary.telegram.infrastructureDescription}
           />
-          <DestinationsCard
-            destinations={data.destinations}
-            activeBotConnections={activeBotConnections}
-            canRead={data.sectionAccess.destinations}
-            canReadBotConnections={data.sectionAccess.botConnections}
-            canManage={data.manageAccess.destinations}
-          />
-        </div>
-      </section>
-      <FeatureRoutingSection
-        routes={routes}
-        schedules={schedules}
-        activeDestinations={activeDestinations}
-        currentWorkspace={data.currentWorkspace}
-        watchlistAssets={data.watchlistAssets}
-        languages={data.languages}
-        languageCatalogError={data.languageCatalogError}
-        scheduleLoadError={data.scheduleLoadError}
-        canUpdateFeatureSettings={data.manageAccess.featureSettings}
-        canUpdateMarketNewsRouting={data.manageAccess.marketNewsRouting}
-        canReadDestinations={data.sectionAccess.destinations}
-        canReadSchedules={data.sectionAccess.schedules}
-        canManageSchedules={data.manageAccess.schedules}
-      />
+          <div className="grid min-w-0 gap-4">
+            <BotConnectionsCard
+              botConnections={data.botConnections}
+              canRead={data.sectionAccess.botConnections}
+              canManage={data.manageAccess.botConnections}
+            />
+            <DestinationsCard
+              destinations={data.destinations}
+              activeBotConnections={activeBotConnections}
+              canRead={data.sectionAccess.destinations}
+              canReadBotConnections={data.sectionAccess.botConnections}
+              canManage={data.manageAccess.destinations}
+            />
+          </div>
+        </section>
+        <ReadinessSummary
+          data={data}
+          routes={routes}
+          schedules={schedules}
+          activeBotCount={activeBotConnections.length}
+          activeDestinationCount={activeDestinations.length}
+        />
+      </div>
     </div>
   )
 }
 
 export function TelegramConfigurationSkeleton() {
   return (
-    <div className="flex w-full flex-col gap-6">
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, index) => (
-          <Card key={index} size="sm">
-            <CardHeader>
-              <Skeleton className="h-5 w-28" />
-              <Skeleton className="h-4 w-full" />
-            </CardHeader>
-            <CardContent>
-              <Skeleton className="h-5 w-20" />
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-      <div className="grid min-w-0 gap-4 xl:grid-cols-2">
-        {Array.from({ length: 2 }).map((_, cardIndex) => (
-          <Card key={cardIndex} className="min-w-0">
-            <CardHeader>
-              <Skeleton className="h-5 w-32" />
-              <Skeleton className="h-4 w-full" />
-              <CardAction>
-                <Skeleton className="h-9 w-28" />
-              </CardAction>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-3">
-              {Array.from({ length: 2 }).map((__, itemIndex) => (
-                <Item key={itemIndex} variant="outline" className="items-start">
-                  <ItemContent className="min-w-0 gap-2">
-                    <Skeleton className="h-5 w-40" />
-                    <Skeleton className="h-4 w-56 max-w-full" />
-                    <Skeleton className="h-4 w-32" />
-                  </ItemContent>
-                  <ItemActions
-                    className={cn(
-                      "ms-auto self-start",
-                      cardIndex === 1 && "basis-full justify-end sm:basis-auto"
-                    )}
+    <div className="grid w-full min-w-0 gap-6 min-[1440px]:grid-cols-[minmax(0,1.5fr)_minmax(22rem,1fr)] lg:grid-cols-[minmax(0,1.15fr)_minmax(20rem,1fr)]">
+      <div className="order-2 flex min-w-0 flex-col gap-6">
+        <div className="grid min-w-0 gap-4">
+          {Array.from({ length: 2 }).map((_, cardIndex) => (
+            <Card key={cardIndex} className="min-w-0">
+              <CardHeader>
+                <Skeleton className="h-5 w-32" />
+                <Skeleton className="h-4 w-full" />
+                <CardAction>
+                  <Skeleton className="h-9 w-28" />
+                </CardAction>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-3">
+                {Array.from({ length: 2 }).map((__, itemIndex) => (
+                  <Item
+                    key={itemIndex}
+                    variant="outline"
+                    className="items-start"
                   >
-                    {cardIndex === 1 ? <Skeleton className="h-8 w-24" /> : null}
-                    <Skeleton className="size-8" />
-                  </ItemActions>
-                </Item>
-              ))}
-            </CardContent>
-          </Card>
-        ))}
+                    <ItemContent className="min-w-0 gap-2">
+                      <Skeleton className="h-5 w-40" />
+                      <Skeleton className="h-4 w-56 max-w-full" />
+                      <Skeleton className="h-4 w-32" />
+                    </ItemContent>
+                    <ItemActions
+                      className={cn(
+                        "ms-auto self-start",
+                        cardIndex === 1 &&
+                          "basis-full justify-end sm:basis-auto"
+                      )}
+                    >
+                      {cardIndex === 1 ? (
+                        <Skeleton className="h-8 w-24" />
+                      ) : null}
+                      <Skeleton className="size-8" />
+                    </ItemActions>
+                  </Item>
+                ))}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        <div className="grid gap-3 min-[1440px]:grid-cols-2">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <Card key={index} size="sm">
+              <CardHeader>
+                <Skeleton className="h-5 w-28" />
+                <Skeleton className="h-4 w-full" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-5 w-20" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
-      <AppListTable className="mt-0">
-        <Table>
-          <TableHeader>
-            <AppListTableHeaderRow>
-              <AppListTableHead>
-                <Skeleton className="h-4 w-24" />
-              </AppListTableHead>
-              <AppListTableHead>
-                <Skeleton className="h-4 w-28" />
-              </AppListTableHead>
-              <AppListTableHead>
-                <Skeleton className="h-4 w-20" />
-              </AppListTableHead>
-              <AppListTableHead>
-                <Skeleton className="h-4 w-16" />
-              </AppListTableHead>
-              <AppListTableHead>
-                <Skeleton className="h-4 w-24" />
-              </AppListTableHead>
-            </AppListTableHeaderRow>
-          </TableHeader>
-          <TableBody>
-            {Array.from({ length: 3 }).map((_, rowIndex) => (
-              <TableRow key={rowIndex}>
-                <TableCell>
-                  <Skeleton className="h-5 w-44" />
-                </TableCell>
-                <TableCell>
-                  <Skeleton className="h-5 w-32" />
-                </TableCell>
-                <TableCell>
-                  <Skeleton className="h-5 w-24" />
-                </TableCell>
-                <TableCell>
-                  <Skeleton className="h-5 w-28" />
-                </TableCell>
-                <TableCell>
-                  <Skeleton className="mx-auto h-5 w-20" />
-                </TableCell>
-              </TableRow>
-            ))}
-            <TableRow>
-              <TableCell colSpan={5} className="p-4">
-                <div className="flex flex-col gap-4 rounded-lg border bg-muted/20 p-4">
-                  <div className="flex items-center justify-between gap-4">
-                    <Skeleton className="h-5 w-36" />
-                    <Skeleton className="h-9 w-24" />
-                  </div>
-                  <div className="overflow-x-auto">
-                    <div className="grid min-w-[72rem] grid-cols-8 gap-3">
-                      {Array.from({ length: 8 }).map((__, columnIndex) => (
-                        <Skeleton key={columnIndex} className="h-10 w-full" />
-                      ))}
+      <div className="order-1 min-w-0">
+        <AppListTable className="mt-0">
+          <Table>
+            <TableHeader>
+              <AppListTableHeaderRow>
+                <AppListTableHead>
+                  <Skeleton className="h-4 w-24" />
+                </AppListTableHead>
+                <AppListTableHead>
+                  <Skeleton className="h-4 w-28" />
+                </AppListTableHead>
+                <AppListTableHead>
+                  <Skeleton className="h-4 w-20" />
+                </AppListTableHead>
+                <AppListTableHead>
+                  <Skeleton className="h-4 w-16" />
+                </AppListTableHead>
+                <AppListTableHead>
+                  <Skeleton className="h-4 w-24" />
+                </AppListTableHead>
+              </AppListTableHeaderRow>
+            </TableHeader>
+            <TableBody>
+              {Array.from({ length: 3 }).map((_, rowIndex) => (
+                <TableRow key={rowIndex}>
+                  <TableCell>
+                    <Skeleton className="h-5 w-44" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-5 w-32" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-5 w-24" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-5 w-28" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="mx-auto h-5 w-20" />
+                  </TableCell>
+                </TableRow>
+              ))}
+              <TableRow>
+                <TableCell colSpan={5} className="p-4">
+                  <div className="flex flex-col gap-4 rounded-lg border bg-muted/20 p-4">
+                    <div className="flex items-center justify-between gap-4">
+                      <Skeleton className="h-5 w-36" />
+                      <Skeleton className="h-9 w-24" />
+                    </div>
+                    <div className="overflow-x-auto">
+                      <div className="grid min-w-[72rem] grid-cols-8 gap-3">
+                        {Array.from({ length: 8 }).map((__, columnIndex) => (
+                          <Skeleton key={columnIndex} className="h-10 w-full" />
+                        ))}
+                      </div>
                     </div>
                   </div>
-                </div>
-              </TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
-      </AppListTable>
+                </TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </AppListTable>
+      </div>
     </div>
   )
 }
@@ -350,64 +364,85 @@ function ReadinessSummary({
     (schedule) => schedule.status === "ACTIVE"
   ).length
   const readinessItems = [
-    {
-      label: t.readiness.bot,
-      description: data.sectionAccess.botConnections
-        ? formatMessage(t.readiness.activeBots, {
-            count: formatCount(activeBotCount),
-          })
-        : t.readiness.noBotPermission,
-      state: activeBotCount > 0 ? t.readiness.ready : t.readiness.needsConfig,
-      status: activeBotCount > 0 ? ("ready" as const) : ("attention" as const),
-      icon: Bot,
-    },
-    {
-      label: t.readiness.destinations,
-      description: data.sectionAccess.destinations
-        ? formatMessage(t.readiness.activeDestinations, {
-            count: formatCount(activeDestinationCount),
-          })
-        : t.readiness.noDestinationPermission,
-      state:
-        activeDestinationCount > 0 ? t.readiness.ready : t.readiness.needsLink,
-      status:
-        activeDestinationCount > 0
-          ? ("ready" as const)
-          : ("attention" as const),
-      icon: MessageCircle,
-    },
-    {
-      label: t.readiness.routing,
-      description: data.currentWorkspace
-        ? formatMessage(t.readiness.configuredRoutes, {
-            configured: formatCount(configuredRoutes),
-            total: formatCount(TELEGRAM_FEATURE_KEYS.length),
-            workspace: data.currentWorkspace.name,
-          })
-        : t.readiness.noWorkspace,
-      state:
-        configuredRoutes > 0
-          ? t.readiness.routesEnabled
-          : t.readiness.needsReview,
-      status:
-        configuredRoutes > 0 ? ("ready" as const) : ("attention" as const),
-      icon: RadioTower,
-    },
-    {
-      label: t.readiness.scheduledAnalysis,
-      description: data.sectionAccess.schedules
-        ? formatMessage(t.readiness.activeSchedules, {
-            count: formatCount(activeSchedules),
-          })
-        : t.readiness.noSchedulePermission,
-      state: activeSchedules > 0 ? t.readiness.ready : t.readiness.noSchedules,
-      status: activeSchedules > 0 ? ("ready" as const) : ("attention" as const),
-      icon: CalendarClock,
-    },
+    ...(data.sectionAccess.botConnections
+      ? [
+          {
+            label: t.readiness.bot,
+            description: formatMessage(t.readiness.activeBots, {
+              count: formatCount(activeBotCount),
+            }),
+            state:
+              activeBotCount > 0 ? t.readiness.ready : t.readiness.needsConfig,
+            status:
+              activeBotCount > 0 ? ("ready" as const) : ("attention" as const),
+            icon: Bot,
+          },
+        ]
+      : []),
+    ...(data.sectionAccess.destinations
+      ? [
+          {
+            label: t.readiness.destinations,
+            description: formatMessage(t.readiness.activeDestinations, {
+              count: formatCount(activeDestinationCount),
+            }),
+            state:
+              activeDestinationCount > 0
+                ? t.readiness.ready
+                : t.readiness.needsLink,
+            status:
+              activeDestinationCount > 0
+                ? ("ready" as const)
+                : ("attention" as const),
+            icon: MessageCircle,
+          },
+        ]
+      : []),
+    ...(routes.length > 0 && data.currentWorkspace
+      ? [
+          {
+            label: t.readiness.routing,
+            description: formatMessage(t.readiness.configuredRoutes, {
+              configured: formatCount(configuredRoutes),
+              total: formatCount(routes.length),
+              workspace: data.currentWorkspace.name,
+            }),
+            state:
+              configuredRoutes > 0
+                ? t.readiness.routesEnabled
+                : t.readiness.needsReview,
+            status:
+              configuredRoutes > 0
+                ? ("ready" as const)
+                : ("attention" as const),
+            icon: RadioTower,
+          },
+        ]
+      : []),
+    ...(data.sectionAccess.schedules
+      ? [
+          {
+            label: t.readiness.scheduledAnalysis,
+            description: formatMessage(t.readiness.activeSchedules, {
+              count: formatCount(activeSchedules),
+            }),
+            state:
+              activeSchedules > 0 ? t.readiness.ready : t.readiness.noSchedules,
+            status:
+              activeSchedules > 0 ? ("ready" as const) : ("attention" as const),
+            icon: CalendarClock,
+          },
+        ]
+      : []),
   ]
 
+  if (readinessItems.length === 0) return null
+
   return (
-    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+    <div
+      className="grid gap-3 min-[1440px]:grid-cols-2"
+      data-testid="telegram-readiness-summary"
+    >
       {readinessItems.map((item) => {
         const Icon = item.icon
 
@@ -469,8 +504,8 @@ function FeatureRoutingSection({
   const otherRoutes = routes.filter(
     (route) => route.featureKey !== "MARKET_NEWS_ALERT"
   )
-  const shouldShowTableBelowWide =
-    otherRoutes.length > 0 || !marketNewsRoute || canReadSchedules
+  const shouldShowTable =
+    routes.length === 0 || otherRoutes.length > 0 || canReadSchedules
 
   return (
     <section className="flex flex-col gap-4" aria-labelledby="telegram-routing">
@@ -481,7 +516,6 @@ function FeatureRoutingSection({
       />
       {marketNewsRoute ? (
         <div
-          className="min-[1440px]:hidden"
           data-feature-key={marketNewsRoute.featureKey}
           data-testid="market-news-routing-card"
           aria-labelledby="telegram-market-news-routing-title"
@@ -517,20 +551,9 @@ function FeatureRoutingSection({
           </div>
         </div>
       ) : null}
-      <AppListTable
-        className={cn(
-          "mt-0",
-          !shouldShowTableBelowWide && "hidden min-[1440px]:block"
-        )}
-      >
+      <AppListTable className={cn("mt-0", !shouldShowTable && "hidden")}>
         <Table>
-          <TableHeader
-            className={cn(
-              marketNewsRoute &&
-                otherRoutes.length === 0 &&
-                "hidden min-[1440px]:table-header-group"
-            )}
-          >
+          <TableHeader className={cn(otherRoutes.length === 0 && "hidden")}>
             <AppListTableHeaderRow>
               <AppListTableHead className="w-[32%]">
                 {t.routing.featureColumn}
@@ -553,7 +576,7 @@ function FeatureRoutingSection({
             {routes.length === 0 ? (
               <AccessLimitedRow colSpan={5} title={t.routing.accessLimited} />
             ) : (
-              routes.map((route) => {
+              otherRoutes.map((route) => {
                 const isScheduledMarketAnalysis =
                   route.featureKey === "SCHEDULED_MARKET_ANALYSIS"
                 const canUpdateRoute =
@@ -565,16 +588,7 @@ function FeatureRoutingSection({
                   <Fragment key={route.featureKey}>
                     <TableRow
                       data-feature-key={route.featureKey}
-                      data-testid={
-                        route.featureKey === "MARKET_NEWS_ALERT"
-                          ? "market-news-routing-row"
-                          : undefined
-                      }
-                      className={cn(
-                        "border-border transition-colors hover:bg-muted/50",
-                        route.featureKey === "MARKET_NEWS_ALERT" &&
-                          "hidden min-[1440px]:table-row"
-                      )}
+                      className="border-border transition-colors hover:bg-muted/50"
                     >
                       <TableCell className="align-top whitespace-normal">
                         <div className="flex min-w-0 flex-col gap-1">

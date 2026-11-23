@@ -142,16 +142,13 @@ test.describe("P0 Telegram operations", () => {
       .click()
     await expect(calendarRow.getByText("Theo ngôn ngữ ưu tiên")).toBeVisible()
 
-    const newsRow = page
-      .getByRole("row")
-      .filter({ hasText: "Cảnh báo tin thị trường" })
-      .first()
+    const newsCard = page.getByTestId("market-news-routing-card")
     await fixture.setScenario(
       "/telegram/feature-settings",
       "mutation-failure",
       "PUT"
     )
-    await newsRow
+    await newsCard
       .getByRole("combobox", {
         name: "Chọn ngôn ngữ đầu ra cho Cảnh báo tin thị trường",
       })
@@ -165,13 +162,13 @@ test.describe("P0 Telegram operations", () => {
         .last()
     ).toBeVisible()
     await expect(
-      newsRow.getByRole("combobox", {
+      newsCard.getByRole("combobox", {
         name: "Chọn ngôn ngữ đầu ra cho Cảnh báo tin thị trường",
       })
     ).toContainText("Tiếng Việt")
 
     await fixture.setScenario("/telegram/feature-settings", "success", "PUT")
-    await newsRow
+    await newsCard
       .getByRole("combobox", {
         name: "Chọn ngôn ngữ đầu ra cho Cảnh báo tin thị trường",
       })
@@ -179,15 +176,15 @@ test.describe("P0 Telegram operations", () => {
     await page
       .getByRole("option", { name: "English (en)", exact: true })
       .click()
-    await expect(newsRow).toContainText("English (en)")
+    await expect(newsCard).toContainText("English (en)")
 
-    const newsSwitch = newsRow.getByRole("switch", {
+    const newsSwitch = newsCard.getByRole("switch", {
       name: "Bật hoặc tắt định tuyến Cảnh báo tin thị trường",
     })
     await newsSwitch.click()
     await expect(newsSwitch).toHaveAttribute("aria-checked", "true")
 
-    await newsRow
+    await newsCard
       .getByRole("button", {
         name: "Bỏ điểm nhận của Cảnh báo tin thị trường",
       })
@@ -196,19 +193,19 @@ test.describe("P0 Telegram operations", () => {
       page.getByText("Đã bỏ điểm nhận và tắt định tuyến.", { exact: true })
     ).toBeVisible()
     await expect(
-      newsRow.getByRole("combobox", {
+      newsCard.getByRole("combobox", {
         name: "Cảnh báo tin thị trường",
         exact: true,
       })
     ).toContainText("Chọn điểm nhận")
     await expect(
-      newsRow.getByRole("switch", {
+      newsCard.getByRole("switch", {
         name: "Bật hoặc tắt định tuyến Cảnh báo tin thị trường",
       })
     ).toHaveAttribute("aria-checked", "false")
-    await expect(newsRow).toContainText("English (en)")
+    await expect(newsCard).toContainText("English (en)")
 
-    await newsRow
+    await newsCard
       .getByRole("combobox", {
         name: "Cảnh báo tin thị trường",
         exact: true,
@@ -218,25 +215,25 @@ test.describe("P0 Telegram operations", () => {
       .getByRole("option", { name: "Operations channel", exact: true })
       .click()
     await expect(
-      newsRow.getByRole("combobox", {
+      newsCard.getByRole("combobox", {
         name: "Cảnh báo tin thị trường",
         exact: true,
       })
     ).toContainText("Operations channel")
     await expect(
-      newsRow.getByRole("switch", {
+      newsCard.getByRole("switch", {
         name: "Bật hoặc tắt định tuyến Cảnh báo tin thị trường",
       })
     ).toHaveAttribute("aria-checked", "false")
-    await expect(newsRow).toContainText("English (en)")
+    await expect(newsCard).toContainText("English (en)")
 
-    await newsRow
+    await newsCard
       .getByRole("switch", {
         name: "Bật hoặc tắt định tuyến Cảnh báo tin thị trường",
       })
       .click()
     await expect(
-      newsRow.getByRole("switch", {
+      newsCard.getByRole("switch", {
         name: "Bật hoặc tắt định tuyến Cảnh báo tin thị trường",
       })
     ).toHaveAttribute("aria-checked", "true")
@@ -544,11 +541,8 @@ test.describe("P0 Telegram operations", () => {
     await page.setViewportSize({ width: 1520, height: 1024 })
     await page.goto("/vi/telegram")
 
-    const newsRow = page
-      .getByRole("row")
-      .filter({ hasText: "Cảnh báo tin thị trường" })
-      .first()
-    await expect(newsRow).toBeVisible()
+    const newsCard = page.getByTestId("market-news-routing-card")
+    await expect(newsCard).toBeVisible()
     await expect(
       page.getByText("Cảnh báo lịch kinh tế", { exact: true })
     ).toHaveCount(0)
@@ -559,7 +553,7 @@ test.describe("P0 Telegram operations", () => {
       page.getByText("Lịch gửi phân tích", { exact: true })
     ).toBeVisible()
     await expect(
-      newsRow.getByRole("switch", {
+      newsCard.getByRole("switch", {
         name: "Bật hoặc tắt định tuyến Cảnh báo tin thị trường",
       })
     ).toHaveAttribute("aria-disabled", "true")
@@ -570,7 +564,7 @@ test.describe("P0 Telegram operations", () => {
     ])
     await page.reload()
     await expect(
-      newsRow.getByRole("switch", {
+      newsCard.getByRole("switch", {
         name: "Bật hoặc tắt định tuyến Cảnh báo tin thị trường",
       })
     ).not.toHaveAttribute("aria-disabled", "true")
@@ -602,6 +596,25 @@ for (const frame of renderEvidenceFrames) {
       '[data-feature-key="MARKET_NEWS_ALERT"]:visible'
     )
     await expect(routeControl).toBeVisible()
+    const routingSection = page.locator(
+      'section[aria-labelledby="telegram-routing"]'
+    )
+    const infrastructureSection = page.locator(
+      'section[aria-labelledby="telegram-infrastructure"]'
+    )
+    const routingBounds = await routingSection.boundingBox()
+    const infrastructureBounds = await infrastructureSection.boundingBox()
+    expect(routingBounds).not.toBeNull()
+    expect(infrastructureBounds).not.toBeNull()
+    if (!routingBounds || !infrastructureBounds) {
+      throw new Error("Telegram page sections were not rendered")
+    }
+    if (frame.width >= 1024) {
+      expect(infrastructureBounds.x).toBeGreaterThan(routingBounds.x)
+    } else {
+      expect(infrastructureBounds.y).toBeGreaterThan(routingBounds.y)
+    }
+
     const routeSwitch = routeControl.getByRole("switch")
     await waitForClientHandler(routeSwitch)
     await routeSwitch.click()
@@ -652,7 +665,9 @@ test("keeps the market route visible without page overflow at shell breakpoints"
     '[data-feature-key="MARKET_NEWS_ALERT"]:visible'
   )
 
-  for (const width of [360, 390, 767, 768, 1024, 1439, 1440, 1520]) {
+  for (const width of [
+    360, 390, 767, 768, 1024, 1439, 1440, 1520, 1920, 2560,
+  ]) {
     await page.setViewportSize({ width, height: 900 })
     await expect(routeControl).toBeVisible()
     const pageOverflows = await page.evaluate(

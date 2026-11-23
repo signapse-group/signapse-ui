@@ -156,13 +156,14 @@ function renderConfiguration(
   )
 }
 
-function getTableRowByText(label: string) {
+function getFeatureRouteContainer(label: string) {
   const cell = screen
     .getAllByText(label)
-    .find((element) => element.closest("tr"))
+    .find((element) => element.closest("[data-feature-key]"))
 
-  if (!cell) throw new Error(`Could not find a table row containing "${label}"`)
-  return cell.closest("tr") as HTMLElement
+  if (!cell)
+    throw new Error(`Could not find a feature route containing "${label}"`)
+  return cell.closest("[data-feature-key]") as HTMLElement
 }
 
 function expectNoSelectControlledWarning(calls: unknown[][]) {
@@ -200,13 +201,17 @@ describe("Telegram schedule destructive actions", () => {
   it("uses dedicated read/update permissions for market news and keeps schedule read separate", () => {
     const marketOnlyData: TelegramConfigurationData = {
       ...data,
+      destinations: [],
       featureSettings: [featureSettings[1]],
+      schedules: [],
       sectionAccess: {
         ...data.sectionAccess,
+        botConnections: false,
+        destinations: false,
         featureSettings: false,
         marketNewsRouting: true,
         schedules: false,
-        destinations: true,
+        watchlistAssets: false,
       },
       manageAccess: {
         ...data.manageAccess,
@@ -218,6 +223,22 @@ describe("Telegram schedule destructive actions", () => {
 
     renderConfiguration(marketOnlyData)
 
+    const readiness = screen.getByTestId("telegram-readiness-summary")
+    expect(readiness).toHaveTextContent("0/1 luồng đã bật trong Workspace.")
+    expect(
+      within(readiness).queryByText(viDictionary.telegram.readiness.bot)
+    ).not.toBeInTheDocument()
+    expect(
+      within(readiness).queryByText(
+        viDictionary.telegram.readiness.destinations
+      )
+    ).not.toBeInTheDocument()
+    expect(
+      within(readiness).queryByText(
+        viDictionary.telegram.readiness.scheduledAnalysis
+      )
+    ).not.toBeInTheDocument()
+
     const marketCard = screen.getByTestId("market-news-routing-card")
     expect(
       within(marketCard).getByText(
@@ -227,7 +248,7 @@ describe("Telegram schedule destructive actions", () => {
     expect(
       within(marketCard).getByText(viDictionary.telegram.routing.languageColumn)
     ).toBeVisible()
-    const marketRow = getTableRowByText(
+    const marketRow = getFeatureRouteContainer(
       viDictionary.telegram.routeDefinitions.MARKET_NEWS_ALERT.label
     )
     expect(
@@ -253,7 +274,7 @@ describe("Telegram schedule destructive actions", () => {
       },
     })
 
-    const manageableMarketRow = getTableRowByText(
+    const manageableMarketRow = getFeatureRouteContainer(
       viDictionary.telegram.routeDefinitions.MARKET_NEWS_ALERT.label
     )
     expect(
@@ -299,7 +320,7 @@ describe("Telegram schedule destructive actions", () => {
     }
     renderConfiguration(marketData)
 
-    const marketRow = getTableRowByText(
+    const marketRow = getFeatureRouteContainer(
       viDictionary.telegram.routeDefinitions.MARKET_NEWS_ALERT.label
     )
     const clear = within(marketRow).getByRole("button", {
@@ -348,7 +369,7 @@ describe("Telegram schedule destructive actions", () => {
 
     cleanup()
     renderConfiguration({ ...marketData, featureSettings: [clearedSetting] })
-    const reloadedMarketRow = getTableRowByText(
+    const reloadedMarketRow = getFeatureRouteContainer(
       viDictionary.telegram.routeDefinitions.MARKET_NEWS_ALERT.label
     )
     expect(
@@ -386,7 +407,7 @@ describe("Telegram schedule destructive actions", () => {
       },
     })
 
-    const marketRow = getTableRowByText(
+    const marketRow = getFeatureRouteContainer(
       viDictionary.telegram.routeDefinitions.MARKET_NEWS_ALERT.label
     )
     const destinationSelect = within(marketRow).getByRole("combobox", {
@@ -445,7 +466,7 @@ describe("Telegram schedule destructive actions", () => {
       },
     })
 
-    const marketRow = getTableRowByText(
+    const marketRow = getFeatureRouteContainer(
       viDictionary.telegram.routeDefinitions.MARKET_NEWS_ALERT.label
     )
     const routeSwitch = within(marketRow).getByRole("switch", {
@@ -485,7 +506,7 @@ describe("Telegram schedule destructive actions", () => {
         marketNewsRouting: true,
       },
     })
-    const pausedMarketRow = getTableRowByText(
+    const pausedMarketRow = getFeatureRouteContainer(
       viDictionary.telegram.routeDefinitions.MARKET_NEWS_ALERT.label
     )
     expect(
@@ -531,7 +552,7 @@ describe("Telegram schedule destructive actions", () => {
         marketNewsRouting: true,
       },
     })
-    const reassignedMarketRow = getTableRowByText(
+    const reassignedMarketRow = getFeatureRouteContainer(
       viDictionary.telegram.routeDefinitions.MARKET_NEWS_ALERT.label
     )
     expect(
@@ -701,7 +722,7 @@ describe("Telegram schedule destructive actions", () => {
         viDictionary.telegram.routeDefinitions.ECONOMIC_CALENDAR_ALERT.label
       )
       .closest("tr") as HTMLElement
-    const newsRow = getTableRowByText(
+    const newsRow = getFeatureRouteContainer(
       viDictionary.telegram.routeDefinitions.MARKET_NEWS_ALERT.label
     )
     const scheduledRow = screen
