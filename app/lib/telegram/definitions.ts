@@ -80,7 +80,7 @@ export interface TelegramFeatureSettingResponse {
   workspaceId: number
   workspaceName?: string
   enabled: boolean
-  destination?: TelegramDestinationResponse
+  destination: TelegramDestinationResponse | null
   outputLanguage?: LanguageResponse
   createdDate?: string
   lastModifiedDate?: string
@@ -112,17 +112,35 @@ export function getCreateTelegramLinkTokenSchema() {
 }
 
 export function getUpdateTelegramFeatureSettingSchema() {
-  return z.object({
-    featureKey: z.enum(TELEGRAM_FEATURE_KEYS),
-    workspaceId: z.coerce.number().int().positive(),
-    destinationId: z.coerce.number().int().positive(),
-    enabled: z.boolean().optional(),
-    outputLanguageIsoCode: z.preprocess(
-      (value) =>
-        typeof value === "string" && value.trim() ? value.trim() : undefined,
-      z.string().optional()
-    ),
-  })
+  const workspaceId = z.coerce.number().int().positive()
+  const destinationId = z.coerce.number().int().positive()
+
+  return z.discriminatedUnion("featureKey", [
+    z.object({
+      featureKey: z.literal("MARKET_NEWS_ALERT"),
+      workspaceId,
+      destinationId: z.union([destinationId, z.null()]).optional(),
+      enabled: z.boolean().optional(),
+      outputLanguageIsoCode: z.preprocess(
+        (value) => (typeof value === "string" ? value.trim() || null : value),
+        z.string().trim().nullable().optional()
+      ),
+    }),
+    z.object({
+      featureKey: z.enum([
+        "ECONOMIC_CALENDAR_ALERT",
+        "SCHEDULED_MARKET_ANALYSIS",
+      ]),
+      workspaceId,
+      destinationId,
+      enabled: z.boolean().optional(),
+      outputLanguageIsoCode: z.preprocess(
+        (value) =>
+          typeof value === "string" && value.trim() ? value.trim() : undefined,
+        z.string().optional()
+      ),
+    }),
+  ])
 }
 
 export function getSaveTelegramMarketAnalysisScheduleSchema(
@@ -225,6 +243,7 @@ export interface TelegramSectionAccess {
   botConnections: boolean
   destinations: boolean
   featureSettings: boolean
+  marketNewsRouting: boolean
   schedules: boolean
   watchlistAssets: boolean
 }
@@ -233,6 +252,7 @@ export interface TelegramManageAccess {
   botConnections: boolean
   destinations: boolean
   featureSettings: boolean
+  marketNewsRouting: boolean
   schedules: boolean
 }
 

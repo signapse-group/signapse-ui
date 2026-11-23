@@ -2614,6 +2614,10 @@ export const en: Dictionary = {
       noWorkspaceSelected: "No workspace selected",
       destinationUpdateError: "Could not update the route destination.",
       destinationUpdateSuccess: "Route destination updated.",
+      destinationClearAria: "Remove the destination for {route}",
+      destinationClearSuccess: "Destination removed and routing paused.",
+      enableDestinationRequired:
+        "Choose an active destination before enabling this route.",
       statusUpdateError: "Could not update route status.",
       enabledSuccess: "Telegram routing enabled.",
       disabledSuccess: "Telegram routing paused.",

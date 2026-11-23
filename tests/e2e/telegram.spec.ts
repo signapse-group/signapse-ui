@@ -1,3 +1,6 @@
+import { mkdir } from "node:fs/promises"
+import { resolve } from "node:path"
+
 import { expect, test, waitForClientHandler } from "./fixtures"
 
 test.describe("P0 Telegram operations", () => {
@@ -143,6 +146,31 @@ test.describe("P0 Telegram operations", () => {
       .getByRole("row")
       .filter({ hasText: "Cảnh báo tin thị trường" })
       .first()
+    await fixture.setScenario(
+      "/telegram/feature-settings",
+      "mutation-failure",
+      "PUT"
+    )
+    await newsRow
+      .getByRole("combobox", {
+        name: "Chọn ngôn ngữ đầu ra cho Cảnh báo tin thị trường",
+      })
+      .click()
+    await page
+      .getByRole("option", { name: "English (en)", exact: true })
+      .click()
+    await expect(
+      page
+        .getByText("Fixture mutation failed; retry is safe", { exact: true })
+        .last()
+    ).toBeVisible()
+    await expect(
+      newsRow.getByRole("combobox", {
+        name: "Chọn ngôn ngữ đầu ra cho Cảnh báo tin thị trường",
+      })
+    ).toContainText("Tiếng Việt")
+
+    await fixture.setScenario("/telegram/feature-settings", "success", "PUT")
     await newsRow
       .getByRole("combobox", {
         name: "Chọn ngôn ngữ đầu ra cho Cảnh báo tin thị trường",
@@ -152,12 +180,101 @@ test.describe("P0 Telegram operations", () => {
       .getByRole("option", { name: "English (en)", exact: true })
       .click()
     await expect(newsRow).toContainText("English (en)")
+
+    const newsSwitch = newsRow.getByRole("switch", {
+      name: "Bật hoặc tắt định tuyến Cảnh báo tin thị trường",
+    })
+    await newsSwitch.click()
+    await expect(newsSwitch).toHaveAttribute("aria-checked", "true")
+
+    await newsRow
+      .getByRole("button", {
+        name: "Bỏ điểm nhận của Cảnh báo tin thị trường",
+      })
+      .click()
+    await expect(
+      page.getByText("Đã bỏ điểm nhận và tắt định tuyến.", { exact: true })
+    ).toBeVisible()
+    await expect(
+      newsRow.getByRole("combobox", {
+        name: "Cảnh báo tin thị trường",
+        exact: true,
+      })
+    ).toContainText("Chọn điểm nhận")
+    await expect(
+      newsRow.getByRole("switch", {
+        name: "Bật hoặc tắt định tuyến Cảnh báo tin thị trường",
+      })
+    ).toHaveAttribute("aria-checked", "false")
+    await expect(newsRow).toContainText("English (en)")
+
+    await newsRow
+      .getByRole("combobox", {
+        name: "Cảnh báo tin thị trường",
+        exact: true,
+      })
+      .click()
+    await page
+      .getByRole("option", { name: "Operations channel", exact: true })
+      .click()
+    await expect(
+      newsRow.getByRole("combobox", {
+        name: "Cảnh báo tin thị trường",
+        exact: true,
+      })
+    ).toContainText("Operations channel")
+    await expect(
+      newsRow.getByRole("switch", {
+        name: "Bật hoặc tắt định tuyến Cảnh báo tin thị trường",
+      })
+    ).toHaveAttribute("aria-checked", "false")
+    await expect(newsRow).toContainText("English (en)")
+
     await newsRow
       .getByRole("switch", {
         name: "Bật hoặc tắt định tuyến Cảnh báo tin thị trường",
       })
       .click()
-    await expect(newsRow).toContainText("English (en)")
+    await expect(
+      newsRow.getByRole("switch", {
+        name: "Bật hoặc tắt định tuyến Cảnh báo tin thị trường",
+      })
+    ).toHaveAttribute("aria-checked", "true")
+
+    const featureUpdates = (await fixture.state()).requests
+      .filter(
+        (request) =>
+          request.method === "PUT" &&
+          request.path === "/telegram/feature-settings" &&
+          (request.body as { featureKey?: string } | undefined)?.featureKey ===
+            "MARKET_NEWS_ALERT"
+      )
+      .map(({ body }) => body)
+    expect(featureUpdates).toEqual([
+      {
+        featureKey: "MARKET_NEWS_ALERT",
+        workspaceId: 1,
+        outputLanguageIsoCode: "en",
+      },
+      {
+        featureKey: "MARKET_NEWS_ALERT",
+        workspaceId: 1,
+        outputLanguageIsoCode: "en",
+      },
+      { featureKey: "MARKET_NEWS_ALERT", workspaceId: 1, enabled: true },
+      {
+        featureKey: "MARKET_NEWS_ALERT",
+        workspaceId: 1,
+        destinationId: null,
+        enabled: false,
+      },
+      {
+        featureKey: "MARKET_NEWS_ALERT",
+        workspaceId: 1,
+        destinationId: 21,
+      },
+      { featureKey: "MARKET_NEWS_ALERT", workspaceId: 1, enabled: true },
+    ])
 
     const scheduledRow = page
       .getByRole("row")
@@ -411,4 +528,137 @@ test.describe("P0 Telegram operations", () => {
     )
     expect(destinationReads).toHaveLength(0)
   })
+
+  test("isolates market routing permissions and keeps schedule read independent", async ({
+    page,
+    fixture,
+  }) => {
+    const permissions = [
+      "telegram-market-news-routing:read",
+      "telegram-destination:read",
+      "telegram-feature-setting:update",
+      "telegram-market-analysis-schedule:read",
+      "workspace:read",
+    ]
+    await fixture.setPermissions(permissions)
+    await page.setViewportSize({ width: 1520, height: 1024 })
+    await page.goto("/vi/telegram")
+
+    const newsRow = page
+      .getByRole("row")
+      .filter({ hasText: "Cảnh báo tin thị trường" })
+      .first()
+    await expect(newsRow).toBeVisible()
+    await expect(
+      page.getByText("Cảnh báo lịch kinh tế", { exact: true })
+    ).toHaveCount(0)
+    await expect(
+      page.getByText("Phân tích thị trường theo lịch", { exact: true })
+    ).toHaveCount(0)
+    await expect(
+      page.getByText("Lịch gửi phân tích", { exact: true })
+    ).toBeVisible()
+    await expect(
+      newsRow.getByRole("switch", {
+        name: "Bật hoặc tắt định tuyến Cảnh báo tin thị trường",
+      })
+    ).toHaveAttribute("aria-disabled", "true")
+
+    await fixture.setPermissions([
+      ...permissions,
+      "telegram-market-news-routing:update",
+    ])
+    await page.reload()
+    await expect(
+      newsRow.getByRole("switch", {
+        name: "Bật hoặc tắt định tuyến Cảnh báo tin thị trường",
+      })
+    ).not.toHaveAttribute("aria-disabled", "true")
+  })
+
 })
+
+const renderEvidenceFrames = [
+  { name: "wide-dark-en-1520x1024", width: 1520, height: 1024, locale: "en" },
+  { name: "compact-dark-en-1024x768", width: 1024, height: 768, locale: "en" },
+  { name: "mobile-dark-en-390x1420", width: 390, height: 1420, locale: "en" },
+  {
+    name: "small-mobile-dark-vi-360x800",
+    width: 360,
+    height: 800,
+    locale: "vi",
+  },
+  { name: "effective-760x512-dark-vi", width: 760, height: 512, locale: "vi" },
+] as const
+
+for (const frame of renderEvidenceFrames) {
+  test(`renders Telegram routing at ${frame.name}`, async ({ page }) => {
+    await page.setViewportSize({ width: frame.width, height: frame.height })
+    await page.emulateMedia({ colorScheme: "dark" })
+    await page.goto(`/${frame.locale}/telegram`)
+    await expect(page.locator("html")).toHaveClass(/dark/)
+
+    const routeControl = page.locator(
+      '[data-feature-key="MARKET_NEWS_ALERT"]:visible'
+    )
+    await expect(routeControl).toBeVisible()
+    const routeSwitch = routeControl.getByRole("switch")
+    await waitForClientHandler(routeSwitch)
+    await routeSwitch.click()
+    await expect(routeSwitch).toHaveAttribute("aria-checked", "true")
+    const enabledToast = page.getByText(
+      frame.locale === "vi"
+        ? "Đã bật định tuyến Telegram."
+        : "Telegram routing enabled.",
+      { exact: true }
+    )
+    await expect(enabledToast).toBeVisible()
+    await expect(enabledToast).toBeHidden()
+
+    const pageOverflows = await page.evaluate(
+      () =>
+        document.documentElement.scrollWidth >
+        document.documentElement.clientWidth
+    )
+    expect(pageOverflows).toBe(false)
+
+    const evidenceDirectory = resolve(
+      process.cwd(),
+      "docs/design/evidence/SIGN-392"
+    )
+    await mkdir(evidenceDirectory, { recursive: true })
+    const routingTable = routeControl.locator(
+      "xpath=ancestor::div[@data-slot='table-container'][1]"
+    )
+    if (await routingTable.count()) {
+      await routingTable.evaluate((element) => {
+        const container = element as HTMLElement
+        container.scrollLeft = 0
+      })
+    }
+    await page.screenshot({
+      path: resolve(evidenceDirectory, `telegram-routing-${frame.name}.png`),
+      fullPage: true,
+      animations: "disabled",
+    })
+  })
+}
+
+test("keeps the market route visible without page overflow at shell breakpoints", async ({
+  page,
+}) => {
+  await page.goto("/en/telegram")
+  const routeControl = page.locator(
+    '[data-feature-key="MARKET_NEWS_ALERT"]:visible'
+  )
+
+  for (const width of [360, 390, 767, 768, 1024, 1439, 1440, 1520]) {
+    await page.setViewportSize({ width, height: 900 })
+    await expect(routeControl).toBeVisible()
+    const pageOverflows = await page.evaluate(
+      () =>
+        document.documentElement.scrollWidth >
+        document.documentElement.clientWidth
+    )
+    expect(pageOverflows, `page overflow at ${width}px`).toBe(false)
+  }

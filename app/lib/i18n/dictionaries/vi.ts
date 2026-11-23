@@ -2591,6 +2591,10 @@ export const vi = {
       noWorkspaceSelected: "Chưa chọn không gian",
       destinationUpdateError: "Không thể cập nhật điểm nhận cho định tuyến.",
       destinationUpdateSuccess: "Đã cập nhật điểm nhận định tuyến.",
+      destinationClearAria: "Bỏ điểm nhận của {route}",
+      destinationClearSuccess: "Đã bỏ điểm nhận và tắt định tuyến.",
+      enableDestinationRequired:
+        "Hãy chọn một điểm nhận đang hoạt động trước khi bật định tuyến.",
       statusUpdateError: "Không thể cập nhật trạng thái định tuyến.",
       enabledSuccess: "Đã bật định tuyến Telegram.",
       disabledSuccess: "Đã tạm dừng định tuyến Telegram.",

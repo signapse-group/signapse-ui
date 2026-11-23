@@ -9,6 +9,7 @@ import {
   MessageCircle,
   RadioTower,
   Trash2,
+  X,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -28,7 +29,6 @@ import {
   TelegramFeatureKey,
   TelegramFeatureSettingResponse,
   TelegramMarketAnalysisScheduleResponse,
-  UpdateTelegramFeatureSettingRequest,
   getUpdateTelegramFeatureSettingSchema,
 } from "@/app/lib/telegram/definitions"
 import {
@@ -142,12 +142,18 @@ export function TelegramConfigurationPage({
         (schedule) => schedule.workspaceId === data.currentWorkspace?.id
       )
     : []
-  const routes = getRouteDefinitions(dictionary).map((route) => ({
-    ...route,
-    setting: featureSettings.find(
-      (setting) => setting.featureKey === route.featureKey
-    ),
-  }))
+  const routes = getRouteDefinitions(dictionary)
+    .filter((route) =>
+      route.featureKey === "MARKET_NEWS_ALERT"
+        ? data.sectionAccess.marketNewsRouting
+        : data.sectionAccess.featureSettings
+    )
+    .map((route) => ({
+      ...route,
+      setting: featureSettings.find(
+        (setting) => setting.featureKey === route.featureKey
+      ),
+    }))
   const activeBotConnections = data.botConnections.filter(
     (connection) => connection.status === "ACTIVE"
   )
@@ -197,8 +203,9 @@ export function TelegramConfigurationPage({
         languages={data.languages}
         languageCatalogError={data.languageCatalogError}
         scheduleLoadError={data.scheduleLoadError}
-        canReadFeatureSettings={data.sectionAccess.featureSettings}
         canUpdateFeatureSettings={data.manageAccess.featureSettings}
+        canUpdateMarketNewsRouting={data.manageAccess.marketNewsRouting}
+        canReadDestinations={data.sectionAccess.destinations}
         canReadSchedules={data.sectionAccess.schedules}
         canManageSchedules={data.manageAccess.schedules}
       />
@@ -434,8 +441,9 @@ function FeatureRoutingSection({
   languages,
   languageCatalogError,
   scheduleLoadError,
-  canReadFeatureSettings,
   canUpdateFeatureSettings,
+  canUpdateMarketNewsRouting,
+  canReadDestinations,
   canReadSchedules,
   canManageSchedules,
 }: {
@@ -447,13 +455,22 @@ function FeatureRoutingSection({
   languages: TelegramConfigurationData["languages"]
   languageCatalogError: boolean
   scheduleLoadError: boolean
-  canReadFeatureSettings: boolean
   canUpdateFeatureSettings: boolean
+  canUpdateMarketNewsRouting: boolean
+  canReadDestinations: boolean
   canReadSchedules: boolean
   canManageSchedules: boolean
 }) {
   const { dictionary } = useLocalization()
   const t = dictionary.telegram
+  const marketNewsRoute = routes.find(
+    (route) => route.featureKey === "MARKET_NEWS_ALERT"
+  )
+  const otherRoutes = routes.filter(
+    (route) => route.featureKey !== "MARKET_NEWS_ALERT"
+  )
+  const shouldShowTableBelowWide =
+    otherRoutes.length > 0 || !marketNewsRoute || canReadSchedules
 
   return (
     <section className="flex flex-col gap-4" aria-labelledby="telegram-routing">
@@ -462,9 +479,58 @@ function FeatureRoutingSection({
         title={t.routing.sectionTitle}
         description={t.routing.sectionDescription}
       />
-      <AppListTable className="mt-0">
+      {marketNewsRoute ? (
+        <div
+          className="min-[1440px]:hidden"
+          data-feature-key={marketNewsRoute.featureKey}
+          data-testid="market-news-routing-card"
+          aria-labelledby="telegram-market-news-routing-title"
+        >
+          <div className="rounded-xl border border-border bg-card p-4">
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-3">
+              <div className="min-w-0 flex-1">
+                <h3
+                  id="telegram-market-news-routing-title"
+                  className="font-medium text-foreground"
+                >
+                  {marketNewsRoute.label}
+                </h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {marketNewsRoute.description}
+                </p>
+                <span className="mt-2 block text-xs text-muted-foreground">
+                  {currentWorkspace?.name ?? t.routing.noWorkspaceSelected}
+                </span>
+              </div>
+              <FeatureRouteControls
+                key={`card:${marketNewsRoute.featureKey}:${marketNewsRoute.setting?.destination?.id ?? "none"}:${marketNewsRoute.setting?.outputLanguage?.isoCode ?? "default"}:${marketNewsRoute.setting?.enabled ?? false}`}
+                layout="card"
+                route={marketNewsRoute}
+                activeDestinations={activeDestinations}
+                currentWorkspaceId={currentWorkspace?.id}
+                canReadDestinations={canReadDestinations}
+                canUpdate={canUpdateMarketNewsRouting}
+                languages={languages}
+                languageCatalogError={languageCatalogError}
+              />
+            </div>
+          </div>
+        </div>
+      ) : null}
+      <AppListTable
+        className={cn(
+          "mt-0",
+          !shouldShowTableBelowWide && "hidden min-[1440px]:block"
+        )}
+      >
         <Table>
-          <TableHeader>
+          <TableHeader
+            className={cn(
+              marketNewsRoute &&
+                otherRoutes.length === 0 &&
+                "hidden min-[1440px]:table-header-group"
+            )}
+          >
             <AppListTableHeaderRow>
               <AppListTableHead className="w-[32%]">
                 {t.routing.featureColumn}
@@ -484,16 +550,32 @@ function FeatureRoutingSection({
             </AppListTableHeaderRow>
           </TableHeader>
           <TableBody>
-            {!canReadFeatureSettings ? (
+            {routes.length === 0 ? (
               <AccessLimitedRow colSpan={5} title={t.routing.accessLimited} />
             ) : (
               routes.map((route) => {
                 const isScheduledMarketAnalysis =
                   route.featureKey === "SCHEDULED_MARKET_ANALYSIS"
+                const canUpdateRoute =
+                  route.featureKey === "MARKET_NEWS_ALERT"
+                    ? canUpdateMarketNewsRouting
+                    : canUpdateFeatureSettings
 
                 return (
                   <Fragment key={route.featureKey}>
-                    <TableRow className="border-border transition-colors hover:bg-muted/50">
+                    <TableRow
+                      data-feature-key={route.featureKey}
+                      data-testid={
+                        route.featureKey === "MARKET_NEWS_ALERT"
+                          ? "market-news-routing-row"
+                          : undefined
+                      }
+                      className={cn(
+                        "border-border transition-colors hover:bg-muted/50",
+                        route.featureKey === "MARKET_NEWS_ALERT" &&
+                          "hidden min-[1440px]:table-row"
+                      )}
+                    >
                       <TableCell className="align-top whitespace-normal">
                         <div className="flex min-w-0 flex-col gap-1">
                           <span className="font-medium text-foreground">
@@ -502,7 +584,7 @@ function FeatureRoutingSection({
                           <span className="text-sm text-muted-foreground">
                             {route.description}
                           </span>
-                            <code className="w-fit rounded bg-muted px-1.5 py-0.5 text-xs text-foreground">
+                          <code className="w-fit rounded bg-muted px-1.5 py-0.5 text-xs text-foreground">
                             {route.featureKey}
                           </code>
                         </div>
@@ -512,16 +594,18 @@ function FeatureRoutingSection({
                           t.routing.noWorkspaceSelected}
                       </TableCell>
                       <FeatureRouteControls
-                        key={`${route.featureKey}:${route.setting?.destination?.id ?? "none"}:${route.setting?.outputLanguage?.isoCode ?? "default"}`}
+                        key={`${route.featureKey}:${route.setting?.destination?.id ?? "none"}:${route.setting?.outputLanguage?.isoCode ?? "default"}:${route.setting?.enabled ?? false}`}
+                        layout="table"
                         route={route}
                         activeDestinations={activeDestinations}
                         currentWorkspaceId={currentWorkspace?.id}
-                        canUpdate={canUpdateFeatureSettings}
+                        canReadDestinations={canReadDestinations}
+                        canUpdate={canUpdateRoute}
                         languages={languages}
                         languageCatalogError={languageCatalogError}
                       />
                     </TableRow>
-                    {isScheduledMarketAnalysis ? (
+                    {isScheduledMarketAnalysis && canReadSchedules ? (
                       <TableRow className="border-border bg-muted/10 hover:bg-muted/10">
                         <TableCell
                           colSpan={5}
@@ -545,6 +629,26 @@ function FeatureRoutingSection({
                 )
               })
             )}
+            {canReadSchedules &&
+            !routes.some(
+              (route) => route.featureKey === "SCHEDULED_MARKET_ANALYSIS"
+            ) ? (
+              <TableRow className="border-border bg-muted/10 hover:bg-muted/10">
+                <TableCell colSpan={5} className="p-4 whitespace-normal">
+                  <MarketAnalysisSchedulePanel
+                    schedules={schedules}
+                    activeDestinations={activeDestinations}
+                    currentWorkspace={currentWorkspace}
+                    watchlistAssets={watchlistAssets}
+                    languages={languages}
+                    languageCatalogError={languageCatalogError}
+                    scheduleLoadError={scheduleLoadError}
+                    canReadSchedules={canReadSchedules}
+                    canManageSchedules={canManageSchedules}
+                  />
+                </TableCell>
+              </TableRow>
+            ) : null}
           </TableBody>
         </Table>
       </AppListTable>
@@ -808,57 +912,128 @@ function MarketAnalysisSchedulePanel({
   )
 }
 function FeatureRouteControls({
+  layout,
   route,
   activeDestinations,
   currentWorkspaceId,
+  canReadDestinations,
   canUpdate,
   languages,
   languageCatalogError,
 }: {
+  layout: "card" | "table"
   route: FeatureRouteView
   activeDestinations: TelegramDestinationResponse[]
   currentWorkspaceId?: number
+  canReadDestinations: boolean
   canUpdate: boolean
   languages: LanguageResponse[]
   languageCatalogError: boolean
 }) {
   const router = useRouter()
+  const [isPending, startTransition] = useTransition()
+  const { dictionary, formatMessage } = useLocalization()
+  const t = dictionary.telegram
+  const isMarketNewsRoute = route.featureKey === "MARKET_NEWS_ALERT"
   const persistedDestinationId = route.setting?.destination?.id.toString() ?? ""
   const persistedLanguageIsoCode = route.setting?.outputLanguage?.isoCode ?? ""
   const [destinationId, setDestinationId] = useState(persistedDestinationId)
   const [outputLanguageIsoCode, setOutputLanguageIsoCode] = useState(
     persistedLanguageIsoCode
   )
-  const [isPending, startTransition] = useTransition()
-  const { dictionary, formatMessage } = useLocalization()
-  const t = dictionary.telegram
-  const routeSupportsLanguage =
-    route.featureKey !== "SCHEDULED_MARKET_ANALYSIS"
-  const hasDestination = activeDestinations.some(
-    (destination) => destination.id.toString() === destinationId
+  const routeSupportsLanguage = route.featureKey !== "SCHEDULED_MARKET_ANALYSIS"
+  const savedDestination = route.setting?.destination ?? null
+  const selectedDestinationId = isMarketNewsRoute
+    ? persistedDestinationId
+    : destinationId
+  const hasSelectedActiveDestination = Boolean(
+    canReadDestinations &&
+    activeDestinations.some(
+      (destination) => destination.id.toString() === selectedDestinationId
+    ) &&
+    (!isMarketNewsRoute || savedDestination?.status === "ACTIVE")
   )
+  const canUpdateRoute = canUpdate && Boolean(currentWorkspaceId)
   const destinationControlDisabled =
-    !canUpdate || !currentWorkspaceId || isPending
-  const controlsDisabled =
-    !canUpdate || !currentWorkspaceId || !hasDestination || isPending
+    !canUpdateRoute ||
+    !canReadDestinations ||
+    activeDestinations.length === 0 ||
+    isPending
+  const switchDisabled =
+    !canUpdateRoute ||
+    isPending ||
+    (!hasSelectedActiveDestination &&
+      (!isMarketNewsRoute || !route.setting?.enabled))
+  const languageControlDisabled =
+    !canUpdateRoute ||
+    (!isMarketNewsRoute && !hasSelectedActiveDestination) ||
+    isPending ||
+    languageCatalogError
+  const shouldExplainMissingDestination =
+    isMarketNewsRoute &&
+    !route.setting?.enabled &&
+    !hasSelectedActiveDestination
+  const destinationItems = [
+    ...(isMarketNewsRoute && savedDestination
+      ? [
+          {
+            value: persistedDestinationId,
+            label: getDestinationLabel(savedDestination, dictionary),
+            disabled:
+              savedDestination.status !== "ACTIVE" ||
+              !canReadDestinations ||
+              !activeDestinations.some(
+                (destination) => destination.id === savedDestination.id
+              ),
+          },
+        ]
+      : []),
+    ...activeDestinations
+      .filter(
+        (destination) =>
+          !isMarketNewsRoute ||
+          destination.id.toString() !== persistedDestinationId
+      )
+      .map((destination) => ({
+        value: destination.id.toString(),
+        label: getDestinationLabel(destination, dictionary),
+        disabled: false,
+      })),
+  ]
 
   function updateRoute(
-    overrides: Partial<UpdateTelegramFeatureSettingRequest>,
+    overrides: {
+      destinationId?: number | null
+      enabled?: boolean
+      outputLanguageIsoCode?: string | null
+    },
     successMessage: string
   ) {
-    const nextDestinationId =
-      overrides.destinationId?.toString() ?? destinationId
+    if (!currentWorkspaceId) return
+    if (!isMarketNewsRoute && !destinationId && overrides.destinationId == null)
+      return
 
-    if (!currentWorkspaceId || !nextDestinationId) return
-
-    const request = getUpdateTelegramFeatureSettingSchema().safeParse({
-      featureKey: route.featureKey,
-      workspaceId: currentWorkspaceId,
-      destinationId: Number(nextDestinationId),
-      enabled: route.setting?.enabled ?? false,
-      outputLanguageIsoCode: outputLanguageIsoCode || undefined,
-      ...overrides,
-    })
+    const requestInput = isMarketNewsRoute
+      ? {
+          featureKey: route.featureKey,
+          workspaceId: currentWorkspaceId,
+          ...(route.setting ? {} : { enabled: false }),
+          ...overrides,
+        }
+      : {
+          featureKey: route.featureKey,
+          workspaceId: currentWorkspaceId,
+          destinationId: Number(
+            typeof overrides.destinationId === "number"
+              ? overrides.destinationId
+              : destinationId
+          ),
+          enabled: route.setting?.enabled ?? false,
+          outputLanguageIsoCode: outputLanguageIsoCode || undefined,
+          ...overrides,
+        }
+    const request =
+      getUpdateTelegramFeatureSettingSchema().safeParse(requestInput)
 
     if (!request.success) {
       toast.error(t.routing.updateError)
@@ -880,7 +1055,7 @@ function FeatureRouteControls({
   function handleDestinationChange(value: string | null) {
     if (value === null) return
 
-    setDestinationId(value)
+    if (!isMarketNewsRoute) setDestinationId(value)
     updateRoute(
       { destinationId: Number(value) },
       t.routing.destinationUpdateSuccess
@@ -890,11 +1065,14 @@ function FeatureRouteControls({
   function handleLanguageChange(value: string | null) {
     if (value === null || !routeSupportsLanguage) return
 
-    const nextLanguage =
-      value === DEFAULT_FEATURE_LANGUAGE_VALUE ? "" : value
-    setOutputLanguageIsoCode(nextLanguage)
+    const nextLanguage = value === DEFAULT_FEATURE_LANGUAGE_VALUE ? "" : value
+    if (!isMarketNewsRoute) setOutputLanguageIsoCode(nextLanguage)
     updateRoute(
-      { outputLanguageIsoCode: nextLanguage || undefined },
+      {
+        outputLanguageIsoCode: isMarketNewsRoute
+          ? nextLanguage || null
+          : nextLanguage || undefined,
+      },
       nextLanguage
         ? t.routing.languageUpdateSuccess
         : t.routing.languageClearSuccess
@@ -902,6 +1080,11 @@ function FeatureRouteControls({
   }
 
   function handleCheckedChange(enabled: boolean) {
+    if (enabled && !hasSelectedActiveDestination) {
+      toast.error(t.routing.enableDestinationRequired)
+      return
+    }
+
     updateRoute(
       { enabled },
       enabled ? t.routing.enabledSuccess : t.routing.disabledSuccess
@@ -940,130 +1123,200 @@ function FeatureRouteControls({
     })),
   ]
 
-  const languageDescriptionId = `telegram-route-${route.featureKey}-language-description`
+  const languageDescriptionId = `telegram-route-${route.featureKey}-${layout}-language-description`
   const languageDescription = languageCatalogError
     ? t.routing.languageCatalogError
-    : !hasDestination
+    : !isMarketNewsRoute && !hasSelectedActiveDestination
       ? t.routing.languageDestinationRequired
       : null
+  const switchDescriptionId = `telegram-route-${route.featureKey}-${layout}-enable-description`
+  const destinationControl =
+    !savedDestination && activeDestinations.length === 0 ? (
+      <span className="text-sm text-muted-foreground">
+        {t.destination.noActiveDestination}
+      </span>
+    ) : (
+      <div className="relative">
+        <Select
+          items={destinationItems}
+          value={selectedDestinationId || null}
+          onValueChange={handleDestinationChange}
+          disabled={destinationControlDisabled}
+        >
+          <SelectTrigger
+            aria-label={route.label}
+            className={cn(
+              "w-full",
+              isMarketNewsRoute && savedDestination && "pe-10"
+            )}
+          >
+            <SelectValue placeholder={t.destination.placeholder} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              {destinationItems.map((destination) => (
+                <SelectItem
+                  key={destination.value}
+                  value={destination.value}
+                  disabled={destination.disabled}
+                >
+                  {destination.label}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
+        {isMarketNewsRoute && savedDestination ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="absolute end-0 top-1/2 z-10 -translate-y-1/2"
+            aria-label={formatMessage(t.routing.destinationClearAria, {
+              route: route.label,
+            })}
+            disabled={!canUpdateRoute || isPending}
+            onClick={() =>
+              updateRoute(
+                { destinationId: null, enabled: false },
+                t.routing.destinationClearSuccess
+              )
+            }
+          >
+            <X data-icon="inline-start" aria-hidden="true" />
+          </Button>
+        ) : null}
+      </div>
+    )
+  const languageControl = routeSupportsLanguage ? (
+    <div className="flex min-w-0 flex-col gap-1">
+      <Select
+        items={languageItems}
+        value={
+          (isMarketNewsRoute
+            ? persistedLanguageIsoCode
+            : outputLanguageIsoCode) || DEFAULT_FEATURE_LANGUAGE_VALUE
+        }
+        onValueChange={handleLanguageChange}
+        disabled={languageControlDisabled}
+      >
+        <SelectTrigger
+          className="w-full"
+          aria-label={formatMessage(t.routing.languageAria, {
+            route: route.label,
+          })}
+          aria-describedby={
+            languageDescription ? languageDescriptionId : undefined
+          }
+        >
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectGroup>
+            <SelectItem value={DEFAULT_FEATURE_LANGUAGE_VALUE}>
+              {t.routing.defaultLanguage}
+            </SelectItem>
+            {languageOptions.map((language) => (
+              <SelectItem key={language.isoCode} value={language.isoCode}>
+                {language.name || language.isoCode} ({language.isoCode})
+                {!hasCurrentLanguageInCatalog &&
+                language.isoCode === currentOutputLanguage?.isoCode
+                  ? ` — ${t.routing.languageUnavailable}`
+                  : ""}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        </SelectContent>
+      </Select>
+      {languageDescription ? (
+        <span
+          id={languageDescriptionId}
+          className="text-xs text-muted-foreground"
+          role="status"
+        >
+          {languageDescription}
+        </span>
+      ) : null}
+    </div>
+  ) : (
+    <span className="text-sm text-muted-foreground">
+      {t.routing.languageNotApplicable}
+    </span>
+  )
+  const switchControl = (
+    <div className="flex flex-col items-center gap-1">
+      <div
+        className={cn(
+          layout === "card" ? "ms-auto" : "mx-auto",
+          "inline-flex h-8 w-32 items-center justify-between gap-2 rounded-lg border border-input bg-transparent px-2.5 text-sm shadow-xs data-[disabled=true]:opacity-60"
+        )}
+        data-disabled={switchDisabled ? true : undefined}
+      >
+        <span
+          className={cn(
+            "min-w-14 text-left text-xs font-medium",
+            route.setting?.enabled ? "text-foreground" : "text-muted-foreground"
+          )}
+        >
+          {route.setting?.enabled ? t.common.enabled : t.common.paused}
+        </span>
+        <Switch
+          checked={Boolean(route.setting?.enabled)}
+          disabled={switchDisabled}
+          onCheckedChange={handleCheckedChange}
+          aria-label={formatMessage(t.routing.switchAria, {
+            route: route.label,
+          })}
+          aria-describedby={
+            shouldExplainMissingDestination ? switchDescriptionId : undefined
+          }
+        />
+      </div>
+      {shouldExplainMissingDestination ? (
+        <span
+          id={switchDescriptionId}
+          className="max-w-32 text-center text-xs text-muted-foreground"
+          role="status"
+        >
+          {t.routing.enableDestinationRequired}
+        </span>
+      ) : null}
+    </div>
+  )
+
+  if (layout === "card") {
+    return (
+      <div className="contents">
+        <div className="col-start-2 row-start-1 justify-self-end">
+          {switchControl}
+        </div>
+        <div className="col-span-2 grid gap-3 md:grid-cols-2">
+          <div className="flex min-w-0 flex-col gap-1">
+            <span className="text-xs font-medium text-muted-foreground">
+              {t.routing.destinationColumn}
+            </span>
+            {destinationControl}
+          </div>
+          <div className="flex min-w-0 flex-col gap-1">
+            <span className="text-xs font-medium text-muted-foreground">
+              {t.routing.languageColumn}
+            </span>
+            {languageControl}
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <>
       <TableCell className="align-top whitespace-normal">
-        {activeDestinations.length === 0 ? (
-          <span className="text-sm text-muted-foreground">
-            {t.destination.noActiveDestination}
-          </span>
-        ) : (
-          <Select
-            items={activeDestinations.map((destination) => ({
-              value: destination.id.toString(),
-              label: getDestinationLabel(destination, dictionary),
-            }))}
-            value={destinationId || null}
-            onValueChange={handleDestinationChange}
-            disabled={destinationControlDisabled}
-          >
-            <SelectTrigger aria-label={route.label} className="w-full">
-              <SelectValue placeholder={t.destination.placeholder} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                {activeDestinations.map((destination) => (
-                  <SelectItem
-                    key={destination.id}
-                    value={destination.id.toString()}
-                  >
-                    {getDestinationLabel(destination, dictionary)}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-        )}
+        {destinationControl}
       </TableCell>
       <TableCell className="align-top whitespace-normal">
-        {routeSupportsLanguage ? (
-          <div className="flex min-w-0 flex-col gap-1">
-            <Select
-              items={languageItems}
-              value={outputLanguageIsoCode || DEFAULT_FEATURE_LANGUAGE_VALUE}
-              onValueChange={handleLanguageChange}
-              disabled={
-                controlsDisabled ||
-                languageCatalogError ||
-                !routeSupportsLanguage
-              }
-            >
-              <SelectTrigger
-                className="w-full"
-                aria-label={formatMessage(t.routing.languageAria, {
-                  route: route.label,
-                })}
-                aria-describedby={
-                  languageDescription ? languageDescriptionId : undefined
-                }
-              >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  <SelectItem value={DEFAULT_FEATURE_LANGUAGE_VALUE}>
-                    {t.routing.defaultLanguage}
-                  </SelectItem>
-                  {languageOptions.map((language) => (
-                    <SelectItem key={language.isoCode} value={language.isoCode}>
-                      {language.name || language.isoCode} ({language.isoCode})
-                      {!hasCurrentLanguageInCatalog &&
-                      language.isoCode === currentOutputLanguage?.isoCode
-                        ? ` — ${t.routing.languageUnavailable}`
-                        : ""}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-            {languageDescription ? (
-              <span
-                id={languageDescriptionId}
-                className="text-xs text-muted-foreground"
-                role="status"
-              >
-                {languageDescription}
-              </span>
-            ) : null}
-          </div>
-        ) : (
-          <span className="text-sm text-muted-foreground">
-            {t.routing.languageNotApplicable}
-          </span>
-        )}
+        {languageControl}
       </TableCell>
-      <TableCell className="align-top">
-        <div
-          className="mx-auto inline-flex h-8 w-32 items-center justify-between gap-2 rounded-lg border border-input bg-transparent px-2.5 text-sm shadow-xs data-[disabled=true]:opacity-60"
-          data-disabled={controlsDisabled ? true : undefined}
-        >
-          <span
-            className={cn(
-              "min-w-14 text-left text-xs font-medium",
-              route.setting?.enabled
-                ? "text-foreground"
-                : "text-muted-foreground"
-            )}
-          >
-            {route.setting?.enabled ? t.common.enabled : t.common.paused}
-          </span>
-          <Switch
-            checked={Boolean(route.setting?.enabled)}
-            disabled={controlsDisabled}
-            onCheckedChange={handleCheckedChange}
-            aria-label={formatMessage(t.routing.switchAria, {
-              route: route.label,
-            })}
-          />
-        </div>
-      </TableCell>
+      <TableCell className="align-top">{switchControl}</TableCell>
     </>
   )
 }

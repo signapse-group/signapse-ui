@@ -4232,27 +4232,60 @@ Which asset did you mean? The available data is limited. Add TSLA to your watchl
     return { __status: 204 }
 
   if (method === "PUT" && pathname === "/telegram/feature-settings") {
+    const hasDestination = Object.hasOwn(body ?? {}, "destinationId")
+    const hasLanguage = Object.hasOwn(body ?? {}, "outputLanguageIsoCode")
     const existing = state.featureSettings.find(
       (item) =>
         item.featureKey === body?.featureKey &&
         item.workspaceId === Number(body?.workspaceId)
     )
+    const outputLanguageIsoCode =
+      typeof body?.outputLanguageIsoCode === "string"
+        ? body.outputLanguageIsoCode.trim()
+        : ""
     if (existing) {
       existing.enabled = body?.enabled ?? existing.enabled
-      existing.destination = state.destinations.find(
-        (item) => item.id === Number(body?.destinationId)
-      )
-      const outputLanguageIsoCode =
-        typeof body?.outputLanguageIsoCode === "string"
-          ? body.outputLanguageIsoCode.trim()
-          : ""
-      existing.outputLanguage = outputLanguageIsoCode
-        ? state.languages.find((item) => item.isoCode === outputLanguageIsoCode)
-        : undefined
+      if (hasDestination) {
+        existing.destination =
+          body.destinationId === null
+            ? null
+            : (state.destinations.find(
+                (item) => item.id === Number(body.destinationId)
+              ) ?? null)
+      }
+      if (hasLanguage || body?.featureKey !== "MARKET_NEWS_ALERT") {
+        existing.outputLanguage = outputLanguageIsoCode
+          ? state.languages.find((item) => item.isoCode === outputLanguageIsoCode)
+          : undefined
+      }
       existing.lastModifiedDate = NOW
       return existing
     }
-    return state.featureSettings[0]
+
+    const workspace = state.workspaces.find(
+      (item) => item.id === Number(body?.workspaceId)
+    )
+    const created = {
+      id: 44,
+      featureKey: body?.featureKey,
+      workspaceId: Number(body?.workspaceId),
+      workspaceName: workspace?.name,
+      enabled: body?.enabled ?? true,
+      destination: hasDestination
+        ? body.destinationId === null
+          ? null
+          : (state.destinations.find(
+              (item) => item.id === Number(body.destinationId)
+            ) ?? null)
+        : null,
+      outputLanguage: outputLanguageIsoCode
+        ? state.languages.find((item) => item.isoCode === outputLanguageIsoCode)
+        : undefined,
+      createdDate: NOW,
+      lastModifiedDate: NOW,
+    }
+    state.featureSettings.push(created)
+    return created
   }
 
   if (method === "POST" && pathname === "/telegram/market-analysis-schedules") {
@@ -4600,6 +4633,9 @@ const server = createServer(async (request, response) => {
     locale: request.headers["accept-language"] ?? null,
     hasAuthHeader,
     ...(method === "PUT" && url.pathname.startsWith("/ai-task-configurations/")
+      ? { body }
+      : {}),
+    ...(method === "PUT" && url.pathname === "/telegram/feature-settings"
       ? { body }
       : {}),
     ...(method === "PATCH" &&

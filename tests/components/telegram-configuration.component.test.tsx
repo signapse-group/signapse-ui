@@ -45,6 +45,7 @@ import {
   disableTelegramMarketAnalysisSchedule,
   updateTelegramFeatureSetting,
 } from "@/app/api/telegram/action"
+import { toast } from "sonner"
 import { vi as viDictionary } from "@/app/lib/i18n/dictionaries/vi"
 import { LocalizationProvider } from "@/app/lib/i18n/provider"
 import type { TelegramConfigurationData } from "@/app/lib/telegram/definitions"
@@ -127,8 +128,9 @@ const data: TelegramConfigurationData = {
   scheduleLoadError: false,
   sectionAccess: {
     botConnections: false,
-    destinations: false,
+    destinations: true,
     featureSettings: true,
+    marketNewsRouting: true,
     schedules: true,
     watchlistAssets: true,
   },
@@ -136,6 +138,7 @@ const data: TelegramConfigurationData = {
     botConnections: false,
     destinations: false,
     featureSettings: false,
+    marketNewsRouting: false,
     schedules: true,
   },
 }
@@ -151,6 +154,15 @@ function renderConfiguration(
       <TelegramConfigurationPage data={configurationData} />
     </LocalizationProvider>
   )
+}
+
+function getTableRowByText(label: string) {
+  const cell = screen
+    .getAllByText(label)
+    .find((element) => element.closest("tr"))
+
+  if (!cell) throw new Error(`Could not find a table row containing "${label}"`)
+  return cell.closest("tr") as HTMLElement
 }
 
 function expectNoSelectControlledWarning(calls: unknown[][]) {
@@ -171,10 +183,370 @@ describe("Telegram schedule destructive actions", () => {
   })
 
   beforeEach(() => {
+    if (!window.PointerEvent) {
+      Object.defineProperty(window, "PointerEvent", {
+        configurable: true,
+        value: MouseEvent,
+      })
+    }
     vi.mocked(deleteTelegramMarketAnalysisSchedule).mockReset()
     vi.mocked(disableTelegramMarketAnalysisSchedule).mockReset()
     vi.mocked(updateTelegramFeatureSetting).mockReset()
+    vi.mocked(toast.error).mockReset()
+    vi.mocked(toast.success).mockReset()
     routerRefresh.mockReset()
+  })
+
+  it("uses dedicated read/update permissions for market news and keeps schedule read separate", () => {
+    const marketOnlyData: TelegramConfigurationData = {
+      ...data,
+      featureSettings: [featureSettings[1]],
+      sectionAccess: {
+        ...data.sectionAccess,
+        featureSettings: false,
+        marketNewsRouting: true,
+        schedules: false,
+        destinations: true,
+      },
+      manageAccess: {
+        ...data.manageAccess,
+        featureSettings: true,
+        marketNewsRouting: false,
+        schedules: false,
+      },
+    }
+
+    renderConfiguration(marketOnlyData)
+
+    const marketCard = screen.getByTestId("market-news-routing-card")
+    expect(
+      within(marketCard).getByText(
+        viDictionary.telegram.routing.destinationColumn
+      )
+    ).toBeVisible()
+    expect(
+      within(marketCard).getByText(viDictionary.telegram.routing.languageColumn)
+    ).toBeVisible()
+    const marketRow = getTableRowByText(
+      viDictionary.telegram.routeDefinitions.MARKET_NEWS_ALERT.label
+    )
+    expect(
+      screen.queryByText(
+        viDictionary.telegram.routeDefinitions.ECONOMIC_CALENDAR_ALERT.label
+      )
+    ).not.toBeInTheDocument()
+    expect(
+      within(marketRow).getByRole("switch", {
+        name: viDictionary.telegram.routing.switchAria.replace(
+          "{route}",
+          viDictionary.telegram.routeDefinitions.MARKET_NEWS_ALERT.label
+        ),
+      })
+    ).toHaveAttribute("aria-disabled", "true")
+
+    cleanup()
+    renderConfiguration({
+      ...marketOnlyData,
+      manageAccess: {
+        ...marketOnlyData.manageAccess,
+        marketNewsRouting: true,
+      },
+    })
+
+    const manageableMarketRow = getTableRowByText(
+      viDictionary.telegram.routeDefinitions.MARKET_NEWS_ALERT.label
+    )
+    expect(
+      within(manageableMarketRow).getByRole("switch", {
+        name: viDictionary.telegram.routing.switchAria.replace(
+          "{route}",
+          viDictionary.telegram.routeDefinitions.MARKET_NEWS_ALERT.label
+        ),
+      })
+    ).toBeEnabled()
+  })
+
+  it("keeps Scheduled analysis visible with schedule read and no route read", () => {
+    renderConfiguration({
+      ...data,
+      sectionAccess: {
+        ...data.sectionAccess,
+        featureSettings: false,
+        marketNewsRouting: false,
+        schedules: true,
+      },
+    })
+
+    expect(
+      screen.getByText(viDictionary.telegram.schedule.panelTitle)
+    ).toBeVisible()
+    expect(
+      screen.queryByText(
+        viDictionary.telegram.routeDefinitions.SCHEDULED_MARKET_ANALYSIS.label
+      )
+    ).not.toBeInTheDocument()
+  })
+
+  it("keeps the saved route context on failure and refreshes only after a confirmed clear", async () => {
+    const user = userEvent.setup()
+    const marketData: TelegramConfigurationData = {
+      ...data,
+      featureSettings: [featureSettings[1]],
+      manageAccess: {
+        ...data.manageAccess,
+        marketNewsRouting: true,
+      },
+    }
+    renderConfiguration(marketData)
+
+    const marketRow = getTableRowByText(
+      viDictionary.telegram.routeDefinitions.MARKET_NEWS_ALERT.label
+    )
+    const clear = within(marketRow).getByRole("button", {
+      name: viDictionary.telegram.routing.destinationClearAria.replace(
+        "{route}",
+        viDictionary.telegram.routeDefinitions.MARKET_NEWS_ALERT.label
+      ),
+    })
+    vi.mocked(updateTelegramFeatureSetting).mockResolvedValueOnce({
+      success: false,
+      error: "Destination update failed",
+    })
+
+    clear.focus()
+    await user.keyboard("{Enter}")
+
+    expect(updateTelegramFeatureSetting).toHaveBeenLastCalledWith({
+      featureKey: "MARKET_NEWS_ALERT",
+      workspaceId: 7,
+      destinationId: null,
+      enabled: false,
+    })
+    expect(
+      within(marketRow).getByRole("combobox", {
+        name: viDictionary.telegram.routeDefinitions.MARKET_NEWS_ALERT.label,
+      })
+    ).toHaveTextContent(destination.displayLabel)
+    expect(toast.error).toHaveBeenCalledWith("Destination update failed")
+    expect(routerRefresh).not.toHaveBeenCalled()
+
+    const clearedSetting = {
+      ...featureSettings[1],
+      enabled: false,
+      destination: null,
+    }
+    vi.mocked(updateTelegramFeatureSetting).mockResolvedValueOnce({
+      success: true,
+      data: clearedSetting,
+    })
+    await user.click(clear)
+
+    await waitFor(() => expect(routerRefresh).toHaveBeenCalledTimes(1))
+    expect(toast.success).toHaveBeenCalledWith(
+      viDictionary.telegram.routing.destinationClearSuccess
+    )
+
+    cleanup()
+    renderConfiguration({ ...marketData, featureSettings: [clearedSetting] })
+    const reloadedMarketRow = getTableRowByText(
+      viDictionary.telegram.routeDefinitions.MARKET_NEWS_ALERT.label
+    )
+    expect(
+      within(reloadedMarketRow).getByRole("combobox", {
+        name: viDictionary.telegram.routeDefinitions.MARKET_NEWS_ALERT.label,
+      })
+    ).toHaveTextContent(viDictionary.telegram.destination.placeholder)
+    expect(reloadedMarketRow).toHaveTextContent("Tiếng Việt")
+    expect(
+      within(reloadedMarketRow).queryByRole("button", {
+        name: viDictionary.telegram.routing.destinationClearAria.replace(
+          "{route}",
+          viDictionary.telegram.routeDefinitions.MARKET_NEWS_ALERT.label
+        ),
+      })
+    ).not.toBeInTheDocument()
+  })
+
+  it("does not show an unsaved destination after an API failure", async () => {
+    const user = userEvent.setup()
+    vi.mocked(updateTelegramFeatureSetting).mockResolvedValue({
+      success: false,
+      error: "Destination unavailable",
+    })
+    renderConfiguration({
+      ...data,
+      featureSettings: [],
+      sectionAccess: {
+        ...data.sectionAccess,
+        destinations: true,
+      },
+      manageAccess: {
+        ...data.manageAccess,
+        marketNewsRouting: true,
+      },
+    })
+
+    const marketRow = getTableRowByText(
+      viDictionary.telegram.routeDefinitions.MARKET_NEWS_ALERT.label
+    )
+    const destinationSelect = within(marketRow).getByRole("combobox", {
+      name: viDictionary.telegram.routeDefinitions.MARKET_NEWS_ALERT.label,
+    })
+    await user.click(destinationSelect)
+    await user.click(
+      await screen.findByRole("option", { name: destination.displayLabel })
+    )
+
+    expect(updateTelegramFeatureSetting).toHaveBeenCalledWith({
+      featureKey: "MARKET_NEWS_ALERT",
+      workspaceId: 7,
+      destinationId: destination.id,
+      enabled: false,
+    })
+    expect(destinationSelect).toHaveTextContent(
+      viDictionary.telegram.destination.placeholder
+    )
+    expect(toast.error).toHaveBeenCalledWith("Destination unavailable")
+    expect(routerRefresh).not.toHaveBeenCalled()
+  })
+
+  it("can pause an enabled route with an inactive destination and reassign it while paused", async () => {
+    const user = userEvent.setup()
+    const inactiveDestination = {
+      ...destination,
+      id: 22,
+      displayLabel: "Disabled destination",
+      status: "DISABLED" as const,
+    }
+    const savedSetting = {
+      ...featureSettings[1],
+      enabled: true,
+      destination: inactiveDestination,
+    }
+    const pausedSetting = { ...savedSetting, enabled: false }
+    const reassignedSetting = { ...pausedSetting, destination }
+    vi.mocked(updateTelegramFeatureSetting)
+      .mockResolvedValueOnce({
+        success: true,
+        data: pausedSetting,
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        data: reassignedSetting,
+      })
+
+    renderConfiguration({
+      ...data,
+      featureSettings: [savedSetting],
+      destinations: [destination, inactiveDestination],
+      manageAccess: {
+        ...data.manageAccess,
+        marketNewsRouting: true,
+      },
+    })
+
+    const marketRow = getTableRowByText(
+      viDictionary.telegram.routeDefinitions.MARKET_NEWS_ALERT.label
+    )
+    const routeSwitch = within(marketRow).getByRole("switch", {
+      name: viDictionary.telegram.routing.switchAria.replace(
+        "{route}",
+        viDictionary.telegram.routeDefinitions.MARKET_NEWS_ALERT.label
+      ),
+    })
+    expect(routeSwitch).toBeEnabled()
+    expect(
+      within(marketRow).getByRole("combobox", {
+        name: viDictionary.telegram.routeDefinitions.MARKET_NEWS_ALERT.label,
+      })
+    ).toHaveTextContent(inactiveDestination.displayLabel)
+
+    await user.click(routeSwitch)
+    await waitFor(() =>
+      expect(updateTelegramFeatureSetting).toHaveBeenLastCalledWith({
+        featureKey: "MARKET_NEWS_ALERT",
+        workspaceId: 7,
+        enabled: false,
+      })
+    )
+    expect(routerRefresh).toHaveBeenCalledTimes(1)
+
+    cleanup()
+    renderConfiguration({
+      ...data,
+      featureSettings: [pausedSetting],
+      destinations: [destination, inactiveDestination],
+      sectionAccess: {
+        ...data.sectionAccess,
+        destinations: true,
+      },
+      manageAccess: {
+        ...data.manageAccess,
+        marketNewsRouting: true,
+      },
+    })
+    const pausedMarketRow = getTableRowByText(
+      viDictionary.telegram.routeDefinitions.MARKET_NEWS_ALERT.label
+    )
+    expect(
+      within(pausedMarketRow).getByRole("switch", {
+        name: viDictionary.telegram.routing.switchAria.replace(
+          "{route}",
+          viDictionary.telegram.routeDefinitions.MARKET_NEWS_ALERT.label
+        ),
+      })
+    ).not.toBeChecked()
+    expect(
+      within(pausedMarketRow).getByRole("combobox", {
+        name: viDictionary.telegram.routeDefinitions.MARKET_NEWS_ALERT.label,
+      })
+    ).toHaveTextContent(inactiveDestination.displayLabel)
+    await user.click(
+      within(pausedMarketRow).getByRole("combobox", {
+        name: viDictionary.telegram.routeDefinitions.MARKET_NEWS_ALERT.label,
+      })
+    )
+    await user.click(
+      await screen.findByRole("option", { name: destination.displayLabel })
+    )
+
+    expect(updateTelegramFeatureSetting).toHaveBeenLastCalledWith({
+      featureKey: "MARKET_NEWS_ALERT",
+      workspaceId: 7,
+      destinationId: destination.id,
+    })
+    expect(routerRefresh).toHaveBeenCalledTimes(2)
+
+    cleanup()
+    renderConfiguration({
+      ...data,
+      featureSettings: [reassignedSetting],
+      destinations: [destination, inactiveDestination],
+      sectionAccess: {
+        ...data.sectionAccess,
+        destinations: true,
+      },
+      manageAccess: {
+        ...data.manageAccess,
+        marketNewsRouting: true,
+      },
+    })
+    const reassignedMarketRow = getTableRowByText(
+      viDictionary.telegram.routeDefinitions.MARKET_NEWS_ALERT.label
+    )
+    expect(
+      within(reassignedMarketRow).getByRole("switch", {
+        name: viDictionary.telegram.routing.switchAria.replace(
+          "{route}",
+          viDictionary.telegram.routeDefinitions.MARKET_NEWS_ALERT.label
+        ),
+      })
+    ).not.toBeChecked()
+    expect(
+      within(reassignedMarketRow).getByRole("combobox", {
+        name: viDictionary.telegram.routeDefinitions.MARKET_NEWS_ALERT.label,
+      })
+    ).toHaveTextContent(destination.displayLabel)
   })
 
   it("keeps delete confirmation open through failure, supports retry, and restores focus", async () => {
@@ -320,6 +692,7 @@ describe("Telegram schedule destructive actions", () => {
       manageAccess: {
         ...data.manageAccess,
         featureSettings: true,
+        marketNewsRouting: true,
       },
     })
 
@@ -328,9 +701,9 @@ describe("Telegram schedule destructive actions", () => {
         viDictionary.telegram.routeDefinitions.ECONOMIC_CALENDAR_ALERT.label
       )
       .closest("tr") as HTMLElement
-    const newsRow = screen
-      .getByText(viDictionary.telegram.routeDefinitions.MARKET_NEWS_ALERT.label)
-      .closest("tr") as HTMLElement
+    const newsRow = getTableRowByText(
+      viDictionary.telegram.routeDefinitions.MARKET_NEWS_ALERT.label
+    )
     const scheduledRow = screen
       .getByText(
         viDictionary.telegram.routeDefinitions.SCHEDULED_MARKET_ANALYSIS.label
@@ -570,7 +943,7 @@ describe("Telegram schedule destructive actions", () => {
       featureSettings: [
         {
           ...featureSettings[0],
-          destination: undefined,
+          destination: null,
         },
       ],
       manageAccess: {
