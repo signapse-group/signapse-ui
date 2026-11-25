@@ -222,6 +222,7 @@ export function ActionConfirmDialog({
   onOpenChange,
   trigger,
   restoreFocusId,
+  successFocusId,
 }: {
   title: string
   description: string
@@ -235,6 +236,7 @@ export function ActionConfirmDialog({
   onOpenChange?: (open: boolean) => void
   trigger?: ReactElement | null
   restoreFocusId?: string
+  successFocusId?: string
 }) {
   const router = useRouter()
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false)
@@ -243,7 +245,7 @@ export function ActionConfirmDialog({
   const { dictionary } = useLocalization()
   const open = controlledOpen ?? uncontrolledOpen
 
-  function setOpen(nextOpen: boolean) {
+  function setOpen(nextOpen: boolean, focusId = restoreFocusId) {
     if (onOpenChange) {
       onOpenChange(nextOpen)
     } else {
@@ -252,9 +254,9 @@ export function ActionConfirmDialog({
 
     if (!nextOpen) {
       setError(null)
-      if (restoreFocusId) {
+      if (focusId) {
         requestAnimationFrame(() => {
-          document.getElementById(restoreFocusId)?.focus()
+          document.getElementById(focusId)?.focus()
         })
       }
     }
@@ -272,7 +274,7 @@ export function ActionConfirmDialog({
 
       if (result.success) {
         toast.success(successMessage)
-        setOpen(false)
+        setOpen(false, successFocusId)
         router.refresh()
       } else {
         setError(result.error)

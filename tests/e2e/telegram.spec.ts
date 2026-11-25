@@ -411,4 +411,149 @@ test.describe("P0 Telegram operations", () => {
     )
     expect(destinationReads).toHaveLength(0)
   })
+
+  test("renders bot Remove responsively, cancels by keyboard, and reads back success", async ({
+    page,
+    fixture,
+  }, testInfo) => {
+    await page.setViewportSize({ width: 1520, height: 1024 })
+    await page.goto("/vi/telegram")
+
+    const removeTrigger = page.getByRole("button", {
+      name: "Gỡ bot Fixture operations bot",
+    })
+    await expect(removeTrigger).toBeVisible()
+    await page.screenshot({
+      path: testInfo.outputPath("telegram-bot-remove-wide.png"),
+      fullPage: true,
+    })
+
+    await removeTrigger.focus()
+    await page.keyboard.press("Enter")
+    const dialog = page.getByRole("alertdialog")
+    await expect(dialog).toContainText(
+      "Gỡ kết nối bot “Fixture operations bot”?"
+    )
+    await page.screenshot({
+      path: testInfo.outputPath("telegram-bot-remove-confirmation.png"),
+      fullPage: true,
+    })
+    await page.keyboard.press("Escape")
+    await expect(dialog).toBeHidden()
+    await expect(removeTrigger).toBeFocused()
+
+    for (const frame of [
+      { name: "compact", width: 1024, height: 768 },
+      { name: "mobile", width: 390, height: 844 },
+      { name: "mobile-360", width: 360, height: 800 },
+      // Effective width of a 390px frame at 200% browser zoom.
+      { name: "zoom-200-percent", width: 195, height: 422 },
+    ]) {
+      await page.setViewportSize({ width: frame.width, height: frame.height })
+      await expect(removeTrigger).toBeVisible()
+      await expect
+        .poll(async () => (await removeTrigger.boundingBox())?.width ?? 0)
+        .toBeGreaterThanOrEqual(frame.width < 768 ? 44 : 0)
+      const box = await removeTrigger.boundingBox()
+      expect(box).not.toBeNull()
+      if (frame.width < 768) {
+        expect(box?.height).toBeGreaterThanOrEqual(44)
+        const botCard = page
+          .locator('[data-slot="card"]')
+          .filter({
+            has: page.getByRole("heading", {
+              name: "Bot Telegram",
+              exact: true,
+            }),
+          })
+          .first()
+        const cardBox = await botCard.boundingBox()
+        expect(cardBox).not.toBeNull()
+        expect(box!.x).toBeGreaterThanOrEqual(cardBox!.x)
+        expect(box!.x + box!.width).toBeLessThanOrEqual(
+          cardBox!.x + cardBox!.width
+        )
+      }
+      await page.screenshot({
+        path: testInfo.outputPath(`telegram-bot-remove-${frame.name}.png`),
+        fullPage: true,
+      })
+    }
+
+    const state = await fixture.state()
+    expect(
+      state.requests.filter(
+        (request) =>
+          request.method === "DELETE" &&
+          request.path === "/telegram/bot-connections/11"
+      )
+    ).toHaveLength(0)
+
+    await page.setViewportSize({ width: 1520, height: 1024 })
+    await removeTrigger.click()
+    const confirmation = page.getByRole("alertdialog")
+    await expect(confirmation).toContainText("Fixture operations bot")
+    await confirmation
+      .getByRole("button", { name: "Gỡ bot", exact: true })
+      .click()
+
+    await expect(
+      page.getByRole("listitem").filter({ hasText: "Fixture operations bot" })
+    ).toHaveCount(0)
+    await expect(page.getByText("Đã gỡ kết nối bot Telegram.")).toBeVisible()
+    await expect(
+      page.getByRole("heading", { name: "Bot Telegram", exact: true })
+    ).toBeFocused()
+
+    const afterRemoval = await fixture.state()
+    expect(
+      afterRemoval.requests.filter(
+        (request) =>
+          request.method === "DELETE" &&
+          request.path === "/telegram/bot-connections/11"
+      )
+    ).toHaveLength(1)
+  })
+
+  test("explains blocked bot removal and keeps the connection unchanged", async ({
+    page,
+    fixture,
+  }) => {
+    await fixture.setScenario(
+      "/telegram/bot-connections/11",
+      "bot-removal-blocked",
+      "DELETE"
+    )
+    await page.setViewportSize({ width: 1520, height: 1024 })
+    await page.goto("/vi/telegram")
+
+    const botItem = page.locator('[role="listitem"]').filter({
+      hasText: "Fixture operations bot",
+    })
+    const removeTrigger = page.getByRole("button", {
+      name: "Gỡ bot Fixture operations bot",
+    })
+    await removeTrigger.click()
+    const dialog = page.getByRole("alertdialog")
+    await dialog.getByRole("button", { name: "Gỡ bot", exact: true }).click()
+
+    await expect(dialog).toContainText(
+      "Trước tiên hãy gỡ tất cả điểm nhận Telegram đang liên kết với bot này. Chưa có dữ liệu nào bị thay đổi."
+    )
+    await expect(dialog).toBeVisible()
+    await page.keyboard.press("Escape")
+    await expect(dialog).toBeHidden()
+    await expect(removeTrigger).toBeFocused()
+    await expect(botItem).toBeVisible()
+    await expect(page.getByText("Đã gỡ kết nối bot Telegram.")).toHaveCount(0)
+
+    const state = await fixture.state()
+    expect(
+      state.requests.filter(
+        (request) =>
+          request.method === "DELETE" &&
+          request.path === "/telegram/bot-connections/11"
+      )
+    ).toHaveLength(1)
+  })
 })
