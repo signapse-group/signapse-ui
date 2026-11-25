@@ -1,45 +1,48 @@
-# SIGN-392 rendered evidence
+# SIGN-392 local evidence
 
 ## Candidate and design source
 
 - Repository: `signapse-group/signapse-ui`
-- Branch: `codex/SIGN-392-market-news-routing`
-- Layout correction commit: `057770e`
+- Branch / PR: `codex/SIGN-392-market-news-routing` / [#159](https://github.com/signapse-group/signapse-ui/pull/159), targeting `dev`
 - Review base: `origin/dev` at `fd9ba256091a259bd968c6f29a5eb169d004a736`
-- Requirement and design: [SIGN-32](https://signapse-group.atlassian.net/browse/SIGN-32), approved v2 attachments 10308 (wide), 10312 (compact), and 10309 (mobile).
+- Requirement and approved design: [SIGN-32](https://signapse-group.atlassian.net/browse/SIGN-32), v2 attachments 10308 (wide), 10312 (compact), and 10309 (mobile)
 
-The candidate puts Feature routing and Scheduled analysis in the main column, with Telegram infrastructure in the side column at desktop widths. At mobile widths, routing and schedules precede infrastructure. `MARKET_NEWS_ALERT` keeps its destination, language, switch, and clear controls together in a card at all widths; other feature routes retain the existing table.
+The page keeps Feature routing and Scheduled analysis in the main column, with Telegram infrastructure beside it on wide screens and below it on mobile. `MARKET_NEWS_ALERT` uses the existing destination, language, enable/pause, and clear controls in one card. Other routes retain their existing table. A route reader without `workspace:read` sees only market-route settings returned for owned workspaces; other route, workspace, destination, bot, and schedule data stay behind their own permissions.
 
 ## Published API contract
 
-Checked https://dev-api.signapse.cloud/v3/api-docs on 2026-11-23 at 20:14:41 UTC; `x-build-revision` was `73e82b158326343a36493798feed8b07e8c72fff`.
+Fetched https://dev-api.signapse.cloud/v3/api-docs on 2026-11-25 at 06:46:44 UTC. `x-build-revision` was `ec258c9bc2242307b875b5fc2ccea985b472d4a7`; the matching backend Deploy workflow [completed successfully](https://github.com/dgminhtam/signapse/actions/runs/45557375826) for that SHA.
 
-- `GET /telegram/feature-settings` returns settings visible under route-specific read permission for owned workspaces. A targeted unreadable route returns 403.
-- `PUT /telegram/feature-settings` requires `telegram-market-news-routing:update` for `MARKET_NEWS_ALERT`, independently of the generic feature update permission.
-- Sparse updates preserve omitted fields. Clearing sends `destinationId: null` with `enabled: false` and omits language. Pausing omits the destination, including when it is inactive. Assigning or enabling requires an eligible active destination and bot. Missing eligible destination returns 400; permission errors return 403; unowned workspace/destination errors return 404.
-- The response includes `destination`, which can be null. The UI treats only the confirmed save response as success and refreshes saved state; errors keep the previously saved selection visible.
-- `Scheduled analysis` remains behind its independent schedule-read permission.
+- `GET /telegram/feature-settings` returns route-readable settings for owned workspaces without requiring `workspace:read`. Explicitly requesting a route the user cannot read returns 403.
+- `PUT /telegram/feature-settings` for `MARKET_NEWS_ALERT` requires `telegram-market-news-routing:update`. Other route permissions do not grant this update permission.
+- Sparse updates preserve omitted fields. Pause retains the saved destination, including an inactive one. Clear sends `destinationId: null` and `enabled: false`, omitting language so it is preserved. Assigning or enabling requires an eligible active destination and bot.
+- The save response is authoritative; the UI only reports success after a confirmed save and refresh. On failure, the previously saved context remains visible. Scheduled analysis stays behind its independent schedule-read permission.
 
-## Partial rendered captures
+This is a contract comparison. Local fixture tests verify client request/response handling; they do not prove live API authorization or persistence.
 
-The locked browser suite rendered these three frames and its structural/layout and overflow assertions passed before the compact readiness grid was refined. They are useful for the routing/infrastructure placement and control grouping, but are **not final captures of the current candidate**. Final recapture and the remaining 360px, effective 760px, and shell-breakpoint checks are pending a fresh browser lease.
+## Rendered evidence
 
-| Partial capture                                          |    Viewport |    PNG size | Locale / state        |
-| -------------------------------------------------------- | ----------: | ----------: | --------------------- |
-| [Wide](telegram-routing-wide-dark-en-1520x1024.png)      | 1520 × 1024 | 1520 × 1024 | EN, sidebar expanded  |
-| [Compact](telegram-routing-compact-dark-en-1024x768.png) |  1024 × 768 | 1024 × 1081 | EN, sidebar collapsed |
-| [Mobile](telegram-routing-mobile-dark-en-390x1420.png)   |  390 × 1420 |  390 × 2376 | EN, overlay closed    |
+The full fixture suite captured dark-theme PNGs in both locales. The 760px case starts at 1520px and resizes the CSS viewport to 760px before capture. Each capture is full-page, so the image height may exceed the viewport height.
 
-## Local checks and limits
+| Capture                                                                    | CSS viewport | State                                                      |
+| -------------------------------------------------------------------------- | -----------: | ---------------------------------------------------------- |
+| [Wide](telegram-routing-wide-dark-en-1520x1024.png)                        |  1520 × 1024 | EN, desktop                                                |
+| [Compact](telegram-routing-compact-dark-en-1024x768.png)                   |   1024 × 768 | EN, compact desktop                                        |
+| [Mobile](telegram-routing-mobile-dark-en-390x1420.png)                     |   390 × 1420 | EN, mobile                                                 |
+| [Small mobile](telegram-routing-small-mobile-dark-vi-360x800.png)          |    360 × 800 | VI, mobile                                                 |
+| [Effective 760px](telegram-routing-effective-760x512-dark-vi.png)          |    760 × 512 | VI, resized from 1520px                                    |
+| [Route-only reader](telegram-routing-route-only-read-dark-vi-1024x768.png) |   1024 × 768 | VI, route read without workspace/destination/schedule read |
 
-- `pnpm exec vitest run tests/components/telegram-configuration.component.test.tsx tests/api/telegram-action.test.ts tests/core/telegram-permissions.test.ts` — 3 files, 20 tests passed.
+Chromium headless did not change its viewport when sent the browser zoom shortcut. The 760px CSS viewport and shell breakpoints were verified; browser zoom scaling itself was not exercised. The captures include the local application shell and fixture toolbar.
+
+## Local checks
+
+- `pnpm exec vitest run tests/components/telegram-configuration.component.test.tsx tests/api/telegram-action.test.ts tests/core/telegram-permissions.test.ts` — 3 files, 21 tests.
+- `/opt/apps/symphony/runtime/run-fe-browser "$PWD" tests/e2e/telegram.spec.ts` — 9 passed. Covers route permission isolation, route-only owned-workspace settings without `workspace:read`, update scoping, scheduled-analysis access, destination clear/pause/reassign behavior, error and readback behavior, keyboard focus for clear, and the five render cases above.
+- Render checks verify layout at 1520, 1024, 760, 390, and 360 CSS pixels, plus shell breakpoints 360, 390, 767, 768, 1024, 1439, 1440, 1520, 1920, and 2560; no page-level horizontal overflow was observed.
 - `pnpm typecheck` — passed.
 - Changed-file ESLint — passed.
 - `pnpm test:contract` — fixture consistency passed for 90 OpenAPI operations.
-- Prettier check and `git diff --check` — passed.
-- The first three render cases (1520, 1024, and 390 CSS pixels) passed in a partial fixture run. The corrected full suite is not verified: `/opt/apps/symphony/runtime/run-fe-browser` returned `resource_busy` because the host browser lease is fenced by an active session cgroup. The lock was not bypassed or cleared.
-- The workspace did not run a live feature test. Fixture coverage does not prove live API authorization, persistence, or readback; QA owns those checks on dev after delivery.
+- Prettier checks and `git diff --check` — passed.
 
-## Open acceptance question
-
-AC-1 says route-specific read access allows a user to view workspace route configuration. The page currently gets active workspace context through `workspace:read`; without it, returned feature settings cannot be associated with the active workspace. The coordinator must decide whether route-only readers must see saved configuration using owned-workspace context, or whether `workspace:read` is an explicit prerequisite and AC-1 needs an update. No permission boundary was inferred locally.
+No live feature test was run. QA owns live dev authorization, persistence, and readback verification after delivery.

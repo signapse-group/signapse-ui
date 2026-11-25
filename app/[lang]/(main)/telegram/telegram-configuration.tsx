@@ -135,7 +135,11 @@ export function TelegramConfigurationPage({
     ? data.featureSettings.filter(
         (setting) => setting.workspaceId === data.currentWorkspace?.id
       )
-    : []
+    : data.sectionAccess.marketNewsRouting
+      ? data.featureSettings.filter(
+          (setting) => setting.featureKey === "MARKET_NEWS_ALERT"
+        )
+      : []
   const schedules = data.currentWorkspace
     ? data.schedules.filter(
         (schedule) => schedule.workspaceId === data.currentWorkspace?.id
@@ -153,6 +157,24 @@ export function TelegramConfigurationPage({
         (setting) => setting.featureKey === route.featureKey
       ),
     }))
+  const marketNewsRoute = routes.find(
+    (route) => route.featureKey === "MARKET_NEWS_ALERT"
+  )
+  const marketNewsSettings = data.currentWorkspace
+    ? marketNewsRoute?.setting
+      ? [marketNewsRoute.setting]
+      : []
+    : featureSettings.filter(
+        (setting) => setting.featureKey === "MARKET_NEWS_ALERT"
+      )
+  const visibleRoutes: FeatureRouteView[] = [
+    ...(marketNewsRoute
+      ? marketNewsSettings.length > 0
+        ? marketNewsSettings.map((setting) => ({ ...marketNewsRoute, setting }))
+        : [marketNewsRoute]
+      : []),
+    ...routes.filter((route) => route.featureKey !== "MARKET_NEWS_ALERT"),
+  ]
   const activeBotConnections = data.botConnections.filter(
     (connection) => connection.status === "ACTIVE"
   )
@@ -164,7 +186,7 @@ export function TelegramConfigurationPage({
     <div className="grid w-full min-w-0 gap-6 min-[1440px]:grid-cols-[minmax(0,1.5fr)_minmax(22rem,1fr)] lg:grid-cols-[minmax(0,1.15fr)_minmax(20rem,1fr)]">
       <div className="min-w-0">
         <FeatureRoutingSection
-          routes={routes}
+          routes={visibleRoutes}
           schedules={schedules}
           activeDestinations={activeDestinations}
           currentWorkspace={data.currentWorkspace}
@@ -206,7 +228,7 @@ export function TelegramConfigurationPage({
         </section>
         <ReadinessSummary
           data={data}
-          routes={routes}
+          routes={visibleRoutes}
           schedules={schedules}
           activeBotCount={activeBotConnections.length}
           activeDestinationCount={activeDestinations.length}
@@ -496,9 +518,9 @@ function FeatureRoutingSection({
   canReadSchedules: boolean
   canManageSchedules: boolean
 }) {
-  const { dictionary } = useLocalization()
+  const { dictionary, formatMessage } = useLocalization()
   const t = dictionary.telegram
-  const marketNewsRoute = routes.find(
+  const marketNewsRoutes = routes.filter(
     (route) => route.featureKey === "MARKET_NEWS_ALERT"
   )
   const otherRoutes = routes.filter(
@@ -514,43 +536,58 @@ function FeatureRoutingSection({
         title={t.routing.sectionTitle}
         description={t.routing.sectionDescription}
       />
-      {marketNewsRoute ? (
-        <div
-          data-feature-key={marketNewsRoute.featureKey}
-          data-testid="market-news-routing-card"
-          aria-labelledby="telegram-market-news-routing-title"
-        >
-          <div className="rounded-xl border border-border bg-card p-4">
-            <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-3">
-              <div className="min-w-0 flex-1">
-                <h3
-                  id="telegram-market-news-routing-title"
-                  className="font-medium text-foreground"
-                >
-                  {marketNewsRoute.label}
-                </h3>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {marketNewsRoute.description}
-                </p>
-                <span className="mt-2 block text-xs text-muted-foreground">
-                  {currentWorkspace?.name ?? t.routing.noWorkspaceSelected}
-                </span>
+      {marketNewsRoutes.map((route) => {
+        const workspaceLabel =
+          route.setting?.workspaceName ??
+          currentWorkspace?.name ??
+          (route.setting
+            ? formatMessage(t.routing.workspaceIdFallback, {
+                id: route.setting.workspaceId,
+              })
+            : t.routing.noSavedWorkspaceSettings)
+        const workspaceId = currentWorkspace?.id ?? route.setting?.workspaceId
+        const titleId = `telegram-market-news-routing-title-${workspaceId ?? "unassigned"}`
+        const controlRoute =
+          !currentWorkspace && route.setting
+            ? { ...route, label: `${route.label} — ${workspaceLabel}` }
+            : route
+
+        return (
+          <div
+            key={`market-news:${workspaceId ?? "unassigned"}`}
+            data-feature-key={route.featureKey}
+            data-testid="market-news-routing-card"
+            aria-labelledby={titleId}
+          >
+            <div className="rounded-xl border border-border bg-card p-4">
+              <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-3">
+                <div className="min-w-0 flex-1">
+                  <h3 id={titleId} className="font-medium text-foreground">
+                    {route.label}
+                  </h3>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {route.description}
+                  </p>
+                  <span className="mt-2 block text-xs text-muted-foreground">
+                    {workspaceLabel}
+                  </span>
+                </div>
+                <FeatureRouteControls
+                  key={`card:${workspaceId ?? "unassigned"}:${route.setting?.destination?.id ?? "none"}:${route.setting?.outputLanguage?.isoCode ?? "default"}:${route.setting?.enabled ?? false}`}
+                  layout="card"
+                  route={controlRoute}
+                  activeDestinations={activeDestinations}
+                  currentWorkspaceId={workspaceId}
+                  canReadDestinations={canReadDestinations}
+                  canUpdate={canUpdateMarketNewsRouting}
+                  languages={languages}
+                  languageCatalogError={languageCatalogError}
+                />
               </div>
-              <FeatureRouteControls
-                key={`card:${marketNewsRoute.featureKey}:${marketNewsRoute.setting?.destination?.id ?? "none"}:${marketNewsRoute.setting?.outputLanguage?.isoCode ?? "default"}:${marketNewsRoute.setting?.enabled ?? false}`}
-                layout="card"
-                route={marketNewsRoute}
-                activeDestinations={activeDestinations}
-                currentWorkspaceId={currentWorkspace?.id}
-                canReadDestinations={canReadDestinations}
-                canUpdate={canUpdateMarketNewsRouting}
-                languages={languages}
-                languageCatalogError={languageCatalogError}
-              />
             </div>
           </div>
-        </div>
-      ) : null}
+        )
+      })}
       <AppListTable className={cn("mt-0", !shouldShowTable && "hidden")}>
         <Table>
           <TableHeader className={cn(otherRoutes.length === 0 && "hidden")}>
@@ -985,8 +1022,18 @@ function FeatureRouteControls({
     languageCatalogError
   const shouldExplainMissingDestination =
     isMarketNewsRoute &&
+    canUpdateRoute &&
     !route.setting?.enabled &&
     !hasSelectedActiveDestination
+  const missingDestinationDescription = canReadDestinations
+    ? t.routing.enableDestinationRequired
+    : t.routing.destinationReadRequired
+  const switchDescription =
+    isMarketNewsRoute && route.setting && !canUpdate
+      ? t.routing.routeReadOnlyDescription
+      : shouldExplainMissingDestination
+        ? missingDestinationDescription
+        : null
   const destinationItems = [
     ...(isMarketNewsRoute && savedDestination
       ? [
@@ -1281,18 +1328,16 @@ function FeatureRouteControls({
           aria-label={formatMessage(t.routing.switchAria, {
             route: route.label,
           })}
-          aria-describedby={
-            shouldExplainMissingDestination ? switchDescriptionId : undefined
-          }
+          aria-describedby={switchDescription ? switchDescriptionId : undefined}
         />
       </div>
-      {shouldExplainMissingDestination ? (
+      {switchDescription ? (
         <span
           id={switchDescriptionId}
           className="max-w-32 text-center text-xs text-muted-foreground"
           role="status"
         >
-          {t.routing.enableDestinationRequired}
+          {switchDescription}
         </span>
       ) : null}
     </div>

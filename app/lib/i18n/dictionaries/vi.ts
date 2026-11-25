@@ -2589,12 +2589,19 @@ export const vi = {
       enabledColumn: "Bật gửi",
       accessLimited: "Không có quyền xem định tuyến",
       noWorkspaceSelected: "Chưa chọn không gian",
+      noSavedWorkspaceSettings:
+        "Chưa có cấu hình định tuyến đã lưu trong các không gian của bạn.",
+      workspaceIdFallback: "Không gian {id}",
       destinationUpdateError: "Không thể cập nhật điểm nhận cho định tuyến.",
       destinationUpdateSuccess: "Đã cập nhật điểm nhận định tuyến.",
       destinationClearAria: "Bỏ điểm nhận của {route}",
       destinationClearSuccess: "Đã bỏ điểm nhận và tắt định tuyến.",
       enableDestinationRequired:
         "Hãy chọn một điểm nhận đang hoạt động trước khi bật định tuyến.",
+      destinationReadRequired:
+        "Cần quyền xem điểm nhận để chọn điểm nhận hợp lệ trước khi bật định tuyến.",
+      routeReadOnlyDescription:
+        "Bạn có thể xem cấu hình nhưng không có quyền thay đổi định tuyến này.",
       statusUpdateError: "Không thể cập nhật trạng thái định tuyến.",
       enabledSuccess: "Đã bật định tuyến Telegram.",
       disabledSuccess: "Đã tạm dừng định tuyến Telegram.",

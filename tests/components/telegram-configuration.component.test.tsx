@@ -308,6 +308,70 @@ describe("Telegram schedule destructive actions", () => {
     ).not.toBeInTheDocument()
   })
 
+  it("shows and updates each owned market route setting without workspace access", async () => {
+    const user = userEvent.setup()
+    const secondMarketSetting = {
+      ...featureSettings[1],
+      id: 44,
+      workspaceId: 8,
+      workspaceName: "Workspace Beta",
+    }
+    renderConfiguration({
+      ...data,
+      currentWorkspace: null,
+      destinations: [],
+      featureSettings: [featureSettings[1], secondMarketSetting],
+      sectionAccess: {
+        ...data.sectionAccess,
+        botConnections: false,
+        destinations: false,
+        featureSettings: false,
+        schedules: false,
+      },
+      manageAccess: {
+        ...data.manageAccess,
+        marketNewsRouting: true,
+      },
+    })
+
+    const marketCards = screen.getAllByTestId("market-news-routing-card")
+    expect(marketCards).toHaveLength(2)
+    expect(marketCards[0]).toHaveTextContent("Workspace")
+    expect(marketCards[1]).toHaveTextContent("Workspace Beta")
+    expect(marketCards[0]).toHaveTextContent("Operations")
+    expect(marketCards[1]).toHaveTextContent("Operations")
+    expect(
+      within(marketCards[0]).getByRole("combobox", {
+        name: "Cảnh báo tin thị trường — Workspace",
+      })
+    ).toBeDisabled()
+    expect(
+      within(marketCards[1]).getByRole("combobox", {
+        name: "Cảnh báo tin thị trường — Workspace Beta",
+      })
+    ).toBeDisabled()
+
+    vi.mocked(updateTelegramFeatureSetting).mockResolvedValueOnce({
+      success: true,
+      data: secondMarketSetting,
+    })
+    await user.click(
+      within(marketCards[1]).getByRole("combobox", {
+        name: "Chọn ngôn ngữ đầu ra cho Cảnh báo tin thị trường — Workspace Beta",
+      })
+    )
+    await user.click(
+      await screen.findByRole("option", { name: "English (en)" })
+    )
+    await waitFor(() =>
+      expect(updateTelegramFeatureSetting).toHaveBeenCalledWith({
+        featureKey: "MARKET_NEWS_ALERT",
+        workspaceId: 8,
+        outputLanguageIsoCode: "en",
+      })
+    )
+  })
+
   it("keeps the saved route context on failure and refreshes only after a confirmed clear", async () => {
     const user = userEvent.setup()
     const marketData: TelegramConfigurationData = {

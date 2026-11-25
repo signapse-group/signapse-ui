@@ -184,11 +184,14 @@ test.describe("P0 Telegram operations", () => {
     await newsSwitch.click()
     await expect(newsSwitch).toHaveAttribute("aria-checked", "true")
 
-    await newsCard
-      .getByRole("button", {
-        name: "Bỏ điểm nhận của Cảnh báo tin thị trường",
-      })
-      .click()
+    const clearDestination = newsCard.getByRole("button", {
+      name: "Bỏ điểm nhận của Cảnh báo tin thị trường",
+    })
+    await newsSwitch.focus()
+    await page.keyboard.press("Tab")
+    await page.keyboard.press("Tab")
+    await expect(clearDestination).toBeFocused()
+    await page.keyboard.press("Enter")
     await expect(
       page.getByText("Đã bỏ điểm nhận và tắt định tuyến.", { exact: true })
     ).toBeVisible()
@@ -570,6 +573,116 @@ test.describe("P0 Telegram operations", () => {
     ).not.toHaveAttribute("aria-disabled", "true")
   })
 
+  test("shows owned market routing without workspace read and updates only with route permission", async ({
+    page,
+    fixture,
+  }) => {
+    await fixture.setPermissions(["telegram-market-news-routing:read"])
+    await page.setViewportSize({ width: 1024, height: 768 })
+    await page.emulateMedia({ colorScheme: "dark" })
+    await page.goto("/vi/telegram")
+
+    const newsCard = page.getByTestId("market-news-routing-card")
+    await expect(newsCard).toBeVisible()
+    await expect(newsCard).toContainText("Workspace Alpha")
+    await expect(newsCard).toContainText("Operations channel")
+    await expect(newsCard).toContainText("Tiếng Việt")
+    await expect(newsCard).not.toContainText(
+      "Hãy chọn một điểm nhận đang hoạt động trước khi bật định tuyến."
+    )
+    await expect(newsCard).toContainText(
+      "Bạn có thể xem cấu hình nhưng không có quyền thay đổi định tuyến này."
+    )
+    await expect(
+      page.getByText("Cảnh báo lịch kinh tế", { exact: true })
+    ).toHaveCount(0)
+    await expect(
+      page.getByText("BTC morning analysis", { exact: true })
+    ).toHaveCount(0)
+    await expect(
+      newsCard.getByRole("switch", {
+        name: "Bật hoặc tắt định tuyến Cảnh báo tin thị trường — Workspace Alpha",
+      })
+    ).toHaveAttribute("aria-disabled", "true")
+    await expect(
+      newsCard.getByRole("combobox", {
+        name: "Chọn ngôn ngữ đầu ra cho Cảnh báo tin thị trường — Workspace Alpha",
+      })
+    ).toBeDisabled()
+
+    const requests = (await fixture.state()).requests
+    expect(
+      requests.some(
+        (request) =>
+          request.method === "GET" &&
+          request.path === "/telegram/feature-settings"
+      )
+    ).toBe(true)
+    for (const path of [
+      "/telegram/bot-connections",
+      "/telegram/destinations",
+      "/telegram/market-analysis-schedules",
+    ]) {
+      expect(
+        requests.some(
+          (request) => request.method === "GET" && request.path === path
+        )
+      ).toBe(false)
+    }
+
+    const evidenceDirectory = resolve(
+      process.cwd(),
+      "docs/design/evidence/SIGN-392"
+    )
+    await mkdir(evidenceDirectory, { recursive: true })
+    await page.screenshot({
+      path: resolve(
+        evidenceDirectory,
+        "telegram-routing-route-only-read-dark-vi-1024x768.png"
+      ),
+      fullPage: true,
+      animations: "disabled",
+    })
+
+    await fixture.setPermissions([
+      "telegram-market-news-routing:read",
+      "telegram-market-news-routing:update",
+    ])
+    await page.reload()
+
+    await expect(
+      newsCard.getByRole("switch", {
+        name: "Bật hoặc tắt định tuyến Cảnh báo tin thị trường — Workspace Alpha",
+      })
+    ).toHaveAttribute("aria-disabled", "true")
+    await expect(newsCard).toContainText(
+      "Cần quyền xem điểm nhận để chọn điểm nhận hợp lệ trước khi bật định tuyến."
+    )
+
+    const language = newsCard.getByRole("combobox", {
+      name: "Chọn ngôn ngữ đầu ra cho Cảnh báo tin thị trường — Workspace Alpha",
+    })
+    await language.click()
+    await page
+      .getByRole("option", { name: "English (en)", exact: true })
+      .click()
+    await expect(newsCard).toContainText("English (en)")
+
+    const featureUpdates = (await fixture.state()).requests.filter(
+      (request) =>
+        request.method === "PUT" &&
+        request.path === "/telegram/feature-settings" &&
+        (request.body as { featureKey?: string } | undefined)?.featureKey ===
+          "MARKET_NEWS_ALERT"
+    )
+    expect(featureUpdates.map(({ body }) => body)).toEqual([
+      {
+        featureKey: "MARKET_NEWS_ALERT",
+        workspaceId: 1,
+        outputLanguageIsoCode: "en",
+      },
+    ])
+  })
 })
 
 const renderEvidenceFrames = [
@@ -587,20 +700,39 @@ const renderEvidenceFrames = [
 
 for (const frame of renderEvidenceFrames) {
   test(`renders Telegram routing at ${frame.name}`, async ({ page }) => {
-    await page.setViewportSize({ width: frame.width, height: frame.height })
+    const startingViewport =
+      frame.width === 760
+        ? { width: 1520, height: 1024 }
+        : { width: frame.width, height: frame.height }
+    await page.setViewportSize(startingViewport)
     await page.emulateMedia({ colorScheme: "dark" })
     await page.goto(`/${frame.locale}/telegram`)
     await expect(page.locator("html")).toHaveClass(/dark/)
+
+    if (frame.width === 760) {
+      await page.setViewportSize({ width: frame.width, height: frame.height })
+      await expect(
+        page.getByTestId("market-news-routing-card").getByRole("combobox", {
+          name: "Cảnh báo tin thị trường",
+          exact: true,
+        })
+      ).toContainText("Operations channel")
+      await expect(
+        page.getByTestId("market-news-routing-card").getByRole("combobox", {
+          name: "Chọn ngôn ngữ đầu ra cho Cảnh báo tin thị trường",
+        })
+      ).toContainText("Tiếng Việt (vi)")
+    }
 
     const routeControl = page.locator(
       '[data-feature-key="MARKET_NEWS_ALERT"]:visible'
     )
     await expect(routeControl).toBeVisible()
     const routingSection = page.locator(
-      'section[aria-labelledby="telegram-routing"]'
+      'section[aria-labelledby="telegram-routing"]:visible'
     )
     const infrastructureSection = page.locator(
-      'section[aria-labelledby="telegram-infrastructure"]'
+      'section[aria-labelledby="telegram-infrastructure"]:visible'
     )
     const routingBounds = await routingSection.boundingBox()
     const infrastructureBounds = await infrastructureSection.boundingBox()

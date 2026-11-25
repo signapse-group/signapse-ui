@@ -2612,12 +2612,19 @@ export const en: Dictionary = {
       enabledColumn: "Sending enabled",
       accessLimited: "No permission to view routing",
       noWorkspaceSelected: "No workspace selected",
+      noSavedWorkspaceSettings:
+        "No saved routing settings are available in your workspaces.",
+      workspaceIdFallback: "Workspace {id}",
       destinationUpdateError: "Could not update the route destination.",
       destinationUpdateSuccess: "Route destination updated.",
       destinationClearAria: "Remove the destination for {route}",
       destinationClearSuccess: "Destination removed and routing paused.",
       enableDestinationRequired:
         "Choose an active destination before enabling this route.",
+      destinationReadRequired:
+        "Destination access is required to choose an eligible destination before enabling this route.",
+      routeReadOnlyDescription:
+        "You can view this setting but cannot update this route.",
       statusUpdateError: "Could not update route status.",
       enabledSuccess: "Telegram routing enabled.",
       disabledSuccess: "Telegram routing paused.",
