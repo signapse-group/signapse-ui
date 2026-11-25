@@ -117,11 +117,6 @@ function getRouteDefinitions(dictionary: Dictionary): RouteDefinition[] {
       label: routes.MARKET_NEWS_ALERT.label,
       description: routes.MARKET_NEWS_ALERT.description,
     },
-    {
-      featureKey: "SCHEDULED_MARKET_ANALYSIS",
-      label: routes.SCHEDULED_MARKET_ANALYSIS.label,
-      description: routes.SCHEDULED_MARKET_ANALYSIS.description,
-    },
   ]
 }
 
@@ -184,22 +179,43 @@ export function TelegramConfigurationPage({
 
   return (
     <div className="grid w-full min-w-0 gap-6 min-[1440px]:grid-cols-[minmax(0,1.5fr)_minmax(22rem,1fr)] lg:grid-cols-[minmax(0,1.15fr)_minmax(20rem,1fr)]">
-      <div className="min-w-0">
+      <div className="flex min-w-0 flex-col gap-6">
         <FeatureRoutingSection
           routes={visibleRoutes}
-          schedules={schedules}
           activeDestinations={activeDestinations}
-          currentWorkspace={data.currentWorkspace}
-          watchlistAssets={data.watchlistAssets}
           languages={data.languages}
           languageCatalogError={data.languageCatalogError}
-          scheduleLoadError={data.scheduleLoadError}
           canUpdateFeatureSettings={data.manageAccess.featureSettings}
           canUpdateMarketNewsRouting={data.manageAccess.marketNewsRouting}
           canReadDestinations={data.sectionAccess.destinations}
-          canReadSchedules={data.sectionAccess.schedules}
-          canManageSchedules={data.manageAccess.schedules}
+          currentWorkspace={data.currentWorkspace}
         />
+        {data.sectionAccess.schedules ? (
+          <section
+            className="flex min-w-0 flex-col gap-4"
+            aria-labelledby="telegram-scheduled-analysis"
+          >
+            <SectionHeader
+              id="telegram-scheduled-analysis"
+              title={dictionary.telegram.schedule.sectionTitle}
+              description={
+                dictionary.telegram.routeDefinitions.SCHEDULED_MARKET_ANALYSIS
+                  .description
+              }
+            />
+            <MarketAnalysisSchedulePanel
+              schedules={schedules}
+              activeDestinations={activeDestinations}
+              currentWorkspace={data.currentWorkspace}
+              watchlistAssets={data.watchlistAssets}
+              languages={data.languages}
+              languageCatalogError={data.languageCatalogError}
+              scheduleLoadError={data.scheduleLoadError}
+              canReadSchedules={data.sectionAccess.schedules}
+              canManageSchedules={data.manageAccess.schedules}
+            />
+          </section>
+        ) : null}
       </div>
       <div className="flex min-w-0 flex-col gap-6">
         <section
@@ -296,8 +312,30 @@ export function TelegramConfigurationSkeleton() {
           ))}
         </div>
       </div>
-      <div className="order-1 min-w-0">
+      <div className="order-1 flex min-w-0 flex-col gap-6">
+        <div className="space-y-2">
+          <Skeleton className="h-5 w-36" />
+          <Skeleton className="h-4 w-full" />
+        </div>
         <AppListTable className="mt-0">
+          <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 border-b border-border p-4">
+            <div className="min-w-0">
+              <Skeleton className="h-5 w-40" />
+              <Skeleton className="mt-2 h-4 w-56 max-w-full" />
+              <Skeleton className="mt-2 h-4 w-32" />
+            </div>
+            <Skeleton className="h-8 w-32" />
+            <div className="col-span-2 grid gap-3 md:grid-cols-2">
+              <div className="space-y-1">
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-9 w-full" />
+              </div>
+              <div className="space-y-1">
+                <Skeleton className="h-4 w-28" />
+                <Skeleton className="h-9 w-full" />
+              </div>
+            </div>
+          </div>
           <Table>
             <TableHeader>
               <AppListTableHeaderRow>
@@ -319,7 +357,7 @@ export function TelegramConfigurationSkeleton() {
               </AppListTableHeaderRow>
             </TableHeader>
             <TableBody>
-              {Array.from({ length: 3 }).map((_, rowIndex) => (
+              {Array.from({ length: 2 }).map((_, rowIndex) => (
                 <TableRow key={rowIndex}>
                   <TableCell>
                     <Skeleton className="h-5 w-44" />
@@ -338,26 +376,28 @@ export function TelegramConfigurationSkeleton() {
                   </TableCell>
                 </TableRow>
               ))}
-              <TableRow>
-                <TableCell colSpan={5} className="p-4">
-                  <div className="flex flex-col gap-4 rounded-lg border bg-muted/20 p-4">
-                    <div className="flex items-center justify-between gap-4">
-                      <Skeleton className="h-5 w-36" />
-                      <Skeleton className="h-9 w-24" />
-                    </div>
-                    <div className="overflow-x-auto">
-                      <div className="grid min-w-[72rem] grid-cols-8 gap-3">
-                        {Array.from({ length: 8 }).map((__, columnIndex) => (
-                          <Skeleton key={columnIndex} className="h-10 w-full" />
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </TableCell>
-              </TableRow>
             </TableBody>
           </Table>
         </AppListTable>
+        <div className="flex min-w-0 flex-col gap-4">
+          <div className="space-y-2">
+            <Skeleton className="h-5 w-40" />
+            <Skeleton className="h-4 w-full" />
+          </div>
+          <div className="flex flex-col gap-4 rounded-lg border bg-muted/20 p-4">
+            <div className="flex items-center justify-between gap-4">
+              <Skeleton className="h-5 w-36" />
+              <Skeleton className="h-9 w-24" />
+            </div>
+            <div className="overflow-x-auto">
+              <div className="grid min-w-[72rem] grid-cols-8 gap-3">
+                {Array.from({ length: 8 }).map((_, columnIndex) => (
+                  <Skeleton key={columnIndex} className="h-10 w-full" />
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   )
@@ -491,32 +531,22 @@ function ReadinessSummary({
 
 function FeatureRoutingSection({
   routes,
-  schedules,
   activeDestinations,
   currentWorkspace,
-  watchlistAssets,
   languages,
   languageCatalogError,
-  scheduleLoadError,
   canUpdateFeatureSettings,
   canUpdateMarketNewsRouting,
   canReadDestinations,
-  canReadSchedules,
-  canManageSchedules,
 }: {
   routes: FeatureRouteView[]
-  schedules: TelegramMarketAnalysisScheduleResponse[]
   activeDestinations: TelegramDestinationResponse[]
   currentWorkspace: TelegramConfigurationData["currentWorkspace"]
-  watchlistAssets: TelegramConfigurationData["watchlistAssets"]
   languages: TelegramConfigurationData["languages"]
   languageCatalogError: boolean
-  scheduleLoadError: boolean
   canUpdateFeatureSettings: boolean
   canUpdateMarketNewsRouting: boolean
   canReadDestinations: boolean
-  canReadSchedules: boolean
-  canManageSchedules: boolean
 }) {
   const { dictionary, formatMessage } = useLocalization()
   const t = dictionary.telegram
@@ -526,8 +556,7 @@ function FeatureRoutingSection({
   const otherRoutes = routes.filter(
     (route) => route.featureKey !== "MARKET_NEWS_ALERT"
   )
-  const shouldShowTable =
-    routes.length === 0 || otherRoutes.length > 0 || canReadSchedules
+  const shouldShowTable = routes.length === 0 || otherRoutes.length > 0
 
   return (
     <section className="flex flex-col gap-4" aria-labelledby="telegram-routing">
@@ -536,30 +565,36 @@ function FeatureRoutingSection({
         title={t.routing.sectionTitle}
         description={t.routing.sectionDescription}
       />
-      {marketNewsRoutes.map((route) => {
-        const workspaceLabel =
-          route.setting?.workspaceName ??
-          currentWorkspace?.name ??
-          (route.setting
-            ? formatMessage(t.routing.workspaceIdFallback, {
-                id: route.setting.workspaceId,
-              })
-            : t.routing.noSavedWorkspaceSettings)
-        const workspaceId = currentWorkspace?.id ?? route.setting?.workspaceId
-        const titleId = `telegram-market-news-routing-title-${workspaceId ?? "unassigned"}`
-        const controlRoute =
-          !currentWorkspace && route.setting
-            ? { ...route, label: `${route.label} — ${workspaceLabel}` }
-            : route
+      <AppListTable className="mt-0">
+        {marketNewsRoutes.map((route, index) => {
+          const workspaceLabel =
+            route.setting?.workspaceName ??
+            currentWorkspace?.name ??
+            (route.setting
+              ? formatMessage(t.routing.workspaceIdFallback, {
+                  id: route.setting.workspaceId,
+                })
+              : t.routing.noSavedWorkspaceSettings)
+          const workspaceId = currentWorkspace?.id ?? route.setting?.workspaceId
+          const titleId = `telegram-market-news-routing-title-${workspaceId ?? "unassigned"}`
+          const controlRoute =
+            !currentWorkspace && route.setting
+              ? { ...route, label: `${route.label} — ${workspaceLabel}` }
+              : route
 
-        return (
-          <div
-            key={`market-news:${workspaceId ?? "unassigned"}`}
-            data-feature-key={route.featureKey}
-            data-testid="market-news-routing-card"
-            aria-labelledby={titleId}
-          >
-            <div className="rounded-xl border border-border bg-card p-4">
+          return (
+            <div
+              key={`market-news:${workspaceId ?? "unassigned"}`}
+              className={cn(
+                "p-4",
+                (index < marketNewsRoutes.length - 1 ||
+                  otherRoutes.length > 0) &&
+                  "border-b border-border"
+              )}
+              data-feature-key={route.featureKey}
+              data-testid="market-news-routing-card"
+              aria-labelledby={titleId}
+            >
               <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-3">
                 <div className="min-w-0 flex-1">
                   <h3 id={titleId} className="font-medium text-foreground">
@@ -585,11 +620,9 @@ function FeatureRoutingSection({
                 />
               </div>
             </div>
-          </div>
-        )
-      })}
-      <AppListTable className={cn("mt-0", !shouldShowTable && "hidden")}>
-        <Table>
+          )
+        })}
+        <Table className={cn(!shouldShowTable && "hidden")}>
           <TableHeader className={cn(otherRoutes.length === 0 && "hidden")}>
             <AppListTableHeaderRow>
               <AppListTableHead className="w-[32%]">
@@ -614,8 +647,6 @@ function FeatureRoutingSection({
               <AccessLimitedRow colSpan={5} title={t.routing.accessLimited} />
             ) : (
               otherRoutes.map((route) => {
-                const isScheduledMarketAnalysis =
-                  route.featureKey === "SCHEDULED_MARKET_ANALYSIS"
                 const canUpdateRoute =
                   route.featureKey === "MARKET_NEWS_ALERT"
                     ? canUpdateMarketNewsRouting
@@ -656,50 +687,10 @@ function FeatureRoutingSection({
                         languageCatalogError={languageCatalogError}
                       />
                     </TableRow>
-                    {isScheduledMarketAnalysis && canReadSchedules ? (
-                      <TableRow className="border-border bg-muted/10 hover:bg-muted/10">
-                        <TableCell
-                          colSpan={5}
-                          className="p-4 whitespace-normal"
-                        >
-                          <MarketAnalysisSchedulePanel
-                            schedules={schedules}
-                            activeDestinations={activeDestinations}
-                            currentWorkspace={currentWorkspace}
-                            watchlistAssets={watchlistAssets}
-                            languages={languages}
-                            languageCatalogError={languageCatalogError}
-                            scheduleLoadError={scheduleLoadError}
-                            canReadSchedules={canReadSchedules}
-                            canManageSchedules={canManageSchedules}
-                          />
-                        </TableCell>
-                      </TableRow>
-                    ) : null}
                   </Fragment>
                 )
               })
             )}
-            {canReadSchedules &&
-            !routes.some(
-              (route) => route.featureKey === "SCHEDULED_MARKET_ANALYSIS"
-            ) ? (
-              <TableRow className="border-border bg-muted/10 hover:bg-muted/10">
-                <TableCell colSpan={5} className="p-4 whitespace-normal">
-                  <MarketAnalysisSchedulePanel
-                    schedules={schedules}
-                    activeDestinations={activeDestinations}
-                    currentWorkspace={currentWorkspace}
-                    watchlistAssets={watchlistAssets}
-                    languages={languages}
-                    languageCatalogError={languageCatalogError}
-                    scheduleLoadError={scheduleLoadError}
-                    canReadSchedules={canReadSchedules}
-                    canManageSchedules={canManageSchedules}
-                  />
-                </TableCell>
-              </TableRow>
-            ) : null}
           </TableBody>
         </Table>
       </AppListTable>

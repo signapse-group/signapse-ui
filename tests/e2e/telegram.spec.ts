@@ -728,6 +728,20 @@ for (const frame of renderEvidenceFrames) {
       '[data-feature-key="MARKET_NEWS_ALERT"]:visible'
     )
     await expect(routeControl).toBeVisible()
+    if (frame.width === 1520) {
+      const featureRoutingGroup = routeControl.locator(
+        "xpath=ancestor::div[@data-slot='app-list-table'][1]"
+      )
+      await expect(featureRoutingGroup).toContainText(
+        "Economic calendar alerts"
+      )
+      await expect(
+        page.locator('section[aria-labelledby="telegram-scheduled-analysis"]')
+      ).toContainText("BTC morning analysis")
+      await expect(featureRoutingGroup).not.toContainText(
+        "Scheduled market analysis"
+      )
+    }
     const routingSection = page.locator(
       'section[aria-labelledby="telegram-routing"]:visible'
     )
@@ -788,6 +802,81 @@ for (const frame of renderEvidenceFrames) {
     })
   })
 }
+
+test("renders Telegram routing in light theme at the wide layout", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1520, height: 1024 })
+  await page.emulateMedia({ colorScheme: "dark" })
+  await page.goto("/en/telegram")
+
+  await page.getByRole("button", { name: "Choose theme" }).click()
+  await page.getByRole("menuitem", { name: "Light", exact: true }).click()
+  await expect(page.locator("html")).not.toHaveClass(/dark/)
+
+  const newsCard = page.getByTestId("market-news-routing-card")
+  await expect(newsCard).toBeVisible()
+  const routeSwitch = newsCard.getByRole("switch")
+  await waitForClientHandler(routeSwitch)
+  await routeSwitch.click()
+  await expect(routeSwitch).toHaveAttribute("aria-checked", "true")
+  const enabledToast = page.getByText("Telegram routing enabled.", {
+    exact: true,
+  })
+  await expect(enabledToast).toBeVisible()
+  await expect(enabledToast).toBeHidden()
+  const pageOverflows = await page.evaluate(
+    () =>
+      document.documentElement.scrollWidth >
+      document.documentElement.clientWidth
+  )
+  expect(pageOverflows).toBe(false)
+
+  await page.screenshot({
+    path: resolve(
+      process.cwd(),
+      "docs/design/evidence/SIGN-392/telegram-routing-wide-light-en-1520x1024.png"
+    ),
+    fullPage: false,
+    animations: "disabled",
+  })
+})
+
+test("keeps Telegram routing usable at a 200% effective viewport", async ({
+  page,
+}) => {
+  // Match the effective CSS viewport of the approved wide frame at 200% zoom.
+  await page.setViewportSize({ width: 760, height: 512 })
+  await page.emulateMedia({ colorScheme: "dark" })
+  await page.goto("/vi/telegram")
+
+  const newsCard = page.getByTestId("market-news-routing-card")
+  await expect(newsCard).toBeVisible()
+  const routeSwitch = newsCard.getByRole("switch")
+  await waitForClientHandler(routeSwitch)
+  await routeSwitch.click()
+  await expect(routeSwitch).toHaveAttribute("aria-checked", "true")
+  const enabledToast = page.getByText("Đã bật định tuyến Telegram.", {
+    exact: true,
+  })
+  await expect(enabledToast).toBeVisible()
+  await expect(enabledToast).toBeHidden()
+  const pageOverflows = await page.evaluate(
+    () =>
+      document.documentElement.scrollWidth >
+      document.documentElement.clientWidth
+  )
+  expect(pageOverflows).toBe(false)
+
+  await page.screenshot({
+    path: resolve(
+      process.cwd(),
+      "docs/design/evidence/SIGN-392/telegram-routing-zoom-200-effective-dark-vi-760x512.png"
+    ),
+    fullPage: false,
+    animations: "disabled",
+  })
+})
 
 test("keeps the market route visible without page overflow at shell breakpoints", async ({
   page,

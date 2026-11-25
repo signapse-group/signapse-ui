@@ -495,6 +495,37 @@ describe("Telegram schedule destructive actions", () => {
     expect(routerRefresh).not.toHaveBeenCalled()
   })
 
+  it("blocks enabling a cleared market route until an eligible destination is saved", () => {
+    const clearedSetting = {
+      ...featureSettings[1],
+      enabled: false,
+      destination: null,
+    }
+    renderConfiguration({
+      ...data,
+      featureSettings: [clearedSetting],
+      manageAccess: {
+        ...data.manageAccess,
+        marketNewsRouting: true,
+      },
+    })
+
+    const marketRow = getFeatureRouteContainer(
+      viDictionary.telegram.routeDefinitions.MARKET_NEWS_ALERT.label
+    )
+    const routeSwitch = within(marketRow).getByRole("switch", {
+      name: viDictionary.telegram.routing.switchAria.replace(
+        "{route}",
+        viDictionary.telegram.routeDefinitions.MARKET_NEWS_ALERT.label
+      ),
+    })
+
+    expect(routeSwitch).toHaveAttribute("aria-disabled", "true")
+    expect(routeSwitch).toHaveAccessibleDescription(
+      viDictionary.telegram.routing.enableDestinationRequired
+    )
+  })
+
   it("can pause an enabled route with an inactive destination and reassign it while paused", async () => {
     const user = userEvent.setup()
     const inactiveDestination = {
@@ -789,12 +820,6 @@ describe("Telegram schedule destructive actions", () => {
     const newsRow = getFeatureRouteContainer(
       viDictionary.telegram.routeDefinitions.MARKET_NEWS_ALERT.label
     )
-    const scheduledRow = screen
-      .getByText(
-        viDictionary.telegram.routeDefinitions.SCHEDULED_MARKET_ANALYSIS.label
-      )
-      .closest("tr") as HTMLElement
-
     const calendarLanguage = within(calendarRow).getByRole("combobox", {
       name: viDictionary.telegram.routing.languageAria.replace(
         "{route}",
@@ -819,12 +844,9 @@ describe("Telegram schedule destructive actions", () => {
       })
     ).toBeEnabled()
     expect(
-      within(scheduledRow).queryByRole("combobox", {
-        name: viDictionary.telegram.routing.languageAria.replace(
-          "{route}",
-          viDictionary.telegram.routeDefinitions.SCHEDULED_MARKET_ANALYSIS.label
-        ),
-      })
+      screen.queryByText(
+        viDictionary.telegram.routeDefinitions.SCHEDULED_MARKET_ANALYSIS.label
+      )
     ).not.toBeInTheDocument()
 
     await user.click(calendarLanguage)
@@ -909,32 +931,6 @@ describe("Telegram schedule destructive actions", () => {
         expect.objectContaining({
           featureKey: "ECONOMIC_CALENDAR_ALERT",
           destinationId: 9,
-          enabled: false,
-          outputLanguageIsoCode: "en",
-        })
-      )
-    )
-
-    vi.mocked(updateTelegramFeatureSetting).mockClear()
-    const scheduledRow = screen
-      .getByText(
-        viDictionary.telegram.routeDefinitions.SCHEDULED_MARKET_ANALYSIS.label
-      )
-      .closest("tr") as HTMLElement
-    fireEvent.click(
-      within(scheduledRow).getByRole("switch", {
-        name: viDictionary.telegram.routing.switchAria.replace(
-          "{route}",
-          viDictionary.telegram.routeDefinitions.SCHEDULED_MARKET_ANALYSIS.label
-        ),
-      })
-    )
-
-    await waitFor(() =>
-      expect(updateTelegramFeatureSetting).toHaveBeenCalledWith(
-        expect.objectContaining({
-          featureKey: "SCHEDULED_MARKET_ANALYSIS",
-          destinationId: 8,
           enabled: false,
           outputLanguageIsoCode: "en",
         })

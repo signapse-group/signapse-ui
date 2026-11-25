@@ -2645,6 +2645,7 @@ export const en: Dictionary = {
       updateError: "Could not update Telegram routing.",
     },
     schedule: {
+      sectionTitle: "Scheduled analysis",
       panelTitle: "Analysis send schedule",
       panelDescription:
         "Send AI analysis at local times for one watchlist asset.",

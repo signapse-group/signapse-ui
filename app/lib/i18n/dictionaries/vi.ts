@@ -2622,6 +2622,7 @@ export const vi = {
       updateError: "Không thể cập nhật định tuyến Telegram.",
     },
     schedule: {
+      sectionTitle: "Phân tích theo lịch",
       panelTitle: "Lịch gửi phân tích",
       panelDescription:
         "Gửi bản phân tích AI theo giờ địa phương cho một tài sản trong danh sách theo dõi.",
