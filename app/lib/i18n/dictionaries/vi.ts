@@ -2521,14 +2521,17 @@ export const vi = {
       linkedBot: "Bot liên kết",
       testMessage: "Gửi thử",
       testMessagePending: "Đang gửi thử…",
-      testMessageSuccess: "Đã gửi tin nhắn thử tới {destination}.",
+      testMessageAction: "Gửi tin nhắn thử tới {destination}",
+      testMessagePendingAction: "Đang gửi tin nhắn thử tới {destination}",
+      testMessageSuccess:
+        "Telegram đã chấp nhận tin nhắn thử cho {destination}.",
       testMessageError: "Không thể gửi tin nhắn thử.",
-      testMessageTimeout:
-        "Yêu cầu gửi đã hết thời gian chờ và kết quả chưa rõ; hãy kiểm tra Telegram trước khi thử lại.",
+      testMessageUnknownOutcome:
+        "Telegram chưa xác nhận có chấp nhận tin nhắn thử hay không. Hãy kiểm tra cuộc trò chuyện Telegram trước khi thử lại.",
       testMessagePermissionRequired:
         "Cần quyền quản lý điểm nhận để gửi tin nhắn thử.",
       testMessageInactive:
-        "Chỉ điểm nhận đang hoạt động mới có thể gửi tin nhắn thử.",
+        "Chỉ điểm nhận đang hoạt động và liên kết với bot đang hoạt động mới có thể gửi tin nhắn thử.",
       disableTitle: "Vô hiệu hóa điểm nhận Telegram?",
       disableDescription:
         "Điểm nhận bị vô hiệu hóa sẽ không còn nhận thông báo từ các luồng đang trỏ tới nó. Giao diện này không hỗ trợ bật lại.",

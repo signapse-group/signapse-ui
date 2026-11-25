@@ -613,3 +613,57 @@ describe("Telegram schedule destructive actions", () => {
     ).toBeDisabled()
   })
 })
+
+describe("Telegram destination test message eligibility", () => {
+  afterEach(() => cleanup())
+
+  it("disables testing when a readable linked bot is inactive", () => {
+    renderConfiguration({
+      ...data,
+      botConnections: [{ id: 1, status: "DISABLED" }],
+      sectionAccess: {
+        ...data.sectionAccess,
+        botConnections: true,
+        destinations: true,
+      },
+      manageAccess: {
+        ...data.manageAccess,
+        destinations: true,
+      },
+    })
+
+    const button = screen.getByRole("button", {
+      name: viDictionary.telegram.destination.testMessageAction.replace(
+        "{destination}",
+        "Operations"
+      ),
+    })
+    expect(button).toHaveAttribute("aria-disabled", "true")
+    expect(button).toHaveAccessibleDescription(
+      viDictionary.telegram.destination.testMessageInactive
+    )
+  })
+
+  it("keeps the action available when bot state is hidden by separate read permission", () => {
+    renderConfiguration({
+      ...data,
+      sectionAccess: {
+        ...data.sectionAccess,
+        botConnections: false,
+        destinations: true,
+      },
+      manageAccess: {
+        ...data.manageAccess,
+        destinations: true,
+      },
+    })
+
+    const button = screen.getByRole("button", {
+      name: viDictionary.telegram.destination.testMessageAction.replace(
+        "{destination}",
+        "Operations"
+      ),
+    })
+    expect(button).not.toHaveAttribute("aria-disabled", "true")
+  })
+})

@@ -5,6 +5,8 @@ test.describe("P0 Telegram operations", () => {
     page,
     fixture,
   }) => {
+    await page.emulateMedia({ colorScheme: "dark" })
+    await page.setViewportSize({ width: 1520, height: 1024 })
     await page.goto("/vi/telegram")
 
     await expect(
@@ -19,19 +21,49 @@ test.describe("P0 Telegram operations", () => {
     await expect(
       page.getByRole("listitem").filter({ hasText: "Disabled channel" }).first()
     ).toBeVisible()
-    await expect(
-      page
-        .locator('button[aria-disabled="true"]')
-        .filter({ hasText: "Gửi thử" })
-    ).toHaveCount(1)
+    const disabledTestMessage = page.getByRole("button", {
+      name: "Gửi tin nhắn thử tới Disabled channel",
+    })
+    await expect(disabledTestMessage).toHaveAttribute("aria-disabled", "true")
 
     const activeTestMessage = page
       .getByRole("button", {
-        name: "Gửi thử",
+        name: "Gửi tin nhắn thử tới Operations channel",
         exact: true,
       })
       .first()
     await waitForClientHandler(activeTestMessage)
+
+    await page.screenshot({
+      path: test.info().outputPath("telegram-test-message-wide.png"),
+      fullPage: true,
+    })
+
+    for (const frame of [
+      { name: "compact", width: 1024, height: 768 },
+      { name: "mobile", width: 390, height: 844 },
+      { name: "mobile-360", width: 360, height: 800 },
+    ]) {
+      await page.setViewportSize({ width: frame.width, height: frame.height })
+      await expect(activeTestMessage).toBeVisible()
+      await page.screenshot({
+        path: test.info().outputPath(`telegram-test-message-${frame.name}.png`),
+        fullPage: true,
+      })
+    }
+
+    // A 195px CSS viewport is the effective width of a 390px window at 200% zoom.
+    await page.setViewportSize({ width: 195, height: 422 })
+    const effectiveZoomWidth = await page.evaluate(() => window.innerWidth)
+    expect(effectiveZoomWidth).toBe(195)
+    await expect(activeTestMessage).toBeVisible()
+    await page.screenshot({
+      path: test
+        .info()
+        .outputPath("telegram-test-message-200-percent-effective-width.png"),
+      fullPage: true,
+    })
+    await page.setViewportSize({ width: 390, height: 844 })
 
     await fixture.setScenario(
       "/telegram/destinations/21/test-message",
@@ -49,12 +81,12 @@ test.describe("P0 Telegram operations", () => {
       "POST"
     )
     await activeTestMessage.click()
-    await expect(
-      page.getByText(
-        "Yêu cầu gửi đã hết thời gian chờ và kết quả chưa rõ; hãy kiểm tra Telegram trước khi thử lại.",
-        { exact: true }
-      )
-    ).toBeVisible()
+    const unknownOutcomeToast = page
+      .locator("[data-sonner-toast]")
+      .filter({ hasText: /Telegram chưa xác nhận có chấp nhận tin nhắn thử/ })
+    await expect(unknownOutcomeToast).toHaveText(
+      "Telegram chưa xác nhận có chấp nhận tin nhắn thử hay không. Hãy kiểm tra cuộc trò chuyện Telegram trước khi thử lại."
+    )
 
     await fixture.setScenario(
       "/telegram/destinations/21/test-message",
@@ -63,9 +95,10 @@ test.describe("P0 Telegram operations", () => {
     )
     await activeTestMessage.click()
     await expect(
-      page.getByText("Đã gửi tin nhắn thử tới Operations channel.", {
-        exact: true,
-      })
+      page.getByText(
+        "Telegram đã chấp nhận tin nhắn thử cho Operations channel.",
+        { exact: true }
+      )
     ).toBeVisible()
 
     await page

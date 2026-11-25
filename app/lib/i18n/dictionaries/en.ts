@@ -2542,14 +2542,17 @@ export const en: Dictionary = {
       linkedBot: "Linked bot",
       testMessage: "Send test",
       testMessagePending: "Sending test…",
-      testMessageSuccess: "Test message sent to {destination}.",
+      testMessageAction: "Send a test message to {destination}",
+      testMessagePendingAction: "Sending a test message to {destination}",
+      testMessageSuccess:
+        "Telegram accepted the test message for {destination}.",
       testMessageError: "Could not send the test message.",
-      testMessageTimeout:
-        "The send request timed out and the result is uncertain; check Telegram before trying again.",
+      testMessageUnknownOutcome:
+        "Telegram did not confirm whether it accepted the test message. Check the Telegram conversation before trying again.",
       testMessagePermissionRequired:
         "Destination management permission is required to send a test message.",
       testMessageInactive:
-        "Only active destinations can receive a test message.",
+        "Only active destinations linked to active bots can receive a test message.",
       disableTitle: "Disable Telegram destination?",
       disableDescription:
         "A disabled destination will no longer receive notifications from routes pointing to it. This interface does not provide reactivation.",
