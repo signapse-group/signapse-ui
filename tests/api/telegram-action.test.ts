@@ -13,6 +13,12 @@ const { testDictionary } = vi.hoisted(() => ({
       localTimeRequired: "At least one local time is required",
       localTimeLimit: "Too many local times",
       localTimeDuplicate: "Local times must be unique",
+      destination: {
+        invalidData: "Destination is invalid",
+        testMessageError: "Could not send a test message",
+        testMessageUnknownOutcome:
+          "Telegram did not confirm the test message. Check the Telegram conversation before trying again.",
+      },
       schedule: {
         languageCatalogError: "Language catalog unavailable",
         createError: "Schedule create failed",
@@ -50,6 +56,7 @@ import {
   createTelegramMarketAnalysisSchedule,
   deleteTelegramMarketAnalysisSchedule,
   disableTelegramMarketAnalysisSchedule,
+  sendTelegramTestMessage,
   updateTelegramMarketAnalysisSchedule,
   updateTelegramFeatureSetting,
 } from "@/app/api/telegram/action"
@@ -225,5 +232,71 @@ describe("Telegram scheduled asset analysis actions", () => {
     )
     expect(failed).toEqual({ success: false, error: "Backend unavailable" })
     expect(revalidatePath).not.toHaveBeenCalled()
+  })
+})
+
+describe("Telegram test message action", () => {
+  beforeEach(() => {
+    vi.mocked(fetchAuthenticated).mockReset()
+    vi.mocked(revalidatePath).mockClear()
+  })
+
+  it("posts only to the selected destination and succeeds after the producer response", async () => {
+    vi.mocked(fetchAuthenticated).mockResolvedValue(null)
+
+    await expect(sendTelegramTestMessage(24)).resolves.toEqual({
+      success: true,
+      data: undefined,
+    })
+    expect(fetchAuthenticated).toHaveBeenCalledWith(
+      "/telegram/destinations/24/test-message",
+      { method: "POST" }
+    )
+    expect(revalidatePath).not.toHaveBeenCalled()
+  })
+
+  it.each([400, 401, 403, 404, 409, 500, 502, 503])(
+    "keeps HTTP %i as a known rejection",
+    async (status) => {
+      vi.mocked(fetchAuthenticated).mockRejectedValue(
+        Object.assign(new Error(`HTTP ${status} rejection`), { status })
+      )
+
+      await expect(sendTelegramTestMessage(24)).resolves.toEqual({
+        success: false,
+        error: `HTTP ${status} rejection`,
+        outcome: "known-error",
+      })
+    }
+  )
+
+  it("maps producer 504 and the app transport AbortError to an unknown outcome", async () => {
+    vi.mocked(fetchAuthenticated).mockRejectedValue(
+      Object.assign(new Error("Gateway timeout"), { status: 504 })
+    )
+    await expect(sendTelegramTestMessage(24)).resolves.toEqual({
+      success: false,
+      error: testDictionary.telegram.destination.testMessageUnknownOutcome,
+      outcome: "unknown",
+    })
+
+    vi.mocked(fetchAuthenticated).mockRejectedValue(
+      Object.assign(new Error("Request aborted"), { name: "AbortError" })
+    )
+    await expect(sendTelegramTestMessage(24)).resolves.toEqual({
+      success: false,
+      error: testDictionary.telegram.destination.testMessageUnknownOutcome,
+      outcome: "unknown",
+    })
+    expect(revalidatePath).not.toHaveBeenCalled()
+  })
+
+  it("rejects invalid IDs before making a request", async () => {
+    await expect(sendTelegramTestMessage(0)).resolves.toEqual({
+      success: false,
+      error: testDictionary.telegram.destination.invalidData,
+      outcome: "known-error",
+    })
+    expect(fetchAuthenticated).not.toHaveBeenCalled()
   })
 })

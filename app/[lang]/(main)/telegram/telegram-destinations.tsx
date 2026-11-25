@@ -170,6 +170,8 @@ export function DestinationsCard({
                   <DestinationItem
                     key={destination.id}
                     destination={destination}
+                    activeBotConnections={activeBotConnections}
+                    canReadBotConnections={canReadBotConnections}
                     canManage={canManage}
                     formatTime={formatTime}
                     dictionary={dictionary}
@@ -198,11 +200,15 @@ export function DestinationsCard({
 
 function DestinationItem({
   destination,
+  activeBotConnections,
+  canReadBotConnections,
   canManage,
   formatTime,
   dictionary,
 }: {
   destination: TelegramDestinationResponse
+  activeBotConnections: TelegramBotConnectionResponse[]
+  canReadBotConnections: boolean
   canManage: boolean
   formatTime: (value?: string) => string
   dictionary: Dictionary
@@ -222,6 +228,11 @@ function DestinationItem({
     },
     dictionary
   )
+  const isBotActive =
+    !canReadBotConnections ||
+    activeBotConnections.some(
+      (connection) => connection.id === destination.botConnectionId
+    )
 
   return (
     <>
@@ -257,7 +268,7 @@ function DestinationItem({
             destinationId={destination.id}
             destinationLabel={label}
             canManage={canManage}
-            isActive={destination.status === "ACTIVE"}
+            isEligible={destination.status === "ACTIVE" && isBotActive}
           />
           {canManage ? (
             <DropdownMenu>

@@ -39,6 +39,13 @@ function getActionError(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback
 }
 
+function isTelegramTestMessageOutcomeUnknown(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    (error.name === "AbortError" || ("status" in error && error.status === 504))
+  )
+}
+
 async function validateScheduleRequest(
   request: SaveTelegramMarketAnalysisScheduleRequest,
   dictionary: Dictionary
@@ -224,15 +231,24 @@ export async function createTelegramLinkToken(
   }
 }
 
+type TelegramTestMessageResult =
+  | { success: true; data: undefined }
+  | {
+      success: false
+      error: string
+      outcome: "known-error" | "unknown"
+    }
+
 export async function sendTelegramTestMessage(
   id: number
-): Promise<ActionResult> {
+): Promise<TelegramTestMessageResult> {
   const dictionary = await getTelegramDictionary()
 
   if (!Number.isInteger(id) || id <= 0) {
     return {
       success: false,
       error: dictionary.telegram.destination.invalidData,
+      outcome: "known-error",
     }
   }
 
@@ -246,12 +262,21 @@ export async function sendTelegramTestMessage(
 
     return { success: true, data: undefined }
   } catch (error: unknown) {
+    if (isTelegramTestMessageOutcomeUnknown(error)) {
+      return {
+        success: false,
+        error: dictionary.telegram.destination.testMessageUnknownOutcome,
+        outcome: "unknown",
+      }
+    }
+
     return {
       success: false,
       error: getActionError(
         error,
         dictionary.telegram.destination.testMessageError
       ),
+      outcome: "known-error",
     }
   }
 }

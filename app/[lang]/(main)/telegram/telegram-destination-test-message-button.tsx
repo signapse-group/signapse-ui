@@ -16,50 +16,58 @@ type TelegramDestinationTestMessageButtonProps = {
   destinationId: number
   destinationLabel: string
   canManage: boolean
-  isActive: boolean
-}
-
-function isTimeoutError(message: string) {
-  return /timeout|timed out|timed-out|aborted|hết thời gian|quá thời gian/i.test(
-    message
-  )
+  isEligible: boolean
 }
 
 export function TelegramDestinationTestMessageButton({
   destinationId,
   destinationLabel,
   canManage,
-  isActive,
+  isEligible,
 }: TelegramDestinationTestMessageButtonProps) {
   const { dictionary, formatMessage } = useLocalization()
   const t = dictionary.telegram.destination
   const [isPending, startTransition] = useTransition()
   const descriptionId = useId()
+  const feedbackId = `telegram-test-message-${destinationId}`
   const unavailableReason = !canManage
     ? t.testMessagePermissionRequired
-    : !isActive
+    : !isEligible
       ? t.testMessageInactive
       : undefined
+  const actionLabel = formatMessage(
+    isPending ? t.testMessagePendingAction : t.testMessageAction,
+    { destination: destinationLabel }
+  )
 
   function handleClick() {
     if (isPending || unavailableReason) return
 
     startTransition(async () => {
-      const result = await sendTelegramTestMessage(destinationId)
+      toast.loading(t.testMessagePending, { id: feedbackId })
 
-      if (result.success) {
-        toast.success(
-          formatMessage(t.testMessageSuccess, {
-            destination: destinationLabel,
-          })
-        )
-        return
+      try {
+        const result = await sendTelegramTestMessage(destinationId)
+
+        if (result.success) {
+          toast.success(
+            formatMessage(t.testMessageSuccess, {
+              destination: destinationLabel,
+            }),
+            { id: feedbackId }
+          )
+          return
+        }
+
+        if (result.outcome === "unknown") {
+          toast.warning(result.error, { id: feedbackId })
+          return
+        }
+
+        toast.error(result.error || t.testMessageError, { id: feedbackId })
+      } catch {
+        toast.warning(t.testMessageUnknownOutcome, { id: feedbackId })
       }
-
-      const errorMessage = result.error || t.testMessageError
-      toast.error(
-        isTimeoutError(errorMessage) ? t.testMessageTimeout : errorMessage
-      )
     })
   }
 
@@ -67,31 +75,35 @@ export function TelegramDestinationTestMessageButton({
     <Button
       type="button"
       variant="outline"
-      className={cn(unavailableReason && "opacity-60")}
-      aria-disabled={unavailableReason ? true : undefined}
+      size="icon-sm"
+      className={cn((unavailableReason || isPending) && "opacity-60")}
+      aria-label={actionLabel}
+      aria-disabled={unavailableReason || isPending ? true : undefined}
+      aria-busy={isPending}
       aria-describedby={unavailableReason ? descriptionId : undefined}
-      disabled={isPending}
       onClick={handleClick}
     >
       {isPending ? (
-        <Spinner data-icon="inline-start" />
+        <Spinner data-icon="inline-start" aria-hidden="true" />
       ) : (
-        <Send data-icon="inline-start" />
+        <Send data-icon="inline-start" aria-hidden="true" />
       )}
-      {isPending ? t.testMessagePending : t.testMessage}
     </Button>
   )
 
-  if (!unavailableReason) return button
-
   return (
     <>
-      <span id={descriptionId} className="sr-only">
-        {unavailableReason}
-      </span>
+      {unavailableReason ? (
+        <span id={descriptionId} className="sr-only">
+          {unavailableReason}
+        </span>
+      ) : null}
       <Tooltip>
         <TooltipTrigger render={button} />
-        <TooltipContentInOverlay>{unavailableReason}</TooltipContentInOverlay>
+        <TooltipContentInOverlay>
+          {unavailableReason ||
+            (isPending ? t.testMessagePending : t.testMessage)}
+        </TooltipContentInOverlay>
       </Tooltip>
     </>
   )
