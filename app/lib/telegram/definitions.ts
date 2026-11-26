@@ -102,12 +102,18 @@ export interface TelegramFeatureSettingResponse {
   lastModifiedDate?: string
 }
 
-export interface TelegramLinkTokenResponse {
-  botConnectionId: number
-  token?: string
-  startCommand: string
-  expiresAt?: string
+export function getTelegramLinkTokenResponseSchema() {
+  return z.object({
+    botConnectionId: z.number().int().positive(),
+    token: z.string().regex(/^[A-Za-z0-9_-]{32}$/),
+    startCommand: z.string().min(1),
+    expiresAt: z.iso.datetime({ offset: true }),
+  })
 }
+
+export type TelegramLinkTokenResponse = z.infer<
+  ReturnType<typeof getTelegramLinkTokenResponseSchema>
+>
 
 export function getCreateTelegramBotConnectionSchema(dictionary: Dictionary) {
   return z.object({

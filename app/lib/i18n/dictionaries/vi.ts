@@ -2529,14 +2529,17 @@ export const vi = {
       linkedBot: "Bot liên kết",
       testMessage: "Gửi thử",
       testMessagePending: "Đang gửi thử…",
-      testMessageSuccess: "Đã gửi tin nhắn thử tới {destination}.",
+      testMessageAction: "Gửi tin nhắn thử tới {destination}",
+      testMessagePendingAction: "Đang gửi tin nhắn thử tới {destination}",
+      testMessageSuccess:
+        "Telegram đã chấp nhận tin nhắn thử cho {destination}.",
       testMessageError: "Không thể gửi tin nhắn thử.",
-      testMessageTimeout:
-        "Yêu cầu gửi đã hết thời gian chờ và kết quả chưa rõ; hãy kiểm tra Telegram trước khi thử lại.",
+      testMessageUnknownOutcome:
+        "Telegram chưa xác nhận có chấp nhận tin nhắn thử hay không. Hãy kiểm tra cuộc trò chuyện Telegram trước khi thử lại.",
       testMessagePermissionRequired:
         "Cần quyền quản lý điểm nhận để gửi tin nhắn thử.",
       testMessageInactive:
-        "Chỉ điểm nhận đang hoạt động mới có thể gửi tin nhắn thử.",
+        "Chỉ điểm nhận đang hoạt động và liên kết với bot đang hoạt động mới có thể gửi tin nhắn thử.",
       disableTitle: "Vô hiệu hóa điểm nhận Telegram?",
       disableDescription:
         "Điểm nhận bị vô hiệu hóa sẽ không còn nhận thông báo từ các luồng đang trỏ tới nó. Giao diện này không hỗ trợ bật lại.",
@@ -2550,29 +2553,31 @@ export const vi = {
       linkTitle: "Liên kết điểm nhận",
       linkDescription:
         "Tạo lệnh /start rồi gửi lệnh đó trong Telegram để xác minh chat, group hoặc channel.",
+      linkPendingDescription:
+        "Gửi lệnh này trong cuộc trò chuyện, nhóm hoặc kênh Telegram bạn muốn xác minh.",
       commandBot: "Bot nhận lệnh /start",
       botPlaceholder: "Chọn bot đang hoạt động",
-      botDescription: "Điểm nhận mới sẽ được gắn với bot đang chọn.",
+      botDescription: "Điểm nhận chỉ được tạo sau khi bot này nhận được lệnh.",
+      bot: "Bot",
       linkCommand: "Lệnh liên kết",
       expiresAt: "Hết hạn: {time}",
       copyCommand: "Sao chép lệnh",
-      refreshDestinations: "Làm mới điểm nhận",
       createCommand: "Tạo lệnh liên kết",
-      regenerateCommand: "Tạo lệnh liên kết mới",
       linkCreated: "Đã tạo lệnh liên kết Telegram.",
-      refreshed: "Đã làm mới danh sách điểm nhận.",
       copied: "Đã sao chép lệnh liên kết.",
       copyError: "Không thể sao chép lệnh liên kết.",
       linkExpired:
-        "Lệnh liên kết này đã hết hạn. Hãy tạo lệnh mới trước khi mở hoặc sao chép.",
-      linkCompletionHint:
-        "Sau khi hoàn tất trên Telegram, quay lại đây và làm mới danh sách điểm nhận để xác minh.",
+        "Lệnh liên kết này đã hết hạn. Hãy đóng hộp thoại và tạo lệnh mới trước khi gửi.",
+      linkExpiredStatus: "Đã hết hạn",
+      awaitingVerification: "Chờ xác minh",
       botReadPermissionRequired: "Cần quyền đọc bot để chọn bot Telegram.",
+      destinationReadPermissionRequired:
+        "Bạn cần quyền đọc điểm nhận để kiểm tra kết quả xác minh.",
       noActiveBotToLink:
         "Hãy kết nối một bot Telegram đang hoạt động trước khi liên kết điểm nhận.",
       botRequired: "Hãy chọn một bot Telegram đang hoạt động.",
-      openPrivate: "Mở chat riêng",
-      openGroup: "Mở group chat",
+      botUnavailable:
+        "Bot đã chọn không còn hoạt động. Hãy chọn bot đang hoạt động và tạo lệnh mới.",
       noActiveDestination: "Chưa có điểm nhận đang hoạt động.",
       placeholder: "Chọn điểm nhận",
       fallbackLabel: "Điểm nhận #{id}",

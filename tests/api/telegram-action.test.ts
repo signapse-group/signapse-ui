@@ -17,6 +17,13 @@ const { testDictionary } = vi.hoisted(() => ({
       localTimeRequired: "At least one local time is required",
       localTimeLimit: "Too many local times",
       localTimeDuplicate: "Local times must be unique",
+      destination: {
+        invalidData: "Destination is invalid",
+        createLinkError: "Could not create the Telegram link command",
+        testMessageError: "Could not send a test message",
+        testMessageUnknownOutcome:
+          "Telegram did not confirm the test message. Check the Telegram conversation before trying again.",
+      },
       schedule: {
         languageCatalogError: "Language catalog unavailable",
         createError: "Schedule create failed",
@@ -54,10 +61,13 @@ import { fetchAuthenticatedWithStatus } from "@/app/api/auth/action"
 import { getLanguages } from "@/app/api/languages/action"
 import {
   createTelegramBotConnection,
+  createTelegramLinkToken,
   createTelegramMarketAnalysisSchedule,
   deleteTelegramMarketAnalysisSchedule,
   disableTelegramMarketAnalysisSchedule,
   getTelegramBotConnections,
+  getTelegramDestinations,
+  sendTelegramTestMessage,
   updateTelegramMarketAnalysisSchedule,
   updateTelegramFeatureSetting,
 } from "@/app/api/telegram/action"
@@ -384,5 +394,156 @@ describe("Telegram bot connection read", () => {
       botConnectionResponse,
     ])
     expect(fetchAuthenticated).toHaveBeenCalledWith("/telegram/bot-connections")
+  })
+})
+
+describe("Telegram test message action", () => {
+  beforeEach(() => {
+    vi.mocked(fetchAuthenticated).mockReset()
+    vi.mocked(revalidatePath).mockClear()
+  })
+
+  it("posts only to the selected destination and succeeds after the producer response", async () => {
+    vi.mocked(fetchAuthenticated).mockResolvedValue(null)
+
+    await expect(sendTelegramTestMessage(24)).resolves.toEqual({
+      success: true,
+      data: undefined,
+    })
+    expect(fetchAuthenticated).toHaveBeenCalledWith(
+      "/telegram/destinations/24/test-message",
+      { method: "POST" }
+    )
+    expect(revalidatePath).not.toHaveBeenCalled()
+  })
+
+  it.each([400, 401, 403, 404, 409, 500, 502, 503])(
+    "keeps HTTP %i as a known rejection",
+    async (status) => {
+      vi.mocked(fetchAuthenticated).mockRejectedValue(
+        Object.assign(new Error(`HTTP ${status} rejection`), { status })
+      )
+
+      await expect(sendTelegramTestMessage(24)).resolves.toEqual({
+        success: false,
+        error: `HTTP ${status} rejection`,
+        outcome: "known-error",
+      })
+    }
+  )
+
+  it("maps producer 504 and the app transport AbortError to an unknown outcome", async () => {
+    vi.mocked(fetchAuthenticated).mockRejectedValue(
+      Object.assign(new Error("Gateway timeout"), { status: 504 })
+    )
+    await expect(sendTelegramTestMessage(24)).resolves.toEqual({
+      success: false,
+      error: testDictionary.telegram.destination.testMessageUnknownOutcome,
+      outcome: "unknown",
+    })
+
+    vi.mocked(fetchAuthenticated).mockRejectedValue(
+      Object.assign(new Error("Request aborted"), { name: "AbortError" })
+    )
+    await expect(sendTelegramTestMessage(24)).resolves.toEqual({
+      success: false,
+      error: testDictionary.telegram.destination.testMessageUnknownOutcome,
+      outcome: "unknown",
+    })
+    expect(revalidatePath).not.toHaveBeenCalled()
+  })
+
+  it("rejects invalid IDs before making a request", async () => {
+    await expect(sendTelegramTestMessage(0)).resolves.toEqual({
+      success: false,
+      error: testDictionary.telegram.destination.invalidData,
+      outcome: "known-error",
+    })
+    expect(fetchAuthenticated).not.toHaveBeenCalled()
+  })
+})
+
+describe("Telegram destination link actions", () => {
+  beforeEach(() => {
+    vi.mocked(fetchAuthenticated).mockReset()
+    vi.mocked(revalidatePath).mockClear()
+  })
+
+  it("creates a token for the selected bot and accepts the published response", async () => {
+    const response = {
+      botConnectionId: 12,
+      token: "ExampleLinkToken0123456789ABCDEF",
+      startCommand: "/start ExampleLinkToken0123456789ABCDEF",
+      expiresAt: "2030-01-15T08:15:00.000Z",
+    }
+    vi.mocked(fetchAuthenticated).mockResolvedValue(response)
+
+    await expect(
+      createTelegramLinkToken({ botConnectionId: 12 })
+    ).resolves.toEqual({ success: true, data: response })
+    expect(fetchAuthenticated).toHaveBeenCalledWith(
+      "/telegram/destinations/link-token",
+      {
+        method: "POST",
+        body: JSON.stringify({ botConnectionId: 12 }),
+      }
+    )
+    expect(revalidatePath).not.toHaveBeenCalled()
+  })
+
+  it("rejects missing response fields and a response for a different bot", async () => {
+    vi.mocked(fetchAuthenticated).mockResolvedValueOnce({
+      botConnectionId: 12,
+      startCommand: "/start missing-token",
+      expiresAt: "2030-01-15T08:15:00.000Z",
+    })
+
+    await expect(
+      createTelegramLinkToken({ botConnectionId: 12 })
+    ).resolves.toEqual({
+      success: false,
+      error: testDictionary.telegram.destination.invalidData,
+    })
+
+    vi.mocked(fetchAuthenticated).mockResolvedValueOnce({
+      botConnectionId: 13,
+      token: "ExampleLinkToken0123456789ABCDEF",
+      startCommand: "/start ExampleLinkToken0123456789ABCDEF",
+      expiresAt: "2030-01-15T08:15:00.000Z",
+    })
+
+    await expect(
+      createTelegramLinkToken({ botConnectionId: 12 })
+    ).resolves.toEqual({
+      success: false,
+      error: testDictionary.telegram.destination.invalidData,
+    })
+  })
+
+  it("keeps API permission failures as errors", async () => {
+    vi.mocked(fetchAuthenticated).mockRejectedValue(
+      Object.assign(new Error("Permission denied"), { status: 403 })
+    )
+
+    await expect(
+      createTelegramLinkToken({ botConnectionId: 12 })
+    ).resolves.toEqual({ success: false, error: "Permission denied" })
+  })
+
+  it("reads back bot and destination status from the API response", async () => {
+    const destinations = [
+      {
+        id: 31,
+        botConnectionId: 12,
+        chatId: "-100123",
+        chatType: "CHANNEL" as const,
+        displayLabel: "Read back channel",
+        status: "DISABLED" as const,
+      },
+    ]
+    vi.mocked(fetchAuthenticated).mockResolvedValue(destinations)
+
+    await expect(getTelegramDestinations()).resolves.toEqual(destinations)
+    expect(fetchAuthenticated).toHaveBeenCalledWith("/telegram/destinations")
   })
 })

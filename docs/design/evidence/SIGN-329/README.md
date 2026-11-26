@@ -105,3 +105,21 @@ Verification from the issue workspace:
 - `git diff --check` — pass.
 
 These checks use local fixtures and do not verify live authentication, persistence or Telegram delivery. QA/coordinator own the feature check on dev and Story acceptance.
+
+## Revalidation after merging current dev
+
+The existing PR branch was updated with `origin/dev` at `83f6658e8f41805a1e3e90d6bc64972f3a994a42`, preserving SIGN-329 commits and including the already accepted Telegram destination-link and test-message work from PRs #162 and #160. No new SIGN-329 product scope was added.
+
+Fetched the producer-published [dev OpenAPI](https://dev-api.signapse.cloud/v3/api-docs) at `2026-11-26T11:20:41Z`. `info.version` is `v0`; `x-build-revision` is `b6de21490d5572bdb51624372ef860230af5df86`. GET and POST still reference `TelegramBotConnectionResponse`; POST 201 documents a new ACTIVE or INVALID connection, and POST 200 documents the caller's stored status. The response schema has no `required` list, so `id` and `status` are structurally optional even though the operation descriptions promise the actual saved status. This revision differs from the producer revisions recorded in SIGN-328 and SIGN-336 handoffs.
+
+The FE runtime schema requires a numeric `id` and an enumerated `status`, then projects only allowlisted metadata. An omitted or malformed field fails closed; the FE cannot infer the saved state. The producer must publish non-null required `id` and `status` fields for GET 200 and POST 200/201 on the deployed revision and update its handoff, or the coordinator must record an accepted response behavior that still satisfies SIGN-31 AC-6 and AC-8 before integration can pass.
+
+### Reverification on the merged working tree
+
+- `pnpm typecheck` — passed.
+- `pnpm exec vitest run tests/api/auth-action.test.ts tests/api/telegram-action.test.ts tests/components/telegram-configuration.component.test.tsx tests/components/telegram-destination-test-message-button.component.test.tsx tests/core/telegram-permissions.test.ts` — 65 passed.
+- `pnpm test:contract -- --scope 'GET /telegram/bot-connections,POST /telegram/bot-connections'` — fixture consistency passed for both operations.
+- `/opt/apps/symphony/runtime/run-fe-browser /opt/apps/symphony/workspaces-fe-jira/SIGN-329 tests/e2e/telegram.spec.ts --grep 'P0 Telegram operations' --retries=0` — 5 passed. It covers the merged shared Telegram P0 flow and SIGN-329 create/read scenarios, including create-only and read-only permissions, ACTIVE/INVALID and caller duplicates, safe readback, rejected requests, keyboard/focus, and responsive behavior.
+- Changed-file ESLint, Prettier check, and `git diff --check` — passed.
+
+Compared the current fixture renders with SIGN-31 attachments 10310/10311 and SIGN-32 attachments 10308/10312/10309. Existing Compact, Mobile, row, and open-dialog effective-width images matched the latest report output; the Wide and 360px dialog captures were refreshed in this section. The tested viewport states remain 1520×1024, 1024×768, 390×844, 360×780, and 760×512 effective CSS width with the dialog open and token draft retained. The 760×512 state is a 200% effective-width proxy, not browser-chrome zoom. The P0 images are local fixture renders and do not prove live auth, persistence, Telegram delivery, or dev feature acceptance.

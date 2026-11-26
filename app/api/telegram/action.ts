@@ -19,6 +19,7 @@ import {
   CreateTelegramLinkTokenRequest,
   getCreateTelegramBotConnectionSchema,
   getCreateTelegramLinkTokenSchema,
+  getTelegramLinkTokenResponseSchema,
   getSaveTelegramMarketAnalysisScheduleSchema,
   getUpdateTelegramFeatureSettingSchema,
   normalizeSaveTelegramMarketAnalysisScheduleRequest,
@@ -54,6 +55,13 @@ function getCreateBotActionError(error: unknown, fallback: string): string {
   }
 
   return fallback
+}
+
+function isTelegramTestMessageOutcomeUnknown(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    (error.name === "AbortError" || ("status" in error && error.status === 504))
+  )
 }
 
 async function validateScheduleRequest(
@@ -256,7 +264,7 @@ export async function createTelegramLinkToken(
   }
 
   try {
-    const data = await fetchAuthenticated<TelegramLinkTokenResponse>(
+    const data = await fetchAuthenticated<unknown>(
       "/telegram/destinations/link-token",
       {
         method: "POST",
@@ -264,7 +272,19 @@ export async function createTelegramLinkToken(
       }
     )
 
-    return { success: true, data }
+    const parsedResponse = getTelegramLinkTokenResponseSchema().safeParse(data)
+
+    if (
+      !parsedResponse.success ||
+      parsedResponse.data.botConnectionId !== parsed.data.botConnectionId
+    ) {
+      return {
+        success: false,
+        error: dictionary.telegram.destination.invalidData,
+      }
+    }
+
+    return { success: true, data: parsedResponse.data }
   } catch (error: unknown) {
     return {
       success: false,
@@ -276,15 +296,24 @@ export async function createTelegramLinkToken(
   }
 }
 
+type TelegramTestMessageResult =
+  | { success: true; data: undefined }
+  | {
+      success: false
+      error: string
+      outcome: "known-error" | "unknown"
+    }
+
 export async function sendTelegramTestMessage(
   id: number
-): Promise<ActionResult> {
+): Promise<TelegramTestMessageResult> {
   const dictionary = await getTelegramDictionary()
 
   if (!Number.isInteger(id) || id <= 0) {
     return {
       success: false,
       error: dictionary.telegram.destination.invalidData,
+      outcome: "known-error",
     }
   }
 
@@ -298,12 +327,21 @@ export async function sendTelegramTestMessage(
 
     return { success: true, data: undefined }
   } catch (error: unknown) {
+    if (isTelegramTestMessageOutcomeUnknown(error)) {
+      return {
+        success: false,
+        error: dictionary.telegram.destination.testMessageUnknownOutcome,
+        outcome: "unknown",
+      }
+    }
+
     return {
       success: false,
       error: getActionError(
         error,
         dictionary.telegram.destination.testMessageError
       ),
+      outcome: "known-error",
     }
   }
 }

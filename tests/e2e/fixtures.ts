@@ -37,6 +37,7 @@ type FixtureController = {
     route: string,
     scenario:
       | "success"
+      | "telegram-verified-readback"
       | "legacy-saved-provider-selection"
       | "legacy-provider-options"
       | "empty"

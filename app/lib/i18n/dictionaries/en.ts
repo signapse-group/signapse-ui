@@ -2549,14 +2549,17 @@ export const en: Dictionary = {
       linkedBot: "Linked bot",
       testMessage: "Send test",
       testMessagePending: "Sending test…",
-      testMessageSuccess: "Test message sent to {destination}.",
+      testMessageAction: "Send a test message to {destination}",
+      testMessagePendingAction: "Sending a test message to {destination}",
+      testMessageSuccess:
+        "Telegram accepted the test message for {destination}.",
       testMessageError: "Could not send the test message.",
-      testMessageTimeout:
-        "The send request timed out and the result is uncertain; check Telegram before trying again.",
+      testMessageUnknownOutcome:
+        "Telegram did not confirm whether it accepted the test message. Check the Telegram conversation before trying again.",
       testMessagePermissionRequired:
         "Destination management permission is required to send a test message.",
       testMessageInactive:
-        "Only active destinations can receive a test message.",
+        "Only active destinations linked to active bots can receive a test message.",
       disableTitle: "Disable Telegram destination?",
       disableDescription:
         "A disabled destination will no longer receive notifications from routes pointing to it. This interface does not provide reactivation.",
@@ -2570,31 +2573,33 @@ export const en: Dictionary = {
       linkTitle: "Link destination",
       linkDescription:
         "Create a /start command, then send it in Telegram to verify a chat, group, or channel.",
+      linkPendingDescription:
+        "Send this command in the Telegram chat, group, or channel you want to verify.",
       commandBot: "Bot receiving /start",
       botPlaceholder: "Choose an active bot",
       botDescription:
-        "The new destination will be attached to the selected bot.",
+        "A destination is created only after this bot receives the command.",
+      bot: "Bot",
       linkCommand: "Link command",
       expiresAt: "Expires: {time}",
       copyCommand: "Copy command",
-      refreshDestinations: "Refresh destinations",
       createCommand: "Create link command",
-      regenerateCommand: "Generate a new link command",
       linkCreated: "Telegram link command created.",
-      refreshed: "Destination list refreshed.",
       copied: "Link command copied.",
       copyError: "Could not copy the link command.",
       linkExpired:
-        "This link command has expired. Generate a new command before opening or copying it.",
-      linkCompletionHint:
-        "After completing the Telegram handoff, return here and refresh the destination list to verify it.",
+        "This link command has expired. Close this dialog and create a new command before sending it.",
+      linkExpiredStatus: "Expired",
+      awaitingVerification: "Awaiting verification",
       botReadPermissionRequired:
         "Bot read permission is required to select a Telegram bot.",
+      destinationReadPermissionRequired:
+        "Destination read permission is required to check the verification result.",
       noActiveBotToLink:
         "Connect an active Telegram bot before linking a destination.",
       botRequired: "Choose an active Telegram bot.",
-      openPrivate: "Open private chat",
-      openGroup: "Open group chat",
+      botUnavailable:
+        "The selected bot is no longer active. Choose an active bot and create a new command.",
       noActiveDestination: "No active destinations yet.",
       placeholder: "Choose destination",
       fallbackLabel: "Destination #{id}",
