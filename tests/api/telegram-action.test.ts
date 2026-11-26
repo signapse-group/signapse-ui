@@ -15,6 +15,7 @@ const { testDictionary } = vi.hoisted(() => ({
       localTimeDuplicate: "Local times must be unique",
       destination: {
         invalidData: "Destination is invalid",
+        createLinkError: "Could not create the Telegram link command",
         testMessageError: "Could not send a test message",
         testMessageUnknownOutcome:
           "Telegram did not confirm the test message. Check the Telegram conversation before trying again.",
@@ -52,8 +53,10 @@ vi.mock("next/cache", () => ({
 import { fetchAuthenticated } from "@/app/api/auth/action"
 import { getLanguages } from "@/app/api/languages/action"
 import {
+  createTelegramLinkToken,
   createTelegramMarketAnalysisSchedule,
   deleteTelegramMarketAnalysisSchedule,
+  getTelegramDestinations,
   sendTelegramTestMessage,
   updateTelegramMarketAnalysisSchedule,
   updateTelegramFeatureSetting,
@@ -289,5 +292,90 @@ describe("Telegram test message action", () => {
       outcome: "known-error",
     })
     expect(fetchAuthenticated).not.toHaveBeenCalled()
+  })
+})
+
+describe("Telegram destination link actions", () => {
+  beforeEach(() => {
+    vi.mocked(fetchAuthenticated).mockReset()
+    vi.mocked(revalidatePath).mockClear()
+  })
+
+  it("creates a token for the selected bot and accepts the published response", async () => {
+    const response = {
+      botConnectionId: 12,
+      token: "ExampleLinkToken0123456789ABCDEF",
+      startCommand: "/start ExampleLinkToken0123456789ABCDEF",
+      expiresAt: "2030-01-15T08:15:00.000Z",
+    }
+    vi.mocked(fetchAuthenticated).mockResolvedValue(response)
+
+    await expect(
+      createTelegramLinkToken({ botConnectionId: 12 })
+    ).resolves.toEqual({ success: true, data: response })
+    expect(fetchAuthenticated).toHaveBeenCalledWith(
+      "/telegram/destinations/link-token",
+      {
+        method: "POST",
+        body: JSON.stringify({ botConnectionId: 12 }),
+      }
+    )
+    expect(revalidatePath).not.toHaveBeenCalled()
+  })
+
+  it("rejects missing response fields and a response for a different bot", async () => {
+    vi.mocked(fetchAuthenticated).mockResolvedValueOnce({
+      botConnectionId: 12,
+      startCommand: "/start missing-token",
+      expiresAt: "2030-01-15T08:15:00.000Z",
+    })
+
+    await expect(
+      createTelegramLinkToken({ botConnectionId: 12 })
+    ).resolves.toEqual({
+      success: false,
+      error: testDictionary.telegram.destination.invalidData,
+    })
+
+    vi.mocked(fetchAuthenticated).mockResolvedValueOnce({
+      botConnectionId: 13,
+      token: "ExampleLinkToken0123456789ABCDEF",
+      startCommand: "/start ExampleLinkToken0123456789ABCDEF",
+      expiresAt: "2030-01-15T08:15:00.000Z",
+    })
+
+    await expect(
+      createTelegramLinkToken({ botConnectionId: 12 })
+    ).resolves.toEqual({
+      success: false,
+      error: testDictionary.telegram.destination.invalidData,
+    })
+  })
+
+  it("keeps API permission failures as errors", async () => {
+    vi.mocked(fetchAuthenticated).mockRejectedValue(
+      Object.assign(new Error("Permission denied"), { status: 403 })
+    )
+
+    await expect(
+      createTelegramLinkToken({ botConnectionId: 12 })
+    ).resolves.toEqual({ success: false, error: "Permission denied" })
+  })
+
+  it("reads back bot and destination status from the API response", async () => {
+    const destinations = [
+      {
+        id: 31,
+        botConnectionId: 12,
+        chatId: "-100123",
+        chatType: "CHANNEL" as const,
+        displayLabel: "Read back channel",
+        status: "DISABLED" as const,
+      },
+    ]
+    vi.mocked(fetchAuthenticated).mockResolvedValue(destinations)
+
+    await expect(getTelegramDestinations()).resolves.toEqual(destinations)
+    expect(fetchAuthenticated).toHaveBeenCalledWith("/telegram/destinations")
   })
 })

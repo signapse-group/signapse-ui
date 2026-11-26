@@ -2547,29 +2547,31 @@ export const vi = {
       linkTitle: "Liên kết điểm nhận",
       linkDescription:
         "Tạo lệnh /start rồi gửi lệnh đó trong Telegram để xác minh chat, group hoặc channel.",
+      linkPendingDescription:
+        "Gửi lệnh này trong cuộc trò chuyện, nhóm hoặc kênh Telegram bạn muốn xác minh.",
       commandBot: "Bot nhận lệnh /start",
       botPlaceholder: "Chọn bot đang hoạt động",
-      botDescription: "Điểm nhận mới sẽ được gắn với bot đang chọn.",
+      botDescription: "Điểm nhận chỉ được tạo sau khi bot này nhận được lệnh.",
+      bot: "Bot",
       linkCommand: "Lệnh liên kết",
       expiresAt: "Hết hạn: {time}",
       copyCommand: "Sao chép lệnh",
-      refreshDestinations: "Làm mới điểm nhận",
       createCommand: "Tạo lệnh liên kết",
-      regenerateCommand: "Tạo lệnh liên kết mới",
       linkCreated: "Đã tạo lệnh liên kết Telegram.",
-      refreshed: "Đã làm mới danh sách điểm nhận.",
       copied: "Đã sao chép lệnh liên kết.",
       copyError: "Không thể sao chép lệnh liên kết.",
       linkExpired:
-        "Lệnh liên kết này đã hết hạn. Hãy tạo lệnh mới trước khi mở hoặc sao chép.",
-      linkCompletionHint:
-        "Sau khi hoàn tất trên Telegram, quay lại đây và làm mới danh sách điểm nhận để xác minh.",
+        "Lệnh liên kết này đã hết hạn. Hãy đóng hộp thoại và tạo lệnh mới trước khi gửi.",
+      linkExpiredStatus: "Đã hết hạn",
+      awaitingVerification: "Chờ xác minh",
       botReadPermissionRequired: "Cần quyền đọc bot để chọn bot Telegram.",
+      destinationReadPermissionRequired:
+        "Bạn cần quyền đọc điểm nhận để kiểm tra kết quả xác minh.",
       noActiveBotToLink:
         "Hãy kết nối một bot Telegram đang hoạt động trước khi liên kết điểm nhận.",
       botRequired: "Hãy chọn một bot Telegram đang hoạt động.",
-      openPrivate: "Mở chat riêng",
-      openGroup: "Mở group chat",
+      botUnavailable:
+        "Bot đã chọn không còn hoạt động. Hãy chọn bot đang hoạt động và tạo lệnh mới.",
       noActiveDestination: "Chưa có điểm nhận đang hoạt động.",
       placeholder: "Chọn điểm nhận",
       fallbackLabel: "Điểm nhận #{id}",

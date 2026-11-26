@@ -15,6 +15,7 @@ import {
   CreateTelegramLinkTokenRequest,
   getCreateTelegramBotConnectionSchema,
   getCreateTelegramLinkTokenSchema,
+  getTelegramLinkTokenResponseSchema,
   getSaveTelegramMarketAnalysisScheduleSchema,
   getUpdateTelegramFeatureSettingSchema,
   normalizeSaveTelegramMarketAnalysisScheduleRequest,
@@ -211,7 +212,7 @@ export async function createTelegramLinkToken(
   }
 
   try {
-    const data = await fetchAuthenticated<TelegramLinkTokenResponse>(
+    const data = await fetchAuthenticated<unknown>(
       "/telegram/destinations/link-token",
       {
         method: "POST",
@@ -219,7 +220,19 @@ export async function createTelegramLinkToken(
       }
     )
 
-    return { success: true, data }
+    const parsedResponse = getTelegramLinkTokenResponseSchema().safeParse(data)
+
+    if (
+      !parsedResponse.success ||
+      parsedResponse.data.botConnectionId !== parsed.data.botConnectionId
+    ) {
+      return {
+        success: false,
+        error: dictionary.telegram.destination.invalidData,
+      }
+    }
+
+    return { success: true, data: parsedResponse.data }
   } catch (error: unknown) {
     return {
       success: false,

@@ -4167,8 +4167,28 @@ Which asset did you mean? The available data is limited. Add TSLA to your watchl
 
   if (method === "GET" && pathname === "/telegram/bot-connections")
     return state.botConnections
-  if (method === "GET" && pathname === "/telegram/destinations")
+  if (method === "GET" && pathname === "/telegram/destinations") {
+    if (getScenario(state, method, pathname) === "telegram-verified-readback") {
+      return [
+        ...state.destinations,
+        {
+          id: 23,
+          botConnectionId: 11,
+          botUsername: "signapse_fixture_bot",
+          botDisplayLabel: "Signapse Fixture Bot",
+          chatId: "-100000000023",
+          chatType: "GROUP",
+          displayLabel: "Verified after link",
+          chatTitle: "Verified after link",
+          status: "ACTIVE",
+          createdDate: NOW,
+          lastModifiedDate: NOW,
+        },
+      ]
+    }
+
     return state.destinations
+  }
   if (method === "GET" && pathname === "/telegram/feature-settings")
     return state.featureSettings
   if (method === "GET" && pathname === "/telegram/market-analysis-schedules")
@@ -4210,11 +4230,12 @@ Which asset did you mean? The available data is limited. Add TSLA to your watchl
   }
 
   if (method === "POST" && pathname === "/telegram/destinations/link-token") {
+    const token = "ExampleLinkToken0123456789ABCDEF"
     return {
       botConnectionId: body?.botConnectionId ?? 11,
-      token: "fixture-token",
-      startCommand: "/start fixture-token",
-      expiresAt: NOW,
+      token,
+      startCommand: `/start ${token}`,
+      expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
     }
   }
 

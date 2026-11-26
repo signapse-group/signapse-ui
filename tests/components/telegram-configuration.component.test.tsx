@@ -10,6 +10,7 @@ import {
 } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { toast } from "sonner"
 
 const { routerRefresh } = vi.hoisted(() => ({
   routerRefresh: vi.fn(),
@@ -38,6 +39,7 @@ vi.mock("sonner", () => ({
 }))
 
 import {
+  createTelegramLinkToken,
   deleteTelegramMarketAnalysisSchedule,
   updateTelegramFeatureSetting,
 } from "@/app/api/telegram/action"
@@ -782,5 +784,215 @@ describe("Telegram destination test message eligibility", () => {
       ),
     })
     expect(button).not.toHaveAttribute("aria-disabled", "true")
+  })
+})
+
+describe("Telegram destination link dialog", () => {
+  const botConnections = [
+    { id: 1, displayLabel: "Market bot", status: "ACTIVE" as const },
+    { id: 2, displayLabel: "Operations bot", status: "ACTIVE" as const },
+  ]
+  const linkToken = {
+    botConnectionId: 2,
+    token: "ExampleLinkToken0123456789ABCDEF",
+    startCommand: "/start ExampleLinkToken0123456789ABCDEF",
+    expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+  }
+
+  beforeEach(() => {
+    vi.mocked(createTelegramLinkToken).mockReset()
+    vi.mocked(toast.success).mockClear()
+    vi.mocked(toast.error).mockClear()
+    routerRefresh.mockClear()
+  })
+
+  afterEach(() => cleanup())
+
+  function linkableData(canReadDestinations = true) {
+    return {
+      ...data,
+      botConnections,
+      destinations: [],
+      sectionAccess: {
+        ...data.sectionAccess,
+        botConnections: true,
+        destinations: canReadDestinations,
+      },
+      manageAccess: {
+        ...data.manageAccess,
+        destinations: true,
+      },
+    }
+  }
+
+  async function openAndSelectBot(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(
+      screen.getByRole("button", {
+        name: viDictionary.telegram.destination.link,
+      })
+    )
+    const botSelect = screen.getByRole("combobox", {
+      name: viDictionary.telegram.destination.commandBot,
+    })
+    await user.click(botSelect)
+    await user.click(screen.getByRole("option", { name: "Operations bot" }))
+    return screen.getByRole("dialog")
+  }
+
+  it("posts the selected bot and shows only the pending response until readback", async () => {
+    const user = userEvent.setup()
+    vi.mocked(createTelegramLinkToken).mockResolvedValue({
+      success: true,
+      data: linkToken,
+    })
+    const currentData = linkableData()
+    const { rerender } = renderConfiguration(currentData)
+
+    const dialog = await openAndSelectBot(user)
+    await user.click(
+      within(dialog).getByRole("button", {
+        name: viDictionary.telegram.destination.createCommand,
+      })
+    )
+
+    await waitFor(() =>
+      expect(createTelegramLinkToken).toHaveBeenCalledWith({
+        botConnectionId: 2,
+      })
+    )
+    expect(
+      await within(dialog).findByText(
+        viDictionary.telegram.destination.awaitingVerification,
+        { exact: true }
+      )
+    ).toBeVisible()
+    expect(
+      within(dialog).getByText("Operations bot", { exact: true })
+    ).toBeVisible()
+    expect(
+      screen.getByLabelText(viDictionary.telegram.destination.linkCommand)
+    ).toHaveValue(linkToken.startCommand)
+    expect(screen.getByText(/Hết hạn:/)).toBeVisible()
+    expect(screen.queryByText("Đã xác minh", { exact: true })).toBeNull()
+
+    const closeButtons = within(dialog).getAllByRole("button", {
+      name: viDictionary.common.close,
+    })
+    await user.click(closeButtons[1]!)
+    await waitFor(() => expect(routerRefresh).toHaveBeenCalledTimes(1))
+    expect(screen.queryByText("Verified channel", { exact: true })).toBeNull()
+
+    const apiReadback = {
+      id: 31,
+      botConnectionId: 2,
+      chatId: "-100123",
+      chatType: "CHANNEL" as const,
+      displayLabel: "Verified channel",
+      status: "DISABLED" as const,
+    }
+    rerender(
+      <LocalizationProvider locale="vi" dictionary={viDictionary}>
+        <TelegramConfigurationPage
+          data={{ ...currentData, destinations: [apiReadback] }}
+        />
+      </LocalizationProvider>
+    )
+    expect(screen.getByText("Verified channel")).toBeVisible()
+    expect(
+      screen.getByText(viDictionary.telegram.statuses.DISABLED, { exact: true })
+    ).toBeVisible()
+  })
+
+  it("keeps token creation available with manage permission but does not read without read permission", async () => {
+    const user = userEvent.setup()
+    vi.mocked(createTelegramLinkToken).mockResolvedValue({
+      success: true,
+      data: linkToken,
+    })
+    renderConfiguration(linkableData(false))
+
+    const dialog = await openAndSelectBot(user)
+    await user.click(
+      within(dialog).getByRole("button", {
+        name: viDictionary.telegram.destination.createCommand,
+      })
+    )
+
+    expect(
+      await within(dialog).findByText(
+        viDictionary.telegram.destination.awaitingVerification,
+        { exact: true }
+      )
+    ).toBeVisible()
+    expect(
+      within(dialog).getByText(
+        viDictionary.telegram.destination.destinationReadPermissionRequired
+      )
+    ).toBeVisible()
+
+    await user.click(
+      within(dialog).getAllByRole("button", {
+        name: viDictionary.common.close,
+      })[1]!
+    )
+    expect(routerRefresh).not.toHaveBeenCalled()
+  })
+
+  it("does not report a token as successful when the response bot is no longer active", async () => {
+    const user = userEvent.setup()
+    vi.mocked(createTelegramLinkToken).mockResolvedValue({
+      success: true,
+      data: { ...linkToken, botConnectionId: 99 },
+    })
+    renderConfiguration(linkableData())
+    const dialog = await openAndSelectBot(user)
+    await user.click(
+      within(dialog).getByRole("button", {
+        name: viDictionary.telegram.destination.createCommand,
+      })
+    )
+
+    expect(
+      await within(dialog).findByText(
+        viDictionary.telegram.destination.botUnavailable
+      )
+    ).toBeVisible()
+    expect(
+      within(dialog).queryByText(
+        viDictionary.telegram.destination.awaitingVerification,
+        { exact: true }
+      )
+    ).toBeNull()
+    expect(toast.success).not.toHaveBeenCalledWith(
+      viDictionary.telegram.destination.linkCreated
+    )
+  })
+
+  it("shows token permission failures without a pending state", async () => {
+    const user = userEvent.setup()
+    vi.mocked(createTelegramLinkToken).mockResolvedValue({
+      success: false,
+      error: "Permission denied",
+    })
+    renderConfiguration(linkableData())
+    const dialog = await openAndSelectBot(user)
+    await user.click(
+      within(dialog).getByRole("button", {
+        name: viDictionary.telegram.destination.createCommand,
+      })
+    )
+
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent(
+      "Permission denied"
+    )
+    expect(
+      within(dialog).queryByText(
+        viDictionary.telegram.destination.awaitingVerification,
+        { exact: true }
+      )
+    ).toBeNull()
+    expect(toast.success).not.toHaveBeenCalledWith(
+      viDictionary.telegram.destination.linkCreated
+    )
   })
 })
