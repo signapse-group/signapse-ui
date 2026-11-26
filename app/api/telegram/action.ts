@@ -174,6 +174,18 @@ export async function createTelegramBotConnection(
     )
 
     if (response.status !== 200 && response.status !== 201) {
+      if (response.status >= 200 && response.status < 300) {
+        revalidateTelegramConfiguration()
+
+        return {
+          success: true,
+          data: {
+            connection: {},
+            created: null,
+          },
+        }
+      }
+
       return {
         success: false,
         error: dictionary.telegram.bot.createError,

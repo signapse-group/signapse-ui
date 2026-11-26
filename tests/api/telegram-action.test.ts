@@ -360,6 +360,21 @@ describe("Telegram bot connection creation", () => {
     expect(revalidatePath).toHaveBeenCalledWith("/telegram")
   })
 
+  it("keeps a successful response without a body as an unverified outcome", async () => {
+    vi.mocked(fetchAuthenticatedWithStatus).mockResolvedValueOnce({
+      data: null,
+      status: 204,
+    })
+
+    await expect(
+      createTelegramBotConnection({ botToken: "fake-token" })
+    ).resolves.toEqual({
+      success: true,
+      data: { connection: {}, created: null },
+    })
+    expect(revalidatePath).toHaveBeenCalledWith("/telegram")
+  })
+
   it("returns localized backend verification, permission, and conflict errors", async () => {
     for (const [status, message] of [
       [400, "Token verification failed."],

@@ -30,30 +30,6 @@ export type TelegramScheduleStatus = "ACTIVE" | "DISABLED" | "REMOVED"
 export type TelegramChatType =
   "PRIVATE" | "GROUP" | "SUPERGROUP" | "CHANNEL" | "UNKNOWN"
 
-export const telegramBotConnectionResponseSchema = z.object({
-  id: z.number().int(),
-  botId: z.number().int().optional(),
-  botUsername: z.string().optional(),
-  botFirstName: z.string().optional(),
-  displayLabel: z.string().optional(),
-  status: telegramConnectionStatusSchema,
-  webhookUrl: z.string().optional(),
-  failureReason: z.string().optional(),
-  verifiedAt: z.string().optional(),
-  lastValidatedAt: z.string().optional(),
-  lastWebhookRegisteredAt: z.string().optional(),
-  createdDate: z.string().optional(),
-  lastModifiedDate: z.string().optional(),
-})
-
-export const telegramBotConnectionsResponseSchema = z.array(
-  telegramBotConnectionResponseSchema
-)
-
-export type TelegramBotConnectionResponse = z.infer<
-  typeof telegramBotConnectionResponseSchema
->
-
 export const telegramBotConnectionReadbackSchema = z.object({
   id: z.number().int().optional().catch(undefined),
   botId: z.number().int().optional().catch(undefined),
@@ -73,6 +49,11 @@ export const telegramBotConnectionReadbackSchema = z.object({
 export type TelegramBotConnectionReadback = z.infer<
   typeof telegramBotConnectionReadbackSchema
 >
+
+export type TelegramBotConnectionResponse = TelegramBotConnectionReadback & {
+  id: number
+  status: TelegramConnectionStatus
+}
 
 export const telegramBotConnectionsReadbackResponseSchema = z
   .array(z.unknown())
