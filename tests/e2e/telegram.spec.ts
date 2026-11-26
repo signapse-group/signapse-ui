@@ -48,7 +48,7 @@ test.describe("P0 Telegram operations", () => {
     const scheduleRequests = (await fixture.state()).requests.filter(
       (request) =>
         request.path === "/telegram/market-analysis-schedules" &&
-        ["GET", "POST"].includes(request.method)
+        (request.method === "GET" || request.method === "POST")
     )
     expect(scheduleRequests.some((request) => request.method === "POST")).toBe(
       true

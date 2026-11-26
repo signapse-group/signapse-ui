@@ -40,10 +40,10 @@ The P0 case resized while Create/Edit stayed open. At 360px and 760px CSS width,
 
 - Focused Vitest: `pnpm exec vitest run tests/api/telegram-action.test.ts tests/components/telegram-configuration.component.test.tsx tests/components/telegram-schedule-form.component.test.tsx tests/core/api-contract-guard.test.ts` — 4 files, 66 passed.
 - Scoped ESLint over changed Telegram actions, components, definitions, dictionaries, fixtures, and tests — passed.
-- `pnpm typecheck` — passed.
+- `pnpm typecheck` — passed on the corrected create/readback test.
 - Prettier on changed TS/TSX/MJS files, `git diff --cached --check`, and `git diff --check` — passed.
 - `/opt/apps/symphony/runtime/run-fe-browser "$PWD" tests/e2e/telegram.spec.ts --retries=0` — 3 passed in 47.5s on the merged candidate, covering the 503 read-isolation state, schedule list/actions, form draft/timezone reflow, and Telegram fixture cases.
-- `/opt/apps/symphony/runtime/run-fe-browser "$PWD" tests/e2e/telegram.spec.ts --retries=0 --grep "creates a schedule and reads it back"` — 1 passed in 17.3s. The Create flow submits valid data, shows the saved ACTIVE row, and retains it after a fresh page read; the fixture records both POST and GET.
+- `/opt/apps/symphony/runtime/run-fe-browser "$PWD" tests/e2e/telegram.spec.ts --retries=0 --grep "creates a schedule and reads it back"` — 1 passed in 15.5s on the corrected test. The Create flow submits valid data, shows the saved ACTIVE row, and retains it after a fresh page read; the fixture records both POST and GET.
 
 These local fixtures do not prove live-user authorization or schedule persistence. QA owns live feature acceptance after delivery.
 
