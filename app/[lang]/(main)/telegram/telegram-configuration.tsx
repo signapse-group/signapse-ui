@@ -814,6 +814,7 @@ function MarketAnalysisSchedulePanel({
         <div className="flex min-w-0 flex-col gap-1">
           <h2
             id="telegram-schedule-heading"
+            tabIndex={-1}
             className="text-lg font-semibold text-foreground"
           >
             {t.schedule.panelTitle}
@@ -916,6 +917,7 @@ function ScheduleActionButtons({
           triggerLabel={t.schedule.deleteTrigger}
           triggerTooltip={t.schedule.deleteTrigger}
           restoreFocusId={deleteTriggerId}
+          successFocusId="telegram-schedule-heading"
           trigger={
             <Button
               id={deleteTriggerId}

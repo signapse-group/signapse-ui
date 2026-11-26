@@ -410,18 +410,23 @@ describe("Telegram schedule destructive actions", () => {
     )
     await waitFor(() => expect(routerRefresh).toHaveBeenCalledTimes(1))
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument()
-    expect(trigger).toHaveFocus()
+    await waitFor(() =>
+      expect(
+        screen.getByRole("heading", {
+          name: viDictionary.telegram.schedule.panelTitle,
+        })
+      ).toHaveFocus()
+    )
   })
 
   it("leaves the schedule unchanged when delete confirmation is cancelled", async () => {
     const user = userEvent.setup()
     renderConfiguration()
 
-    await user.click(
-      screen.getAllByRole("button", {
-        name: viDictionary.telegram.schedule.deleteTrigger,
-      })[0]
-    )
+    const trigger = screen.getAllByRole("button", {
+      name: viDictionary.telegram.schedule.deleteTrigger,
+    })[0]
+    await user.click(trigger)
     const dialog = screen.getByRole("alertdialog")
     await user.click(
       within(dialog).getByRole("button", {
@@ -432,6 +437,7 @@ describe("Telegram schedule destructive actions", () => {
     expect(deleteTelegramMarketAnalysisSchedule).not.toHaveBeenCalled()
     expect(screen.getAllByText("Morning analysis").length).toBeGreaterThan(0)
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument()
+    await waitFor(() => expect(trigger).toHaveFocus())
   })
 
   it("keeps an unassigned feature route Select controlled when assigning a destination", async () => {

@@ -212,6 +212,75 @@ test.describe("P0 Telegram operations", () => {
     expect(lastListReadIndex).toBeGreaterThan(updateIndex)
   })
 
+  test("removes a schedule and focuses the surviving heading after readback", async ({
+    page,
+    fixture,
+  }, testInfo) => {
+    await page.emulateMedia({ colorScheme: "dark" })
+    await page.setViewportSize({ width: 1520, height: 1024 })
+    await page.goto("/vi/telegram")
+    await page.addStyleTag({
+      content:
+        '[aria-label="Ask Signapse"], nextjs-portal { display: none !important; }',
+    })
+
+    const original = (await fixture.state()).schedules?.find(
+      (schedule) => schedule.name === "BTC morning analysis"
+    )
+    expect(original?.status).toBe("ACTIVE")
+    if (!original) throw new Error("Fixture ACTIVE schedule was not found")
+    const schedulePath = `/telegram/market-analysis-schedules/${String(original.id)}`
+    const scheduleRow = page
+      .getByRole("row")
+      .filter({ hasText: "BTC morning analysis" })
+    const removeTrigger = scheduleRow.getByRole("button", {
+      name: "Xóa lịch phân tích",
+    })
+    await removeTrigger.focus()
+    await page.keyboard.press("Enter")
+
+    const dialog = page.getByRole("alertdialog")
+    const confirmButton = dialog.getByRole("button", {
+      name: "Xóa lịch",
+      exact: true,
+    })
+    await page.keyboard.press("Tab")
+    await expect(confirmButton).toBeFocused()
+    await page.keyboard.press("Enter")
+    await expect(dialog).toBeHidden()
+    await expect(scheduleRow).toHaveCount(0)
+    const scheduleHeading = page.getByRole("heading", {
+      name: "Lịch gửi phân tích",
+      exact: true,
+    })
+    await expect(scheduleHeading).toBeFocused()
+    await page.locator("[data-sonner-toast]").waitFor({ state: "hidden" })
+    await page.screenshot({
+      path: testInfo.outputPath(
+        "telegram-schedule-remove-success-focus-wide-dark.png"
+      ),
+      fullPage: true,
+    })
+
+    const afterDelete = await fixture.state()
+    expect(
+      afterDelete.schedules?.find((schedule) => schedule.id === original.id)
+        ?.status
+    ).toBe("REMOVED")
+    const deleteIndex = afterDelete.requests.findIndex(
+      (request) => request.method === "DELETE" && request.path === schedulePath
+    )
+    const lastListReadIndex = afterDelete.requests
+      .map(
+        (request) =>
+          request.method === "GET" &&
+          request.path === "/telegram/market-analysis-schedules"
+      )
+      .lastIndexOf(true)
+    expect(deleteIndex).toBeGreaterThanOrEqual(0)
+    expect(lastListReadIndex).toBeGreaterThan(deleteIndex)
+  })
+
   test("covers destination delivery states and destructive confirmation", async ({
     page,
     fixture,
