@@ -1,6 +1,12 @@
 "use client"
 
-import { type FormEvent, useEffect, useState, useTransition } from "react"
+import {
+  type FormEvent,
+  useEffect,
+  useRef,
+  useState,
+  useTransition,
+} from "react"
 import { useRouter } from "next/navigation"
 import {
   CalendarClock,
@@ -366,6 +372,7 @@ function DestinationLinkDialog({
   const [linkToken, setLinkToken] = useState<TelegramLinkTokenResponse | null>(
     null
   )
+  const linkCommandRef = useRef<HTMLTextAreaElement>(null)
   const [currentTime, setCurrentTime] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
@@ -382,6 +389,7 @@ function DestinationLinkDialog({
   useEffect(() => {
     if (!linkToken) return
 
+    linkCommandRef.current?.focus()
     const expiresAt = new Date(linkToken.expiresAt).getTime()
     if (!Number.isFinite(expiresAt)) return
 
@@ -588,6 +596,7 @@ function DestinationLinkDialog({
                     </FieldLabel>
                     <InputGroup>
                       <InputGroupTextarea
+                        ref={linkCommandRef}
                         id="telegram-link-command"
                         value={linkToken.startCommand}
                         readOnly

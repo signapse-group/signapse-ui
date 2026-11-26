@@ -188,6 +188,9 @@ test.describe("P0 Telegram operations", () => {
 
     const dialog = page.getByRole("dialog", { name: "Liên kết điểm nhận" })
     await expect(dialog).toBeVisible()
+    await expect(
+      dialog.getByRole("button", { name: "Đóng", exact: true }).first()
+    ).toBeFocused()
     expect(
       await dialog.evaluate((element) =>
         element.contains(document.activeElement)
@@ -234,6 +237,12 @@ test.describe("P0 Telegram operations", () => {
 
     const pending = dialog.getByText("Chờ xác minh", { exact: true })
     await expect(pending).toBeVisible()
+    await expect(dialog.getByLabel("Lệnh liên kết")).toBeFocused()
+    await expect
+      .poll(() =>
+        dialog.evaluate((element) => element.contains(document.activeElement))
+      )
+      .toBe(true)
     await expect(
       dialog.getByText("Fixture operations bot", { exact: true })
     ).toBeVisible()
@@ -293,11 +302,35 @@ test.describe("P0 Telegram operations", () => {
       (request) =>
         request.method === "GET" && request.path === "/telegram/destinations"
     ).length
-    await dialog
-      .getByRole("button", { name: "Đóng", exact: true })
+    const closeButton = dialog
+      .getByRole("button", {
+        name: "Đóng",
+        exact: true,
+      })
       .last()
-      .click()
+    let closeButtonFocused = await closeButton.evaluate(
+      (element) => element === document.activeElement
+    )
+    for (let attempt = 0; attempt < 6 && !closeButtonFocused; attempt += 1) {
+      await page.keyboard.press("Tab")
+      await expect
+        .poll(() =>
+          dialog.evaluate((element) => element.contains(document.activeElement))
+        )
+        .toBe(true)
+      closeButtonFocused = await closeButton.evaluate(
+        (element) => element === document.activeElement
+      )
+    }
+    await expect(closeButton).toBeFocused()
+    await dialog.screenshot({
+      path: test
+        .info()
+        .outputPath("telegram-link-pending-keyboard-close-200-zoom.png"),
+    })
+    await page.keyboard.press("Enter")
     await expect(dialog).toBeHidden()
+    await expect(linkTrigger).toBeFocused()
     await expect
       .poll(async () => {
         const requests = (await fixture.state()).requests
@@ -323,6 +356,7 @@ test.describe("P0 Telegram operations", () => {
       .getByRole("listitem")
       .filter({ hasText: "Verified after link" })
     await expect(verifiedItem).toContainText("Đang hoạt động")
+    await expect(verifiedItem).toContainText("Signapse Fixture Bot")
   })
 
   test("does not read destination results without destination read permission", async ({
