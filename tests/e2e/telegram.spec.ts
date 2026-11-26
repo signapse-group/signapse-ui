@@ -416,6 +416,7 @@ test.describe("P0 Telegram operations", () => {
     page,
     fixture,
   }, testInfo) => {
+    await page.emulateMedia({ colorScheme: "dark" })
     await page.setViewportSize({ width: 1520, height: 1024 })
     await page.goto("/vi/telegram")
 
@@ -450,7 +451,19 @@ test.describe("P0 Telegram operations", () => {
       { name: "zoom-200-percent", width: 195, height: 422 },
     ]) {
       await page.setViewportSize({ width: frame.width, height: frame.height })
+      if (frame.name === "compact") {
+        await page
+          .getByRole("button", {
+            name: "Thu gọn/mở rộng thanh điều hướng",
+          })
+          .click()
+      }
       await expect(removeTrigger).toBeVisible()
+      const pageWidths = await page.evaluate(() => ({
+        scroll: document.documentElement.scrollWidth,
+        client: document.documentElement.clientWidth,
+      }))
+      expect(pageWidths.scroll).toBeLessThanOrEqual(pageWidths.client)
       await expect
         .poll(async () => (await removeTrigger.boundingBox())?.width ?? 0)
         .toBeGreaterThanOrEqual(frame.width < 768 ? 44 : 0)
