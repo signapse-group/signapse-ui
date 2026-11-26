@@ -12,7 +12,7 @@ import { getServerDictionary } from "@/app/lib/i18n/server"
 import { hasPermission } from "@/app/lib/permissions"
 import { getCurrentPermissions } from "@/app/lib/permissions-server"
 import {
-  canReadTelegramConfiguration,
+  canAccessTelegramConfiguration,
   getTelegramManageAccess,
   getTelegramScheduleActionAccess,
   getTelegramSectionAccess,
@@ -54,7 +54,7 @@ export default async function TelegramPage() {
   const manageAccess = getTelegramManageAccess(permissions)
   const scheduleActions = getTelegramScheduleActionAccess(permissions)
 
-  if (!canReadTelegramConfiguration(permissions)) {
+  if (!canAccessTelegramConfiguration(permissions)) {
     return (
       <AccessDenied
         description={dictionary.telegram.readDenied}
@@ -113,7 +113,10 @@ async function TelegramConfigurationContent({
     []
   )
   const languagesPromise = loadSection(
-    sectionAccess.schedules || sectionAccess.featureSettings
+    sectionAccess.schedules ||
+      sectionAccess.featureSettings ||
+      scheduleActions.create ||
+      scheduleActions.update
       ? () => getLanguages().then((catalog) => catalog.languages)
       : undefined,
     []

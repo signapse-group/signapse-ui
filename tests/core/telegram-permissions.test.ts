@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest"
 
 import {
+  canAccessTelegramConfiguration,
+  getTelegramScheduleActionAccess,
   getTelegramManageAccess,
   getTelegramSectionAccess,
 } from "@/app/lib/telegram/permissions"
@@ -24,4 +26,23 @@ describe("Telegram bot connection permissions", () => {
       botConnectionsDelete: true,
     })
   })
+
+  it.each([
+    ["create", "telegram-market-analysis-schedule:create"],
+    ["update", "telegram-market-analysis-schedule:update"],
+    ["delete", "telegram-market-analysis-schedule:delete"],
+  ] as const)(
+    "allows the Telegram route for schedule %s alone",
+    (action, permission) => {
+      const permissions = [permission]
+
+      expect(canAccessTelegramConfiguration(permissions)).toBe(true)
+      expect(getTelegramSectionAccess(permissions).schedules).toBe(false)
+      expect(getTelegramScheduleActionAccess(permissions)).toEqual({
+        create: action === "create",
+        update: action === "update",
+        delete: action === "delete",
+      })
+    }
+  )
 })

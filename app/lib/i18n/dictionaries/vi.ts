@@ -2637,12 +2637,12 @@ export const vi = {
       emptyTitle: "Chưa có lịch phân tích",
       emptyDescription:
         "Tạo lịch gửi theo giờ địa phương cho không gian làm việc hiện tại.",
-      deleteTitle: "Xóa lịch phân tích?",
+      deleteTitle: "Gỡ lịch phân tích?",
       deleteDescription:
-        "Lịch gửi phân tích thị trường sẽ bị xóa vĩnh viễn và không thể hoàn tác.",
-      deleteAction: "Xóa lịch",
-      deleteTrigger: "Xóa lịch phân tích",
-      deleteSuccess: "Đã xóa lịch phân tích.",
+        "Thao tác này chuyển lịch sang trạng thái đã gỡ, dừng các lượt chạy mới và đưa lịch ra khỏi danh sách có thể quản lý. Lịch sử đã ghi được bảo toàn.",
+      deleteAction: "Gỡ lịch",
+      deleteTrigger: "Gỡ lịch phân tích",
+      deleteSuccess: "Đã gỡ lịch phân tích. Lịch sử đã ghi được bảo toàn.",
       editTrigger: "Sửa lịch phân tích",
       createSchedule: "Tạo lịch",
       dialogEditTitle: "Chỉnh sửa lịch phân tích",
@@ -2705,12 +2705,12 @@ export const vi = {
       createError: "Không thể tạo lịch phân tích Telegram.",
       updateError: "Không thể cập nhật lịch phân tích Telegram.",
       disableError: "Không thể vô hiệu hóa lịch phân tích Telegram.",
-      deleteError: "Không thể xóa lịch phân tích Telegram.",
+      deleteError: "Không thể gỡ lịch phân tích Telegram. Hãy thử lại.",
     },
     statuses: {
       ACTIVE: "Đang hoạt động",
       INVALID: "Không hợp lệ",
-      REMOVED: "Đã xóa",
+      REMOVED: "Đã gỡ",
       DISABLED: "Đã vô hiệu hóa",
     },
     chatTypes: {

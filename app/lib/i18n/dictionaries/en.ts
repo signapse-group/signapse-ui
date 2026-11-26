@@ -2660,12 +2660,13 @@ export const en: Dictionary = {
       emptyTitle: "No analysis schedules yet",
       emptyDescription:
         "Create a local-time send schedule for the current workspace.",
-      deleteTitle: "Delete analysis schedule?",
+      deleteTitle: "Remove analysis schedule?",
       deleteDescription:
-        "This permanently deletes the market-analysis send schedule. The action cannot be undone.",
-      deleteAction: "Delete schedule",
-      deleteTrigger: "Delete analysis schedule",
-      deleteSuccess: "Analysis schedule deleted.",
+        "This marks the schedule as removed, stops future runs, and removes it from your manageable list. Recorded history is preserved.",
+      deleteAction: "Remove schedule",
+      deleteTrigger: "Remove analysis schedule",
+      deleteSuccess:
+        "Analysis schedule removed. Recorded history is preserved.",
       editTrigger: "Edit analysis schedule",
       createSchedule: "Create schedule",
       dialogEditTitle: "Edit analysis schedule",
@@ -2725,12 +2726,12 @@ export const en: Dictionary = {
       createError: "Could not create the Telegram analysis schedule.",
       updateError: "Could not update the Telegram analysis schedule.",
       disableError: "Could not disable the Telegram analysis schedule.",
-      deleteError: "Could not delete the Telegram analysis schedule.",
+      deleteError: "Could not remove the Telegram analysis schedule.",
     },
     statuses: {
       ACTIVE: "Active",
       INVALID: "Invalid",
-      REMOVED: "Deleted",
+      REMOVED: "Removed",
       DISABLED: "Disabled",
     },
     chatTypes: {

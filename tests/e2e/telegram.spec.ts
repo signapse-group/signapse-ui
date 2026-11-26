@@ -82,7 +82,273 @@ async function getDestructiveControlContrast(
   }, focusRing)
 }
 
+async function getControlBoundaryContrast(control: Locator) {
+  return control.evaluate((element) => {
+    function luminance(color: Uint8ClampedArray) {
+      const channel = (value: number) => {
+        const normalized = value / 255
+        return normalized <= 0.04045
+          ? normalized / 12.92
+          : ((normalized + 0.055) / 1.055) ** 2.4
+      }
+      return (
+        0.2126 * channel(color[0]) +
+        0.7152 * channel(color[1]) +
+        0.0722 * channel(color[2])
+      )
+    }
+
+    const context = document.createElement("canvas").getContext("2d", {
+      willReadFrequently: true,
+    })
+    if (!context) throw new Error("Canvas is unavailable for color sampling")
+    context.canvas.width = 1
+    context.canvas.height = 1
+
+    const backgrounds: string[] = []
+    for (
+      let ancestor: HTMLElement | null = element as HTMLElement;
+      ancestor;
+      ancestor = ancestor.parentElement
+    ) {
+      backgrounds.push(getComputedStyle(ancestor).backgroundColor)
+    }
+    context.fillStyle = "#fff"
+    context.fillRect(0, 0, 1, 1)
+    for (const background of backgrounds.reverse()) {
+      context.fillStyle = background
+      context.fillRect(0, 0, 1, 1)
+    }
+    const background = context.getImageData(0, 0, 1, 1).data
+
+    context.fillStyle = `rgb(${background[0]} ${background[1]} ${background[2]})`
+    context.fillRect(0, 0, 1, 1)
+    context.fillStyle = getComputedStyle(element).borderTopColor
+    context.fillRect(0, 0, 1, 1)
+    const border = context.getImageData(0, 0, 1, 1).data
+    const values = [luminance(border), luminance(background)].sort(
+      (left, right) => right - left
+    )
+    return (values[0] + 0.05) / (values[1] + 0.05)
+  })
+}
+
 test.describe("P0 Telegram operations", () => {
+  test("schedule creator can use Telegram without schedule read permission", async ({
+    page,
+    fixture,
+  }) => {
+    await fixture.setPermissions([
+      "telegram-market-analysis-schedule:create",
+      "telegram-destination:read",
+      "workspace:read",
+      "watchlist:read",
+    ])
+    await page.setViewportSize({ width: 1520, height: 1024 })
+    await page.context().addCookies([
+      {
+        name: "sidebar_state",
+        value: "true",
+        url: "http://127.0.0.1:3100/",
+      },
+    ])
+    await page.goto("/vi/dashboard")
+
+    const telegramLink = page.getByRole("link", {
+      name: "Tích hợp Telegram",
+      exact: true,
+    })
+    await expect(telegramLink).toBeVisible()
+    await telegramLink.click()
+    await expect(page).toHaveURL(/\/vi\/telegram$/)
+
+    const scheduleSection = page.locator(
+      'section[aria-labelledby="telegram-schedule-heading"]'
+    )
+    await expect(scheduleSection).toBeVisible()
+    await expect(scheduleSection).toContainText(
+      "Bạn chưa có quyền xem lịch gửi."
+    )
+    await expect(
+      scheduleSection.getByRole("button", { name: "Tạo lịch" })
+    ).toBeVisible()
+
+    await page.goto("/vi/telegram")
+    await expect(scheduleSection).toBeVisible()
+    await expect(
+      scheduleSection.getByRole("button", { name: "Tạo lịch" })
+    ).toBeVisible()
+
+    const dialogTrigger = scheduleSection.getByRole("button", {
+      name: "Tạo lịch",
+    })
+    await dialogTrigger.click()
+    const dialog = page.getByRole("dialog", { name: "Tạo lịch phân tích" })
+    await dialog.getByRole("textbox", { name: "Tên lịch" }).fill("Create-only")
+    await dialog.getByRole("combobox", { name: "Điểm nhận" }).click()
+    await page.getByRole("option", { name: "Operations channel" }).click()
+    await dialog.getByRole("combobox", { name: "Tài sản theo dõi" }).click()
+    await page.getByRole("option", { name: "BTC/USDT — Bitcoin" }).click()
+    await dialog.getByRole("textbox", { name: "Mốc giờ gửi 1" }).fill("09:15")
+    await dialog.getByRole("button", { name: "Tạo lịch", exact: true }).click()
+    await expect(dialog).toBeHidden()
+    await expect(
+      page.getByText("Đã tạo lịch phân tích.", { exact: true })
+    ).toBeVisible()
+
+    const state = await fixture.state()
+    expect(
+      state.schedules?.some((schedule) => schedule.name === "Create-only")
+    ).toBe(true)
+    expect(
+      state.requests.some(
+        (request) =>
+          request.path === "/telegram/market-analysis-schedules" &&
+          request.method === "GET"
+      )
+    ).toBe(false)
+    expect(
+      state.requests.some(
+        (request) =>
+          request.path === "/telegram/market-analysis-schedules" &&
+          request.method === "POST"
+      )
+    ).toBe(true)
+  })
+
+  test("schedule list reflows at 767/768px without page overflow or lost row actions", async ({
+    page,
+    fixture,
+  }, testInfo) => {
+    await page.emulateMedia({ colorScheme: "dark" })
+    await page.context().addCookies([
+      {
+        name: "sidebar_state",
+        value: "false",
+        url: "http://127.0.0.1:3100/",
+      },
+    ])
+    const initial = await fixture.state()
+    const scheduleId = initial.schedules?.find(
+      (schedule) => schedule.name === "BTC morning analysis"
+    )?.id
+    expect(scheduleId).toBeDefined()
+
+    const scheduleSection = page.locator(
+      'section[aria-labelledby="telegram-schedule-heading"]'
+    )
+    const activeCard = page
+      .locator("article")
+      .filter({ hasText: "BTC morning analysis" })
+      .first()
+    const activeRow = scheduleSection
+      .getByRole("row")
+      .filter({ hasText: "BTC morning analysis" })
+    const pageWidth = async () =>
+      page.evaluate(() => ({
+        scroll: document.documentElement.scrollWidth,
+        client: window.innerWidth,
+      }))
+
+    await page.setViewportSize({ width: 767, height: 900 })
+    await page.goto("/vi/telegram")
+    await expect(activeCard).toBeVisible()
+    await expect(activeRow).toBeHidden()
+    const mobileRemove = page.locator(
+      `#telegram-schedule-delete-${String(scheduleId)}-mobile`
+    )
+    await expect(mobileRemove).toBeVisible()
+    expect((await pageWidth()).scroll).toBeLessThanOrEqual(767)
+    await scheduleSection.screenshot({
+      path: testInfo.outputPath("schedule-list-breakpoint-767-dark-vi.png"),
+    })
+    await mobileRemove.focus()
+    await expect(mobileRemove).toBeFocused()
+
+    await page.setViewportSize({ width: 768, height: 900 })
+    await expect(activeRow).toBeVisible()
+    await expect(activeCard).toBeHidden()
+    const desktopRemove = page.locator(
+      `#telegram-schedule-delete-${String(scheduleId)}-desktop`
+    )
+    await expect(desktopRemove).toBeVisible()
+    expect((await pageWidth()).scroll).toBeLessThanOrEqual(768)
+    await scheduleSection.screenshot({
+      path: testInfo.outputPath("schedule-list-breakpoint-768-dark-vi.png"),
+    })
+    await desktopRemove.focus()
+    await expect(desktopRemove).toBeFocused()
+    const focusedAction = await desktopRemove.boundingBox()
+    expect(focusedAction).not.toBeNull()
+    expect(focusedAction!.x).toBeGreaterThanOrEqual(0)
+    expect(focusedAction!.x + focusedAction!.width).toBeLessThanOrEqual(768)
+    expect((await pageWidth()).scroll).toBeLessThanOrEqual(768)
+  })
+
+  test("schedule Create and Edit field boundaries meet 3:1 in both themes", async ({
+    page,
+  }, testInfo) => {
+    await page.setViewportSize({ width: 1520, height: 1024 })
+    await page.goto("/vi/telegram")
+    await page.addStyleTag({
+      content:
+        '[aria-label="Ask Signapse"], nextjs-portal { display: none !important; }',
+    })
+
+    const measurements: Array<{
+      theme: "light" | "dark"
+      form: "Create" | "Edit"
+      input: number
+      destination: number
+    }> = []
+
+    for (const theme of ["light", "dark"] as const) {
+      await setTelegramTheme(page, theme)
+
+      for (const form of ["Create", "Edit"] as const) {
+        if (form === "Create") {
+          await page.getByRole("button", { name: "Tạo lịch" }).click()
+        } else {
+          await page
+            .getByRole("row")
+            .filter({ hasText: "BTC morning analysis" })
+            .getByRole("button", { name: "Sửa lịch phân tích" })
+            .click()
+        }
+
+        const dialog = page.getByRole("dialog")
+        const input = dialog.getByRole("textbox", { name: "Tên lịch" })
+        const destination = dialog.getByRole("combobox", {
+          name: "Điểm nhận",
+        })
+        const inputContrast = await getControlBoundaryContrast(input)
+        const destinationContrast =
+          await getControlBoundaryContrast(destination)
+        expect(inputContrast).toBeGreaterThanOrEqual(3)
+        expect(destinationContrast).toBeGreaterThanOrEqual(3)
+        measurements.push({
+          theme,
+          form,
+          input: Number(inputContrast.toFixed(2)),
+          destination: Number(destinationContrast.toFixed(2)),
+        })
+        await dialog.screenshot({
+          path: testInfo.outputPath(
+            `schedule-${form.toLowerCase()}-${theme}-vi.png`
+          ),
+        })
+        await page.keyboard.press("Escape")
+        await expect(dialog).toBeHidden()
+      }
+    }
+
+    await testInfo.attach("schedule-control-boundary-contrast.json", {
+      body: JSON.stringify(measurements, null, 2),
+      contentType: "application/json",
+    })
+    console.info("Schedule control boundary contrast", measurements)
+  })
+
   test("creates a schedule and reads it back from the saved list", async ({
     page,
     fixture,
@@ -234,14 +500,14 @@ test.describe("P0 Telegram operations", () => {
       .getByRole("row")
       .filter({ hasText: "BTC morning analysis" })
     const removeTrigger = scheduleRow.getByRole("button", {
-      name: "Xóa lịch phân tích",
+      name: "Gỡ lịch phân tích",
     })
     await removeTrigger.focus()
     await page.keyboard.press("Enter")
 
     const dialog = page.getByRole("alertdialog")
     const confirmButton = dialog.getByRole("button", {
-      name: "Xóa lịch",
+      name: "Gỡ lịch",
       exact: true,
     })
     await page.keyboard.press("Tab")
@@ -544,11 +810,11 @@ test.describe("P0 Telegram operations", () => {
       activeScheduleRow.getByRole("button", { name: "Sửa lịch phân tích" })
     ).toBeVisible()
     await expect(
-      activeScheduleRow.getByRole("button", { name: "Xóa lịch phân tích" })
+      activeScheduleRow.getByRole("button", { name: "Gỡ lịch phân tích" })
     ).toBeVisible()
     await expect(inactiveScheduleRow).toContainText("Chưa có điểm nhận")
     await expect(
-      inactiveScheduleRow.getByRole("button", { name: "Xóa lịch phân tích" })
+      inactiveScheduleRow.getByRole("button", { name: "Gỡ lịch phân tích" })
     ).toBeVisible()
     await expect(
       inactiveScheduleRow.getByRole("button", { name: "Sửa lịch phân tích" })
@@ -828,15 +1094,15 @@ test.describe("P0 Telegram operations", () => {
     await expect(activeScheduleRow).toContainText("BTC morning analysis")
 
     const removeScheduleButton = activeScheduleRow.getByRole("button", {
-      name: "Xóa lịch phân tích",
+      name: "Gỡ lịch phân tích",
     })
     await removeScheduleButton.hover()
-    await expect(page.getByRole("tooltip")).toHaveText("Xóa lịch phân tích")
+    await expect(page.getByRole("tooltip")).toHaveText("Gỡ lịch phân tích")
     await page.mouse.move(0, 0)
     await removeScheduleButton.click()
     const scheduleDeleteDialog = page.getByRole("alertdialog")
     await expect(
-      scheduleDeleteDialog.getByRole("heading", { name: "Xóa lịch phân tích?" })
+      scheduleDeleteDialog.getByRole("heading", { name: "Gỡ lịch phân tích?" })
     ).toBeVisible()
     await scheduleDeleteDialog.screenshot({
       path: test.info().outputPath("telegram-schedule-remove-confirmation.png"),

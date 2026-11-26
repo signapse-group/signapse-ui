@@ -220,6 +220,7 @@ describe("Telegram schedule destructive actions", () => {
     vi.mocked(deleteTelegramBotConnection).mockReset()
     vi.mocked(deleteTelegramMarketAnalysisSchedule).mockReset()
     vi.mocked(updateTelegramFeatureSetting).mockReset()
+    vi.mocked(toast.success).mockReset()
     routerRefresh.mockReset()
   })
 
@@ -274,6 +275,55 @@ describe("Telegram schedule destructive actions", () => {
         name: viDictionary.telegram.schedule.deleteTrigger,
       })
     ).not.toBeInTheDocument()
+  })
+
+  it("offers Create without exposing the schedule list to a create-only role", () => {
+    renderConfiguration({
+      ...data,
+      sectionAccess: {
+        ...data.sectionAccess,
+        featureSettings: false,
+        schedules: false,
+      },
+      scheduleActions: { create: true, update: false, delete: false },
+    })
+
+    expect(
+      screen.getByRole("heading", {
+        name: viDictionary.telegram.schedule.panelTitle,
+      })
+    ).toBeVisible()
+    expect(
+      screen.getByRole("button", {
+        name: viDictionary.telegram.schedule.createSchedule,
+      })
+    ).toBeVisible()
+    expect(
+      screen.getAllByText(viDictionary.telegram.schedule.accessLimited).length
+    ).toBeGreaterThan(0)
+    expect(screen.queryByText("Morning analysis")).not.toBeInTheDocument()
+  })
+
+  it("does not report an unreadable Feature routing section as needing review", () => {
+    renderConfiguration({
+      ...data,
+      sectionAccess: { ...data.sectionAccess, featureSettings: false },
+    })
+
+    const routingReadiness = screen
+      .getByText(viDictionary.telegram.readiness.routing)
+      .closest('[data-slot="card"]')
+
+    expect(routingReadiness).not.toBeNull()
+    expect(routingReadiness).toHaveTextContent(
+      viDictionary.telegram.routing.accessLimited
+    )
+    expect(routingReadiness).toHaveTextContent(
+      viDictionary.telegram.readiness.unavailable
+    )
+    expect(routingReadiness).not.toHaveTextContent(
+      viDictionary.telegram.readiness.needsReview
+    )
   })
 
   it("keeps schedules visible and reports a Feature routing read error", () => {
@@ -384,6 +434,9 @@ describe("Telegram schedule destructive actions", () => {
         name: viDictionary.telegram.schedule.deleteTitle,
       })
     ).toBeVisible()
+    expect(dialog).toHaveTextContent("dừng các lượt chạy mới")
+    expect(dialog).toHaveTextContent("Lịch sử đã ghi được bảo toàn.")
+    expect(dialog).not.toHaveTextContent("không thể hoàn tác")
 
     vi.mocked(deleteTelegramMarketAnalysisSchedule).mockResolvedValueOnce({
       success: false,
@@ -409,6 +462,9 @@ describe("Telegram schedule destructive actions", () => {
       expect(deleteTelegramMarketAnalysisSchedule).toHaveBeenCalledTimes(2)
     )
     await waitFor(() => expect(routerRefresh).toHaveBeenCalledTimes(1))
+    expect(toast.success).toHaveBeenCalledWith(
+      "Đã gỡ lịch phân tích. Lịch sử đã ghi được bảo toàn."
+    )
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument()
     await waitFor(() =>
       expect(

@@ -432,15 +432,19 @@ function ReadinessSummary({
       description:
         data.featureSettingsLoadError || data.currentWorkspaceLoadError
           ? t.common.readError
-          : data.currentWorkspace
-            ? formatMessage(t.readiness.configuredRoutes, {
-                configured: formatCount(configuredRoutes),
-                total: formatCount(routes.length),
-                workspace: data.currentWorkspace.name,
-              })
-            : t.readiness.noWorkspace,
+          : !data.sectionAccess.featureSettings
+            ? t.routing.accessLimited
+            : data.currentWorkspace
+              ? formatMessage(t.readiness.configuredRoutes, {
+                  configured: formatCount(configuredRoutes),
+                  total: formatCount(routes.length),
+                  workspace: data.currentWorkspace.name,
+                })
+              : t.readiness.noWorkspace,
       state:
-        data.featureSettingsLoadError || data.currentWorkspaceLoadError
+        data.featureSettingsLoadError ||
+        data.currentWorkspaceLoadError ||
+        !data.sectionAccess.featureSettings
           ? t.readiness.unavailable
           : configuredRoutes > 0
             ? t.readiness.routesEnabled

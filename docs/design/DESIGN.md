@@ -97,6 +97,7 @@ Light mode và dark mode phải là hai biến thể của cùng một direction
 - Giữ neutral default của preset theo `tailwind.baseColor` trong [components.json](../../components.json) và các token tương ứng trong [globals.css](../../app/globals.css).
 - Không đổi `--primary`, `--accent`, `--sidebar-*`, `--chart-*`, radius hoặc wrapper chrome để sửa một vấn đề cục bộ.
 - Màu feature đi qua semantic tokens hoặc shared app-level surfaces; không dùng raw palette tùy ý.
+- Viền của Input và Select dùng semantic token `--input-border`, tách khỏi màu nền của control và đạt mức tương phản tối thiểu trong cả hai theme.
 - Light và dark mode là hai biến thể của cùng một system, có contrast và hierarchy tương đương.
 - Background grid hoặc depth decoration, nếu có, chỉ thuộc app shell/shared surface và phải rất nhẹ; không lặp ở từng card.
 - Shadow tạo hierarchy nhẹ, không dùng để làm destructive/alert state nổi bật.

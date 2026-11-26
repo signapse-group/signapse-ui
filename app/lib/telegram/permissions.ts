@@ -38,12 +38,17 @@ export const TELEGRAM_READ_PERMISSIONS = [
   TELEGRAM_MARKET_ANALYSIS_SCHEDULE_READ_PERMISSION,
 ] as const
 
-export const TELEGRAM_NAV_PERMISSIONS = TELEGRAM_READ_PERMISSIONS
+export const TELEGRAM_NAV_PERMISSIONS = [
+  ...TELEGRAM_READ_PERMISSIONS,
+  TELEGRAM_MARKET_ANALYSIS_SCHEDULE_CREATE_PERMISSION,
+  TELEGRAM_MARKET_ANALYSIS_SCHEDULE_UPDATE_PERMISSION,
+  TELEGRAM_MARKET_ANALYSIS_SCHEDULE_DELETE_PERMISSION,
+] as const
 
-export function canReadTelegramConfiguration(
+export function canAccessTelegramConfiguration(
   permissions: PermissionCollection
 ): boolean {
-  return hasAnyPermission(permissions, TELEGRAM_READ_PERMISSIONS)
+  return hasAnyPermission(permissions, TELEGRAM_NAV_PERMISSIONS)
 }
 
 export function getTelegramSectionAccess(
