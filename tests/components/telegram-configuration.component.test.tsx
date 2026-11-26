@@ -748,21 +748,28 @@ describe("Telegram bot connection removal", () => {
       })
     )
 
-    await user.click(confirm)
+    confirm.focus()
+    await user.keyboard("{Enter}")
     await waitFor(() => {
       expect(confirm).toBeDisabled()
       expect(cancel).toBeDisabled()
+      expect(within(openDialog).getByRole("status")).toHaveTextContent(
+        viDictionary.telegram.bot.deletePending
+      )
+      expect(within(openDialog).getByRole("status")).toHaveFocus()
     })
+    expect(confirm).toHaveAccessibleName(viDictionary.telegram.bot.deleteAction)
     settleRequest({
       success: false,
       error: viDictionary.telegram.bot.deleteBlockedByDestinations,
     })
 
-    await waitFor(() =>
+    await waitFor(() => {
       expect(screen.getByRole("alert")).toHaveTextContent(
         viDictionary.telegram.bot.deleteBlockedByDestinations
       )
-    )
+      expect(screen.getByRole("alert")).toHaveFocus()
+    })
     expect(screen.getByRole("alertdialog")).toBeInTheDocument()
     expect(routerRefresh).not.toHaveBeenCalled()
     await waitFor(() => expect(confirm).toBeEnabled())

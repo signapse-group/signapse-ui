@@ -220,6 +220,7 @@ function BotConnectionItem({
               title={formatMessage(t.bot.deleteTitle, { botName: label })}
               description={t.bot.deleteDescription}
               actionLabel={t.bot.deleteAction}
+              pendingLabel={t.bot.deletePending}
               triggerLabel={removeTriggerLabel}
               action={() => deleteTelegramBotConnection(connection.id)}
               successMessage={t.bot.deleteSuccess}

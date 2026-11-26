@@ -2486,6 +2486,7 @@ export const vi = {
         "Thao tác này kết thúc việc sử dụng bot trong Signapse. Hãy gỡ tất cả điểm nhận của bot trước; chúng sẽ không bị gỡ tự động. Lịch sử gửi được giữ lại. Muốn dùng lại bot, bạn cần tạo kết nối mới.",
       deleteTrigger: "Gỡ bot {botName}",
       deleteAction: "Gỡ bot",
+      deletePending: "Đang gỡ bot…",
       deleteSuccess: "Đã gỡ kết nối bot Telegram.",
       deleteBlockedByDestinations:
         "Trước tiên hãy gỡ tất cả điểm nhận Telegram đang liên kết với bot này. Chưa có dữ liệu nào bị thay đổi.",

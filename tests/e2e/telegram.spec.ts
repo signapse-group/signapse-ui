@@ -1,4 +1,61 @@
 import { expect, test, waitForClientHandler } from "./fixtures"
+import type { Locator, Page } from "@playwright/test"
+
+async function setTelegramTheme(page: Page, theme: "light" | "dark") {
+  await page.getByRole("button", { name: "Chọn giao diện" }).click()
+  await page
+    .getByRole("menuitem", { name: theme === "light" ? "Sáng" : "Tối" })
+    .click()
+  await expect(page.locator("html")).toHaveClass(new RegExp(theme))
+}
+
+async function getDestructiveControlContrast(trigger: Locator) {
+  return trigger.evaluate((element) => {
+    function luminance(color: Uint8ClampedArray) {
+      const channel = (value: number) => {
+        const normalized = value / 255
+        return normalized <= 0.04045
+          ? normalized / 12.92
+          : ((normalized + 0.055) / 1.055) ** 2.4
+      }
+      return (
+        0.2126 * channel(color[0]) +
+        0.7152 * channel(color[1]) +
+        0.0722 * channel(color[2])
+      )
+    }
+
+    const context = document.createElement("canvas").getContext("2d", {
+      willReadFrequently: true,
+    })
+    if (!context) throw new Error("Canvas is unavailable for color sampling")
+    context.canvas.width = 1
+    context.canvas.height = 1
+
+    const style = getComputedStyle(element)
+    const backgrounds: string[] = []
+    for (let ancestor: Element | null = element; ancestor;) {
+      backgrounds.push(getComputedStyle(ancestor).backgroundColor)
+      ancestor = ancestor.parentElement
+    }
+    context.fillStyle = "#000"
+    context.fillRect(0, 0, 1, 1)
+    for (const background of backgrounds.reverse()) {
+      context.fillStyle = background
+      context.fillRect(0, 0, 1, 1)
+    }
+    const background = context.getImageData(0, 0, 1, 1).data
+
+    context.clearRect(0, 0, 1, 1)
+    context.fillStyle = style.color
+    context.fillRect(0, 0, 1, 1)
+    const foreground = context.getImageData(0, 0, 1, 1).data
+    const contrast = [luminance(foreground), luminance(background)].sort(
+      (left, right) => right - left
+    )
+    return (contrast[0] + 0.05) / (contrast[1] + 0.05)
+  })
+}
 
 test.describe("P0 Telegram operations", () => {
   test("covers destination delivery states and destructive confirmation", async ({
@@ -416,7 +473,6 @@ test.describe("P0 Telegram operations", () => {
     page,
     fixture,
   }, testInfo) => {
-    await page.emulateMedia({ colorScheme: "dark" })
     await page.setViewportSize({ width: 1520, height: 1024 })
     await page.goto("/vi/telegram")
     // Keep the Next.js development portal out of screenshots and small-viewport checks.
@@ -428,8 +484,20 @@ test.describe("P0 Telegram operations", () => {
       name: "Gỡ bot Fixture operations bot",
     })
     await expect(removeTrigger).toBeVisible()
+    await setTelegramTheme(page, "light")
+    expect(
+      await getDestructiveControlContrast(removeTrigger)
+    ).toBeGreaterThanOrEqual(3)
     await page.screenshot({
-      path: testInfo.outputPath("telegram-bot-remove-wide.png"),
+      path: testInfo.outputPath("telegram-bot-remove-wide-light.png"),
+      fullPage: true,
+    })
+    await setTelegramTheme(page, "dark")
+    expect(
+      await getDestructiveControlContrast(removeTrigger)
+    ).toBeGreaterThanOrEqual(3)
+    await page.screenshot({
+      path: testInfo.outputPath("telegram-bot-remove-wide-dark.png"),
       fullPage: true,
     })
 
@@ -448,11 +516,13 @@ test.describe("P0 Telegram operations", () => {
     await expect(removeTrigger).toBeFocused()
 
     for (const frame of [
-      { name: "compact", width: 1024, height: 768 },
-      { name: "mobile", width: 390, height: 844 },
-      { name: "mobile-360", width: 360, height: 800 },
+      { name: "compact", width: 1024, height: 768, targetSize: 32 },
+      { name: "breakpoint-767", width: 767, height: 844, targetSize: 44 },
+      { name: "breakpoint-768", width: 768, height: 844, targetSize: 32 },
+      { name: "mobile", width: 390, height: 844, targetSize: 44 },
+      { name: "mobile-360", width: 360, height: 800, targetSize: 44 },
       // Effective width of a 390px frame at 200% browser zoom.
-      { name: "zoom-200-percent", width: 195, height: 422 },
+      { name: "zoom-200-percent", width: 195, height: 422, targetSize: 44 },
     ]) {
       await page.setViewportSize({ width: frame.width, height: frame.height })
       if (frame.name === "compact") {
@@ -470,11 +540,11 @@ test.describe("P0 Telegram operations", () => {
       expect(pageWidths.scroll).toBeLessThanOrEqual(pageWidths.client)
       await expect
         .poll(async () => (await removeTrigger.boundingBox())?.width ?? 0)
-        .toBeGreaterThanOrEqual(frame.width < 768 ? 44 : 0)
+        .toBeGreaterThanOrEqual(frame.targetSize)
       const box = await removeTrigger.boundingBox()
       expect(box).not.toBeNull()
-      if (frame.width < 768) {
-        expect(box?.height).toBeGreaterThanOrEqual(44)
+      expect(box?.height).toBeGreaterThanOrEqual(frame.targetSize)
+      if (frame.width <= 768) {
         const botCard = page
           .locator('[data-slot="card"]')
           .filter({
@@ -495,7 +565,7 @@ test.describe("P0 Telegram operations", () => {
         path: testInfo.outputPath(`telegram-bot-remove-${frame.name}.png`),
         fullPage: true,
       })
-      if (frame.width < 768) {
+      if (frame.width <= 768) {
         await removeTrigger.focus()
         await page.keyboard.press("Enter")
         const responsiveConfirmation = page.getByRole("alertdialog")
@@ -512,9 +582,7 @@ test.describe("P0 Telegram operations", () => {
         const dialogBox = await responsiveConfirmation.boundingBox()
         expect(dialogBox).not.toBeNull()
         expect(dialogBox!.x).toBeGreaterThanOrEqual(0)
-        expect(dialogBox!.x + dialogBox!.width).toBeLessThanOrEqual(
-          frame.width
-        )
+        expect(dialogBox!.x + dialogBox!.width).toBeLessThanOrEqual(frame.width)
         expect(dialogBox!.y).toBeGreaterThanOrEqual(0)
         expect(dialogBox!.y + dialogBox!.height).toBeLessThanOrEqual(
           frame.height
@@ -540,13 +608,66 @@ test.describe("P0 Telegram operations", () => {
       )
     ).toHaveLength(0)
 
-    await page.setViewportSize({ width: 1520, height: 1024 })
+    await page.setViewportSize({ width: 360, height: 800 })
+    await fixture.setScenario(
+      "/telegram/bot-connections/11",
+      "delayed",
+      "DELETE"
+    )
     await removeTrigger.click()
     const confirmation = page.getByRole("alertdialog")
     await expect(confirmation).toContainText("Fixture operations bot")
-    await confirmation
-      .getByRole("button", { name: "Gỡ bot", exact: true })
-      .click()
+    const confirm = confirmation.getByRole("button", {
+      name: "Gỡ bot",
+      exact: true,
+    })
+    await confirm.focus()
+    await page.keyboard.press("Enter")
+    const pendingStatus = confirmation.getByRole("status")
+    await expect(pendingStatus).toContainText("Đang gỡ bot…")
+    await expect(pendingStatus).toBeFocused()
+    expect(
+      await pendingStatus.evaluate((element) =>
+        element.matches(":focus-visible")
+      )
+    ).toBe(true)
+    await expect(confirm).toBeDisabled()
+
+    await page.setViewportSize({ width: 195, height: 422 })
+    await expect(pendingStatus).toContainText("Đang gỡ bot…")
+    await expect(pendingStatus).toBeFocused()
+    expect(
+      await pendingStatus.evaluate((element) =>
+        element.matches(":focus-visible")
+      )
+    ).toBe(true)
+    const pendingDialogBox = await confirmation.boundingBox()
+    expect(pendingDialogBox).not.toBeNull()
+    expect(pendingDialogBox!.x).toBeGreaterThanOrEqual(0)
+    expect(pendingDialogBox!.x + pendingDialogBox!.width).toBeLessThanOrEqual(
+      195
+    )
+    expect(pendingDialogBox!.y).toBeGreaterThanOrEqual(0)
+    expect(pendingDialogBox!.y + pendingDialogBox!.height).toBeLessThanOrEqual(
+      422
+    )
+    const pendingPageWidths = await page.evaluate(() => ({
+      scroll: document.documentElement.scrollWidth,
+      client: document.documentElement.clientWidth,
+    }))
+    expect(pendingPageWidths.scroll).toBeLessThanOrEqual(
+      pendingPageWidths.client
+    )
+    await page.screenshot({
+      path: testInfo.outputPath("telegram-bot-remove-pending-200-percent.png"),
+      fullPage: true,
+    })
+
+    await fixture.setScenario(
+      "/telegram/bot-connections/11",
+      "success",
+      "DELETE"
+    )
 
     await expect(
       page.getByRole("listitem").filter({ hasText: "Fixture operations bot" })

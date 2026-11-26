@@ -2506,6 +2506,7 @@ export const en: Dictionary = {
         "This ends future use of the bot in Signapse. Remove all its destinations first; they will not be removed automatically. Sending history is retained, and using this bot again requires a new connection.",
       deleteTrigger: "Remove {botName}",
       deleteAction: "Remove bot",
+      deletePending: "Removing bot…",
       deleteSuccess: "Telegram bot removed.",
       deleteBlockedByDestinations:
         "Remove every Telegram destination linked to this bot first. Nothing was changed.",
