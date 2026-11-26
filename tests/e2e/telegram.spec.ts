@@ -998,6 +998,7 @@ test.describe("P0 Telegram operations", () => {
     expect(unverifiedLayout.scrollWidth).toBeLessThanOrEqual(
       unverifiedLayout.clientWidth
     )
+    await unverifiedReadbackRow.scrollIntoViewIfNeeded()
     await testInfo.attach("sign329-unverified-readback-mobile.png", {
       body: await page.screenshot({ type: "png" }),
       contentType: "image/png",
