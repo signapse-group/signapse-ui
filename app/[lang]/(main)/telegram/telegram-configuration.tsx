@@ -1,6 +1,6 @@
 "use client"
 
-import { Fragment, useState, useTransition } from "react"
+import { Fragment, useEffect, useRef, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import {
   Bot,
@@ -549,11 +549,7 @@ function FeatureRoutingSection({
         <AppListTable className="mt-0">
           <Table>
             <TableHeader
-              className={
-                economicCalendarOnly
-                  ? "hidden md:table-header-group"
-                  : undefined
-              }
+              className={economicCalendarOnly ? "hidden" : undefined}
             >
               <AppListTableHeaderRow>
                 <AppListTableHead className="w-[32%]">
@@ -581,35 +577,48 @@ function FeatureRoutingSection({
                   className={cn(
                     "border-border transition-colors hover:bg-muted/50",
                     economicCalendarOnly &&
-                      "grid grid-cols-[minmax(0,1fr)_auto] gap-x-2 rounded-xl border bg-card p-3 md:table-row md:rounded-none md:border-0 md:bg-transparent md:p-0"
+                      "grid grid-cols-[minmax(0,1fr)_auto] gap-x-2 rounded-xl border bg-card p-3 md:grid-cols-2"
                   )}
                 >
                   <TableCell
                     className={cn(
-                      "block align-top whitespace-normal md:table-cell",
-                      economicCalendarOnly &&
-                        "col-start-1 row-start-1 min-w-0 border-b-0 px-1 py-2 md:table-cell md:border-b md:px-2 md:py-2"
+                      "block align-top whitespace-normal",
+                      economicCalendarOnly
+                        ? "col-start-1 row-start-1 min-w-0 border-b-0 px-1 py-2"
+                        : "md:table-cell"
                     )}
                   >
                     <div className="flex min-w-0 flex-col gap-1">
                       <span className="flex items-center gap-2 font-medium text-foreground">
                         {economicCalendarOnly ? (
-                          <CalendarClock className="size-4 shrink-0 text-muted-foreground md:hidden" />
+                          <CalendarClock className="size-4 shrink-0 text-muted-foreground" />
                         ) : null}
                         {route.label}
                       </span>
-                      <span className="sr-only text-sm text-muted-foreground md:not-sr-only md:block">
+                      <span
+                        className={cn(
+                          "text-sm text-muted-foreground",
+                          economicCalendarOnly
+                            ? "sr-only"
+                            : "sr-only md:not-sr-only md:block"
+                        )}
+                      >
                         {route.description}
                       </span>
-                      <code className="hidden w-fit rounded bg-muted px-1.5 py-0.5 text-xs text-foreground md:block">
+                      <code
+                        className={cn(
+                          "hidden w-fit rounded bg-muted px-1.5 py-0.5 text-xs text-foreground",
+                          !economicCalendarOnly && "md:block"
+                        )}
+                      >
                         {route.featureKey}
                       </code>
                     </div>
                   </TableCell>
                   <TableCell
                     className={cn(
-                      "block align-top text-sm text-muted-foreground md:table-cell",
-                      economicCalendarOnly && "hidden md:table-cell"
+                      "block align-top text-sm text-muted-foreground",
+                      economicCalendarOnly ? "hidden" : "md:table-cell"
                     )}
                   >
                     {currentWorkspace?.name ?? t.routing.noWorkspaceSelected}
@@ -617,7 +626,7 @@ function FeatureRoutingSection({
                   {route.featureKey === "ECONOMIC_CALENDAR_ALERT" ? (
                     <EconomicCalendarRouteControls
                       route={route}
-                      mobileCard={economicCalendarOnly}
+                      cardLayout={economicCalendarOnly}
                       activeDestinations={activeDestinations}
                       canReadDestinations={canReadDestinations}
                       destinationLoadError={destinationLoadError}
@@ -924,7 +933,7 @@ function MarketAnalysisSchedulePanel({
 }
 function EconomicCalendarRouteControls({
   route,
-  mobileCard,
+  cardLayout,
   activeDestinations,
   canReadDestinations,
   destinationLoadError,
@@ -934,7 +943,7 @@ function EconomicCalendarRouteControls({
   languageCatalogError,
 }: {
   route: FeatureRouteView
-  mobileCard: boolean
+  cardLayout: boolean
   activeDestinations: TelegramDestinationResponse[]
   canReadDestinations: boolean
   destinationLoadError: boolean
@@ -949,11 +958,26 @@ function EconomicCalendarRouteControls({
   const t = dictionary.telegram
   const selectedDestination = route.setting?.destination ?? null
   const selectedDestinationValue = selectedDestination?.id.toString() ?? ""
+  const destinationTriggerRef = useRef<HTMLButtonElement>(null)
+  const languageTriggerRef = useRef<HTMLButtonElement>(null)
+  const enabledSwitchRef = useRef<HTMLButtonElement>(null)
+  const focusAfterClear = useRef(false)
   const persistedLanguage = route.setting?.outputLanguage ?? null
   const persistedLanguageCode = persistedLanguage?.isoCode ?? ""
   const canMutate = canUpdate && Boolean(currentWorkspaceId) && !isPending
   const hasActiveDestinations = activeDestinations.length > 0
   const destinationItems = [...activeDestinations]
+
+  useEffect(() => {
+    if (!focusAfterClear.current || selectedDestination) return
+
+    const focusTarget =
+      destinationTriggerRef.current ??
+      languageTriggerRef.current ??
+      enabledSwitchRef.current
+    focusAfterClear.current = false
+    focusTarget?.focus()
+  }, [selectedDestination])
 
   if (
     canReadDestinations &&
@@ -1020,6 +1044,9 @@ function EconomicCalendarRouteControls({
         const result = await updateTelegramFeatureSetting(request.data)
 
         if (result.success) {
+          if (overrides.destinationId === null && overrides.enabled === false) {
+            focusAfterClear.current = true
+          }
           toast.success(successMessage)
           router.refresh()
         } else {
@@ -1069,13 +1096,14 @@ function EconomicCalendarRouteControls({
     <>
       <TableCell
         className={cn(
-          "block align-top whitespace-normal md:table-cell",
-          mobileCard &&
-            "col-span-2 row-start-2 min-w-0 border-b-0 px-1 py-2 md:table-cell md:border-b md:px-2 md:py-2"
+          "block align-top whitespace-normal",
+          cardLayout
+            ? "col-span-2 row-start-2 min-w-0 border-b-0 px-1 py-2 md:col-span-1 md:col-start-1 md:px-2"
+            : "md:table-cell"
         )}
       >
-        {mobileCard ? (
-          <span className="mb-1 block text-xs font-medium text-muted-foreground md:hidden">
+        {cardLayout ? (
+          <span className="mb-1 block text-xs font-medium text-muted-foreground">
             {t.routing.destinationColumn}
           </span>
         ) : null}
@@ -1119,6 +1147,7 @@ function EconomicCalendarRouteControls({
                 disabled={!canMutate || !hasActiveDestinations}
               >
                 <SelectTrigger
+                  ref={destinationTriggerRef}
                   aria-label={route.label}
                   className={cn(
                     "w-full",
@@ -1175,13 +1204,14 @@ function EconomicCalendarRouteControls({
       </TableCell>
       <TableCell
         className={cn(
-          "block align-top whitespace-normal md:table-cell",
-          mobileCard &&
-            "col-span-2 row-start-3 min-w-0 border-b-0 px-1 py-2 md:table-cell md:border-b md:px-2 md:py-2"
+          "block align-top whitespace-normal",
+          cardLayout
+            ? "col-span-2 row-start-3 min-w-0 border-b-0 px-1 py-2 md:col-span-1 md:col-start-2 md:row-start-2 md:px-2"
+            : "md:table-cell"
         )}
       >
-        {mobileCard ? (
-          <span className="mb-1 block text-xs font-medium text-muted-foreground md:hidden">
+        {cardLayout ? (
+          <span className="mb-1 block text-xs font-medium text-muted-foreground">
             {t.routing.languageColumn}
           </span>
         ) : null}
@@ -1202,6 +1232,7 @@ function EconomicCalendarRouteControls({
           disabled={!canMutate || languageCatalogError}
         >
           <SelectTrigger
+            ref={languageTriggerRef}
             className="w-full"
             aria-label={formatMessage(t.routing.languageAria, {
               route: route.label,
@@ -1244,15 +1275,16 @@ function EconomicCalendarRouteControls({
       </TableCell>
       <TableCell
         className={cn(
-          "block align-top md:table-cell",
-          mobileCard &&
-            "col-start-2 row-start-1 border-b-0 px-1 py-2 md:table-cell md:border-b md:px-2 md:py-2"
+          "block align-top",
+          cardLayout
+            ? "col-start-2 row-start-1 flex justify-end border-b-0 px-1 py-2 md:px-2"
+            : "md:table-cell"
         )}
       >
         <div
           className={cn(
             "inline-flex h-8 w-32 items-center justify-between gap-2 rounded-lg border border-input bg-transparent px-2.5 text-sm shadow-xs data-[disabled=true]:opacity-60",
-            mobileCard ? "mx-0 md:mx-auto" : "mx-auto"
+            cardLayout ? "mx-0" : "mx-auto"
           )}
           data-disabled={!canMutate ? true : undefined}
         >
@@ -1267,6 +1299,7 @@ function EconomicCalendarRouteControls({
             {route.setting?.enabled ? t.common.enabled : t.common.paused}
           </span>
           <Switch
+            ref={enabledSwitchRef}
             checked={Boolean(route.setting?.enabled)}
             disabled={!canMutate}
             onCheckedChange={(enabled) =>
