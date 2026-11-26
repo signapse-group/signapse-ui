@@ -1,6 +1,6 @@
 # SIGN-686 Scheduled analysis evidence
 
-App-code candidate: [`4c347c3`](https://github.com/signapse-group/signapse-ui/commit/4c347c309e91f5f54bb8d65d37a2e4a9bb6e568a) — the SIGN-686 implementation integrated with current `origin/dev` [`83f6658`](https://github.com/signapse-group/signapse-ui/commit/83f6658e8f41805a1e3e90d6bc64972f3a994a42). This evidence update does not change application code.
+Candidate: [`24e44dc`](https://github.com/signapse-group/signapse-ui/commit/24e44dc341f618fcbfaef168e2a448873d3aa125), including current `origin/dev` [`dc7d7d0`](https://github.com/signapse-group/signapse-ui/commit/dc7d7d06ab6d4a108b8da38356bff23219e524f1) and SIGN-686 app-code commit [`4c347c3`](https://github.com/signapse-group/signapse-ui/commit/4c347c309e91f5f54bb8d65d37a2e4a9bb6e568a). This evidence update does not change application code.
 
 ## Design and API basis
 
@@ -42,12 +42,11 @@ Light/dark visual review found the text, control boundaries, required Destinatio
 
 ## Local checks
 
-- Focused Vitest: `pnpm exec vitest run tests/api/telegram-action.test.ts tests/components/telegram-configuration.component.test.tsx tests/components/telegram-schedule-form.component.test.tsx tests/core/api-contract-guard.test.ts` — 4 files, 66 passed.
-- Scoped ESLint on the changed schedule form, fixture, and browser spec — passed.
-- `pnpm typecheck` — passed on the corrected create/readback test.
+- Focused Vitest: `pnpm exec vitest run tests/api/telegram-action.test.ts tests/components/telegram-configuration.component.test.tsx tests/components/telegram-schedule-form.component.test.tsx tests/core/api-contract-guard.test.ts tests/core/telegram-permissions.test.ts` — 5 files, 73 passed.
+- Scoped ESLint on the merged Telegram configuration/schedule components and affected browser tests — passed.
+- `pnpm typecheck` — passed on the conflict-resolved branch.
 - Prettier on changed TS/TSX/MJS/Markdown files and `git diff --check` — passed.
-- `/opt/apps/symphony/runtime/run-fe-browser "$PWD" tests/e2e/telegram.spec.ts --grep "edits an active schedule and reads the same record back|covers destination delivery states and destructive confirmation"` — 2 passed in 40.7s. Covers Edit readback of the same ACTIVE record, 503 isolation, Create/Edit keyboard and responsive behavior, and destructive confirmation.
-- `/opt/apps/symphony/runtime/run-fe-browser "$PWD" tests/e2e/telegram.spec.ts --grep "creates a schedule and reads it back"` — 1 passed in 14.9s. The Create flow submits valid data, shows the saved ACTIVE row, and retains it after a fresh page read; the fixture records both POST and GET.
+- `/opt/apps/symphony/runtime/run-fe-browser "$PWD" tests/e2e/telegram.spec.ts --grep "creates a schedule and reads it back|edits an active schedule and reads the same record back|covers destination delivery states and destructive confirmation|renders bot Remove responsively|explains blocked bot removal"` — 5 passed in 1.1m. Covers Create/Edit readback, Feature routing 503 isolation, dialog keyboard and responsive behavior, schedule removal confirmation, and integration with current Telegram bot removal.
 
 These local fixtures do not prove live-user authorization or schedule persistence. QA owns live feature acceptance after delivery.
 
