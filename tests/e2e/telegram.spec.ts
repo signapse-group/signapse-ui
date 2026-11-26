@@ -1,4 +1,86 @@
 import { expect, test, waitForClientHandler } from "./fixtures"
+import type { Locator, Page } from "@playwright/test"
+
+async function setTelegramTheme(page: Page, theme: "light" | "dark") {
+  await page.getByRole("button", { name: "Chọn giao diện" }).click()
+  await page
+    .getByRole("menuitem", { name: theme === "light" ? "Sáng" : "Tối" })
+    .click()
+  await expect(page.locator("html")).toHaveClass(new RegExp(theme))
+}
+
+async function getDestructiveControlContrast(
+  trigger: Locator,
+  focusRing = false
+) {
+  return trigger.evaluate((element, measureFocusRing) => {
+    if (measureFocusRing && !element.matches(":focus-visible")) return 0
+
+    function luminance(color: Uint8ClampedArray) {
+      const channel = (value: number) => {
+        const normalized = value / 255
+        return normalized <= 0.04045
+          ? normalized / 12.92
+          : ((normalized + 0.055) / 1.055) ** 2.4
+      }
+      return (
+        0.2126 * channel(color[0]) +
+        0.7152 * channel(color[1]) +
+        0.0722 * channel(color[2])
+      )
+    }
+
+    const context = document.createElement("canvas").getContext("2d", {
+      willReadFrequently: true,
+    })
+    if (!context) throw new Error("Canvas is unavailable for color sampling")
+    context.canvas.width = 1
+    context.canvas.height = 1
+
+    const style = getComputedStyle(element)
+    const backgrounds: string[] = []
+    for (
+      let ancestor = measureFocusRing ? element.parentElement : element;
+      ancestor;
+      ancestor = ancestor.parentElement
+    ) {
+      backgrounds.push(getComputedStyle(ancestor).backgroundColor)
+    }
+    context.fillStyle = "#000"
+    context.fillRect(0, 0, 1, 1)
+    for (const background of backgrounds.reverse()) {
+      context.fillStyle = background
+      context.fillRect(0, 0, 1, 1)
+    }
+    const background = context.getImageData(0, 0, 1, 1).data
+
+    let foregroundColor = style.color
+    if (measureFocusRing) {
+      const colors = style.boxShadow.match(
+        /(?:rgba?\([^)]*\)|oklab\([^)]*\)|oklch\([^)]*\)|lab\([^)]*\)|lch\([^)]*\)|color\([^)]*\))/g
+      )
+      foregroundColor =
+        colors?.find((color) => {
+          context.clearRect(0, 0, 1, 1)
+          context.fillStyle = color
+          context.fillRect(0, 0, 1, 1)
+          return context.getImageData(0, 0, 1, 1).data[3] > 0
+        }) ?? ""
+      if (!foregroundColor) return 0
+    }
+
+    context.clearRect(0, 0, 1, 1)
+    context.fillStyle = `rgb(${background[0]} ${background[1]} ${background[2]})`
+    context.fillRect(0, 0, 1, 1)
+    context.fillStyle = foregroundColor
+    context.fillRect(0, 0, 1, 1)
+    const foreground = context.getImageData(0, 0, 1, 1).data
+    const contrast = [luminance(foreground), luminance(background)].sort(
+      (left, right) => right - left
+    )
+    return (contrast[0] + 0.05) / (contrast[1] + 0.05)
+  }, focusRing)
+}
 
 test.describe("P0 Telegram operations", () => {
   test("covers destination delivery states and destructive confirmation", async ({
@@ -410,5 +492,303 @@ test.describe("P0 Telegram operations", () => {
         request.method === "GET" && request.path === "/telegram/destinations"
     )
     expect(destinationReads).toHaveLength(0)
+  })
+
+  test("renders bot Remove responsively, cancels by keyboard, and reads back success", async ({
+    page,
+    fixture,
+  }, testInfo) => {
+    await page.setViewportSize({ width: 1520, height: 1024 })
+    await page.goto("/vi/telegram")
+    // Keep the Next.js development portal out of screenshots and small-viewport checks.
+    await page.addStyleTag({
+      content: "nextjs-portal { display: none !important; }",
+    })
+
+    const removeTrigger = page.getByRole("button", {
+      name: "Gỡ bot Fixture operations bot",
+    })
+    await expect(removeTrigger).toBeVisible()
+    await setTelegramTheme(page, "light")
+    expect(
+      await getDestructiveControlContrast(removeTrigger)
+    ).toBeGreaterThanOrEqual(3)
+    await page.screenshot({
+      path: testInfo.outputPath("telegram-bot-remove-wide-light.png"),
+      fullPage: true,
+    })
+    await removeTrigger.focus()
+    await page.keyboard.press("Shift+Tab")
+    await page.keyboard.press("Tab")
+    await expect(removeTrigger).toBeFocused()
+    await expect
+      .poll(() => getDestructiveControlContrast(removeTrigger, true))
+      .toBeGreaterThanOrEqual(3)
+    const lightFocusContrast = await getDestructiveControlContrast(
+      removeTrigger,
+      true
+    )
+    await test.step(
+      `light focus indicator contrast: ${lightFocusContrast.toFixed(2)}:1`,
+      async () => expect(lightFocusContrast).toBeGreaterThanOrEqual(3)
+    )
+    await page.screenshot({
+      path: testInfo.outputPath("telegram-bot-remove-wide-light-focused.png"),
+      fullPage: true,
+    })
+    await setTelegramTheme(page, "dark")
+    expect(
+      await getDestructiveControlContrast(removeTrigger)
+    ).toBeGreaterThanOrEqual(3)
+    await page.screenshot({
+      path: testInfo.outputPath("telegram-bot-remove-wide-dark.png"),
+      fullPage: true,
+    })
+    await removeTrigger.focus()
+    await page.keyboard.press("Shift+Tab")
+    await page.keyboard.press("Tab")
+    await expect(removeTrigger).toBeFocused()
+    await expect
+      .poll(() => getDestructiveControlContrast(removeTrigger, true))
+      .toBeGreaterThanOrEqual(3)
+    const darkFocusContrast = await getDestructiveControlContrast(
+      removeTrigger,
+      true
+    )
+    await test.step(
+      `dark focus indicator contrast: ${darkFocusContrast.toFixed(2)}:1`,
+      async () => expect(darkFocusContrast).toBeGreaterThanOrEqual(3)
+    )
+    await page.screenshot({
+      path: testInfo.outputPath("telegram-bot-remove-wide-dark-focused.png"),
+      fullPage: true,
+    })
+
+    await removeTrigger.focus()
+    await page.keyboard.press("Enter")
+    const dialog = page.getByRole("alertdialog")
+    await expect(dialog).toContainText(
+      "Gỡ kết nối bot “Fixture operations bot”?"
+    )
+    await page.screenshot({
+      path: testInfo.outputPath("telegram-bot-remove-confirmation.png"),
+      fullPage: true,
+    })
+    await page.keyboard.press("Escape")
+    await expect(dialog).toBeHidden()
+    await expect(removeTrigger).toBeFocused()
+
+    for (const frame of [
+      { name: "compact", width: 1024, height: 768, targetSize: 32 },
+      { name: "breakpoint-767", width: 767, height: 844, targetSize: 44 },
+      { name: "breakpoint-768", width: 768, height: 844, targetSize: 32 },
+      { name: "mobile", width: 390, height: 844, targetSize: 44 },
+      { name: "mobile-360", width: 360, height: 800, targetSize: 44 },
+      // Effective width of a 390px frame at 200% browser zoom.
+      { name: "zoom-200-percent", width: 195, height: 422, targetSize: 44 },
+    ]) {
+      await page.setViewportSize({ width: frame.width, height: frame.height })
+      if (frame.name === "compact") {
+        await page
+          .getByRole("button", {
+            name: "Thu gọn/mở rộng thanh điều hướng",
+          })
+          .click()
+      }
+      await expect(removeTrigger).toBeVisible()
+      const pageWidths = await page.evaluate(() => ({
+        scroll: document.documentElement.scrollWidth,
+        client: document.documentElement.clientWidth,
+      }))
+      expect(pageWidths.scroll).toBeLessThanOrEqual(pageWidths.client)
+      await expect
+        .poll(async () => (await removeTrigger.boundingBox())?.width ?? 0)
+        .toBeGreaterThanOrEqual(frame.targetSize)
+      const box = await removeTrigger.boundingBox()
+      expect(box).not.toBeNull()
+      expect(box?.height).toBeGreaterThanOrEqual(frame.targetSize)
+      if (frame.width <= 768) {
+        const botCard = page
+          .locator('[data-slot="card"]')
+          .filter({
+            has: page.getByRole("heading", {
+              name: "Bot Telegram",
+              exact: true,
+            }),
+          })
+          .first()
+        const cardBox = await botCard.boundingBox()
+        expect(cardBox).not.toBeNull()
+        expect(box!.x).toBeGreaterThanOrEqual(cardBox!.x)
+        expect(box!.x + box!.width).toBeLessThanOrEqual(
+          cardBox!.x + cardBox!.width
+        )
+      }
+      await page.screenshot({
+        path: testInfo.outputPath(`telegram-bot-remove-${frame.name}.png`),
+        fullPage: true,
+      })
+      if (frame.width <= 768) {
+        await removeTrigger.focus()
+        await page.keyboard.press("Enter")
+        const responsiveConfirmation = page.getByRole("alertdialog")
+        await expect(responsiveConfirmation).toBeVisible()
+        await expect(responsiveConfirmation).toContainText(
+          "Fixture operations bot"
+        )
+        await expect(
+          responsiveConfirmation.getByRole("button", { name: "Hủy" })
+        ).toBeVisible()
+        await expect(
+          responsiveConfirmation.getByRole("button", { name: "Gỡ bot" })
+        ).toBeVisible()
+        const dialogBox = await responsiveConfirmation.boundingBox()
+        expect(dialogBox).not.toBeNull()
+        expect(dialogBox!.x).toBeGreaterThanOrEqual(0)
+        expect(dialogBox!.x + dialogBox!.width).toBeLessThanOrEqual(frame.width)
+        expect(dialogBox!.y).toBeGreaterThanOrEqual(0)
+        expect(dialogBox!.y + dialogBox!.height).toBeLessThanOrEqual(
+          frame.height
+        )
+        await page.screenshot({
+          path: testInfo.outputPath(
+            "telegram-bot-remove-dialog-" + frame.name + ".png"
+          ),
+          fullPage: true,
+        })
+        await page.keyboard.press("Escape")
+        await expect(responsiveConfirmation).toBeHidden()
+        await expect(removeTrigger).toBeFocused()
+      }
+    }
+
+    const state = await fixture.state()
+    expect(
+      state.requests.filter(
+        (request) =>
+          request.method === "DELETE" &&
+          request.path === "/telegram/bot-connections/11"
+      )
+    ).toHaveLength(0)
+
+    await page.setViewportSize({ width: 360, height: 800 })
+    await fixture.setScenario(
+      "/telegram/bot-connections/11",
+      "delayed",
+      "DELETE"
+    )
+    await removeTrigger.click()
+    const confirmation = page.getByRole("alertdialog")
+    await expect(confirmation).toContainText("Fixture operations bot")
+    const confirm = confirmation.getByRole("button", {
+      name: "Gỡ bot",
+      exact: true,
+    })
+    await confirm.focus()
+    await page.keyboard.press("Enter")
+    const pendingStatus = confirmation.getByRole("status")
+    await expect(pendingStatus).toContainText("Đang gỡ bot…")
+    await expect(pendingStatus).toBeFocused()
+    expect(
+      await pendingStatus.evaluate((element) =>
+        element.matches(":focus-visible")
+      )
+    ).toBe(true)
+    await expect(confirm).toBeDisabled()
+
+    await page.setViewportSize({ width: 195, height: 422 })
+    await expect(pendingStatus).toContainText("Đang gỡ bot…")
+    await expect(pendingStatus).toBeFocused()
+    expect(
+      await pendingStatus.evaluate((element) =>
+        element.matches(":focus-visible")
+      )
+    ).toBe(true)
+    const pendingDialogBox = await confirmation.boundingBox()
+    expect(pendingDialogBox).not.toBeNull()
+    expect(pendingDialogBox!.x).toBeGreaterThanOrEqual(0)
+    expect(pendingDialogBox!.x + pendingDialogBox!.width).toBeLessThanOrEqual(
+      195
+    )
+    expect(pendingDialogBox!.y).toBeGreaterThanOrEqual(0)
+    expect(pendingDialogBox!.y + pendingDialogBox!.height).toBeLessThanOrEqual(
+      422
+    )
+    const pendingPageWidths = await page.evaluate(() => ({
+      scroll: document.documentElement.scrollWidth,
+      client: document.documentElement.clientWidth,
+    }))
+    expect(pendingPageWidths.scroll).toBeLessThanOrEqual(
+      pendingPageWidths.client
+    )
+    await page.screenshot({
+      path: testInfo.outputPath("telegram-bot-remove-pending-200-percent.png"),
+      fullPage: true,
+    })
+
+    await fixture.setScenario(
+      "/telegram/bot-connections/11",
+      "success",
+      "DELETE"
+    )
+
+    await expect(
+      page.getByRole("listitem").filter({ hasText: "Fixture operations bot" })
+    ).toHaveCount(0)
+    await expect(page.getByText("Đã gỡ kết nối bot Telegram.")).toBeVisible()
+    await expect(
+      page.getByRole("heading", { name: "Bot Telegram", exact: true })
+    ).toBeFocused()
+
+    const afterRemoval = await fixture.state()
+    expect(
+      afterRemoval.requests.filter(
+        (request) =>
+          request.method === "DELETE" &&
+          request.path === "/telegram/bot-connections/11"
+      )
+    ).toHaveLength(1)
+  })
+
+  test("explains blocked bot removal and keeps the connection unchanged", async ({
+    page,
+    fixture,
+  }) => {
+    await fixture.setScenario(
+      "/telegram/bot-connections/11",
+      "bot-removal-blocked",
+      "DELETE"
+    )
+    await page.setViewportSize({ width: 1520, height: 1024 })
+    await page.goto("/vi/telegram")
+
+    const botItem = page.locator('[role="listitem"]').filter({
+      hasText: "Fixture operations bot",
+    })
+    const removeTrigger = page.getByRole("button", {
+      name: "Gỡ bot Fixture operations bot",
+    })
+    await removeTrigger.click()
+    const dialog = page.getByRole("alertdialog")
+    await dialog.getByRole("button", { name: "Gỡ bot", exact: true }).click()
+
+    await expect(dialog).toContainText(
+      "Trước tiên hãy gỡ tất cả điểm nhận Telegram đang liên kết với bot này. Chưa có dữ liệu nào bị thay đổi."
+    )
+    await expect(dialog).toBeVisible()
+    await page.keyboard.press("Escape")
+    await expect(dialog).toBeHidden()
+    await expect(removeTrigger).toBeFocused()
+    await expect(botItem).toBeVisible()
+    await expect(page.getByText("Đã gỡ kết nối bot Telegram.")).toHaveCount(0)
+
+    const state = await fixture.state()
+    expect(
+      state.requests.filter(
+        (request) =>
+          request.method === "DELETE" &&
+          request.path === "/telegram/bot-connections/11"
+      )
+    ).toHaveLength(1)
   })
 })
