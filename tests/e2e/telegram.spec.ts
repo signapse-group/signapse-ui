@@ -419,6 +419,10 @@ test.describe("P0 Telegram operations", () => {
     await page.emulateMedia({ colorScheme: "dark" })
     await page.setViewportSize({ width: 1520, height: 1024 })
     await page.goto("/vi/telegram")
+    // Keep the Next.js development portal out of screenshots and small-viewport checks.
+    await page.addStyleTag({
+      content: "nextjs-portal { display: none !important; }",
+    })
 
     const removeTrigger = page.getByRole("button", {
       name: "Gỡ bot Fixture operations bot",
@@ -491,6 +495,40 @@ test.describe("P0 Telegram operations", () => {
         path: testInfo.outputPath(`telegram-bot-remove-${frame.name}.png`),
         fullPage: true,
       })
+      if (frame.width < 768) {
+        await removeTrigger.focus()
+        await page.keyboard.press("Enter")
+        const responsiveConfirmation = page.getByRole("alertdialog")
+        await expect(responsiveConfirmation).toBeVisible()
+        await expect(responsiveConfirmation).toContainText(
+          "Fixture operations bot"
+        )
+        await expect(
+          responsiveConfirmation.getByRole("button", { name: "Hủy" })
+        ).toBeVisible()
+        await expect(
+          responsiveConfirmation.getByRole("button", { name: "Gỡ bot" })
+        ).toBeVisible()
+        const dialogBox = await responsiveConfirmation.boundingBox()
+        expect(dialogBox).not.toBeNull()
+        expect(dialogBox!.x).toBeGreaterThanOrEqual(0)
+        expect(dialogBox!.x + dialogBox!.width).toBeLessThanOrEqual(
+          frame.width
+        )
+        expect(dialogBox!.y).toBeGreaterThanOrEqual(0)
+        expect(dialogBox!.y + dialogBox!.height).toBeLessThanOrEqual(
+          frame.height
+        )
+        await page.screenshot({
+          path: testInfo.outputPath(
+            "telegram-bot-remove-dialog-" + frame.name + ".png"
+          ),
+          fullPage: true,
+        })
+        await page.keyboard.press("Escape")
+        await expect(responsiveConfirmation).toBeHidden()
+        await expect(removeTrigger).toBeFocused()
+      }
     }
 
     const state = await fixture.state()
