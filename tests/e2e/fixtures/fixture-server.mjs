@@ -4183,6 +4183,12 @@ Which asset did you mean? The available data is limited. Add TSLA to your watchl
       }
       state.scenarios[`${method} ${pathname}`] = "success"
     }
+    if (scenario === "economic-calendar-missing-setting") {
+      state.featureSettings = state.featureSettings.filter(
+        (setting) => setting.featureKey !== "ECONOMIC_CALENDAR_ALERT"
+      )
+      state.scenarios[`${method} ${pathname}`] = "success"
+    }
     return state.featureSettings
   }
   if (method === "GET" && pathname === "/telegram/market-analysis-schedules")
@@ -4309,7 +4315,57 @@ Which asset did you mean? The available data is limited. Add TSLA to your watchl
       existing.lastModifiedDate = NOW
       return existing
     }
-    return state.featureSettings[0]
+    const nextEnabled = body?.enabled ?? true
+    const nextDestination = Object.hasOwn(body ?? {}, "destinationId")
+      ? body.destinationId === null
+        ? null
+        : (state.destinations.find(
+            (item) => item.id === Number(body.destinationId)
+          ) ?? null)
+      : null
+    const destinationIsEligible =
+      nextDestination?.status === "ACTIVE" &&
+      state.botConnections.some(
+        (connection) =>
+          connection.id === nextDestination.botConnectionId &&
+          connection.status === "ACTIVE"
+      )
+
+    if (
+      (nextEnabled && !destinationIsEligible) ||
+      (nextDestination && !destinationIsEligible)
+    ) {
+      return {
+        __status: 400,
+        payload: errorPayload(
+          "Choose an eligible destination",
+          "FIXTURE_VALIDATION"
+        ),
+      }
+    }
+
+    const created = {
+      id:
+        Math.max(0, ...state.featureSettings.map((setting) => setting.id)) + 1,
+      featureKey: body?.featureKey,
+      workspaceId: Number(body?.workspaceId),
+      workspaceName:
+        state.workspaces.find(
+          (workspace) => workspace.id === Number(body?.workspaceId)
+        )?.name ?? null,
+      enabled: nextEnabled,
+      destination: nextDestination,
+      outputLanguage:
+        typeof body?.outputLanguageIsoCode === "string"
+          ? (state.languages.find(
+              (language) => language.isoCode === body.outputLanguageIsoCode
+            ) ?? null)
+          : null,
+      createdDate: NOW,
+      lastModifiedDate: NOW,
+    }
+    state.featureSettings.push(created)
+    return created
   }
 
   if (method === "POST" && pathname === "/telegram/market-analysis-schedules") {

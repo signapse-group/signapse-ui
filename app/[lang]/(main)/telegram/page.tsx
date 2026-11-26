@@ -52,7 +52,9 @@ export default async function TelegramPage() {
   }
 
   return (
-    <Suspense fallback={<TelegramConfigurationSkeleton />}>
+    <Suspense
+      fallback={<TelegramConfigurationSkeleton sectionAccess={sectionAccess} />}
+    >
       <TelegramConfigurationContent
         sectionAccess={sectionAccess}
         manageAccess={manageAccess}

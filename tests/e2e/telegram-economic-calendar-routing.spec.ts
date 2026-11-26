@@ -1,4 +1,134 @@
 import { expect, test } from "./fixtures"
+import type { Page } from "@playwright/test"
+
+type LoadingFixture = {
+  setPermissions(permissions: string[]): Promise<void>
+  setScenario(
+    route: string,
+    scenario: "delayed" | "success",
+    method?: string
+  ): Promise<void>
+}
+
+async function captureLoadingState(
+  page: Page,
+  fixture: LoadingFixture,
+  width: number,
+  height: number,
+  filename: string
+) {
+  await fixture.setPermissions(["telegram-economic-calendar-routing:read"])
+  await page.emulateMedia({ colorScheme: "dark" })
+  await page.context().addCookies([
+    {
+      name: "sidebar_state",
+      value: "false",
+      url: "http://127.0.0.1:3100/",
+    },
+  ])
+
+  await page.setViewportSize({ width, height })
+  await fixture.setScenario("/telegram/feature-settings", "delayed", "GET")
+  const navigation = page.goto("/vi/telegram", { waitUntil: "commit" })
+  try {
+    const routeSection = page.getByRole("region", {
+      name: "Định tuyến tính năng",
+    })
+    const routeRow = routeSection.locator(
+      '[data-route-key="ECONOMIC_CALENDAR_ALERT"]'
+    )
+    await expect(routeSection).toHaveAttribute("aria-busy", "true")
+    await expect(routeRow).toBeVisible()
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth)
+    ).toBeLessThanOrEqual(width)
+    await page.addStyleTag({
+      content: "nextjs-portal { display: none !important; }",
+    })
+    await page.screenshot({ path: test.info().outputPath(filename) })
+  } finally {
+    await fixture.setScenario("/telegram/feature-settings", "success", "GET")
+    await navigation
+  }
+  await expect(
+    page.locator('[data-route-key="ECONOMIC_CALENDAR_ALERT"]')
+  ).toBeVisible()
+}
+
+test("Economic calendar loading layout matches Compact", async ({
+  page,
+  fixture,
+}) => {
+  await captureLoadingState(
+    page,
+    fixture,
+    1024,
+    768,
+    "economic-calendar-loading-compact-dark-vi-1024x768.png"
+  )
+})
+
+test("Economic calendar loading layout matches Mobile", async ({
+  page,
+  fixture,
+}) => {
+  await captureLoadingState(
+    page,
+    fixture,
+    390,
+    844,
+    "economic-calendar-loading-mobile-dark-vi-390x844.png"
+  )
+})
+
+test("first Economic calendar assignment stays Off after API readback", async ({
+  page,
+  fixture,
+}) => {
+  await fixture.setPermissions([
+    "telegram-economic-calendar-routing:read",
+    "telegram-economic-calendar-routing:update",
+    "telegram-destination:read",
+  ])
+  await fixture.setScenario(
+    "/telegram/feature-settings",
+    "economic-calendar-missing-setting",
+    "GET"
+  )
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto("/vi/telegram")
+
+  const row = page.locator('[data-route-key="ECONOMIC_CALENDAR_ALERT"]')
+  const destinationControl = row.getByRole("combobox", {
+    name: "Cảnh báo lịch kinh tế",
+    exact: true,
+  })
+  const routeSwitch = row.getByRole("switch", {
+    name: "Bật hoặc tắt định tuyến Cảnh báo lịch kinh tế",
+  })
+
+  await destinationControl.click()
+  await page
+    .getByRole("option", { name: "Operations channel", exact: true })
+    .click()
+  await expect(
+    page.getByText("Đã cập nhật điểm nhận định tuyến.", { exact: true })
+  ).toBeVisible()
+  await expect
+    .poll(async () => {
+      const requests = (await fixture.state()).requests as Array<{
+        method: string
+        path: string
+      }>
+      return requests.filter(
+        ({ method, path }) =>
+          method === "GET" && path === "/telegram/feature-settings"
+      ).length
+    })
+    .toBeGreaterThan(1)
+  await expect(destinationControl).toContainText("Operations channel")
+  await expect(routeSwitch).not.toBeChecked()
+})
 
 test("Economic calendar route access stays scoped and reflows across viewports", async ({
   page,

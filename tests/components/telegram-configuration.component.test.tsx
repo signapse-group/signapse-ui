@@ -310,9 +310,13 @@ describe("Telegram schedule destructive actions", () => {
           featureKey: "ECONOMIC_CALENDAR_ALERT",
           workspaceId: 7,
           destinationId: 8,
+          enabled: false,
         })
       })
       await waitFor(() => expect(routerRefresh).toHaveBeenCalledTimes(1))
+      expect(
+        within(routeRow as HTMLElement).getByRole("switch")
+      ).not.toBeChecked()
       expectNoSelectControlledWarning(consoleError.mock.calls)
     } finally {
       consoleError.mockRestore()
@@ -393,6 +397,7 @@ describe("Telegram schedule destructive actions", () => {
         featureKey: "ECONOMIC_CALENDAR_ALERT",
         workspaceId: 7,
         outputLanguageIsoCode: null,
+        enabled: true,
       })
     )
   })
@@ -438,6 +443,7 @@ describe("Telegram schedule destructive actions", () => {
           featureKey: "ECONOMIC_CALENDAR_ALERT",
           workspaceId: 7,
           destinationId: 9,
+          enabled: true,
         })
       )
     )
@@ -1043,6 +1049,7 @@ describe("Economic calendar route permissions and persistence", () => {
         featureKey: "ECONOMIC_CALENDAR_ALERT",
         workspaceId: 7,
         destinationId: 9,
+        enabled: false,
       })
     )
     await waitFor(() =>

@@ -214,9 +214,199 @@ export function TelegramConfigurationPage({
   )
 }
 
-export function TelegramConfigurationSkeleton() {
+export function TelegramConfigurationSkeleton({
+  sectionAccess,
+}: {
+  sectionAccess: TelegramConfigurationData["sectionAccess"]
+}) {
+  const { dictionary } = useLocalization()
+  const t = dictionary.telegram
+  const routes = getRouteDefinitions(dictionary).filter(
+    (route) => sectionAccess.featureSettings[route.featureKey]
+  )
+  const economicCalendarOnly =
+    routes.length === 1 && routes[0]?.featureKey === "ECONOMIC_CALENDAR_ALERT"
+
   return (
     <div className="flex w-full flex-col gap-6">
+      <section
+        aria-labelledby="telegram-routing-skeleton"
+        aria-busy="true"
+        className="flex flex-col gap-4"
+      >
+        <div className="flex flex-col gap-1">
+          <h2
+            id="telegram-routing-skeleton"
+            className="text-base font-semibold text-foreground"
+          >
+            {t.routing.sectionTitle}
+          </h2>
+          <Skeleton className="h-4 w-56 max-w-full" />
+        </div>
+        {routes.length === 0 ? (
+          <p
+            role="status"
+            className="rounded-lg border bg-card px-4 py-3 text-sm text-muted-foreground"
+          >
+            {t.routing.accessLimited}
+          </p>
+        ) : null}
+        {routes.length > 0 || sectionAccess.schedules ? (
+          <AppListTable className="mt-0">
+            <Table>
+              {routes.length > 0 ? (
+                <TableHeader
+                  className={economicCalendarOnly ? "hidden" : undefined}
+                >
+                  <AppListTableHeaderRow>
+                    <AppListTableHead>
+                      <Skeleton className="h-4 w-24" />
+                    </AppListTableHead>
+                    <AppListTableHead>
+                      <Skeleton className="h-4 w-28" />
+                    </AppListTableHead>
+                    <AppListTableHead>
+                      <Skeleton className="h-4 w-20" />
+                    </AppListTableHead>
+                    <AppListTableHead>
+                      <Skeleton className="h-4 w-16" />
+                    </AppListTableHead>
+                    <AppListTableHead>
+                      <Skeleton className="h-4 w-24" />
+                    </AppListTableHead>
+                  </AppListTableHeaderRow>
+                </TableHeader>
+              ) : null}
+              <TableBody>
+                {routes.map((route) => {
+                  const cardLayout =
+                    economicCalendarOnly &&
+                    route.featureKey === "ECONOMIC_CALENDAR_ALERT"
+
+                  return (
+                    <TableRow
+                      key={route.featureKey}
+                      data-route-key={route.featureKey}
+                      className={cn(
+                        "border-border",
+                        cardLayout &&
+                          "grid grid-cols-[minmax(0,1fr)_auto] gap-x-2 rounded-xl border bg-card p-3 md:grid-cols-2"
+                      )}
+                    >
+                      <TableCell
+                        className={cn(
+                          "block align-top whitespace-normal",
+                          cardLayout
+                            ? "col-start-1 row-start-1 min-w-0 border-b-0 px-1 py-2"
+                            : "md:table-cell"
+                        )}
+                      >
+                        <div className="flex min-w-0 flex-col gap-1">
+                          <span className="flex items-center gap-2">
+                            {cardLayout ? (
+                              <Skeleton className="size-4 rounded-full" />
+                            ) : null}
+                            <Skeleton className="h-5 w-40" />
+                          </span>
+                          <Skeleton
+                            className={cn(
+                              "h-4 w-56",
+                              cardLayout
+                                ? "sr-only"
+                                : "sr-only md:not-sr-only md:block"
+                            )}
+                          />
+                          <Skeleton
+                            className={cn(
+                              "h-4 w-32",
+                              !cardLayout && "hidden md:block"
+                            )}
+                          />
+                        </div>
+                      </TableCell>
+                      <TableCell
+                        className={cn(
+                          "block align-top text-sm text-muted-foreground",
+                          cardLayout ? "hidden" : "md:table-cell"
+                        )}
+                      >
+                        <Skeleton className="h-4 w-24" />
+                      </TableCell>
+                      <TableCell
+                        className={cn(
+                          "block align-top whitespace-normal",
+                          cardLayout
+                            ? "col-span-2 row-start-2 min-w-0 border-b-0 px-1 py-2 md:col-span-1 md:col-start-1 md:px-2"
+                            : "md:table-cell"
+                        )}
+                      >
+                        {cardLayout ? (
+                          <span className="mb-1 block text-xs font-medium text-muted-foreground">
+                            {t.routing.destinationColumn}
+                          </span>
+                        ) : null}
+                        <Skeleton className="h-8 w-full" />
+                      </TableCell>
+                      <TableCell
+                        className={cn(
+                          "block align-top whitespace-normal",
+                          cardLayout
+                            ? "col-span-2 row-start-3 min-w-0 border-b-0 px-1 py-2 md:col-span-1 md:col-start-2 md:row-start-2 md:px-2"
+                            : "md:table-cell"
+                        )}
+                      >
+                        {cardLayout ? (
+                          <span className="mb-1 block text-xs font-medium text-muted-foreground">
+                            {t.routing.languageColumn}
+                          </span>
+                        ) : null}
+                        <Skeleton className="h-8 w-full" />
+                      </TableCell>
+                      <TableCell
+                        className={cn(
+                          "block align-top",
+                          cardLayout
+                            ? "col-start-2 row-start-1 flex justify-end border-b-0 px-1 py-2 md:px-2"
+                            : "md:table-cell"
+                        )}
+                      >
+                        <div
+                          className={cn(
+                            "inline-flex h-8 w-32 items-center justify-between gap-2 rounded-lg border border-input px-2.5",
+                            cardLayout ? "mx-0" : "mx-auto"
+                          )}
+                        >
+                          <Skeleton className="h-4 w-12" />
+                          <Skeleton className="size-4 rounded-full" />
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
+                {sectionAccess.schedules ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="p-4">
+                      <div className="flex flex-col gap-4 rounded-lg border bg-muted/20 p-4">
+                        <div className="flex items-center justify-between gap-4">
+                          <Skeleton className="h-5 w-36" />
+                          <Skeleton className="h-9 w-24" />
+                        </div>
+                        <div className="overflow-x-auto">
+                          <div className="grid min-w-[72rem] grid-cols-8 gap-3">
+                            {Array.from({ length: 8 }).map((_, index) => (
+                              <Skeleton key={index} className="h-10 w-full" />
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : null}
+              </TableBody>
+            </Table>
+          </AppListTable>
+        ) : null}
+      </section>
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         {Array.from({ length: 4 }).map((_, index) => (
           <Card key={index} size="sm">
@@ -263,67 +453,6 @@ export function TelegramConfigurationSkeleton() {
           </Card>
         ))}
       </div>
-      <AppListTable className="mt-0">
-        <Table>
-          <TableHeader>
-            <AppListTableHeaderRow>
-              <AppListTableHead>
-                <Skeleton className="h-4 w-24" />
-              </AppListTableHead>
-              <AppListTableHead>
-                <Skeleton className="h-4 w-28" />
-              </AppListTableHead>
-              <AppListTableHead>
-                <Skeleton className="h-4 w-20" />
-              </AppListTableHead>
-              <AppListTableHead>
-                <Skeleton className="h-4 w-16" />
-              </AppListTableHead>
-              <AppListTableHead>
-                <Skeleton className="h-4 w-24" />
-              </AppListTableHead>
-            </AppListTableHeaderRow>
-          </TableHeader>
-          <TableBody>
-            {Array.from({ length: 1 }).map((_, rowIndex) => (
-              <TableRow key={rowIndex}>
-                <TableCell>
-                  <Skeleton className="h-5 w-44" />
-                </TableCell>
-                <TableCell>
-                  <Skeleton className="h-5 w-32" />
-                </TableCell>
-                <TableCell>
-                  <Skeleton className="h-5 w-24" />
-                </TableCell>
-                <TableCell>
-                  <Skeleton className="h-5 w-28" />
-                </TableCell>
-                <TableCell>
-                  <Skeleton className="mx-auto h-5 w-20" />
-                </TableCell>
-              </TableRow>
-            ))}
-            <TableRow>
-              <TableCell colSpan={5} className="p-4">
-                <div className="flex flex-col gap-4 rounded-lg border bg-muted/20 p-4">
-                  <div className="flex items-center justify-between gap-4">
-                    <Skeleton className="h-5 w-36" />
-                    <Skeleton className="h-9 w-24" />
-                  </div>
-                  <div className="overflow-x-auto">
-                    <div className="grid min-w-[72rem] grid-cols-8 gap-3">
-                      {Array.from({ length: 8 }).map((__, columnIndex) => (
-                        <Skeleton key={columnIndex} className="h-10 w-full" />
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
-      </AppListTable>
     </div>
   )
 }
@@ -1030,6 +1159,7 @@ function EconomicCalendarRouteControls({
       {
         featureKey: route.featureKey,
         workspaceId: currentWorkspaceId,
+        enabled: route.setting?.enabled ?? false,
         ...overrides,
       }
     )

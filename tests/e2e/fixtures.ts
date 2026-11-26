@@ -40,6 +40,7 @@ type FixtureController = {
       | "telegram-verified-readback"
       | "economic-calendar-off-unassigned"
       | "economic-calendar-off-assigned"
+      | "economic-calendar-missing-setting"
       | "legacy-saved-provider-selection"
       | "legacy-provider-options"
       | "empty"
