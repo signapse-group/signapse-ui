@@ -54,6 +54,35 @@ export type TelegramBotConnectionResponse = z.infer<
   typeof telegramBotConnectionResponseSchema
 >
 
+export const telegramBotConnectionReadbackSchema = z.object({
+  id: z.number().int().optional().catch(undefined),
+  botId: z.number().int().optional().catch(undefined),
+  botUsername: z.string().optional().catch(undefined),
+  botFirstName: z.string().optional().catch(undefined),
+  displayLabel: z.string().optional().catch(undefined),
+  status: telegramConnectionStatusSchema.optional().catch(undefined),
+  webhookUrl: z.string().optional().catch(undefined),
+  failureReason: z.string().optional().catch(undefined),
+  verifiedAt: z.string().optional().catch(undefined),
+  lastValidatedAt: z.string().optional().catch(undefined),
+  lastWebhookRegisteredAt: z.string().optional().catch(undefined),
+  createdDate: z.string().optional().catch(undefined),
+  lastModifiedDate: z.string().optional().catch(undefined),
+})
+
+export type TelegramBotConnectionReadback = z.infer<
+  typeof telegramBotConnectionReadbackSchema
+>
+
+export const telegramBotConnectionsReadbackResponseSchema = z
+  .array(z.unknown())
+  .transform((connections) =>
+    connections.map((connection) => {
+      const parsed = telegramBotConnectionReadbackSchema.safeParse(connection)
+      return parsed.success ? parsed.data : {}
+    })
+  )
+
 export interface TelegramDestinationResponse {
   id: number
   botConnectionId: number
@@ -253,7 +282,7 @@ export interface TelegramManageAccess {
 }
 
 export interface TelegramConfigurationData {
-  botConnections: TelegramBotConnectionResponse[]
+  botConnections: TelegramBotConnectionReadback[]
   destinations: TelegramDestinationResponse[]
   featureSettings: TelegramFeatureSettingResponse[]
   schedules: TelegramMarketAnalysisScheduleResponse[]

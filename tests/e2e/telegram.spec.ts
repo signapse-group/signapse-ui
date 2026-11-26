@@ -773,7 +773,7 @@ test.describe("P0 Telegram operations", () => {
   test("uses API statuses to report created, duplicate, and rejected bots", async ({
     page,
     fixture,
-  }) => {
+  }, testInfo) => {
     await fixture.setPermissions([
       "telegram-bot-connection:create",
       "telegram-bot-connection:read",
@@ -910,5 +910,97 @@ test.describe("P0 Telegram operations", () => {
     )
     expect(await savedBots()).toEqual(createdInvalidBots)
     expect(await countRequests("POST")).toBe(initialPosts + 6)
+
+    await fixture.setPermissions([
+      "telegram-bot-connection:create",
+      "telegram-bot-connection:read",
+    ])
+    await tokenInput.fill("fixture-missing-status-token")
+    await dialog.getByRole("button", { name: "Kết nối bot" }).click()
+    await expect(dialog).toBeHidden()
+    await expect(
+      page.getByText(
+        "Bot đã được thêm nhưng chưa xác minh được trạng thái hiện tại. Hãy kiểm tra danh sách kết nối trước khi thử lại.",
+        { exact: true }
+      )
+    ).toBeVisible()
+    await expect(
+      page.getByText("Đã kết nối bot Telegram.", { exact: true })
+    ).toHaveCount(0)
+    const savedAfterMissingStatusResponse = await savedBots()
+    expect(savedAfterMissingStatusResponse).toHaveLength(
+      createdInvalidBots.length + 1
+    )
+    const responseStatusMissingRow = botCard
+      .getByRole("listitem")
+      .filter({ hasText: "New fixture bot" })
+    await expect(responseStatusMissingRow).toContainText("Đang hoạt động")
+    expect(await countRequests("POST")).toBe(initialPosts + 7)
+
+    await connectTrigger.click()
+    await tokenInput.fill("fixture-unknown-outcome-token")
+    await dialog.getByRole("button", { name: "Kết nối bot" }).click()
+    await expect(dialog).toBeHidden()
+    await expect(
+      page.getByText(
+        "Chưa xác nhận được kết quả kết nối. Hãy kiểm tra danh sách trước khi thử lại.",
+        { exact: true }
+      )
+    ).toBeVisible()
+    await expect(
+      page.getByText("Không thể kết nối bot Telegram.", { exact: true })
+    ).toHaveCount(0)
+    const unknownOutcomeRow = botCard
+      .getByRole("listitem")
+      .filter({ hasText: "Unconfirmed response bot" })
+    await expect(unknownOutcomeRow).toContainText("Đang hoạt động")
+    expect(
+      (await savedBots()).find(
+        (connection) =>
+          connection.displayLabel === "Unconfirmed response bot" &&
+          connection.status === "ACTIVE"
+      )
+    ).toBeDefined()
+    expect(await countRequests("POST")).toBe(initialPosts + 8)
+
+    await fixture.setPermissions([
+      "telegram-bot-connection:create",
+      "telegram-bot-connection:read",
+      "telegram-bot-connection:update",
+    ])
+    await fixture.setScenario(
+      "/telegram/bot-connections",
+      "missing-connection-fields",
+      "GET"
+    )
+    await page.reload()
+    const unverifiedReadbackRow = botCard
+      .getByRole("listitem")
+      .filter({ hasText: "Fixture operations bot" })
+    await expect(unverifiedReadbackRow).toContainText(
+      "Chưa xác minh trạng thái"
+    )
+    await expect(unverifiedReadbackRow).toContainText(
+      "Một số dữ liệu kết nối chưa được trả về. Hãy tải lại để xác minh bản ghi đã lưu."
+    )
+    await expect(
+      unverifiedReadbackRow.getByRole("button", {
+        name: "Thao tác bot Telegram",
+      })
+    ).toHaveCount(0)
+    await page.setViewportSize({ width: 390, height: 844 })
+    const unverifiedNote = unverifiedReadbackRow.getByRole("note")
+    await expect(unverifiedNote).toBeVisible()
+    const unverifiedLayout = await page.evaluate(() => ({
+      clientWidth: document.documentElement.clientWidth,
+      scrollWidth: document.documentElement.scrollWidth,
+    }))
+    expect(unverifiedLayout.scrollWidth).toBeLessThanOrEqual(
+      unverifiedLayout.clientWidth
+    )
+    await testInfo.attach("sign329-unverified-readback-mobile.png", {
+      body: await page.screenshot({ type: "png" }),
+      contentType: "image/png",
+    })
   })
 })

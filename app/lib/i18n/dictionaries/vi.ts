@@ -2471,6 +2471,10 @@ export const vi = {
       accessLimited: "Không có quyền xem bot Telegram",
       noUsername: "Chưa có username",
       noBotName: "Chưa có tên bot",
+      statusUnverified: "Chưa xác minh trạng thái",
+      connectionDetailsUnverified:
+        "Một số dữ liệu kết nối chưa được trả về. Hãy tải lại để xác minh bản ghi đã lưu.",
+      unverifiedLabel: "Bot Telegram chưa xác minh",
       webhookRegistered: "Đã đăng ký {time}",
       webhookNotRegistered: "Chưa có thời điểm đăng ký",
       lastValidated: "Xác thực gần nhất {time}",
@@ -2484,6 +2488,14 @@ export const vi = {
         "Bot này đã có trong danh sách kết nối. Trạng thái đã lưu: {status}.",
       alreadyConnectedIncomplete:
         "Bot này đã có trong danh sách kết nối với trạng thái {status}, nhưng thiết lập chưa hoàn tất.",
+      createStatusUnverified:
+        "Bot đã được thêm nhưng chưa xác minh được trạng thái hiện tại. Hãy kiểm tra danh sách kết nối trước khi thử lại.",
+      createOutcomeUnverified:
+        "Chưa xác nhận được kết quả kết nối. Hãy kiểm tra danh sách trước khi thử lại.",
+      alreadyConnectedStatusUnverified:
+        "Bot đã được kết nối nhưng chưa xác minh được trạng thái đã lưu. Hãy kiểm tra danh sách trước khi thực hiện thao tác khác.",
+      createNotActive:
+        "Bot đã được thêm với trạng thái {status}; chưa xác nhận bot đang hoạt động.",
       emptyTitle: "Chưa có bot Telegram",
       emptyDescription:
         "Kết nối bot do bạn tạo trong BotFather để bắt đầu gửi thông báo.",

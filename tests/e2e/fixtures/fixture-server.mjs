@@ -4163,9 +4163,19 @@ Which asset did you mean? The available data is limited. Add TSLA to your watchl
         ),
       }
     }
-    return state.botConnections.filter(
+    const connections = state.botConnections.filter(
       (connection) => connection.status !== "REMOVED"
     )
+    if (getScenario(state, method, pathname) === "missing-connection-fields") {
+      return connections.map((connection) => {
+        if (connection.id !== 11) return connection
+        const unverifiedConnection = { ...connection }
+        delete unverifiedConnection.id
+        delete unverifiedConnection.status
+        return unverifiedConnection
+      })
+    }
+    return connections
   }
   if (method === "GET" && pathname === "/telegram/destinations") {
     if (getScenario(state, method, pathname) === "telegram-verified-readback") {
@@ -4249,13 +4259,27 @@ Which asset did you mean? The available data is limited. Add TSLA to your watchl
     }
 
     const invalid = body?.botToken === "fixture-webhook-failed-token"
+    const omitCreateStatus = body?.botToken === "fixture-missing-status-token"
+    const unknownOutcome = body?.botToken === "fixture-unknown-outcome-token"
     const id = Math.max(0, ...state.botConnections.map((item) => item.id)) + 1
     const item = {
       id,
       botId: 10000 + id,
-      botUsername: invalid ? "incomplete_fixture_bot" : "new_fixture_bot",
-      botFirstName: invalid ? "Incomplete Fixture" : "New Fixture",
-      displayLabel: invalid ? "New incomplete fixture bot" : "New fixture bot",
+      botUsername: invalid
+        ? "incomplete_fixture_bot"
+        : unknownOutcome
+          ? "unconfirmed_fixture_bot"
+          : "new_fixture_bot",
+      botFirstName: invalid
+        ? "Incomplete Fixture"
+        : unknownOutcome
+          ? "Unconfirmed Fixture"
+          : "New Fixture",
+      displayLabel: invalid
+        ? "New incomplete fixture bot"
+        : unknownOutcome
+          ? "Unconfirmed response bot"
+          : "New fixture bot",
       status: invalid ? "INVALID" : "ACTIVE",
       ...(invalid
         ? {
@@ -4269,6 +4293,17 @@ Which asset did you mean? The available data is limited. Add TSLA to your watchl
       lastModifiedDate: NOW,
     }
     state.botConnections.unshift(item)
+    if (omitCreateStatus) {
+      const unverifiedResponse = { ...item }
+      delete unverifiedResponse.status
+      return { __status: 201, payload: unverifiedResponse }
+    }
+    if (unknownOutcome) {
+      return {
+        __status: 503,
+        payload: errorPayload("Fixture backend unavailable", "UNAVAILABLE"),
+      }
+    }
     return { __status: 201, payload: item }
   }
 

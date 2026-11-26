@@ -24,8 +24,9 @@ import {
   getUpdateTelegramFeatureSettingSchema,
   normalizeSaveTelegramMarketAnalysisScheduleRequest,
   SaveTelegramMarketAnalysisScheduleRequest,
-  telegramBotConnectionResponseSchema,
-  telegramBotConnectionsResponseSchema,
+  telegramBotConnectionReadbackSchema,
+  telegramBotConnectionsReadbackResponseSchema,
+  TelegramBotConnectionReadback,
   TelegramBotConnectionResponse,
   TelegramDestinationResponse,
   TelegramFeatureSettingResponse,
@@ -105,12 +106,13 @@ function revalidateTelegramConfiguration() {
 }
 
 export async function getTelegramBotConnections(): Promise<
-  TelegramBotConnectionResponse[]
+  TelegramBotConnectionReadback[]
 > {
   const response = await fetchAuthenticated<unknown>(
     "/telegram/bot-connections"
   )
-  const parsed = telegramBotConnectionsResponseSchema.safeParse(response)
+  const parsed =
+    telegramBotConnectionsReadbackResponseSchema.safeParse(response)
 
   if (!parsed.success) {
     throw new Error("Invalid Telegram bot connections response")
@@ -147,8 +149,8 @@ export async function createTelegramBotConnection(
   request: CreateTelegramBotConnectionRequest
 ): Promise<
   ActionResult<{
-    connection: TelegramBotConnectionResponse
-    created: boolean
+    connection: TelegramBotConnectionReadback
+    created: boolean | null
   }>
 > {
   const dictionary = await getTelegramDictionary()
@@ -171,17 +173,36 @@ export async function createTelegramBotConnection(
       }
     )
 
-    const connection = telegramBotConnectionResponseSchema.safeParse(
-      response.data
-    )
-
-    if (
-      (response.status !== 200 && response.status !== 201) ||
-      !connection.success
-    ) {
+    if (response.status !== 200 && response.status !== 201) {
       return {
         success: false,
         error: dictionary.telegram.bot.createError,
+      }
+    }
+
+    const parsedConnection = telegramBotConnectionReadbackSchema.safeParse(
+      response.data
+    )
+    const connection = parsedConnection.success ? parsedConnection.data : {}
+
+    revalidateTelegramConfiguration()
+
+    return {
+      success: true,
+      data: {
+        connection,
+        created: response.status === 201,
+      },
+    }
+  } catch (error: unknown) {
+    const status = (error as BackendApiError)?.status
+    if (typeof status === "number" && status >= 400 && status < 500) {
+      return {
+        success: false,
+        error: getCreateBotActionError(
+          error,
+          dictionary.telegram.bot.createError
+        ),
       }
     }
 
@@ -190,17 +211,9 @@ export async function createTelegramBotConnection(
     return {
       success: true,
       data: {
-        connection: connection.data,
-        created: response.status === 201,
+        connection: {},
+        created: null,
       },
-    }
-  } catch (error: unknown) {
-    return {
-      success: false,
-      error: getCreateBotActionError(
-        error,
-        dictionary.telegram.bot.createError
-      ),
     }
   }
 }

@@ -38,6 +38,7 @@ type FixtureController = {
     scenario:
       | "success"
       | "telegram-verified-readback"
+      | "missing-connection-fields"
       | "legacy-saved-provider-selection"
       | "legacy-provider-options"
       | "empty"

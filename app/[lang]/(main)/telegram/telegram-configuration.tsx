@@ -24,6 +24,7 @@ import type { LanguageResponse } from "@/app/lib/languages/definitions"
 import {
   TELEGRAM_FEATURE_KEYS,
   TelegramConfigurationData,
+  TelegramBotConnectionResponse,
   TelegramDestinationResponse,
   TelegramFeatureKey,
   TelegramFeatureSettingResponse,
@@ -151,7 +152,8 @@ export function TelegramConfigurationPage({
     ),
   }))
   const activeBotConnections = data.botConnections.filter(
-    (connection) => connection.status === "ACTIVE"
+    (connection): connection is TelegramBotConnectionResponse =>
+      connection.status === "ACTIVE" && connection.id !== undefined
   )
   const activeDestinations = data.destinations.filter(
     (destination) => destination.status === "ACTIVE"

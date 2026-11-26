@@ -23,7 +23,7 @@ import type { Dictionary } from "@/app/lib/i18n/dictionary-types"
 import { useLocalization } from "@/app/lib/i18n/provider"
 import {
   getCreateTelegramBotConnectionSchema,
-  TelegramBotConnectionResponse,
+  TelegramBotConnectionReadback,
 } from "@/app/lib/telegram/definitions"
 import { AppTimeMetadata } from "@/components/app-time-metadata"
 import {
@@ -93,7 +93,7 @@ export function BotConnectionsCard({
   canManage,
   canCreate,
 }: {
-  botConnections: TelegramBotConnectionResponse[]
+  botConnections: TelegramBotConnectionReadback[]
   canRead: boolean
   canManage: boolean
   canCreate: boolean
@@ -130,9 +130,9 @@ export function BotConnectionsCard({
             ) : null}
             {records.length > 0 ? (
               <ItemGroup>
-                {records.map((connection) => (
+                {records.map((connection, index) => (
                   <BotConnectionItem
-                    key={connection.id}
+                    key={connection.id ?? `unverified-${index}`}
                     connection={connection}
                     canManage={canManage}
                     formatTime={formatTime}
@@ -166,14 +166,19 @@ function BotConnectionItem({
   formatMessage,
   dictionary,
 }: {
-  connection: TelegramBotConnectionResponse
+  connection: TelegramBotConnectionReadback
   canManage: boolean
   formatTime: (value?: string) => string
   formatMessage: ReturnType<typeof useLocalization>["formatMessage"]
   dictionary: Dictionary
 }) {
   const t = dictionary.telegram
-  const menuTriggerId = "telegram-bot-actions-" + connection.id
+  const manageableId =
+    canManage && connection.id !== undefined && connection.status !== undefined
+      ? connection.id
+      : null
+  const menuTriggerId =
+    manageableId === null ? null : `telegram-bot-actions-${manageableId}`
   const [confirmation, setConfirmation] = useState<"disable" | "delete" | null>(
     null
   )
@@ -189,6 +194,11 @@ function BotConnectionItem({
             </ItemTitle>
             <StatusBadge status={connection.status} />
           </ItemHeader>
+          {connection.id === undefined || connection.status === undefined ? (
+            <p className="text-xs text-muted-foreground" role="note">
+              {t.bot.connectionDetailsUnverified}
+            </p>
+          ) : null}
           <ItemDescription className="line-clamp-none break-words">
             {connection.botUsername
               ? "@" + connection.botUsername.replace(/^@/, "")
@@ -222,7 +232,7 @@ function BotConnectionItem({
             </div>
           ) : null}
         </ItemContent>
-        {canManage ? (
+        {manageableId !== null && menuTriggerId !== null ? (
           <ItemActions className="ms-auto self-start">
             <DropdownMenu>
               <DropdownMenuTrigger
@@ -260,34 +270,36 @@ function BotConnectionItem({
           </ItemActions>
         ) : null}
       </Item>
-      <ActionConfirmDialog
-        title={
-          confirmation === "disable" ? t.bot.disableTitle : t.bot.deleteTitle
-        }
-        description={
-          confirmation === "disable"
-            ? t.bot.disableDescription
-            : t.bot.deleteDescription
-        }
-        actionLabel={
-          confirmation === "disable" ? t.common.disable : t.bot.deleteAction
-        }
-        triggerLabel={t.bot.actionMenu}
-        action={() =>
-          confirmation === "disable"
-            ? disableTelegramBotConnection(connection.id)
-            : deleteTelegramBotConnection(connection.id)
-        }
-        successMessage={
-          confirmation === "disable"
-            ? t.bot.disableSuccess
-            : t.bot.deleteSuccess
-        }
-        open={confirmation !== null}
-        onOpenChange={(open) => setConfirmation(open ? confirmation : null)}
-        trigger={null}
-        restoreFocusId={menuTriggerId}
-      />
+      {manageableId !== null && menuTriggerId !== null ? (
+        <ActionConfirmDialog
+          title={
+            confirmation === "disable" ? t.bot.disableTitle : t.bot.deleteTitle
+          }
+          description={
+            confirmation === "disable"
+              ? t.bot.disableDescription
+              : t.bot.deleteDescription
+          }
+          actionLabel={
+            confirmation === "disable" ? t.common.disable : t.bot.deleteAction
+          }
+          triggerLabel={t.bot.actionMenu}
+          action={() =>
+            confirmation === "disable"
+              ? disableTelegramBotConnection(manageableId)
+              : deleteTelegramBotConnection(manageableId)
+          }
+          successMessage={
+            confirmation === "disable"
+              ? t.bot.disableSuccess
+              : t.bot.deleteSuccess
+          }
+          open={confirmation !== null}
+          onOpenChange={(open) => setConfirmation(open ? confirmation : null)}
+          trigger={null}
+          restoreFocusId={menuTriggerId}
+        />
+      ) : null}
     </>
   )
 }
@@ -329,28 +341,44 @@ function ConnectBotDialog() {
 
       if (result.success) {
         const { connection, created } = result.data
-        const statusLabel = dictionary.telegram.statuses[connection.status]
+        const status = connection.status
 
-        if (created && connection.status === "ACTIVE") {
-          toast.success(t.bot.createSuccess)
-        } else if (connection.status === "INVALID") {
-          const incompleteMessage = formatMessage(
-            created ? t.bot.createIncomplete : t.bot.alreadyConnectedIncomplete,
-            { status: statusLabel }
-          )
+        if (created === null) {
+          toast.warning(t.bot.createOutcomeUnverified)
+        } else if (status === undefined) {
           toast.warning(
             created
-              ? incompleteMessage
-              : `${incompleteMessage} ${t.bot.webhookRegistrationFailed}`
-          )
-        } else if (!created) {
-          toast.info(
-            formatMessage(t.bot.alreadyConnected, {
-              status: statusLabel,
-            })
+              ? t.bot.createStatusUnverified
+              : t.bot.alreadyConnectedStatusUnverified
           )
         } else {
-          toast.error(t.bot.createError)
+          const statusLabel = dictionary.telegram.statuses[status]
+
+          if (created && status === "ACTIVE") {
+            toast.success(t.bot.createSuccess)
+          } else if (status === "INVALID") {
+            const incompleteMessage = formatMessage(
+              created
+                ? t.bot.createIncomplete
+                : t.bot.alreadyConnectedIncomplete,
+              { status: statusLabel }
+            )
+            toast.warning(
+              created
+                ? incompleteMessage
+                : `${incompleteMessage} ${t.bot.webhookRegistrationFailed}`
+            )
+          } else if (!created) {
+            toast.info(
+              formatMessage(t.bot.alreadyConnected, {
+                status: statusLabel,
+              })
+            )
+          } else {
+            toast.warning(
+              formatMessage(t.bot.createNotActive, { status: statusLabel })
+            )
+          }
         }
 
         handleOpenChange(false)

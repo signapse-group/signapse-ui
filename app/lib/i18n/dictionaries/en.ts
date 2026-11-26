@@ -2491,6 +2491,10 @@ export const en: Dictionary = {
       accessLimited: "No permission to view Telegram bots",
       noUsername: "No username yet",
       noBotName: "No bot name yet",
+      statusUnverified: "Status unverified",
+      connectionDetailsUnverified:
+        "Some connection details were not returned. Refresh to verify the saved record.",
+      unverifiedLabel: "Unverified Telegram bot",
       webhookRegistered: "Registered {time}",
       webhookNotRegistered: "No registration time yet",
       lastValidated: "Last validated {time}",
@@ -2504,6 +2508,14 @@ export const en: Dictionary = {
         "This bot is already in your connections. Its saved status is {status}.",
       alreadyConnectedIncomplete:
         "This bot is already in your connections with status {status}, but its setup is incomplete.",
+      createStatusUnverified:
+        "The bot was added, but its current status could not be verified. Check the connections list before retrying.",
+      createOutcomeUnverified:
+        "The connection result could not be confirmed. Check the connections list before retrying.",
+      alreadyConnectedStatusUnverified:
+        "This bot is already connected, but its saved status could not be verified. Check the connections list before taking further action.",
+      createNotActive:
+        "The bot was added with status {status}; it has not been confirmed as active.",
       emptyTitle: "No Telegram bots yet",
       emptyDescription:
         "Connect a bot you created in BotFather to start sending notifications.",
