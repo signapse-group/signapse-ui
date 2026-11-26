@@ -232,6 +232,22 @@ test("Economic calendar route access stays scoped and reflows across viewports",
       .outputPath("economic-calendar-compact-dark-vi-1024x768.png"),
   })
 
+  await page.emulateMedia({ colorScheme: "light" })
+  await expect(page.locator("html")).toHaveClass(/\blight\b/)
+  await expect(destinationControl).toBeVisible()
+  await expect(languageControl).toBeVisible()
+  await expect(routeSwitch).toBeVisible()
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth)
+  ).toBeLessThanOrEqual(1024)
+  await page.screenshot({
+    path: test
+      .info()
+      .outputPath("economic-calendar-compact-light-vi-1024x768.png"),
+  })
+  await page.emulateMedia({ colorScheme: "dark" })
+  await expect(page.locator("html")).toHaveClass(/\bdark\b/)
+
   await page.setViewportSize({ width: 390, height: 844 })
   await expect(row).toBeVisible()
   await expect(row.getByText("Điểm nhận", { exact: true })).toBeVisible()

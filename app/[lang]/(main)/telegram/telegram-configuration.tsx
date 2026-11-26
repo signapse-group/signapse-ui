@@ -1100,12 +1100,18 @@ function EconomicCalendarRouteControls({
   useEffect(() => {
     if (!focusAfterClear.current || selectedDestination) return
 
-    const focusTarget =
-      destinationTriggerRef.current ??
-      languageTriggerRef.current ??
-      enabledSwitchRef.current
     focusAfterClear.current = false
-    focusTarget?.focus()
+
+    for (const focusTarget of [
+      destinationTriggerRef.current,
+      languageTriggerRef.current,
+      enabledSwitchRef.current,
+    ]) {
+      if (!focusTarget?.isConnected || focusTarget.disabled) continue
+
+      focusTarget.focus()
+      if (document.activeElement === focusTarget) break
+    }
   }, [selectedDestination])
 
   if (

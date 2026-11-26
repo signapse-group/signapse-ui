@@ -792,6 +792,78 @@ describe("Economic calendar route permissions and persistence", () => {
     )
   })
 
+  it("moves clear focus to the enabled switch when destination and language controls cannot receive focus", async () => {
+    const user = userEvent.setup()
+    const routePermissions = {
+      ECONOMIC_CALENDAR_ALERT: true,
+      MARKET_NEWS_ALERT: false,
+      SCHEDULED_MARKET_ANALYSIS: false,
+    }
+    const configuration = {
+      ...data,
+      featureSettings: [{ ...featureSettings[0], enabled: true }],
+      languageCatalogError: true,
+      sectionAccess: {
+        ...data.sectionAccess,
+        destinations: false,
+        featureSettings: routePermissions,
+      },
+      manageAccess: {
+        ...data.manageAccess,
+        featureSettings: routePermissions,
+      },
+    }
+    const { rerender } = renderConfiguration(configuration)
+    vi.mocked(updateTelegramFeatureSetting).mockResolvedValue({
+      success: true,
+      data: { ...featureSettings[0], enabled: false, destination: null },
+    })
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Xóa điểm nhận cho Cảnh báo lịch kinh tế",
+      })
+    )
+    await waitFor(() => expect(routerRefresh).toHaveBeenCalledTimes(1))
+
+    rerender(
+      <LocalizationProvider locale="vi" dictionary={viDictionary}>
+        <TelegramConfigurationPage
+          data={{
+            ...configuration,
+            featureSettings: [
+              { ...featureSettings[0], enabled: false, destination: null },
+            ],
+          }}
+        />
+      </LocalizationProvider>
+    )
+
+    const languageControl = screen.getByRole("combobox", {
+      name: viDictionary.telegram.routing.languageAria.replace(
+        "{route}",
+        viDictionary.telegram.routeDefinitions.ECONOMIC_CALENDAR_ALERT.label
+      ),
+    })
+    expect(
+      screen.queryByRole("combobox", {
+        name:
+          viDictionary.telegram.routing.destinationColumn +
+          ": " +
+          viDictionary.telegram.routeDefinitions.ECONOMIC_CALENDAR_ALERT.label,
+      })
+    ).not.toBeInTheDocument()
+    const routeSwitch = screen.getByRole("switch", {
+      name: viDictionary.telegram.routing.switchAria.replace(
+        "{route}",
+        viDictionary.telegram.routeDefinitions.ECONOMIC_CALENDAR_ALERT.label
+      ),
+    })
+    expect(languageControl).toBeDisabled()
+    expect(routeSwitch).toBeEnabled()
+    await waitFor(() => expect(routeSwitch).toHaveFocus())
+  })
+
   it("does not represent a missing current workspace as an Off route", () => {
     renderConfiguration({
       ...data,
