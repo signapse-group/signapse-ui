@@ -43,8 +43,9 @@ Chromium headless did not change its viewport when sent the browser zoom shortcu
 ## Local checks
 
 - `pnpm exec vitest run tests/components/telegram-configuration.component.test.tsx tests/api/telegram-action.test.ts tests/core/telegram-permissions.test.ts` — 3 files and 46 tests passed, including incomplete-readback cases.
-- `/opt/apps/symphony/runtime/run-fe-browser "$PWD" tests/e2e/telegram.spec.ts` — rerun on the final candidate before handoff; the previous candidate run passed 11 tests. Coverage includes route permission isolation, route-only owned-workspace settings without `workspace:read`, update scoping, scheduled-analysis access, destination clear/pause/reassign behavior, error and readback behavior, keyboard focus for clear, render cases, light theme, effective viewport, and shell breakpoints.
-- Render checks verify layout at 1520, 1024, 760, 390, and 360 CSS pixels, plus shell breakpoints 360, 390, 767, 768, 1024, 1439, 1440, 1520, 1920, and 2560; no page-level horizontal overflow was observed.
+- `/opt/apps/symphony/runtime/run-fe-browser "$PWD" tests/e2e/telegram.spec.ts` — 13 passed. Coverage includes route permission isolation, route-only owned-workspace settings without `workspace:read`, update scoping, scheduled-analysis access, destination clear/pause/reassign behavior, errors and readback, keyboard focus, render cases, light theme, effective viewport, and shell breakpoints.
+- `/opt/apps/symphony/runtime/run-fe-browser "$PWD" tests/e2e/telegram.spec.ts --grep 'creates a pending link' --repeat-each=2` — 2 passed; verifies the pending link dialog has no page-level horizontal overflow at 195 CSS pixels.
+- Render checks verify layout at 1520, 1024, 760, 390, and 360 CSS pixels, plus shell breakpoints 360, 390, 767, 768, 1024, 1439, 1440, 1520, 1920, and 2560; no page-level horizontal overflow was observed in those frames.
 - `pnpm typecheck` — passed.
 - Changed-file ESLint — passed.
 - `pnpm test:contract` — fixture consistency passed for 90 OpenAPI operations.

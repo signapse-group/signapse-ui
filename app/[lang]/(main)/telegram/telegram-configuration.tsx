@@ -797,7 +797,12 @@ function MarketAnalysisSchedulePanel({
           )}
         </AppListToolbarLeading>
         <AppListToolbarTrailing>
-          <Badge variant="outline">{t.common.currentWorkspaceScope}</Badge>
+          <Badge
+            className="h-auto max-w-full shrink whitespace-normal"
+            variant="outline"
+          >
+            {t.common.currentWorkspaceScope}
+          </Badge>
         </AppListToolbarTrailing>
       </AppListToolbar>
       <AppListTable className="mt-0">
