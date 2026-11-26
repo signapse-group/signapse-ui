@@ -35,3 +35,17 @@ The published `GET /telegram/feature-settings` contract documents per-route read
 - `/opt/apps/symphony/runtime/run-fe-browser "$PWD" tests/e2e/accessibility.spec.ts --project=chromium-vi --grep 'Telegram state'` — **1 passed**.
 
 P0 checks use local fixtures and do not establish production authorization, persistence, Telegram delivery or live dev feature behavior. QA owns live dev behavior checks; the coordinator owns parent acceptance.
+
+## Follow-up attempt #1
+
+Candidate implementation: [`ffe2dea5a9c6559acbc2f047da176ec27a090001`](https://github.com/signapse-group/signapse-ui/commit/ffe2dea5a9c6559acbc2f047da176ec27a090001) on the same `origin/dev` base. This follow-up sends the current enabled state on every partial Economic route update, explicitly defaulting a newly created route to Off. The fixture now models the published API behavior where an omitted `enabled` on a new setting defaults to On and returns the saved setting, so the added browser case verifies first assignment remains Off after readback. The Suspense fallback now places the permitted Feature routing row first and follows the single Economic row's compact/mobile layout.
+
+Checks on this candidate:
+
+- `pnpm typecheck` — passed.
+- Targeted ESLint and Prettier checks — passed.
+- `git diff --check` — passed.
+- `pnpm test:contract` — fixture consistency passed for 90 operations.
+- `pnpm exec vitest run tests/components/telegram-configuration.component.test.tsx tests/api/telegram-action.test.ts --reporter=dot` — 2 files, **40 passed**.
+
+The required P0 browser run could not start. `/opt/apps/symphony/runtime/run-fe-browser "$PWD" tests/e2e/telegram-economic-calendar-routing.spec.ts --project=chromium-vi --grep "Economic calendar loading layout"` returned `resource_busy: host browser slot occupied; retry_after_seconds=30` on repeated attempts. The host lease points to a still-populated Symphony session cgroup; no local browser runner remains, so the lease was left intact and the wrapper was not bypassed. The new first-assignment readback and compact/mobile loading-state cases therefore remain unverified on this candidate, and no new loading screenshots were captured. The earlier loaded-state renders and two passing route journeys above belong to the previous candidate and are not evidence for these follow-up cases. Capture the pending states at **1024×768** (collapsed sidebar) and **390×844** (navigation closed), dark theme, Vietnamese locale, browser zoom 100%; use the existing responsive cases for layout bounds. No live feature request or product deployment was attempted.
