@@ -103,11 +103,14 @@ export async function getTelegramDestinations(): Promise<
   )
 }
 
-export async function getTelegramFeatureSettings(): Promise<
-  TelegramFeatureSettingResponse[]
-> {
+export async function getTelegramFeatureSettings(
+  workspaceId: number
+): Promise<TelegramFeatureSettingResponse[]> {
+  const filter = new URLSearchParams({
+    $filter: `workspace.id eq ${workspaceId}`,
+  })
   return fetchAuthenticated<TelegramFeatureSettingResponse[]>(
-    "/telegram/feature-settings"
+    `/telegram/feature-settings?${filter}`
   )
 }
 
@@ -346,7 +349,8 @@ export async function updateTelegramFeatureSetting(
   request: UpdateTelegramFeatureSettingRequest
 ): Promise<ActionResult<TelegramFeatureSettingResponse>> {
   const dictionary = await getTelegramDictionary()
-  const parsed = getUpdateTelegramFeatureSettingSchema().safeParse(request)
+  const parsed =
+    getUpdateTelegramFeatureSettingSchema(dictionary).safeParse(request)
 
   if (!parsed.success) {
     return {

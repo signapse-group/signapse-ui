@@ -3,7 +3,7 @@ import { z } from "zod"
 import type { Dictionary } from "@/app/lib/i18n/dictionary-types"
 import type { LanguageResponse } from "@/app/lib/languages/definitions"
 import { WorkspaceWatchlistAssetListItemResponse } from "@/app/lib/watchlists/definitions"
-import { WorkspaceResponse } from "@/app/lib/workspaces/definitions"
+import type { BackendWorkspaceSummary } from "@/app/lib/users/definitions"
 
 export const TELEGRAM_FEATURE_KEYS = [
   "ECONOMIC_CALENDAR_ALERT",
@@ -12,6 +12,7 @@ export const TELEGRAM_FEATURE_KEYS = [
 ] as const
 
 export type TelegramFeatureKey = (typeof TELEGRAM_FEATURE_KEYS)[number]
+export type TelegramFeatureAccess = Record<TelegramFeatureKey, boolean>
 
 export type TelegramConnectionStatus =
   "ACTIVE" | "DISABLED" | "REMOVED" | "INVALID"
@@ -80,8 +81,8 @@ export interface TelegramFeatureSettingResponse {
   workspaceId: number
   workspaceName?: string
   enabled: boolean
-  destination?: TelegramDestinationResponse
-  outputLanguage?: LanguageResponse
+  destination: TelegramDestinationResponse | null
+  outputLanguage: LanguageResponse | null
   createdDate?: string
   lastModifiedDate?: string
 }
@@ -111,18 +112,47 @@ export function getCreateTelegramLinkTokenSchema() {
   })
 }
 
-export function getUpdateTelegramFeatureSettingSchema() {
-  return z.object({
-    featureKey: z.enum(TELEGRAM_FEATURE_KEYS),
-    workspaceId: z.coerce.number().int().positive(),
-    destinationId: z.coerce.number().int().positive(),
-    enabled: z.boolean().optional(),
-    outputLanguageIsoCode: z.preprocess(
-      (value) =>
-        typeof value === "string" && value.trim() ? value.trim() : undefined,
-      z.string().optional()
-    ),
-  })
+export function getUpdateTelegramFeatureSettingSchema(dictionary?: Dictionary) {
+  return z
+    .object({
+      featureKey: z.enum(TELEGRAM_FEATURE_KEYS),
+      workspaceId: z.coerce.number().int().positive(),
+      destinationId: z.preprocess(
+        (value) => (value === "" ? undefined : value),
+        z.coerce.number().int().positive().nullable().optional()
+      ),
+      enabled: z.boolean().optional(),
+      outputLanguageIsoCode: z.preprocess((value) => {
+        if (value === null) return null
+        if (typeof value === "string") return value.trim() || null
+        return value
+      }, z.string().nullable().optional()),
+    })
+    .superRefine((request, context) => {
+      if (
+        request.featureKey === "SCHEDULED_MARKET_ANALYSIS" &&
+        request.destinationId == null
+      ) {
+        context.addIssue({
+          code: "custom",
+          path: ["destinationId"],
+          message:
+            dictionary?.telegram.destinationRequired ??
+            "Choose an active destination.",
+        })
+        return
+      }
+
+      if (request.destinationId === null && request.enabled !== false) {
+        context.addIssue({
+          code: "custom",
+          path: ["enabled"],
+          message:
+            dictionary?.telegram.routing.destinationClearRequiresDisabled ??
+            "Disable routing before clearing its destination.",
+        })
+      }
+    })
 }
 
 export function getSaveTelegramMarketAnalysisScheduleSchema(
@@ -224,7 +254,7 @@ export type SaveTelegramMarketAnalysisScheduleRequest = z.infer<
 export interface TelegramSectionAccess {
   botConnections: boolean
   destinations: boolean
-  featureSettings: boolean
+  featureSettings: TelegramFeatureAccess
   schedules: boolean
   watchlistAssets: boolean
 }
@@ -232,16 +262,18 @@ export interface TelegramSectionAccess {
 export interface TelegramManageAccess {
   botConnections: boolean
   destinations: boolean
-  featureSettings: boolean
+  featureSettings: TelegramFeatureAccess
   schedules: boolean
 }
 
 export interface TelegramConfigurationData {
   botConnections: TelegramBotConnectionResponse[]
   destinations: TelegramDestinationResponse[]
+  destinationsLoadError: boolean
   featureSettings: TelegramFeatureSettingResponse[]
+  featureSettingsLoadError: boolean
   schedules: TelegramMarketAnalysisScheduleResponse[]
-  currentWorkspace: WorkspaceResponse | null
+  currentWorkspace: BackendWorkspaceSummary | null
   watchlistAssets: WorkspaceWatchlistAssetListItemResponse[]
   languages: LanguageResponse[]
   languageCatalogError: boolean

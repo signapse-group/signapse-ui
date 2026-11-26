@@ -38,6 +38,8 @@ type FixtureController = {
     scenario:
       | "success"
       | "telegram-verified-readback"
+      | "economic-calendar-off-unassigned"
+      | "economic-calendar-off-assigned"
       | "legacy-saved-provider-selection"
       | "legacy-provider-options"
       | "empty"

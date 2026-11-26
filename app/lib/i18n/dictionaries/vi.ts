@@ -2429,6 +2429,7 @@ export const vi = {
       bot: "Bot Telegram",
       activeBots: "{count} bot đang hoạt động.",
       noBotPermission: "Bạn chưa có quyền xem bot.",
+      accessLimited: "Giới hạn quyền truy cập",
       ready: "Sẵn sàng",
       needsConfig: "Cần cấu hình",
       destinations: "Điểm nhận",
@@ -2436,6 +2437,8 @@ export const vi = {
       noDestinationPermission: "Bạn chưa có quyền xem điểm nhận.",
       needsLink: "Cần liên kết",
       routing: "Định tuyến",
+      noRoutingPermission: "Bạn chưa có quyền xem định tuyến.",
+      routingLoadError: "Không thể tải cấu hình định tuyến đã lưu.",
       configuredRoutes: "{configured}/{total} luồng đã bật trong {workspace}.",
       noWorkspace: "Chưa có không gian làm việc hiện tại.",
       routesEnabled: "Có luồng bật",
@@ -2511,6 +2514,7 @@ export const vi = {
       sectionDescription:
         "Chat, group hoặc channel đã xác minh bằng lệnh /start qua bot được chọn.",
       accessLimited: "Không có quyền xem điểm nhận",
+      loadError: "Không thể tải danh sách điểm nhận để chọn.",
       readOnlyDescription:
         "Bạn có thể xem các điểm nhận này, nhưng cần quyền quản lý điểm nhận để thay đổi.",
       noChatMetadata: "Chưa có metadata chat",
@@ -2589,6 +2593,18 @@ export const vi = {
       enabledColumn: "Bật gửi",
       accessLimited: "Không có quyền xem định tuyến",
       noWorkspaceSelected: "Chưa chọn không gian",
+      settingsLoadError: "Không thể tải cấu hình định tuyến.",
+      settingsLoadErrorDescription:
+        "Không thể tải cấu hình định tuyến đã lưu. Hãy thử tải lại.",
+      retry: "Thử lại",
+      noDestination: "Chưa gán điểm nhận",
+      destinationReadOnly: "Cần quyền xem danh sách điểm nhận để thay đổi.",
+      unavailableDestination: "Không khả dụng",
+      clearDestination: "Xóa điểm nhận cho {route}",
+      destinationClearSuccess: "Đã xóa điểm nhận và tạm dừng định tuyến.",
+      destinationClearRequiresDisabled:
+        "Hãy tạm dừng định tuyến trước khi xóa điểm nhận.",
+      saving: "Đang lưu cấu hình định tuyến…",
       destinationUpdateError: "Không thể cập nhật điểm nhận cho định tuyến.",
       destinationUpdateSuccess: "Đã cập nhật điểm nhận định tuyến.",
       statusUpdateError: "Không thể cập nhật trạng thái định tuyến.",

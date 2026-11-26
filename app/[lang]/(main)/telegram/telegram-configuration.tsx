@@ -9,6 +9,7 @@ import {
   MessageCircle,
   RadioTower,
   Trash2,
+  X,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -22,7 +23,6 @@ import { useLocalization } from "@/app/lib/i18n/provider"
 import { isSelectableLanguage } from "@/app/lib/languages/definitions"
 import type { LanguageResponse } from "@/app/lib/languages/definitions"
 import {
-  TELEGRAM_FEATURE_KEYS,
   TelegramConfigurationData,
   TelegramDestinationResponse,
   TelegramFeatureKey,
@@ -132,22 +132,27 @@ export function TelegramConfigurationPage({
   data: TelegramConfigurationData
 }) {
   const { dictionary } = useLocalization()
-  const featureSettings = data.currentWorkspace
-    ? data.featureSettings.filter(
-        (setting) => setting.workspaceId === data.currentWorkspace?.id
-      )
-    : []
+  const featureSettings =
+    data.currentWorkspace && !data.featureSettingsLoadError
+      ? data.featureSettings.filter(
+          (setting) => setting.workspaceId === data.currentWorkspace?.id
+        )
+      : []
   const schedules = data.currentWorkspace
     ? data.schedules.filter(
         (schedule) => schedule.workspaceId === data.currentWorkspace?.id
       )
     : []
-  const routes = getRouteDefinitions(dictionary).map((route) => ({
-    ...route,
-    setting: featureSettings.find(
-      (setting) => setting.featureKey === route.featureKey
-    ),
-  }))
+  const routes = data.currentWorkspace
+    ? getRouteDefinitions(dictionary)
+        .map((route) => ({
+          ...route,
+          setting: featureSettings.find(
+            (setting) => setting.featureKey === route.featureKey
+          ),
+        }))
+        .filter((route) => data.sectionAccess.featureSettings[route.featureKey])
+    : []
   const activeBotConnections = data.botConnections.filter(
     (connection) => connection.status === "ACTIVE"
   )
@@ -157,6 +162,22 @@ export function TelegramConfigurationPage({
 
   return (
     <div className="flex w-full flex-col gap-6">
+      <FeatureRoutingSection
+        routes={routes}
+        schedules={schedules}
+        activeDestinations={activeDestinations}
+        currentWorkspace={data.currentWorkspace}
+        watchlistAssets={data.watchlistAssets}
+        languages={data.languages}
+        languageCatalogError={data.languageCatalogError}
+        scheduleLoadError={data.scheduleLoadError}
+        featureSettingsLoadError={data.featureSettingsLoadError}
+        destinationLoadError={data.destinationsLoadError}
+        canReadDestinations={data.sectionAccess.destinations}
+        canUpdateFeatureSettings={data.manageAccess.featureSettings}
+        canReadSchedules={data.sectionAccess.schedules}
+        canManageSchedules={data.manageAccess.schedules}
+      />
       <ReadinessSummary
         data={data}
         routes={routes}
@@ -181,6 +202,7 @@ export function TelegramConfigurationPage({
           />
           <DestinationsCard
             destinations={data.destinations}
+            loadError={data.destinationsLoadError}
             activeBotConnections={activeBotConnections}
             canRead={data.sectionAccess.destinations}
             canReadBotConnections={data.sectionAccess.botConnections}
@@ -188,20 +210,6 @@ export function TelegramConfigurationPage({
           />
         </div>
       </section>
-      <FeatureRoutingSection
-        routes={routes}
-        schedules={schedules}
-        activeDestinations={activeDestinations}
-        currentWorkspace={data.currentWorkspace}
-        watchlistAssets={data.watchlistAssets}
-        languages={data.languages}
-        languageCatalogError={data.languageCatalogError}
-        scheduleLoadError={data.scheduleLoadError}
-        canReadFeatureSettings={data.sectionAccess.featureSettings}
-        canUpdateFeatureSettings={data.manageAccess.featureSettings}
-        canReadSchedules={data.sectionAccess.schedules}
-        canManageSchedules={data.manageAccess.schedules}
-      />
     </div>
   )
 }
@@ -277,7 +285,7 @@ export function TelegramConfigurationSkeleton() {
             </AppListTableHeaderRow>
           </TableHeader>
           <TableBody>
-            {Array.from({ length: 3 }).map((_, rowIndex) => (
+            {Array.from({ length: 1 }).map((_, rowIndex) => (
               <TableRow key={rowIndex}>
                 <TableCell>
                   <Skeleton className="h-5 w-44" />
@@ -339,6 +347,9 @@ function ReadinessSummary({
   const configuredRoutes = routes.filter(
     (route) => route.setting?.destination && route.setting.enabled
   ).length
+  const canReadRoutes = Object.values(data.sectionAccess.featureSettings).some(
+    Boolean
+  )
   const activeSchedules = schedules.filter(
     (schedule) => schedule.status === "ACTIVE"
   ).length
@@ -350,8 +361,15 @@ function ReadinessSummary({
             count: formatCount(activeBotCount),
           })
         : t.readiness.noBotPermission,
-      state: activeBotCount > 0 ? t.readiness.ready : t.readiness.needsConfig,
-      status: activeBotCount > 0 ? ("ready" as const) : ("attention" as const),
+      state: !data.sectionAccess.botConnections
+        ? t.readiness.accessLimited
+        : activeBotCount > 0
+          ? t.readiness.ready
+          : t.readiness.needsConfig,
+      status:
+        data.sectionAccess.botConnections && activeBotCount > 0
+          ? ("ready" as const)
+          : ("attention" as const),
       icon: Bot,
     },
     {
@@ -361,29 +379,41 @@ function ReadinessSummary({
             count: formatCount(activeDestinationCount),
           })
         : t.readiness.noDestinationPermission,
-      state:
-        activeDestinationCount > 0 ? t.readiness.ready : t.readiness.needsLink,
+      state: !data.sectionAccess.destinations
+        ? t.readiness.accessLimited
+        : activeDestinationCount > 0
+          ? t.readiness.ready
+          : t.readiness.needsLink,
       status:
-        activeDestinationCount > 0
+        data.sectionAccess.destinations && activeDestinationCount > 0
           ? ("ready" as const)
           : ("attention" as const),
       icon: MessageCircle,
     },
     {
       label: t.readiness.routing,
-      description: data.currentWorkspace
-        ? formatMessage(t.readiness.configuredRoutes, {
-            configured: formatCount(configuredRoutes),
-            total: formatCount(TELEGRAM_FEATURE_KEYS.length),
-            workspace: data.currentWorkspace.name,
-          })
-        : t.readiness.noWorkspace,
-      state:
-        configuredRoutes > 0
-          ? t.readiness.routesEnabled
-          : t.readiness.needsReview,
+      description: data.featureSettingsLoadError
+        ? t.readiness.routingLoadError
+        : !data.currentWorkspace
+          ? t.readiness.noWorkspace
+          : !canReadRoutes
+            ? t.readiness.noRoutingPermission
+            : formatMessage(t.readiness.configuredRoutes, {
+                configured: formatCount(configuredRoutes),
+                total: formatCount(routes.length),
+                workspace: data.currentWorkspace.name,
+              }),
+      state: data.featureSettingsLoadError
+        ? t.readiness.accessLimited
+        : !data.currentWorkspace || !canReadRoutes
+          ? t.readiness.accessLimited
+          : configuredRoutes > 0
+            ? t.readiness.routesEnabled
+            : t.readiness.needsReview,
       status:
-        configuredRoutes > 0 ? ("ready" as const) : ("attention" as const),
+        !data.featureSettingsLoadError && canReadRoutes && configuredRoutes > 0
+          ? ("ready" as const)
+          : ("attention" as const),
       icon: RadioTower,
     },
     {
@@ -393,8 +423,15 @@ function ReadinessSummary({
             count: formatCount(activeSchedules),
           })
         : t.readiness.noSchedulePermission,
-      state: activeSchedules > 0 ? t.readiness.ready : t.readiness.noSchedules,
-      status: activeSchedules > 0 ? ("ready" as const) : ("attention" as const),
+      state: !data.sectionAccess.schedules
+        ? t.readiness.accessLimited
+        : activeSchedules > 0
+          ? t.readiness.ready
+          : t.readiness.noSchedules,
+      status:
+        data.sectionAccess.schedules && activeSchedules > 0
+          ? ("ready" as const)
+          : ("attention" as const),
       icon: CalendarClock,
     },
   ]
@@ -434,7 +471,9 @@ function FeatureRoutingSection({
   languages,
   languageCatalogError,
   scheduleLoadError,
-  canReadFeatureSettings,
+  featureSettingsLoadError,
+  destinationLoadError,
+  canReadDestinations,
   canUpdateFeatureSettings,
   canReadSchedules,
   canManageSchedules,
@@ -447,107 +486,183 @@ function FeatureRoutingSection({
   languages: TelegramConfigurationData["languages"]
   languageCatalogError: boolean
   scheduleLoadError: boolean
-  canReadFeatureSettings: boolean
-  canUpdateFeatureSettings: boolean
+  featureSettingsLoadError: boolean
+  destinationLoadError: boolean
+  canReadDestinations: boolean
+  canUpdateFeatureSettings: TelegramConfigurationData["manageAccess"]["featureSettings"]
   canReadSchedules: boolean
   canManageSchedules: boolean
 }) {
+  const router = useRouter()
   const { dictionary } = useLocalization()
   const t = dictionary.telegram
+  const economicCalendarOnly =
+    routes.length === 1 && routes[0]?.featureKey === "ECONOMIC_CALENDAR_ALERT"
 
   return (
     <section className="flex flex-col gap-4" aria-labelledby="telegram-routing">
-      <SectionHeader
-        id="telegram-routing"
-        title={t.routing.sectionTitle}
-        description={t.routing.sectionDescription}
-      />
-      <AppListTable className="mt-0">
-        <Table>
-          <TableHeader>
-            <AppListTableHeaderRow>
-              <AppListTableHead className="w-[32%]">
-                {t.routing.featureColumn}
-              </AppListTableHead>
-              <AppListTableHead className="w-40">
-                {t.routing.workspaceColumn}
-              </AppListTableHead>
-              <AppListTableHead className="w-52">
-                {t.routing.destinationColumn}
-              </AppListTableHead>
-              <AppListTableHead className="w-64">
-                {t.routing.languageColumn}
-              </AppListTableHead>
-              <AppListTableHead className="w-32 text-center">
-                {t.routing.enabledColumn}
-              </AppListTableHead>
-            </AppListTableHeaderRow>
-          </TableHeader>
-          <TableBody>
-            {!canReadFeatureSettings ? (
-              <AccessLimitedRow colSpan={5} title={t.routing.accessLimited} />
-            ) : (
-              routes.map((route) => {
-                const isScheduledMarketAnalysis =
-                  route.featureKey === "SCHEDULED_MARKET_ANALYSIS"
-
-                return (
-                  <Fragment key={route.featureKey}>
-                    <TableRow className="border-border transition-colors hover:bg-muted/50">
-                      <TableCell className="align-top whitespace-normal">
-                        <div className="flex min-w-0 flex-col gap-1">
-                          <span className="font-medium text-foreground">
-                            {route.label}
-                          </span>
-                          <span className="text-sm text-muted-foreground">
-                            {route.description}
-                          </span>
-                            <code className="w-fit rounded bg-muted px-1.5 py-0.5 text-xs text-foreground">
-                            {route.featureKey}
-                          </code>
-                        </div>
-                      </TableCell>
-                      <TableCell className="align-top text-sm text-muted-foreground">
-                        {currentWorkspace?.name ??
-                          t.routing.noWorkspaceSelected}
-                      </TableCell>
-                      <FeatureRouteControls
-                        key={`${route.featureKey}:${route.setting?.destination?.id ?? "none"}:${route.setting?.outputLanguage?.isoCode ?? "default"}`}
-                        route={route}
-                        activeDestinations={activeDestinations}
-                        currentWorkspaceId={currentWorkspace?.id}
-                        canUpdate={canUpdateFeatureSettings}
-                        languages={languages}
-                        languageCatalogError={languageCatalogError}
-                      />
-                    </TableRow>
-                    {isScheduledMarketAnalysis ? (
-                      <TableRow className="border-border bg-muted/10 hover:bg-muted/10">
-                        <TableCell
-                          colSpan={5}
-                          className="p-4 whitespace-normal"
-                        >
-                          <MarketAnalysisSchedulePanel
-                            schedules={schedules}
-                            activeDestinations={activeDestinations}
-                            currentWorkspace={currentWorkspace}
-                            watchlistAssets={watchlistAssets}
-                            languages={languages}
-                            languageCatalogError={languageCatalogError}
-                            scheduleLoadError={scheduleLoadError}
-                            canReadSchedules={canReadSchedules}
-                            canManageSchedules={canManageSchedules}
-                          />
-                        </TableCell>
-                      </TableRow>
-                    ) : null}
-                  </Fragment>
-                )
-              })
-            )}
-          </TableBody>
-        </Table>
-      </AppListTable>
+      <div className="flex flex-col gap-1">
+        <h2
+          id="telegram-routing"
+          className="text-base font-semibold text-foreground"
+        >
+          {t.routing.sectionTitle}
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          {currentWorkspace
+            ? `${currentWorkspace.name} · ${t.common.currentWorkspaceScope}`
+            : t.routing.noWorkspaceSelected}
+        </p>
+      </div>
+      {!currentWorkspace ? (
+        <p
+          role="status"
+          className="rounded-lg border bg-card px-4 py-3 text-sm text-muted-foreground"
+        >
+          {t.routing.noWorkspaceSelected}
+        </p>
+      ) : featureSettingsLoadError ? (
+        <div
+          role="alert"
+          className="flex flex-col gap-3 rounded-lg border border-destructive/40 bg-destructive/5 p-4 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <div className="flex items-start gap-3">
+            <CircleAlert className="mt-0.5 size-4 shrink-0 text-destructive" />
+            <div className="flex flex-col gap-1">
+              <p className="text-sm font-medium text-foreground">
+                {t.routing.settingsLoadError}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {t.routing.settingsLoadErrorDescription}
+              </p>
+            </div>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => router.refresh()}
+          >
+            {t.routing.retry}
+          </Button>
+        </div>
+      ) : routes.length > 0 ? (
+        <AppListTable className="mt-0">
+          <Table>
+            <TableHeader
+              className={
+                economicCalendarOnly
+                  ? "hidden md:table-header-group"
+                  : undefined
+              }
+            >
+              <AppListTableHeaderRow>
+                <AppListTableHead className="w-[32%]">
+                  {t.routing.featureColumn}
+                </AppListTableHead>
+                <AppListTableHead className="w-40">
+                  {t.routing.workspaceColumn}
+                </AppListTableHead>
+                <AppListTableHead className="w-52">
+                  {t.routing.destinationColumn}
+                </AppListTableHead>
+                <AppListTableHead className="w-64">
+                  {t.routing.languageColumn}
+                </AppListTableHead>
+                <AppListTableHead className="w-32 text-center">
+                  {t.routing.enabledColumn}
+                </AppListTableHead>
+              </AppListTableHeaderRow>
+            </TableHeader>
+            <TableBody>
+              {routes.map((route) => (
+                <TableRow
+                  key={route.featureKey}
+                  data-route-key={route.featureKey}
+                  className={cn(
+                    "border-border transition-colors hover:bg-muted/50",
+                    economicCalendarOnly &&
+                      "grid grid-cols-[minmax(0,1fr)_auto] gap-x-2 rounded-xl border bg-card p-3 md:table-row md:rounded-none md:border-0 md:bg-transparent md:p-0"
+                  )}
+                >
+                  <TableCell
+                    className={cn(
+                      "block align-top whitespace-normal md:table-cell",
+                      economicCalendarOnly &&
+                        "col-start-1 row-start-1 min-w-0 border-b-0 px-1 py-2 md:table-cell md:border-b md:px-2 md:py-2"
+                    )}
+                  >
+                    <div className="flex min-w-0 flex-col gap-1">
+                      <span className="flex items-center gap-2 font-medium text-foreground">
+                        {economicCalendarOnly ? (
+                          <CalendarClock className="size-4 shrink-0 text-muted-foreground md:hidden" />
+                        ) : null}
+                        {route.label}
+                      </span>
+                      <span className="sr-only text-sm text-muted-foreground md:not-sr-only md:block">
+                        {route.description}
+                      </span>
+                      <code className="hidden w-fit rounded bg-muted px-1.5 py-0.5 text-xs text-foreground md:block">
+                        {route.featureKey}
+                      </code>
+                    </div>
+                  </TableCell>
+                  <TableCell
+                    className={cn(
+                      "block align-top text-sm text-muted-foreground md:table-cell",
+                      economicCalendarOnly && "hidden md:table-cell"
+                    )}
+                  >
+                    {currentWorkspace?.name ?? t.routing.noWorkspaceSelected}
+                  </TableCell>
+                  {route.featureKey === "ECONOMIC_CALENDAR_ALERT" ? (
+                    <EconomicCalendarRouteControls
+                      route={route}
+                      mobileCard={economicCalendarOnly}
+                      activeDestinations={activeDestinations}
+                      canReadDestinations={canReadDestinations}
+                      destinationLoadError={destinationLoadError}
+                      currentWorkspaceId={currentWorkspace?.id}
+                      canUpdate={canUpdateFeatureSettings[route.featureKey]}
+                      languages={languages}
+                      languageCatalogError={languageCatalogError}
+                    />
+                  ) : (
+                    <FeatureRouteControls
+                      key={`${route.featureKey}:${route.setting?.destination?.id ?? "none"}:${route.setting?.outputLanguage?.isoCode ?? "default"}`}
+                      route={route}
+                      activeDestinations={activeDestinations}
+                      currentWorkspaceId={currentWorkspace?.id}
+                      canUpdate={canUpdateFeatureSettings[route.featureKey]}
+                      languages={languages}
+                      languageCatalogError={languageCatalogError}
+                    />
+                  )}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </AppListTable>
+      ) : (
+        <p
+          role="status"
+          className="rounded-lg border bg-card px-4 py-3 text-sm text-muted-foreground"
+        >
+          {t.routing.accessLimited}
+        </p>
+      )}
+      {canReadSchedules ? (
+        <MarketAnalysisSchedulePanel
+          schedules={schedules}
+          activeDestinations={activeDestinations}
+          currentWorkspace={currentWorkspace}
+          watchlistAssets={watchlistAssets}
+          languages={languages}
+          languageCatalogError={languageCatalogError}
+          scheduleLoadError={scheduleLoadError}
+          canReadSchedules={canReadSchedules}
+          canManageSchedules={canManageSchedules}
+        />
+      ) : null}
     </section>
   )
 }
@@ -807,6 +922,375 @@ function MarketAnalysisSchedulePanel({
     </div>
   )
 }
+function EconomicCalendarRouteControls({
+  route,
+  mobileCard,
+  activeDestinations,
+  canReadDestinations,
+  destinationLoadError,
+  currentWorkspaceId,
+  canUpdate,
+  languages,
+  languageCatalogError,
+}: {
+  route: FeatureRouteView
+  mobileCard: boolean
+  activeDestinations: TelegramDestinationResponse[]
+  canReadDestinations: boolean
+  destinationLoadError: boolean
+  currentWorkspaceId?: number
+  canUpdate: boolean
+  languages: LanguageResponse[]
+  languageCatalogError: boolean
+}) {
+  const router = useRouter()
+  const [isPending, startTransition] = useTransition()
+  const { dictionary, formatMessage } = useLocalization()
+  const t = dictionary.telegram
+  const selectedDestination = route.setting?.destination ?? null
+  const selectedDestinationValue = selectedDestination?.id.toString() ?? ""
+  const persistedLanguage = route.setting?.outputLanguage ?? null
+  const persistedLanguageCode = persistedLanguage?.isoCode ?? ""
+  const canMutate = canUpdate && Boolean(currentWorkspaceId) && !isPending
+  const hasActiveDestinations = activeDestinations.length > 0
+  const destinationItems = [...activeDestinations]
+
+  if (
+    canReadDestinations &&
+    selectedDestination &&
+    !destinationItems.some(
+      (destination) => destination.id === selectedDestination.id
+    )
+  ) {
+    destinationItems.push(selectedDestination)
+  }
+
+  const languageOptions = languages.filter(isSelectableLanguage)
+  const hasCurrentLanguageInCatalog = persistedLanguageCode
+    ? languageOptions.some(
+        (language) => language.isoCode === persistedLanguageCode
+      )
+    : true
+
+  if (
+    persistedLanguage &&
+    isSelectableLanguage(persistedLanguage) &&
+    !hasCurrentLanguageInCatalog
+  ) {
+    languageOptions.unshift(persistedLanguage)
+  }
+
+  const languageItems = [
+    {
+      value: DEFAULT_FEATURE_LANGUAGE_VALUE,
+      label: t.routing.defaultLanguage,
+    },
+    ...languageOptions.map((language) => ({
+      value: language.isoCode,
+      label: `${language.name || language.isoCode} (${language.isoCode})${
+        !hasCurrentLanguageInCatalog &&
+        language.isoCode === persistedLanguageCode
+          ? ` — ${t.routing.languageUnavailable}`
+          : ""
+      }`,
+    })),
+  ]
+
+  function updateRoute(
+    overrides: Partial<UpdateTelegramFeatureSettingRequest>,
+    successMessage: string
+  ) {
+    if (!currentWorkspaceId) return
+
+    const request = getUpdateTelegramFeatureSettingSchema(dictionary).safeParse(
+      {
+        featureKey: route.featureKey,
+        workspaceId: currentWorkspaceId,
+        ...overrides,
+      }
+    )
+
+    if (!request.success) {
+      toast.error(t.routing.updateError)
+      return
+    }
+
+    startTransition(async () => {
+      try {
+        const result = await updateTelegramFeatureSetting(request.data)
+
+        if (result.success) {
+          toast.success(successMessage)
+          router.refresh()
+        } else {
+          toast.error(result.error)
+        }
+      } catch {
+        toast.error(t.routing.updateError)
+      }
+    })
+  }
+
+  const destinationLabel = selectedDestination
+    ? getDestinationLabel(selectedDestination, dictionary)
+    : t.routing.noDestination
+  const clearDestinationButton =
+    selectedDestination && canUpdate ? (
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-sm"
+        className="size-7 shrink-0"
+        aria-label={formatMessage(t.routing.clearDestination, {
+          route: route.label,
+        })}
+        disabled={!canMutate}
+        onClick={(event) => {
+          event.preventDefault()
+          event.stopPropagation()
+          updateRoute(
+            { destinationId: null, enabled: false },
+            t.routing.destinationClearSuccess
+          )
+        }}
+      >
+        <X />
+      </Button>
+    ) : null
+  const destinationDescription = destinationLoadError
+    ? t.destination.loadError
+    : !canReadDestinations
+      ? t.routing.destinationReadOnly
+      : !hasActiveDestinations
+        ? t.destination.noActiveDestination
+        : null
+
+  return (
+    <>
+      <TableCell
+        className={cn(
+          "block align-top whitespace-normal md:table-cell",
+          mobileCard &&
+            "col-span-2 row-start-2 min-w-0 border-b-0 px-1 py-2 md:table-cell md:border-b md:px-2 md:py-2"
+        )}
+      >
+        {mobileCard ? (
+          <span className="mb-1 block text-xs font-medium text-muted-foreground md:hidden">
+            {t.routing.destinationColumn}
+          </span>
+        ) : null}
+        {destinationLoadError ? (
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex flex-col items-start gap-2">
+              <span role="alert" className="text-sm text-destructive">
+                {t.destination.loadError}
+              </span>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => router.refresh()}
+              >
+                {t.routing.retry}
+              </Button>
+            </div>
+            {clearDestinationButton}
+          </div>
+        ) : canReadDestinations ? (
+          hasActiveDestinations || selectedDestination ? (
+            <div className="relative">
+              <Select
+                items={destinationItems.map((destination) => ({
+                  value: destination.id.toString(),
+                  label: `${getDestinationLabel(destination, dictionary)}${
+                    destination.status === "ACTIVE"
+                      ? ""
+                      : ` — ${t.routing.unavailableDestination}`
+                  }`,
+                }))}
+                value={selectedDestinationValue || null}
+                onValueChange={(value) => {
+                  if (value === null) return
+                  updateRoute(
+                    { destinationId: Number(value) },
+                    t.routing.destinationUpdateSuccess
+                  )
+                }}
+                disabled={!canMutate || !hasActiveDestinations}
+              >
+                <SelectTrigger
+                  aria-label={route.label}
+                  className={cn(
+                    "w-full",
+                    selectedDestination && canUpdate && "pe-16"
+                  )}
+                  aria-busy={isPending}
+                >
+                  <SelectValue placeholder={t.destination.placeholder} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {destinationItems.map((destination) => (
+                      <SelectItem
+                        key={destination.id}
+                        value={destination.id.toString()}
+                        disabled={destination.status !== "ACTIVE"}
+                      >
+                        {getDestinationLabel(destination, dictionary)}
+                        {destination.status !== "ACTIVE"
+                          ? ` — ${t.routing.unavailableDestination}`
+                          : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+              {clearDestinationButton ? (
+                <div className="absolute top-1/2 right-7 z-10 -translate-y-1/2">
+                  {clearDestinationButton}
+                </div>
+              ) : null}
+            </div>
+          ) : (
+            <div className="flex min-h-8 items-center justify-between gap-2">
+              <span className="text-sm text-muted-foreground">
+                {t.destination.noActiveDestination}
+              </span>
+              {clearDestinationButton}
+            </div>
+          )
+        ) : (
+          <div className="flex min-h-8 items-center justify-between gap-2">
+            <span className="text-sm text-muted-foreground">
+              {destinationLabel}
+            </span>
+            {clearDestinationButton}
+          </div>
+        )}
+        {destinationDescription && !destinationLoadError ? (
+          <p className="mt-1 text-xs text-muted-foreground" role="status">
+            {destinationDescription}
+          </p>
+        ) : null}
+      </TableCell>
+      <TableCell
+        className={cn(
+          "block align-top whitespace-normal md:table-cell",
+          mobileCard &&
+            "col-span-2 row-start-3 min-w-0 border-b-0 px-1 py-2 md:table-cell md:border-b md:px-2 md:py-2"
+        )}
+      >
+        {mobileCard ? (
+          <span className="mb-1 block text-xs font-medium text-muted-foreground md:hidden">
+            {t.routing.languageColumn}
+          </span>
+        ) : null}
+        <Select
+          items={languageItems}
+          value={persistedLanguageCode || DEFAULT_FEATURE_LANGUAGE_VALUE}
+          onValueChange={(value) => {
+            if (value === null) return
+            const language =
+              value === DEFAULT_FEATURE_LANGUAGE_VALUE ? null : value
+            updateRoute(
+              { outputLanguageIsoCode: language },
+              language
+                ? t.routing.languageUpdateSuccess
+                : t.routing.languageClearSuccess
+            )
+          }}
+          disabled={!canMutate || languageCatalogError}
+        >
+          <SelectTrigger
+            className="w-full"
+            aria-label={formatMessage(t.routing.languageAria, {
+              route: route.label,
+            })}
+            aria-busy={isPending}
+            aria-describedby={
+              languageCatalogError
+                ? `telegram-route-${route.featureKey}-language-description`
+                : undefined
+            }
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              <SelectItem value={DEFAULT_FEATURE_LANGUAGE_VALUE}>
+                {t.routing.defaultLanguage}
+              </SelectItem>
+              {languageOptions.map((language) => (
+                <SelectItem key={language.isoCode} value={language.isoCode}>
+                  {language.name || language.isoCode} ({language.isoCode})
+                  {!hasCurrentLanguageInCatalog &&
+                  language.isoCode === persistedLanguageCode
+                    ? ` — ${t.routing.languageUnavailable}`
+                    : ""}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
+        {languageCatalogError ? (
+          <span
+            id={`telegram-route-${route.featureKey}-language-description`}
+            className="mt-1 block text-xs text-muted-foreground"
+            role="status"
+          >
+            {t.routing.languageCatalogError}
+          </span>
+        ) : null}
+      </TableCell>
+      <TableCell
+        className={cn(
+          "block align-top md:table-cell",
+          mobileCard &&
+            "col-start-2 row-start-1 border-b-0 px-1 py-2 md:table-cell md:border-b md:px-2 md:py-2"
+        )}
+      >
+        <div
+          className={cn(
+            "inline-flex h-8 w-32 items-center justify-between gap-2 rounded-lg border border-input bg-transparent px-2.5 text-sm shadow-xs data-[disabled=true]:opacity-60",
+            mobileCard ? "mx-0 md:mx-auto" : "mx-auto"
+          )}
+          data-disabled={!canMutate ? true : undefined}
+        >
+          <span
+            className={cn(
+              "min-w-14 text-left text-xs font-medium",
+              route.setting?.enabled
+                ? "text-foreground"
+                : "text-muted-foreground"
+            )}
+          >
+            {route.setting?.enabled ? t.common.enabled : t.common.paused}
+          </span>
+          <Switch
+            checked={Boolean(route.setting?.enabled)}
+            disabled={!canMutate}
+            onCheckedChange={(enabled) =>
+              updateRoute(
+                { enabled },
+                enabled ? t.routing.enabledSuccess : t.routing.disabledSuccess
+              )
+            }
+            aria-label={formatMessage(t.routing.switchAria, {
+              route: route.label,
+            })}
+            aria-busy={isPending}
+          />
+        </div>
+        {isPending ? (
+          <span className="sr-only" role="status">
+            {t.routing.saving}
+          </span>
+        ) : null}
+      </TableCell>
+    </>
+  )
+}
+
 function FeatureRouteControls({
   route,
   activeDestinations,
@@ -832,8 +1316,7 @@ function FeatureRouteControls({
   const [isPending, startTransition] = useTransition()
   const { dictionary, formatMessage } = useLocalization()
   const t = dictionary.telegram
-  const routeSupportsLanguage =
-    route.featureKey !== "SCHEDULED_MARKET_ANALYSIS"
+  const routeSupportsLanguage = route.featureKey !== "SCHEDULED_MARKET_ANALYSIS"
   const hasDestination = activeDestinations.some(
     (destination) => destination.id.toString() === destinationId
   )
@@ -851,14 +1334,16 @@ function FeatureRouteControls({
 
     if (!currentWorkspaceId || !nextDestinationId) return
 
-    const request = getUpdateTelegramFeatureSettingSchema().safeParse({
-      featureKey: route.featureKey,
-      workspaceId: currentWorkspaceId,
-      destinationId: Number(nextDestinationId),
-      enabled: route.setting?.enabled ?? false,
-      outputLanguageIsoCode: outputLanguageIsoCode || undefined,
-      ...overrides,
-    })
+    const request = getUpdateTelegramFeatureSettingSchema(dictionary).safeParse(
+      {
+        featureKey: route.featureKey,
+        workspaceId: currentWorkspaceId,
+        destinationId: Number(nextDestinationId),
+        enabled: route.setting?.enabled ?? false,
+        outputLanguageIsoCode: outputLanguageIsoCode || undefined,
+        ...overrides,
+      }
+    )
 
     if (!request.success) {
       toast.error(t.routing.updateError)
@@ -890,8 +1375,7 @@ function FeatureRouteControls({
   function handleLanguageChange(value: string | null) {
     if (value === null || !routeSupportsLanguage) return
 
-    const nextLanguage =
-      value === DEFAULT_FEATURE_LANGUAGE_VALUE ? "" : value
+    const nextLanguage = value === DEFAULT_FEATURE_LANGUAGE_VALUE ? "" : value
     setOutputLanguageIsoCode(nextLanguage)
     updateRoute(
       { outputLanguageIsoCode: nextLanguage || undefined },

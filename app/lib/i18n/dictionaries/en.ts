@@ -2448,6 +2448,7 @@ export const en: Dictionary = {
       bot: "Telegram bot",
       activeBots: "{count} active bots.",
       noBotPermission: "You do not have permission to view bots.",
+      accessLimited: "Access limited",
       ready: "Ready",
       needsConfig: "Needs setup",
       destinations: "Destinations",
@@ -2456,6 +2457,8 @@ export const en: Dictionary = {
         "You do not have permission to view destinations.",
       needsLink: "Needs linking",
       routing: "Routing",
+      noRoutingPermission: "You do not have permission to view routing.",
+      routingLoadError: "Saved routing settings could not be loaded.",
       configuredRoutes: "{configured}/{total} routes enabled in {workspace}.",
       noWorkspace: "No current workspace.",
       routesEnabled: "Routes enabled",
@@ -2532,6 +2535,7 @@ export const en: Dictionary = {
       sectionDescription:
         "Chats, groups, or channels verified by sending /start through the selected bot.",
       accessLimited: "No permission to view destinations",
+      loadError: "Could not load destination choices.",
       readOnlyDescription:
         "You can view these destinations, but destination management permission is required for changes.",
       noChatMetadata: "No chat metadata yet",
@@ -2612,6 +2616,18 @@ export const en: Dictionary = {
       enabledColumn: "Sending enabled",
       accessLimited: "No permission to view routing",
       noWorkspaceSelected: "No workspace selected",
+      settingsLoadError: "Could not load route settings.",
+      settingsLoadErrorDescription:
+        "The saved routing settings are unavailable. Retry to load them again.",
+      retry: "Retry",
+      noDestination: "No destination assigned",
+      destinationReadOnly: "Destination list access is required to change it.",
+      unavailableDestination: "Unavailable",
+      clearDestination: "Clear destination for {route}",
+      destinationClearSuccess: "Destination cleared and route paused.",
+      destinationClearRequiresDisabled:
+        "Pause routing before clearing the destination.",
+      saving: "Saving route settings…",
       destinationUpdateError: "Could not update the route destination.",
       destinationUpdateSuccess: "Route destination updated.",
       statusUpdateError: "Could not update route status.",

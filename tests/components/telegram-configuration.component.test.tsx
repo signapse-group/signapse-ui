@@ -45,6 +45,8 @@ import {
   disableTelegramMarketAnalysisSchedule,
   updateTelegramFeatureSetting,
 } from "@/app/api/telegram/action"
+import { toast } from "sonner"
+import { en as enDictionary } from "@/app/lib/i18n/dictionaries/en"
 import { vi as viDictionary } from "@/app/lib/i18n/dictionaries/vi"
 import { LocalizationProvider } from "@/app/lib/i18n/provider"
 import type { TelegramConfigurationData } from "@/app/lib/telegram/definitions"
@@ -100,17 +102,27 @@ const featureSettings = [
   },
 ]
 
+const allFeatureAccess = {
+  ECONOMIC_CALENDAR_ALERT: true,
+  MARKET_NEWS_ALERT: true,
+  SCHEDULED_MARKET_ANALYSIS: true,
+}
+const noFeatureAccess = {
+  ECONOMIC_CALENDAR_ALERT: false,
+  MARKET_NEWS_ALERT: false,
+  SCHEDULED_MARKET_ANALYSIS: false,
+}
+
 const data: TelegramConfigurationData = {
   botConnections: [],
   destinations: [destination],
+  destinationsLoadError: false,
   featureSettings: [],
+  featureSettingsLoadError: false,
   schedules: [schedule],
   currentWorkspace: {
     id: 7,
     name: "Workspace",
-    currentWorkspace: true,
-    createdDate: "2026-07-29T00:00:00Z",
-    lastModifiedDate: "2026-07-29T00:00:00Z",
   },
   watchlistAssets: [
     {
@@ -128,14 +140,14 @@ const data: TelegramConfigurationData = {
   sectionAccess: {
     botConnections: false,
     destinations: false,
-    featureSettings: true,
+    featureSettings: allFeatureAccess,
     schedules: true,
     watchlistAssets: true,
   },
   manageAccess: {
     botConnections: false,
     destinations: false,
-    featureSettings: false,
+    featureSettings: noFeatureAccess,
     schedules: true,
   },
 }
@@ -262,6 +274,7 @@ describe("Telegram schedule destructive actions", () => {
         workspaceId: 7,
         enabled: false,
         destination,
+        outputLanguage: null,
       },
     })
 
@@ -270,8 +283,9 @@ describe("Telegram schedule destructive actions", () => {
         ...data,
         manageAccess: {
           ...data.manageAccess,
-          featureSettings: true,
+          featureSettings: allFeatureAccess,
         },
+        sectionAccess: { ...data.sectionAccess, destinations: true },
       })
 
       const routeRow = screen
@@ -296,8 +310,6 @@ describe("Telegram schedule destructive actions", () => {
           featureKey: "ECONOMIC_CALENDAR_ALERT",
           workspaceId: 7,
           destinationId: 8,
-          enabled: false,
-          outputLanguageIsoCode: undefined,
         })
       })
       await waitFor(() => expect(routerRefresh).toHaveBeenCalledTimes(1))
@@ -319,7 +331,7 @@ describe("Telegram schedule destructive actions", () => {
       featureSettings,
       manageAccess: {
         ...data.manageAccess,
-        featureSettings: true,
+        featureSettings: allFeatureAccess,
       },
     })
 
@@ -380,9 +392,7 @@ describe("Telegram schedule destructive actions", () => {
       expect(updateTelegramFeatureSetting).toHaveBeenCalledWith({
         featureKey: "ECONOMIC_CALENDAR_ALERT",
         workspaceId: 7,
-        destinationId: 8,
-        enabled: true,
-        outputLanguageIsoCode: undefined,
+        outputLanguageIsoCode: null,
       })
     )
   })
@@ -401,9 +411,10 @@ describe("Telegram schedule destructive actions", () => {
         destination,
         { ...destination, id: 9, displayLabel: "Backup" },
       ],
+      sectionAccess: { ...data.sectionAccess, destinations: true },
       manageAccess: {
         ...data.manageAccess,
-        featureSettings: true,
+        featureSettings: allFeatureAccess,
       },
     })
 
@@ -425,9 +436,8 @@ describe("Telegram schedule destructive actions", () => {
       expect(updateTelegramFeatureSetting).toHaveBeenCalledWith(
         expect.objectContaining({
           featureKey: "ECONOMIC_CALENDAR_ALERT",
+          workspaceId: 7,
           destinationId: 9,
-          enabled: true,
-          outputLanguageIsoCode: "en",
         })
       )
     )
@@ -450,9 +460,8 @@ describe("Telegram schedule destructive actions", () => {
       expect(updateTelegramFeatureSetting).toHaveBeenCalledWith(
         expect.objectContaining({
           featureKey: "ECONOMIC_CALENDAR_ALERT",
-          destinationId: 9,
+          workspaceId: 7,
           enabled: false,
-          outputLanguageIsoCode: "en",
         })
       )
     )
@@ -491,7 +500,7 @@ describe("Telegram schedule destructive actions", () => {
       languageCatalogError: true,
       manageAccess: {
         ...data.manageAccess,
-        featureSettings: true,
+        featureSettings: allFeatureAccess,
       },
     })
 
@@ -535,7 +544,7 @@ describe("Telegram schedule destructive actions", () => {
       ],
       manageAccess: {
         ...data.manageAccess,
-        featureSettings: true,
+        featureSettings: allFeatureAccess,
       },
     })
 
@@ -558,7 +567,7 @@ describe("Telegram schedule destructive actions", () => {
     ).toBeEnabled()
   })
 
-  it("disables language configuration without a route destination or update access", () => {
+  it("allows language configuration without a route destination but disables it without update access", () => {
     const calendarLanguageName =
       viDictionary.telegram.routing.languageAria.replace(
         "{route}",
@@ -570,12 +579,13 @@ describe("Telegram schedule destructive actions", () => {
       featureSettings: [
         {
           ...featureSettings[0],
-          destination: undefined,
+          destination: null,
+          outputLanguage: null,
         },
       ],
       manageAccess: {
         ...data.manageAccess,
-        featureSettings: true,
+        featureSettings: allFeatureAccess,
       },
     })
 
@@ -588,12 +598,7 @@ describe("Telegram schedule destructive actions", () => {
       within(unassignedRow).getByRole("combobox", {
         name: calendarLanguageName,
       })
-    ).toBeDisabled()
-    expect(
-      within(unassignedRow).getByText(
-        viDictionary.telegram.routing.languageDestinationRequired
-      )
-    ).toBeVisible()
+    ).toBeEnabled()
 
     cleanup()
     renderConfiguration({
@@ -601,7 +606,7 @@ describe("Telegram schedule destructive actions", () => {
       featureSettings,
       manageAccess: {
         ...data.manageAccess,
-        featureSettings: false,
+        featureSettings: noFeatureAccess,
       },
     })
 
@@ -613,6 +618,441 @@ describe("Telegram schedule destructive actions", () => {
     expect(
       within(readOnlyRow).getByRole("combobox", { name: calendarLanguageName })
     ).toBeDisabled()
+  })
+})
+
+describe("Economic calendar route permissions and persistence", () => {
+  afterEach(() => cleanup())
+
+  beforeEach(() => {
+    vi.mocked(updateTelegramFeatureSetting).mockReset()
+    vi.mocked(toast.error).mockReset()
+    vi.mocked(toast.success).mockReset()
+    routerRefresh.mockReset()
+  })
+
+  it("shows only rows granted by their route-specific read permission", () => {
+    renderConfiguration({
+      ...data,
+      featureSettings,
+      sectionAccess: {
+        ...data.sectionAccess,
+        featureSettings: {
+          ECONOMIC_CALENDAR_ALERT: true,
+          MARKET_NEWS_ALERT: false,
+          SCHEDULED_MARKET_ANALYSIS: false,
+        },
+      },
+    })
+
+    expect(
+      screen.getByText(
+        viDictionary.telegram.routeDefinitions.ECONOMIC_CALENDAR_ALERT.label
+      )
+    ).toBeVisible()
+    expect(
+      screen.queryByText(
+        viDictionary.telegram.routeDefinitions.MARKET_NEWS_ALERT.label
+      )
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByText(
+        viDictionary.telegram.routeDefinitions.SCHEDULED_MARKET_ANALYSIS.label
+      )
+    ).not.toBeInTheDocument()
+  })
+
+  it("uses English copy for the clear action and confirmed update", async () => {
+    const user = userEvent.setup()
+    vi.mocked(updateTelegramFeatureSetting).mockResolvedValue({
+      success: true,
+      data: featureSettings[0],
+    })
+
+    render(
+      <LocalizationProvider locale="en" dictionary={enDictionary}>
+        <TelegramConfigurationPage
+          data={{
+            ...data,
+            featureSettings: [featureSettings[0]],
+            sectionAccess: {
+              ...data.sectionAccess,
+              featureSettings: {
+                ECONOMIC_CALENDAR_ALERT: true,
+                MARKET_NEWS_ALERT: false,
+                SCHEDULED_MARKET_ANALYSIS: false,
+              },
+            },
+            manageAccess: {
+              ...data.manageAccess,
+              featureSettings: {
+                ECONOMIC_CALENDAR_ALERT: true,
+                MARKET_NEWS_ALERT: false,
+                SCHEDULED_MARKET_ANALYSIS: false,
+              },
+            },
+          }}
+        />
+      </LocalizationProvider>
+    )
+
+    const clearButton = screen.getByRole("button", {
+      name: "Clear destination for Economic calendar alerts",
+    })
+    await user.click(clearButton)
+
+    await waitFor(() =>
+      expect(updateTelegramFeatureSetting).toHaveBeenCalledWith({
+        featureKey: "ECONOMIC_CALENDAR_ALERT",
+        workspaceId: 7,
+        destinationId: null,
+        enabled: false,
+      })
+    )
+    await waitFor(() =>
+      expect(toast.success).toHaveBeenCalledWith(
+        enDictionary.telegram.routing.destinationClearSuccess
+      )
+    )
+  })
+
+  it("does not represent a missing current workspace as an Off route", () => {
+    renderConfiguration({
+      ...data,
+      currentWorkspace: null,
+      featureSettings,
+      sectionAccess: {
+        ...data.sectionAccess,
+        featureSettings: {
+          ECONOMIC_CALENDAR_ALERT: true,
+          MARKET_NEWS_ALERT: false,
+          SCHEDULED_MARKET_ANALYSIS: false,
+        },
+        schedules: false,
+      },
+    })
+
+    expect(
+      screen.queryByText(
+        viDictionary.telegram.routeDefinitions.ECONOMIC_CALENDAR_ALERT.label
+      )
+    ).not.toBeInTheDocument()
+    expect(screen.getByRole("status")).toHaveTextContent(
+      viDictionary.telegram.routing.noWorkspaceSelected
+    )
+    expect(
+      screen.getByText(viDictionary.telegram.readiness.noWorkspace)
+    ).toBeVisible()
+    expect(screen.queryByRole("switch")).not.toBeInTheDocument()
+  })
+
+  it("shows a route load error without presenting stale settings as saved", async () => {
+    const user = userEvent.setup()
+    renderConfiguration({
+      ...data,
+      featureSettings,
+      featureSettingsLoadError: true,
+      sectionAccess: {
+        ...data.sectionAccess,
+        featureSettings: {
+          ECONOMIC_CALENDAR_ALERT: true,
+          MARKET_NEWS_ALERT: false,
+          SCHEDULED_MARKET_ANALYSIS: false,
+        },
+        schedules: false,
+      },
+    })
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      viDictionary.telegram.routing.settingsLoadError
+    )
+    expect(
+      screen.queryByText(
+        viDictionary.telegram.routeDefinitions.ECONOMIC_CALENDAR_ALERT.label
+      )
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByText(viDictionary.telegram.readiness.routingLoadError)
+    ).toBeVisible()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: viDictionary.telegram.routing.retry,
+      })
+    )
+    expect(routerRefresh).toHaveBeenCalledTimes(1)
+  })
+
+  it("keeps destination read errors visible and leaves clear available", () => {
+    renderConfiguration({
+      ...data,
+      destinations: [],
+      destinationsLoadError: true,
+      featureSettings: [featureSettings[0]],
+      sectionAccess: {
+        ...data.sectionAccess,
+        destinations: true,
+        featureSettings: {
+          ECONOMIC_CALENDAR_ALERT: true,
+          MARKET_NEWS_ALERT: false,
+          SCHEDULED_MARKET_ANALYSIS: false,
+        },
+        schedules: false,
+      },
+      manageAccess: {
+        ...data.manageAccess,
+        featureSettings: {
+          ECONOMIC_CALENDAR_ALERT: true,
+          MARKET_NEWS_ALERT: false,
+          SCHEDULED_MARKET_ANALYSIS: false,
+        },
+      },
+    })
+
+    expect(screen.getAllByRole("alert")).toHaveLength(2)
+    expect(
+      screen.queryByText(viDictionary.telegram.destination.emptyTitle)
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByRole("button", {
+        name: "Xóa điểm nhận cho Cảnh báo lịch kinh tế",
+      })
+    ).toBeEnabled()
+  })
+
+  it("keeps Off when enabling without an eligible destination is rejected", async () => {
+    const user = userEvent.setup()
+    vi.mocked(updateTelegramFeatureSetting).mockResolvedValue({
+      success: false,
+      error: "Choose an eligible destination.",
+    })
+
+    renderConfiguration({
+      ...data,
+      featureSettings: [
+        {
+          ...featureSettings[0],
+          enabled: false,
+          destination: null,
+          outputLanguage: null,
+        },
+      ],
+      manageAccess: {
+        ...data.manageAccess,
+        featureSettings: {
+          ECONOMIC_CALENDAR_ALERT: true,
+          MARKET_NEWS_ALERT: false,
+          SCHEDULED_MARKET_ANALYSIS: false,
+        },
+      },
+    })
+
+    const routeSwitch = screen.getByRole("switch", {
+      name: viDictionary.telegram.routing.switchAria.replace(
+        "{route}",
+        viDictionary.telegram.routeDefinitions.ECONOMIC_CALENDAR_ALERT.label
+      ),
+    })
+    expect(routeSwitch).toBeEnabled()
+
+    Object.defineProperty(window, "PointerEvent", {
+      configurable: true,
+      value: MouseEvent,
+    })
+
+    await user.click(routeSwitch)
+
+    await waitFor(() =>
+      expect(updateTelegramFeatureSetting).toHaveBeenCalledWith({
+        featureKey: "ECONOMIC_CALENDAR_ALERT",
+        workspaceId: 7,
+        enabled: true,
+      })
+    )
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(
+        "Choose an eligible destination."
+      )
+    )
+    expect(routeSwitch).not.toBeChecked()
+    expect(routerRefresh).not.toHaveBeenCalled()
+  })
+
+  it("allows disabling when the assigned destination is inactive and bot state is unreadable", async () => {
+    const inactiveDestination = {
+      ...destination,
+      status: "DISABLED" as const,
+    }
+    const setting = {
+      ...featureSettings[0],
+      enabled: true,
+      destination: inactiveDestination,
+    }
+    const user = userEvent.setup()
+    vi.mocked(updateTelegramFeatureSetting).mockResolvedValue({
+      success: true,
+      data: { ...setting, enabled: false },
+    })
+
+    renderConfiguration({
+      ...data,
+      destinations: [],
+      featureSettings: [setting],
+      sectionAccess: {
+        ...data.sectionAccess,
+        featureSettings: {
+          ECONOMIC_CALENDAR_ALERT: true,
+          MARKET_NEWS_ALERT: false,
+          SCHEDULED_MARKET_ANALYSIS: false,
+        },
+      },
+      manageAccess: {
+        ...data.manageAccess,
+        featureSettings: {
+          ECONOMIC_CALENDAR_ALERT: true,
+          MARKET_NEWS_ALERT: false,
+          SCHEDULED_MARKET_ANALYSIS: false,
+        },
+      },
+    })
+
+    const routeSwitch = screen.getByRole("switch", {
+      name: viDictionary.telegram.routing.switchAria.replace(
+        "{route}",
+        viDictionary.telegram.routeDefinitions.ECONOMIC_CALENDAR_ALERT.label
+      ),
+    })
+    expect(routeSwitch).toBeChecked()
+    expect(routeSwitch).toBeEnabled()
+
+    Object.defineProperty(window, "PointerEvent", {
+      configurable: true,
+      value: MouseEvent,
+    })
+    await user.click(routeSwitch)
+
+    await waitFor(() =>
+      expect(updateTelegramFeatureSetting).toHaveBeenCalledWith({
+        featureKey: "ECONOMIC_CALENDAR_ALERT",
+        workspaceId: 7,
+        enabled: false,
+      })
+    )
+    await waitFor(() =>
+      expect(toast.success).toHaveBeenCalledWith(
+        viDictionary.telegram.routing.disabledSuccess
+      )
+    )
+    expect(routerRefresh).toHaveBeenCalledTimes(1)
+  })
+
+  it("clears an assigned destination with a confirmed atomic disable and keeps the saved language on failure", async () => {
+    const user = userEvent.setup()
+    vi.mocked(updateTelegramFeatureSetting).mockResolvedValue({
+      success: false,
+      error: "Could not clear the route.",
+    })
+
+    renderConfiguration({
+      ...data,
+      destinations: [],
+      featureSettings: [{ ...featureSettings[0], enabled: true }],
+      sectionAccess: {
+        ...data.sectionAccess,
+        destinations: false,
+      },
+      manageAccess: {
+        ...data.manageAccess,
+        featureSettings: {
+          ECONOMIC_CALENDAR_ALERT: true,
+          MARKET_NEWS_ALERT: false,
+          SCHEDULED_MARKET_ANALYSIS: false,
+        },
+      },
+    })
+
+    const clearButton = screen.getByRole("button", {
+      name: "Xóa điểm nhận cho Cảnh báo lịch kinh tế",
+    })
+    await user.click(clearButton)
+
+    await waitFor(() =>
+      expect(updateTelegramFeatureSetting).toHaveBeenCalledWith({
+        featureKey: "ECONOMIC_CALENDAR_ALERT",
+        workspaceId: 7,
+        destinationId: null,
+        enabled: false,
+      })
+    )
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith("Could not clear the route.")
+    )
+    const economicCalendarRow = screen
+      .getByText(
+        viDictionary.telegram.routeDefinitions.ECONOMIC_CALENDAR_ALERT.label
+      )
+      .closest("tr") as HTMLElement
+    expect(
+      within(economicCalendarRow).getByText(destination.displayLabel)
+    ).toBeVisible()
+    expect(
+      screen.getByRole("switch", {
+        name: viDictionary.telegram.routing.switchAria.replace(
+          "{route}",
+          viDictionary.telegram.routeDefinitions.ECONOMIC_CALENDAR_ALERT.label
+        ),
+      })
+    ).toBeChecked()
+    expect(routerRefresh).not.toHaveBeenCalled()
+  })
+
+  it("does not show an unconfirmed destination as saved after a failed assignment", async () => {
+    const user = userEvent.setup()
+    vi.mocked(updateTelegramFeatureSetting).mockResolvedValue({
+      success: false,
+      error: "Destination is no longer eligible.",
+    })
+
+    renderConfiguration({
+      ...data,
+      featureSettings: [{ ...featureSettings[0], enabled: false }],
+      destinations: [
+        destination,
+        { ...destination, id: 9, displayLabel: "Backup" },
+      ],
+      sectionAccess: { ...data.sectionAccess, destinations: true },
+      manageAccess: {
+        ...data.manageAccess,
+        featureSettings: {
+          ECONOMIC_CALENDAR_ALERT: true,
+          MARKET_NEWS_ALERT: false,
+          SCHEDULED_MARKET_ANALYSIS: false,
+        },
+      },
+    })
+
+    const destinationSelect = screen.getByRole("combobox", {
+      name: viDictionary.telegram.routeDefinitions.ECONOMIC_CALENDAR_ALERT
+        .label,
+    })
+    await user.click(destinationSelect)
+    await user.click(await screen.findByRole("option", { name: "Backup" }))
+
+    await waitFor(() =>
+      expect(updateTelegramFeatureSetting).toHaveBeenCalledWith({
+        featureKey: "ECONOMIC_CALENDAR_ALERT",
+        workspaceId: 7,
+        destinationId: 9,
+      })
+    )
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(
+        "Destination is no longer eligible."
+      )
+    )
+    expect(destinationSelect).toHaveTextContent("Operations")
+    expect(destinationSelect).not.toHaveTextContent("Backup")
+    expect(routerRefresh).not.toHaveBeenCalled()
   })
 })
 

@@ -23,7 +23,10 @@ vi.mock("@/app/lib/dev-auth-mode", () => ({
   isP0FixtureModeEnabled,
 }))
 
-import { getCurrentPermissions } from "@/app/lib/permissions-server"
+import {
+  getCurrentPermissions,
+  getCurrentWorkspaceSummary,
+} from "@/app/lib/permissions-server"
 
 describe("server permission loading", () => {
   beforeEach(() => {
@@ -61,5 +64,19 @@ describe("server permission loading", () => {
 
     await expect(getCurrentPermissions()).resolves.toEqual(["*"])
     expect(getMe).not.toHaveBeenCalled()
+  })
+
+  it("reads only the current workspace summary from /me without requiring workspace read", async () => {
+    vi.mocked(isDevAuthModeEnabled).mockReturnValue(false)
+    vi.mocked(getMe).mockResolvedValue({
+      currentWorkspace: { id: 7, name: "Workspace" },
+      permissions: ["telegram-economic-calendar-routing:read"],
+    })
+
+    await expect(getCurrentWorkspaceSummary()).resolves.toEqual({
+      id: 7,
+      name: "Workspace",
+    })
+    expect(getMe).toHaveBeenCalledTimes(1)
   })
 })

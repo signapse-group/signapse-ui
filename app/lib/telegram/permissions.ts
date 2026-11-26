@@ -19,6 +19,14 @@ export const TELEGRAM_FEATURE_SETTING_READ_PERMISSION =
   "telegram-feature-setting:read"
 export const TELEGRAM_FEATURE_SETTING_UPDATE_PERMISSION =
   "telegram-feature-setting:update"
+export const TELEGRAM_ECONOMIC_CALENDAR_ROUTING_READ_PERMISSION =
+  "telegram-economic-calendar-routing:read"
+export const TELEGRAM_ECONOMIC_CALENDAR_ROUTING_UPDATE_PERMISSION =
+  "telegram-economic-calendar-routing:update"
+export const TELEGRAM_MARKET_NEWS_ROUTING_READ_PERMISSION =
+  "telegram-market-news-routing:read"
+export const TELEGRAM_MARKET_NEWS_ROUTING_UPDATE_PERMISSION =
+  "telegram-market-news-routing:update"
 export const TELEGRAM_MARKET_ANALYSIS_SCHEDULE_READ_PERMISSION =
   "telegram-market-analysis-schedule:read"
 export const TELEGRAM_MARKET_ANALYSIS_SCHEDULE_MANAGE_PERMISSION =
@@ -28,6 +36,8 @@ export const TELEGRAM_READ_PERMISSIONS = [
   TELEGRAM_BOT_CONNECTION_READ_PERMISSION,
   TELEGRAM_DESTINATION_READ_PERMISSION,
   TELEGRAM_FEATURE_SETTING_READ_PERMISSION,
+  TELEGRAM_ECONOMIC_CALENDAR_ROUTING_READ_PERMISSION,
+  TELEGRAM_MARKET_NEWS_ROUTING_READ_PERMISSION,
   TELEGRAM_MARKET_ANALYSIS_SCHEDULE_READ_PERMISSION,
 ] as const
 
@@ -51,10 +61,20 @@ export function getTelegramSectionAccess(
       permissions,
       TELEGRAM_DESTINATION_READ_PERMISSION
     ),
-    featureSettings: hasPermission(
-      permissions,
-      TELEGRAM_FEATURE_SETTING_READ_PERMISSION
-    ),
+    featureSettings: {
+      ECONOMIC_CALENDAR_ALERT: hasPermission(
+        permissions,
+        TELEGRAM_ECONOMIC_CALENDAR_ROUTING_READ_PERMISSION
+      ),
+      MARKET_NEWS_ALERT: hasPermission(
+        permissions,
+        TELEGRAM_MARKET_NEWS_ROUTING_READ_PERMISSION
+      ),
+      SCHEDULED_MARKET_ANALYSIS: hasPermission(
+        permissions,
+        TELEGRAM_FEATURE_SETTING_READ_PERMISSION
+      ),
+    },
     schedules: hasPermission(
       permissions,
       TELEGRAM_MARKET_ANALYSIS_SCHEDULE_READ_PERMISSION
@@ -75,10 +95,20 @@ export function getTelegramManageAccess(
       permissions,
       TELEGRAM_DESTINATION_MANAGE_PERMISSION
     ),
-    featureSettings: hasPermission(
-      permissions,
-      TELEGRAM_FEATURE_SETTING_UPDATE_PERMISSION
-    ),
+    featureSettings: {
+      ECONOMIC_CALENDAR_ALERT: hasPermission(
+        permissions,
+        TELEGRAM_ECONOMIC_CALENDAR_ROUTING_UPDATE_PERMISSION
+      ),
+      MARKET_NEWS_ALERT: hasPermission(
+        permissions,
+        TELEGRAM_MARKET_NEWS_ROUTING_UPDATE_PERMISSION
+      ),
+      SCHEDULED_MARKET_ANALYSIS: hasPermission(
+        permissions,
+        TELEGRAM_FEATURE_SETTING_UPDATE_PERMISSION
+      ),
+    },
     schedules: hasPermission(
       permissions,
       TELEGRAM_MARKET_ANALYSIS_SCHEDULE_MANAGE_PERMISSION

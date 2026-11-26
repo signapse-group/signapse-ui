@@ -10,13 +10,15 @@ import {
 import { getWorkspaceWatchlistAssets } from "@/app/api/watchlists/action"
 import { getServerDictionary } from "@/app/lib/i18n/server"
 import { hasPermission } from "@/app/lib/permissions"
-import { getCurrentPermissions } from "@/app/lib/permissions-server"
+import {
+  getCurrentPermissions,
+  getCurrentWorkspaceSummary,
+} from "@/app/lib/permissions-server"
 import {
   canReadTelegramConfiguration,
   getTelegramManageAccess,
   getTelegramSectionAccess,
 } from "@/app/lib/telegram/permissions"
-import { getActiveWorkspaceForCurrentUser } from "@/app/lib/workspaces/current"
 import { AccessDenied } from "@/components/access-denied"
 
 import {
@@ -69,9 +71,10 @@ async function TelegramConfigurationContent({
   manageAccess: ReturnType<typeof getTelegramManageAccess>
   canReadWorkspace: boolean
 }) {
-  const currentWorkspace = canReadWorkspace
-    ? await getActiveWorkspaceForCurrentUser()
-    : null
+  const currentWorkspace = await getCurrentWorkspaceSummary()
+  const canReadAnyFeatureSettings = Object.values(
+    sectionAccess.featureSettings
+  ).some(Boolean)
 
   const schedulesPromise = sectionAccess.schedules
     ? getTelegramMarketAnalysisSchedules()
@@ -80,25 +83,33 @@ async function TelegramConfigurationContent({
     : Promise.resolve({ data: [], error: false })
 
   const languagesPromise =
-    sectionAccess.schedules || sectionAccess.featureSettings
-    ? getLanguages()
-        .then((catalog) => ({ data: catalog.languages, error: false }))
-        .catch(() => ({ data: [], error: true }))
-    : Promise.resolve({ data: [], error: false })
+    sectionAccess.schedules || (canReadAnyFeatureSettings && currentWorkspace)
+      ? getLanguages()
+          .then((catalog) => ({ data: catalog.languages, error: false }))
+          .catch(() => ({ data: [], error: true }))
+      : Promise.resolve({ data: [], error: false })
 
   const [
     botConnections,
-    destinations,
-    featureSettings,
+    destinationsResult,
+    featureSettingsResult,
     schedulesResult,
     watchlistAssetsPage,
     languagesResult,
   ] = await Promise.all([
     sectionAccess.botConnections ? getTelegramBotConnections() : [],
-    sectionAccess.destinations ? getTelegramDestinations() : [],
-    sectionAccess.featureSettings ? getTelegramFeatureSettings() : [],
+    sectionAccess.destinations
+      ? getTelegramDestinations()
+          .then((data) => ({ data, error: false }))
+          .catch(() => ({ data: [], error: true }))
+      : Promise.resolve({ data: [], error: false }),
+    canReadAnyFeatureSettings && currentWorkspace
+      ? getTelegramFeatureSettings(currentWorkspace.id)
+          .then((data) => ({ data, error: false }))
+          .catch(() => ({ data: [], error: true }))
+      : Promise.resolve({ data: [], error: false }),
     schedulesPromise,
-    sectionAccess.watchlistAssets && currentWorkspace
+    canReadWorkspace && sectionAccess.watchlistAssets && currentWorkspace
       ? getWorkspaceWatchlistAssets(WATCHLIST_ASSET_SEARCH)
       : null,
     languagesPromise,
@@ -108,8 +119,10 @@ async function TelegramConfigurationContent({
     <TelegramConfigurationPage
       data={{
         botConnections,
-        destinations,
-        featureSettings,
+        destinations: destinationsResult.data,
+        destinationsLoadError: destinationsResult.error,
+        featureSettings: featureSettingsResult.data,
+        featureSettingsLoadError: featureSettingsResult.error,
         schedules: schedulesResult.data,
         currentWorkspace,
         watchlistAssets: watchlistAssetsPage?.content ?? [],

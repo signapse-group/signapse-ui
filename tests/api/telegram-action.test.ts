@@ -13,6 +13,7 @@ const { testDictionary } = vi.hoisted(() => ({
       localTimeRequired: "At least one local time is required",
       localTimeLimit: "Too many local times",
       localTimeDuplicate: "Local times must be unique",
+      destinationRequired: "Choose a destination.",
       destination: {
         invalidData: "Destination is invalid",
         createLinkError: "Could not create the Telegram link command",
@@ -26,6 +27,10 @@ const { testDictionary } = vi.hoisted(() => ({
         updateError: "Schedule update failed",
         disableError: "Schedule disable failed",
         deleteError: "Schedule delete failed",
+      },
+      routing: {
+        updateError: "Route update failed",
+        destinationClearRequiresDisabled: "Pause before clearing",
       },
     },
   },
@@ -59,6 +64,7 @@ import {
   deleteTelegramMarketAnalysisSchedule,
   disableTelegramMarketAnalysisSchedule,
   getTelegramDestinations,
+  getTelegramFeatureSettings,
   sendTelegramTestMessage,
   updateTelegramMarketAnalysisSchedule,
   updateTelegramFeatureSetting,
@@ -100,6 +106,17 @@ describe("Telegram scheduled asset analysis actions", () => {
     })
   })
 
+  it("filters feature settings to the active workspace", async () => {
+    vi.mocked(fetchAuthenticated).mockResolvedValue([])
+
+    await expect(getTelegramFeatureSettings(7)).resolves.toEqual([])
+
+    const requestPath = vi.mocked(fetchAuthenticated).mock.calls[0]?.[0]
+    expect(typeof requestPath).toBe("string")
+    const query = new URLSearchParams(requestPath!.split("?")[1])
+    expect(query.get("$filter")).toBe("workspace.id eq 7")
+  })
+
   it("creates and updates schedules with normalized request bodies", async () => {
     vi.mocked(fetchAuthenticated).mockResolvedValue(scheduleResponse)
 
@@ -137,24 +154,24 @@ describe("Telegram scheduled asset analysis actions", () => {
     expect(revalidatePath).toHaveBeenCalledWith("/telegram")
   })
 
-  it("preserves and explicitly clears feature output-language overrides", async () => {
+  it("omits fields to preserve settings and sends null to clear them", async () => {
     const featureResponse = {
       id: 41,
       featureKey: "ECONOMIC_CALENDAR_ALERT" as const,
       workspaceId: 7,
-      enabled: true,
+      enabled: false,
+      destination: null,
+      outputLanguage: null,
     }
     vi.mocked(fetchAuthenticated).mockResolvedValue(featureResponse)
 
-    const preserved = await updateTelegramFeatureSetting({
+    const disabled = await updateTelegramFeatureSetting({
       featureKey: "ECONOMIC_CALENDAR_ALERT",
       workspaceId: 7,
-      destinationId: 8,
-      enabled: true,
-      outputLanguageIsoCode: " en ",
+      enabled: false,
     })
 
-    expect(preserved).toEqual({ success: true, data: featureResponse })
+    expect(disabled).toEqual({ success: true, data: featureResponse })
     expect(fetchAuthenticated).toHaveBeenLastCalledWith(
       "/telegram/feature-settings",
       {
@@ -162,8 +179,46 @@ describe("Telegram scheduled asset analysis actions", () => {
         body: JSON.stringify({
           featureKey: "ECONOMIC_CALENDAR_ALERT",
           workspaceId: 7,
-          destinationId: 8,
-          enabled: true,
+          enabled: false,
+        }),
+      }
+    )
+
+    await updateTelegramFeatureSetting({
+      featureKey: "ECONOMIC_CALENDAR_ALERT",
+      workspaceId: 7,
+      destinationId: null,
+      enabled: false,
+    })
+
+    expect(fetchAuthenticated).toHaveBeenLastCalledWith(
+      "/telegram/feature-settings",
+      {
+        method: "PUT",
+        body: JSON.stringify({
+          featureKey: "ECONOMIC_CALENDAR_ALERT",
+          workspaceId: 7,
+          destinationId: null,
+          enabled: false,
+        }),
+      }
+    )
+
+    await updateTelegramFeatureSetting({
+      featureKey: "ECONOMIC_CALENDAR_ALERT",
+      workspaceId: 7,
+      enabled: false,
+      outputLanguageIsoCode: " en ",
+    })
+
+    expect(fetchAuthenticated).toHaveBeenLastCalledWith(
+      "/telegram/feature-settings",
+      {
+        method: "PUT",
+        body: JSON.stringify({
+          featureKey: "ECONOMIC_CALENDAR_ALERT",
+          workspaceId: 7,
+          enabled: false,
           outputLanguageIsoCode: "en",
         }),
       }
@@ -172,8 +227,7 @@ describe("Telegram scheduled asset analysis actions", () => {
     await updateTelegramFeatureSetting({
       featureKey: "ECONOMIC_CALENDAR_ALERT",
       workspaceId: 7,
-      destinationId: 8,
-      enabled: true,
+      enabled: false,
       outputLanguageIsoCode: "   ",
     })
 
@@ -184,11 +238,60 @@ describe("Telegram scheduled asset analysis actions", () => {
         body: JSON.stringify({
           featureKey: "ECONOMIC_CALENDAR_ALERT",
           workspaceId: 7,
-          destinationId: 8,
-          enabled: true,
+          enabled: false,
+          outputLanguageIsoCode: null,
         }),
       }
     )
+  })
+
+  it.each([
+    [400, "No eligible destination"],
+    [403, "Route update forbidden"],
+    [404, "Workspace not found"],
+  ])(
+    "returns HTTP %i failures without invalidating saved settings",
+    async (_status, message) => {
+      vi.mocked(fetchAuthenticated).mockRejectedValue(new Error(message))
+
+      await expect(
+        updateTelegramFeatureSetting({
+          featureKey: "ECONOMIC_CALENDAR_ALERT",
+          workspaceId: 7,
+          enabled: true,
+        })
+      ).resolves.toEqual({ success: false, error: message })
+      expect(revalidatePath).not.toHaveBeenCalled()
+    }
+  )
+
+  it("requires clearing the destination and disabling routing atomically", async () => {
+    const result = await updateTelegramFeatureSetting({
+      featureKey: "ECONOMIC_CALENDAR_ALERT",
+      workspaceId: 7,
+      destinationId: null,
+    })
+
+    expect(result).toEqual({
+      success: false,
+      error: "Pause before clearing",
+    })
+    expect(fetchAuthenticated).not.toHaveBeenCalled()
+    expect(revalidatePath).not.toHaveBeenCalled()
+  })
+
+  it("requires a destination for scheduled route setting updates", async () => {
+    const result = await updateTelegramFeatureSetting({
+      featureKey: "SCHEDULED_MARKET_ANALYSIS",
+      workspaceId: 7,
+      enabled: false,
+    })
+
+    expect(result).toEqual({
+      success: false,
+      error: "Choose a destination.",
+    })
+    expect(fetchAuthenticated).not.toHaveBeenCalled()
   })
 
   it("disables and deletes schedules through their mutation endpoints", async () => {
