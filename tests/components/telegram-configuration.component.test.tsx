@@ -2252,11 +2252,7 @@ describe("Telegram destination removal", () => {
         "Operations"
       )
     )
-    await user.click(
-      within(dialog).getByRole("button", {
-        name: viDictionary.common.cancel,
-      })
-    )
+    await user.keyboard("{Escape}")
 
     expect(deleteTelegramDestination).not.toHaveBeenCalled()
     await waitFor(() => expect(trigger).toHaveFocus())
@@ -2290,6 +2286,7 @@ describe("Telegram destination removal", () => {
     expect(await within(dialog).findByRole("alert")).toHaveTextContent(
       viDictionary.telegram.destination.removeInUseError
     )
+    await waitFor(() => expect(confirm).toHaveFocus())
     expect(dialog).toBeVisible()
     expect(routerRefresh).not.toHaveBeenCalled()
     expect(toast.success).not.toHaveBeenCalled()
@@ -2308,6 +2305,44 @@ describe("Telegram destination removal", () => {
         })
       ).toHaveFocus()
     )
+  })
+
+  it("announces pending removal and keeps the dialog busy until the API settles", async () => {
+    const user = userEvent.setup()
+    let resolveRemoval: (result: { success: true; data: undefined }) => void =
+      () => undefined
+    const pendingRemoval = new Promise<{ success: true; data: undefined }>(
+      (resolve) => {
+        resolveRemoval = resolve
+      }
+    )
+    vi.mocked(deleteTelegramDestination).mockReturnValueOnce(pendingRemoval)
+    renderConfiguration(manageableData())
+
+    await user.click(
+      screen.getByRole("button", {
+        name: viDictionary.telegram.destination.removeTrigger.replace(
+          "{destination}",
+          "Operations"
+        ),
+      })
+    )
+    const dialog = screen.getByRole("alertdialog")
+    const confirm = within(dialog).getByRole("button", {
+      name: viDictionary.telegram.destination.removeAction,
+    })
+    await user.click(confirm)
+
+    const pending = within(dialog).getByRole("status")
+    expect(pending).toHaveTextContent(viDictionary.common.pending)
+    expect(pending).toHaveFocus()
+    expect(confirm).toBeDisabled()
+    expect(routerRefresh).not.toHaveBeenCalled()
+    expect(toast.success).not.toHaveBeenCalled()
+
+    resolveRemoval({ success: true, data: undefined })
+    await waitFor(() => expect(dialog).not.toBeVisible())
+    expect(routerRefresh).toHaveBeenCalledTimes(1)
   })
 
   it("keeps Removed destinations out of the list and send choices after readback", async () => {

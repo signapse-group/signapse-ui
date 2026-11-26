@@ -90,6 +90,8 @@ import {
   ItemTitle,
 } from "@/components/ui/item"
 import { Spinner } from "@/components/ui/spinner"
+import { Tooltip, TooltipTrigger } from "@/components/ui/tooltip"
+import { TooltipContentInOverlay } from "@/components/ui/tooltip-content-in-overlay"
 import {
   Select,
   SelectContent,
@@ -223,6 +225,10 @@ function DestinationItem({
   const removeTriggerId = "telegram-destination-remove-" + destination.id
   const [removeOpen, setRemoveOpen] = useState(false)
   const label = getDestinationLabel(destination, dictionary)
+  const removeTriggerLabel = t.destination.removeTrigger.replace(
+    "{destination}",
+    label
+  )
   const botLabel = getBotLabel(
     {
       id: destination.botConnectionId,
@@ -275,19 +281,25 @@ function DestinationItem({
             isEligible={destination.status === "ACTIVE" && isBotActive}
           />
           {canManage ? (
-            <Button
-              id={removeTriggerId}
-              type="button"
-              variant="destructive"
-              size="icon-sm"
-              aria-label={t.destination.removeTrigger.replace(
-                "{destination}",
-                label
-              )}
-              onClick={() => setRemoveOpen(true)}
-            >
-              <Trash2 data-icon="inline-start" />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    id={removeTriggerId}
+                    type="button"
+                    variant="destructive"
+                    size="icon-sm"
+                    aria-label={removeTriggerLabel}
+                    onClick={() => setRemoveOpen(true)}
+                  >
+                    <Trash2 data-icon="inline-start" aria-hidden="true" />
+                  </Button>
+                }
+              />
+              <TooltipContentInOverlay>
+                {t.destination.removeAction}
+              </TooltipContentInOverlay>
+            </Tooltip>
           ) : null}
         </ItemActions>
       </Item>
@@ -295,10 +307,7 @@ function DestinationItem({
         title={t.destination.removeTitle.replace("{destination}", label)}
         description={t.destination.removeDescription}
         actionLabel={t.destination.removeAction}
-        triggerLabel={t.destination.removeTrigger.replace(
-          "{destination}",
-          label
-        )}
+        triggerLabel={removeTriggerLabel}
         action={() => deleteTelegramDestination(destination.id)}
         successMessage={t.destination.removeSuccess}
         open={removeOpen}
