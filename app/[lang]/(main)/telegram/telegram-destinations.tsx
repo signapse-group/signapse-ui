@@ -13,8 +13,6 @@ import {
   Clipboard,
   Link2,
   MessageCircle,
-  MoreHorizontal,
-  PowerOff,
   RefreshCw,
   Trash2,
   X,
@@ -24,7 +22,6 @@ import { toast } from "sonner"
 import {
   createTelegramLinkToken,
   deleteTelegramDestination,
-  disableTelegramDestination,
 } from "@/app/api/telegram/action"
 import type { Dictionary } from "@/app/lib/i18n/dictionary-types"
 import { useLocalization } from "@/app/lib/i18n/provider"
@@ -94,14 +91,6 @@ import {
 } from "@/components/ui/item"
 import { Spinner } from "@/components/ui/spinner"
 import {
-  DropdownMenu,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { DropdownMenuContentInOverlay as DropdownMenuContent } from "@/components/ui/dropdown-menu-content-in-overlay"
-import {
   Select,
   SelectContent,
   SelectGroup,
@@ -126,7 +115,9 @@ export function DestinationsCard({
 }) {
   const { dictionary, formatDateTime } = useLocalization()
   const t = dictionary.telegram
-  const records = sortOperationalTelegramRecords(destinations)
+  const records = sortOperationalTelegramRecords(
+    destinations.filter((destination) => destination.status !== "REMOVED")
+  )
   const formatTime = (value?: string) =>
     formatTelegramDateTime(value, formatDateTime, t.common.noData)
   const linkUnavailable =
@@ -140,7 +131,14 @@ export function DestinationsCard({
   return (
     <Card className="min-w-0">
       <CardHeader>
-        <CardTitle>{t.destination.sectionTitle}</CardTitle>
+        <CardTitle
+          id="telegram-destinations-title"
+          role="heading"
+          aria-level={3}
+          tabIndex={-1}
+        >
+          {t.destination.sectionTitle}
+        </CardTitle>
         <CardDescription>{t.destination.sectionDescription}</CardDescription>
         {canManage ? (
           <CardAction>
@@ -222,10 +220,8 @@ function DestinationItem({
   dictionary: Dictionary
 }) {
   const t = dictionary.telegram
-  const menuTriggerId = "telegram-destination-actions-" + destination.id
-  const [confirmation, setConfirmation] = useState<"disable" | "delete" | null>(
-    null
-  )
+  const removeTriggerId = "telegram-destination-remove-" + destination.id
+  const [removeOpen, setRemoveOpen] = useState(false)
   const label = getDestinationLabel(destination, dictionary)
   const botLabel = getBotLabel(
     {
@@ -279,73 +275,37 @@ function DestinationItem({
             isEligible={destination.status === "ACTIVE" && isBotActive}
           />
           {canManage ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <Button
-                    id={menuTriggerId}
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label={t.destination.actionMenu}
-                  />
-                }
-              >
-                <MoreHorizontal />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuGroup>
-                  <DropdownMenuItem
-                    disabled={destination.status !== "ACTIVE"}
-                    onClick={() => setConfirmation("disable")}
-                  >
-                    <PowerOff />
-                    {t.common.disable}
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    variant="destructive"
-                    onClick={() => setConfirmation("delete")}
-                  >
-                    <Trash2 />
-                    {t.destination.deleteAction}
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <Button
+              id={removeTriggerId}
+              type="button"
+              variant="destructive"
+              size="icon-sm"
+              aria-label={t.destination.removeTrigger.replace(
+                "{destination}",
+                label
+              )}
+              onClick={() => setRemoveOpen(true)}
+            >
+              <Trash2 data-icon="inline-start" />
+            </Button>
           ) : null}
         </ItemActions>
       </Item>
       <ActionConfirmDialog
-        title={
-          confirmation === "disable"
-            ? t.destination.disableTitle
-            : t.destination.deleteTitle
-        }
-        description={
-          confirmation === "disable"
-            ? t.destination.disableDescription
-            : t.destination.deleteDescription
-        }
-        actionLabel={
-          confirmation === "disable"
-            ? t.common.disable
-            : t.destination.deleteAction
-        }
-        triggerLabel={t.destination.actionMenu}
-        action={() =>
-          confirmation === "disable"
-            ? disableTelegramDestination(destination.id)
-            : deleteTelegramDestination(destination.id)
-        }
-        successMessage={
-          confirmation === "disable"
-            ? t.destination.disableSuccess
-            : t.destination.deleteSuccess
-        }
-        open={confirmation !== null}
-        onOpenChange={(open) => setConfirmation(open ? confirmation : null)}
+        title={t.destination.removeTitle.replace("{destination}", label)}
+        description={t.destination.removeDescription}
+        actionLabel={t.destination.removeAction}
+        triggerLabel={t.destination.removeTrigger.replace(
+          "{destination}",
+          label
+        )}
+        action={() => deleteTelegramDestination(destination.id)}
+        successMessage={t.destination.removeSuccess}
+        open={removeOpen}
+        onOpenChange={setRemoveOpen}
         trigger={null}
-        restoreFocusId={menuTriggerId}
+        restoreFocusId={removeTriggerId}
+        successFocusId="telegram-destinations-title"
       />
     </>
   )

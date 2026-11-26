@@ -266,7 +266,6 @@ export function ActionConfirmDialog({
   useEffect(() => {
     if (isPending || error) feedbackRef.current?.focus()
   }, [error, isPending])
-
   function setOpen(nextOpen: boolean, focusId = restoreFocusId) {
     if (onOpenChange) {
       onOpenChange(nextOpen)

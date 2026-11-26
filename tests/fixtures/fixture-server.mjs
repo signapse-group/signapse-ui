@@ -4160,6 +4160,24 @@ Which asset did you mean? The available data is limited. Add TSLA to your watchl
         },
       ]
     }
+    if (getScenario(state, method, pathname) === "telegram-removal-candidate") {
+      return [
+        ...state.destinations,
+        {
+          id: 23,
+          botConnectionId: 11,
+          botUsername: "signapse_fixture_bot",
+          botDisplayLabel: "Signapse Fixture Bot",
+          chatId: "-100000000023",
+          chatType: "GROUP",
+          displayLabel: "Unused destination",
+          chatTitle: "Unused destination",
+          status: "ACTIVE",
+          createdDate: NOW,
+          lastModifiedDate: NOW,
+        },
+      ]
+    }
 
     return state.destinations
   }
@@ -4230,18 +4248,20 @@ Which asset did you mean? The available data is limited. Add TSLA to your watchl
     return { __status: 204 }
   }
 
-  if (
-    method === "PATCH" &&
-    /^\/telegram\/destinations\/\d+\/disable$/.test(pathname)
-  ) {
+  if (method === "DELETE" && /^\/telegram\/destinations\/\d+$/.test(pathname)) {
     const id = Number(pathname.split("/")[3])
-    const item = state.destinations.find((destination) => destination.id === id)
-    if (item) item.status = "DISABLED"
-    return item ?? state.destinations[0]
+    state.destinations = state.destinations.filter(
+      (destination) => destination.id !== id
+    )
+    if (
+      id === 23 &&
+      getScenario(state, "GET", "/telegram/destinations") ===
+        "telegram-removal-candidate"
+    ) {
+      state.scenarios["GET /telegram/destinations"] = "success"
+    }
+    return { __status: 200, __empty: true }
   }
-
-  if (method === "DELETE" && /^\/telegram\/destinations\/\d+$/.test(pathname))
-    return { __status: 204 }
 
   if (method === "PUT" && pathname === "/telegram/feature-settings") {
     const existing = state.featureSettings.find(
@@ -4760,6 +4780,21 @@ const server = createServer(async (request, response) => {
       response,
       422,
       errorPayload("Fixture validation failed", "FIXTURE_VALIDATION")
+    )
+    return
+  }
+  if (
+    scenario === "telegram-destination-in-use" &&
+    method === "DELETE" &&
+    /^\/telegram\/destinations\/\d+$/.test(url.pathname)
+  ) {
+    sendJson(
+      response,
+      409,
+      errorPayload(
+        "This Telegram destination is still assigned to a route or schedule.",
+        "TELEGRAM_DESTINATION_IN_USE"
+      )
     )
     return
   }
