@@ -257,6 +257,13 @@ test.describe("P0 Telegram operations", () => {
       page.getByText("Đã tạo lệnh liên kết Telegram.", { exact: true })
     ).toBeHidden()
 
+    await page.emulateMedia({ colorScheme: "light" })
+    await expect(dialog).toBeVisible()
+    await dialog.screenshot({
+      path: test.info().outputPath("telegram-link-pending-wide-light.png"),
+    })
+    await page.emulateMedia({ colorScheme: "dark" })
+
     await page.setViewportSize({ width: 390, height: 844 })
     await expect(dialog).toBeVisible()
     await expect(pending).toBeVisible()
