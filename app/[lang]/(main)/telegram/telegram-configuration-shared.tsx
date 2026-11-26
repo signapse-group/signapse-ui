@@ -245,6 +245,7 @@ export function ActionConfirmDialog({
   onOpenChange,
   trigger,
   restoreFocusId,
+  restoreFocusCandidates = [],
   successFocusId,
 }: {
   title: string
@@ -261,6 +262,7 @@ export function ActionConfirmDialog({
   onOpenChange?: (open: boolean) => void
   trigger?: ReactElement | null
   restoreFocusId?: string
+  restoreFocusCandidates?: string[]
   successFocusId?: string
 }) {
   const router = useRouter()
@@ -275,7 +277,12 @@ export function ActionConfirmDialog({
     if (isPending || error) feedbackRef.current?.focus()
   }, [error, isPending])
 
-  function setOpen(nextOpen: boolean, focusId = restoreFocusId) {
+  function setOpen(
+    nextOpen: boolean,
+    focusIds = [restoreFocusId, ...restoreFocusCandidates].filter(
+      (id): id is string => Boolean(id)
+    )
+  ) {
     if (onOpenChange) {
       onOpenChange(nextOpen)
     } else {
@@ -284,9 +291,15 @@ export function ActionConfirmDialog({
 
     if (!nextOpen) {
       setError(null)
-      if (focusId) {
+      if (focusIds.length > 0) {
         requestAnimationFrame(() => {
-          document.getElementById(focusId)?.focus()
+          const targets = focusIds
+            .map((id) => document.getElementById(id))
+            .filter((element): element is HTMLElement => element !== null)
+          const target =
+            targets.find((element) => element.getClientRects().length > 0) ??
+            targets[0]
+          target?.focus()
         })
       }
     }
@@ -304,7 +317,7 @@ export function ActionConfirmDialog({
 
       if (result.success) {
         toast.success(successMessage)
-        setOpen(false, successFocusId)
+        setOpen(false, successFocusId ? [successFocusId] : undefined)
         router.refresh()
       } else {
         setError(result.error)
@@ -337,7 +350,7 @@ export function ActionConfirmDialog({
           <span
             id={restoreFocusId ? `${restoreFocusId}-tooltip` : undefined}
             role="tooltip"
-            className="pointer-events-none invisible absolute right-1/2 bottom-full z-50 mb-2 translate-x-1/2 rounded-md bg-foreground px-3 py-1.5 text-xs whitespace-nowrap text-background shadow-sm group-focus-within/trigger-tooltip:visible group-hover/trigger-tooltip:visible"
+            className="pointer-events-none invisible absolute top-full right-0 bottom-auto z-50 mt-2 translate-x-0 rounded-md bg-foreground px-3 py-1.5 text-xs whitespace-nowrap text-background shadow-sm group-focus-within/trigger-tooltip:visible group-hover/trigger-tooltip:visible md:top-auto md:bottom-full md:mt-0 md:mb-2"
           >
             {triggerTooltip}
           </span>

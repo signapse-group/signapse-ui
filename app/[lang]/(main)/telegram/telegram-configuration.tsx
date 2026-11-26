@@ -889,6 +889,7 @@ function ScheduleActionButtons({
   const t = dictionary.telegram
   const deleteTriggerId =
     "telegram-schedule-delete-" + schedule.id + "-" + layout
+  const otherDeleteTriggerId = `telegram-schedule-delete-${schedule.id}-${layout === "mobile" ? "desktop" : "mobile"}`
 
   return (
     <div
@@ -917,6 +918,7 @@ function ScheduleActionButtons({
           triggerLabel={t.schedule.deleteTrigger}
           triggerTooltip={t.schedule.deleteTrigger}
           restoreFocusId={deleteTriggerId}
+          restoreFocusCandidates={[otherDeleteTriggerId]}
           successFocusId="telegram-schedule-heading"
           trigger={
             <Button

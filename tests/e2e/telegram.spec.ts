@@ -281,6 +281,120 @@ test.describe("P0 Telegram operations", () => {
     expect(lastListReadIndex).toBeGreaterThan(deleteIndex)
   })
 
+  test("restores schedule Remove focus to the visible trigger after responsive resize", async ({
+    page,
+    fixture,
+  }, testInfo) => {
+    await page.emulateMedia({ colorScheme: "dark" })
+    await page.setViewportSize({ width: 1520, height: 1024 })
+    await page.goto("/vi/telegram")
+    await page.addStyleTag({
+      content:
+        '[aria-label="Ask Signapse"], nextjs-portal { display: none !important; }',
+    })
+
+    const original = (await fixture.state()).schedules?.find(
+      (schedule) => schedule.name === "BTC morning analysis"
+    )
+    expect(original?.status).toBe("ACTIVE")
+    if (!original) throw new Error("Fixture ACTIVE schedule was not found")
+
+    const desktopRemove = page.locator(
+      `#telegram-schedule-delete-${original.id}-desktop`
+    )
+    const mobileRemove = page.locator(
+      `#telegram-schedule-delete-${original.id}-mobile`
+    )
+    await expect(desktopRemove).toBeVisible()
+    await expect(mobileRemove).toBeHidden()
+
+    await desktopRemove.focus()
+    await page.keyboard.press("Enter")
+    const dialog = page.getByRole("alertdialog")
+    await expect(dialog).toBeVisible()
+    await page.setViewportSize({ width: 360, height: 800 })
+    await expect(desktopRemove).toBeHidden()
+    await expect(mobileRemove).toBeVisible()
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth)
+    ).toBeLessThanOrEqual(
+      await page.evaluate(() => document.documentElement.clientWidth)
+    )
+    await dialog.getByRole("button", { name: "Hủy", exact: true }).focus()
+    await page.keyboard.press("Enter")
+    await expect(dialog).toBeHidden()
+    await expect(mobileRemove).toBeFocused()
+    await expect(
+      page.locator(`#telegram-schedule-delete-${original.id}-mobile-tooltip`)
+    ).toBeVisible()
+    expect(
+      await mobileRemove.evaluate((element) =>
+        element.matches(":focus-visible")
+      )
+    ).toBe(true)
+    await page.screenshot({
+      path: testInfo.outputPath(
+        "telegram-schedule-remove-cancel-focus-mobile-360-dark.png"
+      ),
+      fullPage: true,
+    })
+
+    await mobileRemove.focus()
+    await page.keyboard.press("Enter")
+    await expect(dialog).toBeVisible()
+    await page.setViewportSize({ width: 760, height: 512 })
+    await expect(dialog).toBeVisible()
+    await expect(mobileRemove).toBeVisible()
+    await expect(desktopRemove).toBeHidden()
+    await expect
+      .poll(() =>
+        dialog.evaluate((element) => element.contains(document.activeElement))
+      )
+      .toBe(true)
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth)
+    ).toBeLessThanOrEqual(
+      await page.evaluate(() => document.documentElement.clientWidth)
+    )
+    await dialog.screenshot({
+      path: testInfo.outputPath(
+        "telegram-schedule-remove-dialog-effective-760-200pct-dark.png"
+      ),
+    })
+    await page.setViewportSize({ width: 1520, height: 1024 })
+    await expect(mobileRemove).toBeHidden()
+    await expect(desktopRemove).toBeVisible()
+    await page.keyboard.press("Escape")
+    await expect(dialog).toBeHidden()
+    await expect(desktopRemove).toBeFocused()
+    await expect(
+      page.locator(`#telegram-schedule-delete-${original.id}-desktop-tooltip`)
+    ).toBeVisible()
+    expect(
+      await desktopRemove.evaluate((element) =>
+        element.matches(":focus-visible")
+      )
+    ).toBe(true)
+    await page.screenshot({
+      path: testInfo.outputPath(
+        "telegram-schedule-remove-escape-focus-wide-dark.png"
+      ),
+      fullPage: true,
+    })
+
+    const state = await fixture.state()
+    expect(
+      state.requests.filter(
+        (request) =>
+          request.method === "DELETE" &&
+          request.path === `/telegram/market-analysis-schedules/${original.id}`
+      )
+    ).toHaveLength(0)
+    expect(
+      state.schedules?.find((schedule) => schedule.id === original.id)?.status
+    ).toBe("ACTIVE")
+  })
+
   test("covers destination delivery states and destructive confirmation", async ({
     page,
     fixture,
