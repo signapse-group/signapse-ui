@@ -49,3 +49,20 @@ Checks on this candidate:
 - `pnpm exec vitest run tests/components/telegram-configuration.component.test.tsx tests/api/telegram-action.test.ts --reporter=dot` — 2 files, **40 passed**.
 
 The required P0 browser run could not start. `/opt/apps/symphony/runtime/run-fe-browser "$PWD" tests/e2e/telegram-economic-calendar-routing.spec.ts --project=chromium-vi --grep "Economic calendar loading layout"` returned `resource_busy: host browser slot occupied; retry_after_seconds=30` on repeated attempts. The host lease points to a still-populated Symphony session cgroup; no local browser runner remains, so the lease was left intact and the wrapper was not bypassed. The new first-assignment readback and compact/mobile loading-state cases therefore remain unverified on this candidate, and no new loading screenshots were captured. The earlier loaded-state renders and two passing route journeys above belong to the previous candidate and are not evidence for these follow-up cases. Capture the pending states at **1024×768** (collapsed sidebar) and **390×844** (navigation closed), dark theme, Vietnamese locale, browser zoom 100%; use the existing responsive cases for layout bounds. No live feature request or product deployment was attempted.
+
+## Resume verification on candidate `81b39545`
+
+The host browser slot was available after the coordinator resumed SIGN-688 to Progress. On 2026-11-26, Chromium `chromium-vi` ran the following selected fixture-backed cases from this workspace and candidate:
+
+```text
+/opt/apps/symphony/runtime/run-fe-browser "$PWD" tests/e2e/telegram-economic-calendar-routing.spec.ts --project=chromium-vi --grep 'Economic calendar loading layout|first Economic calendar assignment'
+```
+
+Result: **3 passed**. The first assignment test selected an eligible destination for a missing setting, observed the success response/readback and confirmed the route remained Off. The two loading tests held the fixture GET open, checked the Feature routing section and Economic calendar row were visible, checked there was no page-level horizontal overflow, captured the pending state, then released the fixture. This verifies the resumed gap without making a live API or Telegram request.
+
+- Compact loading, **1024×768**, collapsed sidebar, dark theme, Vietnamese locale, 100% browser zoom: [candidate render](economic-calendar-loading-compact-dark-vi-1024x768.png). Compared with approved SIGN-32 attachment **10312** and the compact responsive frame. Feature routing appears first; Destination and output-language placeholders share a row; the page has no horizontal overflow.
+- Mobile loading, **390×844**, navigation closed, dark theme, Vietnamese locale, 100% browser zoom: [candidate render](economic-calendar-loading-mobile-dark-vi-390x844.png). Compared with approved SIGN-32 attachment **10309** and the mobile responsive frame. The controls stack vertically and the route skeleton remains in the first viewport.
+
+The selected P0 cases passed on code candidate `81b39545`; this evidence-only follow-up adds the captured screenshots and this record without changing runtime source. Earlier loaded-state renders remain from `7ee918d`; the resumed code changes only altered the Economic route's partial-save default and the Suspense fallback, so the existing loaded-state comparison remains applicable. This visual review covers the affected route and its loading state; light theme and native 200% browser zoom were not captured.
+
+The published OpenAPI was fetched again from `https://dev-api.signapse.cloud/v3/api-docs` at **2026-11-26 09:42:31 UTC**. Its `x-build-revision` remained `b6de21490d5572bdb51624372ef860230af5df86`, matching Deploy run `45763078705`; the fetched GET/PUT operations and nullable readback schemas still match the consumer behavior documented above. `/health` returned HTTP 200 at 09:43:47 UTC. The contract confirms that a new route defaults to enabled when `enabled` is omitted, which is why FE explicitly sends `enabled: false` on first assignment.
