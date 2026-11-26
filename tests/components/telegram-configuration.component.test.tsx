@@ -1295,7 +1295,9 @@ describe("Telegram destination link dialog", () => {
       name: viDictionary.telegram.destination.commandBot,
     })
     await user.click(botSelect)
-    await user.click(screen.getByRole("option", { name: "Operations bot" }))
+    await user.click(
+      await screen.findByRole("option", { name: "Operations bot" })
+    )
     return screen.getByRole("dialog")
   }
 
