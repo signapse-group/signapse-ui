@@ -4553,6 +4553,7 @@ async function handleControl(request, response, url, body) {
       feedbackScenarios: state.feedbackScenarios,
       permissions: state.permissions,
       aiTaskConfigurations: state.aiTaskConfigurations,
+      schedules: state.schedules,
       newsOutlets: state.newsOutlets,
       marketConversations: state.marketConversations,
       marketConversationTurns: state.marketConversationTurns.map(

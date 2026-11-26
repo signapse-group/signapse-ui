@@ -116,6 +116,7 @@ type FixtureController = {
     streamConnections: number
     smtpConfiguration?: Record<string, unknown>
     aiTaskConfigurations?: Array<Record<string, unknown>>
+    schedules?: Array<Record<string, unknown>>
     newsOutlets?: Array<{
       id: number
       name: string

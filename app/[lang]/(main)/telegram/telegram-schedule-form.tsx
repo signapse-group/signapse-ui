@@ -1037,7 +1037,10 @@ export function CreateTelegramScheduleDialog({
           <Plus data-icon="inline-start" />
           {dictionary.telegram.schedule.createSchedule}
         </DialogTrigger>
-        <DialogContent className="grid max-h-[min(90vh,58rem)] min-h-0 grid-rows-[auto_minmax(0,1fr)] overflow-hidden sm:max-w-2xl">
+        <DialogContent
+          showCloseButton={false}
+          className="grid max-h-[min(90vh,58rem)] min-h-0 grid-rows-[auto_minmax(0,1fr)] overflow-hidden sm:max-w-2xl"
+        >
           <DialogHeader className="shrink-0 pe-8">
             <DialogTitle>
               {dictionary.telegram.schedule.dialogCreateTitle}
@@ -1287,7 +1290,17 @@ export function UpdateTelegramScheduleDialog({
         >
           <Pencil data-icon="inline-start" />
         </DialogTrigger>
-        <DialogContent className="grid max-h-[min(90vh,58rem)] min-h-0 grid-rows-[auto_minmax(0,1fr)] overflow-hidden sm:max-w-2xl">
+        <DialogContent
+          showCloseButton={false}
+          finalFocus={() =>
+            Array.from(
+              document.querySelectorAll<HTMLButtonElement>(
+                `[id="${idPrefix}-trigger"]`
+              )
+            ).find((trigger) => trigger.getClientRects().length > 0) ?? null
+          }
+          className="grid max-h-[min(90vh,58rem)] min-h-0 grid-rows-[auto_minmax(0,1fr)] overflow-hidden sm:max-w-2xl"
+        >
           <DialogHeader className="shrink-0 pe-8">
             <DialogTitle>
               {dictionary.telegram.schedule.dialogEditTitle}
