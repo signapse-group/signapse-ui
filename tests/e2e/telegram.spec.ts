@@ -127,10 +127,9 @@ test.describe("P0 Telegram operations", () => {
       page.getByText("BTC morning analysis", { exact: true })
     ).toBeVisible()
 
-    const calendarRow = page
-      .getByRole("row")
-      .filter({ hasText: "Cảnh báo lịch kinh tế" })
-      .first()
+    const calendarRow = page.locator(
+      '[data-feature-key="ECONOMIC_CALENDAR_ALERT"]:visible'
+    )
     const calendarLanguage = calendarRow.getByRole("combobox", {
       name: "Chọn ngôn ngữ đầu ra cho Cảnh báo lịch kinh tế",
     })
@@ -201,6 +200,12 @@ test.describe("P0 Telegram operations", () => {
         exact: true,
       })
     ).toContainText("Chọn điểm nhận")
+    await expect(
+      newsCard.getByRole("combobox", {
+        name: "Cảnh báo tin thị trường",
+        exact: true,
+      })
+    ).toBeFocused()
     await expect(
       newsCard.getByRole("switch", {
         name: "Bật hoặc tắt định tuyến Cảnh báo tin thị trường",
@@ -728,6 +733,36 @@ for (const frame of renderEvidenceFrames) {
       '[data-feature-key="MARKET_NEWS_ALERT"]:visible'
     )
     await expect(routeControl).toBeVisible()
+    const calendarRoute = page.locator(
+      '[data-feature-key="ECONOMIC_CALENDAR_ALERT"]:visible'
+    )
+    await expect(calendarRoute).toBeVisible()
+    const calendarLabel =
+      frame.locale === "vi"
+        ? "Cảnh báo lịch kinh tế"
+        : "Economic calendar alerts"
+    await expect(
+      calendarRoute.getByRole("combobox", {
+        name: calendarLabel,
+        exact: true,
+      })
+    ).toBeVisible()
+    await expect(
+      calendarRoute.getByRole("combobox", {
+        name:
+          frame.locale === "vi"
+            ? `Chọn ngôn ngữ đầu ra cho ${calendarLabel}`
+            : `Choose an output language for ${calendarLabel}`,
+      })
+    ).toBeVisible()
+    await expect(
+      calendarRoute.getByRole("switch", {
+        name:
+          frame.locale === "vi"
+            ? `Bật hoặc tắt định tuyến ${calendarLabel}`
+            : `Toggle route ${calendarLabel}`,
+      })
+    ).toBeVisible()
     if (frame.width === 1520) {
       const featureRoutingGroup = routeControl.locator(
         "xpath=ancestor::div[@data-slot='app-list-table'][1]"
@@ -742,24 +777,20 @@ for (const frame of renderEvidenceFrames) {
         "Scheduled market analysis"
       )
     }
-    const routingSection = page.locator(
-      'section[aria-labelledby="telegram-routing"]:visible'
-    )
-    const infrastructureSection = page.locator(
-      'section[aria-labelledby="telegram-infrastructure"]:visible'
-    )
-    const routingBounds = await routingSection.boundingBox()
-    const infrastructureBounds = await infrastructureSection.boundingBox()
-    expect(routingBounds).not.toBeNull()
-    expect(infrastructureBounds).not.toBeNull()
-    if (!routingBounds || !infrastructureBounds) {
-      throw new Error("Telegram page sections were not rendered")
-    }
-    if (frame.width >= 1024) {
-      expect(infrastructureBounds.x).toBeGreaterThan(routingBounds.x)
-    } else {
-      expect(infrastructureBounds.y).toBeGreaterThan(routingBounds.y)
-    }
+    await expect(
+      page.getByRole("heading", {
+        name:
+          frame.locale === "vi" ? "Định tuyến tính năng" : "Feature routing",
+      })
+    ).toBeVisible()
+    await expect(
+      page.getByRole("heading", {
+        name:
+          frame.locale === "vi"
+            ? "Hạ tầng Telegram"
+            : "Telegram infrastructure",
+      })
+    ).toBeVisible()
 
     const routeSwitch = routeControl.getByRole("switch")
     await waitForClientHandler(routeSwitch)

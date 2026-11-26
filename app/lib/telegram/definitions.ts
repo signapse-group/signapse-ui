@@ -81,7 +81,7 @@ export interface TelegramFeatureSettingResponse {
   workspaceName?: string
   enabled?: boolean
   destination: TelegramDestinationResponse | null
-  outputLanguage?: LanguageResponse
+  outputLanguage: LanguageResponse | null
   createdDate?: string
   lastModifiedDate?: string
 }

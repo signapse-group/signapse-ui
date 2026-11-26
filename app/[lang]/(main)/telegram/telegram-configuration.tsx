@@ -1,6 +1,6 @@
 "use client"
 
-import { Fragment, useState, useTransition } from "react"
+import { useEffect, useId, useRef, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import {
   Bot,
@@ -586,14 +586,6 @@ function FeatureRoutingSection({
 }) {
   const { dictionary, formatMessage } = useLocalization()
   const t = dictionary.telegram
-  const marketNewsRoutes = routes.filter(
-    (route) => route.featureKey === "MARKET_NEWS_ALERT"
-  )
-  const otherRoutes = routes.filter(
-    (route) => route.featureKey !== "MARKET_NEWS_ALERT"
-  )
-  const shouldShowTable = routes.length === 0 || otherRoutes.length > 0
-
   return (
     <section className="flex flex-col gap-4" aria-labelledby="telegram-routing">
       <SectionHeader
@@ -602,140 +594,83 @@ function FeatureRoutingSection({
         description={t.routing.sectionDescription}
       />
       <AppListTable className="mt-0">
-        {marketNewsRoutes.map((route, index) => {
-          const workspaceLabel = route.readbackUnverified
-            ? (route.setting?.workspaceName ??
-              (route.setting?.workspaceId !== undefined
-                ? formatMessage(t.routing.workspaceIdFallback, {
-                    id: route.setting.workspaceId,
-                  })
-                : t.routing.readbackWorkspaceUnknown))
-            : (route.setting?.workspaceName ??
-              currentWorkspace?.name ??
-              (route.setting?.workspaceId !== undefined
-                ? formatMessage(t.routing.workspaceIdFallback, {
-                    id: route.setting.workspaceId,
-                  })
-                : t.routing.noSavedWorkspaceSettings))
-          const workspaceId = currentWorkspace?.id ?? route.setting?.workspaceId
-          const rowId = `${workspaceId ?? "unassigned"}-${index}`
-          const titleId = `telegram-market-news-routing-title-${rowId}`
-          const controlRoute =
-            !currentWorkspace && route.setting
-              ? { ...route, label: `${route.label} — ${workspaceLabel}` }
-              : route
+        {routes.length === 0 ? (
+          <Table>
+            <TableBody>
+              <AccessLimitedRow colSpan={1} title={t.routing.accessLimited} />
+            </TableBody>
+          </Table>
+        ) : (
+          routes.map((route, index) => {
+            const isMarketNewsRoute = route.featureKey === "MARKET_NEWS_ALERT"
+            const workspaceId =
+              currentWorkspace?.id ?? route.setting?.workspaceId
+            const workspaceLabel = route.readbackUnverified
+              ? (route.setting?.workspaceName ??
+                (route.setting?.workspaceId !== undefined
+                  ? formatMessage(t.routing.workspaceIdFallback, {
+                      id: route.setting.workspaceId,
+                    })
+                  : t.routing.readbackWorkspaceUnknown))
+              : (route.setting?.workspaceName ??
+                currentWorkspace?.name ??
+                (route.setting?.workspaceId !== undefined
+                  ? formatMessage(t.routing.workspaceIdFallback, {
+                      id: route.setting.workspaceId,
+                    })
+                  : t.routing.noSavedWorkspaceSettings))
+            const rowId = `${route.featureKey}-${workspaceId ?? index}`
+            const titleId = `telegram-route-title-${rowId}`
+            const controlRoute =
+              isMarketNewsRoute && !currentWorkspace && route.setting
+                ? { ...route, label: `${route.label} — ${workspaceLabel}` }
+                : route
 
-          return (
-            <div
-              key={`market-news:${rowId}`}
-              className={cn(
-                "p-4",
-                (index < marketNewsRoutes.length - 1 ||
-                  otherRoutes.length > 0) &&
-                  "border-b border-border"
-              )}
-              data-feature-key={route.featureKey}
-              data-testid="market-news-routing-card"
-              aria-labelledby={titleId}
-            >
-              <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-3">
-                <div className="min-w-0 flex-1">
-                  <h3 id={titleId} className="font-medium text-foreground">
-                    {route.label}
-                  </h3>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {route.description}
-                  </p>
-                  <span className="mt-2 block text-xs text-muted-foreground">
-                    {workspaceLabel}
-                  </span>
+            return (
+              <div
+                key={rowId}
+                className={cn(
+                  "p-4",
+                  index < routes.length - 1 && "border-b border-border"
+                )}
+                data-feature-key={route.featureKey}
+                data-testid={
+                  isMarketNewsRoute ? "market-news-routing-card" : undefined
+                }
+                aria-labelledby={titleId}
+              >
+                <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-3">
+                  <div className="min-w-0 flex-1">
+                    <h3 id={titleId} className="font-medium text-foreground">
+                      {route.label}
+                    </h3>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {route.description}
+                    </p>
+                    {isMarketNewsRoute ? (
+                      <span className="mt-2 block text-xs text-muted-foreground">
+                        {workspaceLabel}
+                      </span>
+                    ) : null}
+                  </div>
+                  <FeatureRouteControls
+                    route={controlRoute}
+                    activeDestinations={activeDestinations}
+                    currentWorkspaceId={workspaceId}
+                    canReadDestinations={canReadDestinations}
+                    canUpdate={
+                      isMarketNewsRoute
+                        ? canUpdateMarketNewsRouting
+                        : canUpdateFeatureSettings
+                    }
+                    languages={languages}
+                    languageCatalogError={languageCatalogError}
+                  />
                 </div>
-                <FeatureRouteControls
-                  key={`card:${rowId}:${route.setting?.destination?.id ?? "none"}:${route.setting?.outputLanguage?.isoCode ?? "default"}:${route.setting?.enabled ?? false}`}
-                  layout="card"
-                  route={controlRoute}
-                  activeDestinations={activeDestinations}
-                  currentWorkspaceId={workspaceId}
-                  canReadDestinations={canReadDestinations}
-                  canUpdate={canUpdateMarketNewsRouting}
-                  languages={languages}
-                  languageCatalogError={languageCatalogError}
-                />
               </div>
-            </div>
-          )
-        })}
-        <Table className={cn(!shouldShowTable && "hidden")}>
-          <TableHeader className={cn(otherRoutes.length === 0 && "hidden")}>
-            <AppListTableHeaderRow>
-              <AppListTableHead className="w-[32%]">
-                {t.routing.featureColumn}
-              </AppListTableHead>
-              <AppListTableHead className="w-40">
-                {t.routing.workspaceColumn}
-              </AppListTableHead>
-              <AppListTableHead className="w-52">
-                {t.routing.destinationColumn}
-              </AppListTableHead>
-              <AppListTableHead className="w-64">
-                {t.routing.languageColumn}
-              </AppListTableHead>
-              <AppListTableHead className="w-32 text-center">
-                {t.routing.enabledColumn}
-              </AppListTableHead>
-            </AppListTableHeaderRow>
-          </TableHeader>
-          <TableBody>
-            {routes.length === 0 ? (
-              <AccessLimitedRow colSpan={5} title={t.routing.accessLimited} />
-            ) : (
-              otherRoutes.map((route) => {
-                const canUpdateRoute =
-                  route.featureKey === "MARKET_NEWS_ALERT"
-                    ? canUpdateMarketNewsRouting
-                    : canUpdateFeatureSettings
-
-                return (
-                  <Fragment key={route.featureKey}>
-                    <TableRow
-                      data-feature-key={route.featureKey}
-                      className="border-border transition-colors hover:bg-muted/50"
-                    >
-                      <TableCell className="align-top whitespace-normal">
-                        <div className="flex min-w-0 flex-col gap-1">
-                          <span className="font-medium text-foreground">
-                            {route.label}
-                          </span>
-                          <span className="text-sm text-muted-foreground">
-                            {route.description}
-                          </span>
-                          <code className="w-fit rounded bg-muted px-1.5 py-0.5 text-xs text-foreground">
-                            {route.featureKey}
-                          </code>
-                        </div>
-                      </TableCell>
-                      <TableCell className="align-top text-sm text-muted-foreground">
-                        {currentWorkspace?.name ??
-                          t.routing.noWorkspaceSelected}
-                      </TableCell>
-                      <FeatureRouteControls
-                        key={`${route.featureKey}:${route.setting?.destination?.id ?? "none"}:${route.setting?.outputLanguage?.isoCode ?? "default"}:${route.setting?.enabled ?? false}`}
-                        layout="table"
-                        route={route}
-                        activeDestinations={activeDestinations}
-                        currentWorkspaceId={currentWorkspace?.id}
-                        canReadDestinations={canReadDestinations}
-                        canUpdate={canUpdateRoute}
-                        languages={languages}
-                        languageCatalogError={languageCatalogError}
-                      />
-                    </TableRow>
-                  </Fragment>
-                )
-              })
-            )}
-          </TableBody>
-        </Table>
+            )
+          })
+        )}
       </AppListTable>
     </section>
   )
@@ -1002,7 +937,6 @@ function MarketAnalysisSchedulePanel({
   )
 }
 function FeatureRouteControls({
-  layout,
   route,
   activeDestinations,
   currentWorkspaceId,
@@ -1011,7 +945,6 @@ function FeatureRouteControls({
   languages,
   languageCatalogError,
 }: {
-  layout: "card" | "table"
   route: FeatureRouteView
   activeDestinations: TelegramDestinationResponse[]
   currentWorkspaceId?: number
@@ -1022,6 +955,9 @@ function FeatureRouteControls({
 }) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
+  const destinationFocusTarget = useRef<HTMLElement | null>(null)
+  const restoreFocusAfterClear = useRef(false)
+  const controlId = useId()
   const { dictionary, formatMessage } = useLocalization()
   const t = dictionary.telegram
   const isMarketNewsRoute = route.featureKey === "MARKET_NEWS_ALERT"
@@ -1031,6 +967,18 @@ function FeatureRouteControls({
   const [outputLanguageIsoCode, setOutputLanguageIsoCode] = useState(
     persistedLanguageIsoCode
   )
+
+  useEffect(() => {
+    if (!restoreFocusAfterClear.current) return
+
+    destinationFocusTarget.current?.focus()
+    restoreFocusAfterClear.current = false
+  }, [persistedDestinationId])
+
+  function setDestinationFocusTarget(element: HTMLElement | null) {
+    destinationFocusTarget.current = element
+  }
+
   if (isMarketNewsRoute && route.readbackUnverified) {
     return (
       <div
@@ -1154,6 +1102,10 @@ function FeatureRouteControls({
       const result = await updateTelegramFeatureSetting(request.data)
 
       if (result.success) {
+        if (isMarketNewsRoute && overrides.destinationId === null) {
+          restoreFocusAfterClear.current = true
+          destinationFocusTarget.current?.focus()
+        }
         toast.success(successMessage)
         router.refresh()
       } else {
@@ -1233,16 +1185,21 @@ function FeatureRouteControls({
     })),
   ]
 
-  const languageDescriptionId = `telegram-route-${route.featureKey}-${layout}-language-description`
+  const languageDescriptionId = `telegram-route-language-description-${controlId}`
   const languageDescription = languageCatalogError
     ? t.routing.languageCatalogError
     : !isMarketNewsRoute && !hasSelectedActiveDestination
       ? t.routing.languageDestinationRequired
       : null
-  const switchDescriptionId = `telegram-route-${route.featureKey}-${layout}-enable-description`
+  const switchDescriptionId = `telegram-route-switch-description-${controlId}`
   const destinationControl =
     !savedDestination && activeDestinations.length === 0 ? (
-      <span className="text-sm text-muted-foreground">
+      <span
+        ref={setDestinationFocusTarget}
+        className="text-sm text-muted-foreground"
+        role="status"
+        tabIndex={-1}
+      >
         {t.destination.noActiveDestination}
       </span>
     ) : (
@@ -1254,6 +1211,7 @@ function FeatureRouteControls({
           disabled={destinationControlDisabled}
         >
           <SelectTrigger
+            ref={setDestinationFocusTarget}
             aria-label={route.label}
             className={cn(
               "w-full",
@@ -1357,8 +1315,7 @@ function FeatureRouteControls({
     <div className="flex flex-col items-center gap-1">
       <div
         className={cn(
-          layout === "card" ? "ms-auto" : "mx-auto",
-          "inline-flex h-8 w-32 items-center justify-between gap-2 rounded-lg border border-input bg-transparent px-2.5 text-sm shadow-xs data-[disabled=true]:opacity-60"
+          "ms-auto inline-flex h-8 w-32 items-center justify-between gap-2 rounded-lg border border-input bg-transparent px-2.5 text-sm shadow-xs data-[disabled=true]:opacity-60"
         )}
         data-disabled={switchDisabled ? true : undefined}
       >
@@ -1392,40 +1349,26 @@ function FeatureRouteControls({
     </div>
   )
 
-  if (layout === "card") {
-    return (
-      <div className="contents">
-        <div className="col-start-2 row-start-1 justify-self-end">
-          {switchControl}
+  return (
+    <div className="contents">
+      <div className="col-start-2 row-start-1 justify-self-end">
+        {switchControl}
+      </div>
+      <div className="col-span-2 grid gap-3 md:grid-cols-2">
+        <div className="flex min-w-0 flex-col gap-1">
+          <span className="text-xs font-medium text-muted-foreground">
+            {t.routing.destinationColumn}
+          </span>
+          {destinationControl}
         </div>
-        <div className="col-span-2 grid gap-3 md:grid-cols-2">
-          <div className="flex min-w-0 flex-col gap-1">
-            <span className="text-xs font-medium text-muted-foreground">
-              {t.routing.destinationColumn}
-            </span>
-            {destinationControl}
-          </div>
-          <div className="flex min-w-0 flex-col gap-1">
-            <span className="text-xs font-medium text-muted-foreground">
-              {t.routing.languageColumn}
-            </span>
-            {languageControl}
-          </div>
+        <div className="flex min-w-0 flex-col gap-1">
+          <span className="text-xs font-medium text-muted-foreground">
+            {t.routing.languageColumn}
+          </span>
+          {languageControl}
         </div>
       </div>
-    )
-  }
-
-  return (
-    <>
-      <TableCell className="align-top whitespace-normal">
-        {destinationControl}
-      </TableCell>
-      <TableCell className="align-top whitespace-normal">
-        {languageControl}
-      </TableCell>
-      <TableCell className="align-top">{switchControl}</TableCell>
-    </>
+    </div>
   )
 }
 

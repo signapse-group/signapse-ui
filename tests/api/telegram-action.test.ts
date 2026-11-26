@@ -147,6 +147,7 @@ describe("Telegram scheduled asset analysis actions", () => {
       workspaceId: 7,
       enabled: true,
       destination: null,
+      outputLanguage: null,
     }
     vi.mocked(fetchAuthenticated).mockResolvedValue(featureResponse)
 
@@ -202,6 +203,7 @@ describe("Telegram scheduled asset analysis actions", () => {
       workspaceId: 7,
       enabled: false,
       destination: null,
+      outputLanguage: null,
     }
     vi.mocked(fetchAuthenticated).mockResolvedValue(savedSetting)
 

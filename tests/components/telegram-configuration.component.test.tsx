@@ -477,6 +477,9 @@ describe("Telegram schedule destructive actions", () => {
     const marketRow = getFeatureRouteContainer(
       viDictionary.telegram.routeDefinitions.MARKET_NEWS_ALERT.label
     )
+    const destinationSelect = within(marketRow).getByRole("combobox", {
+      name: viDictionary.telegram.routeDefinitions.MARKET_NEWS_ALERT.label,
+    })
     const clear = within(marketRow).getByRole("button", {
       name: viDictionary.telegram.routing.destinationClearAria.replace(
         "{route}",
@@ -520,6 +523,7 @@ describe("Telegram schedule destructive actions", () => {
     expect(toast.success).toHaveBeenCalledWith(
       viDictionary.telegram.routing.destinationClearSuccess
     )
+    expect(destinationSelect).toHaveFocus()
 
     cleanup()
     renderConfiguration({ ...marketData, featureSettings: [clearedSetting] })
@@ -583,6 +587,62 @@ describe("Telegram schedule destructive actions", () => {
     )
     expect(toast.error).toHaveBeenCalledWith("Destination unavailable")
     expect(routerRefresh).not.toHaveBeenCalled()
+  })
+
+  it("moves focus to the no-destination status after clearing an inactive target", async () => {
+    const user = userEvent.setup()
+    const inactiveDestination = { ...destination, status: "DISABLED" as const }
+    const savedSetting = {
+      ...featureSettings[1],
+      destination: inactiveDestination,
+    }
+    const marketData: TelegramConfigurationData = {
+      ...data,
+      destinations: [],
+      featureSettings: [savedSetting],
+      manageAccess: {
+        ...data.manageAccess,
+        marketNewsRouting: true,
+      },
+    }
+    const rendered = renderConfiguration(marketData)
+    const marketRow = getFeatureRouteContainer(
+      viDictionary.telegram.routeDefinitions.MARKET_NEWS_ALERT.label
+    )
+    const clear = within(marketRow).getByRole("button", {
+      name: viDictionary.telegram.routing.destinationClearAria.replace(
+        "{route}",
+        viDictionary.telegram.routeDefinitions.MARKET_NEWS_ALERT.label
+      ),
+    })
+    const clearedSetting = {
+      ...savedSetting,
+      enabled: false,
+      destination: null,
+    }
+    vi.mocked(updateTelegramFeatureSetting).mockResolvedValueOnce({
+      success: true,
+      data: clearedSetting,
+    })
+
+    clear.focus()
+    await user.keyboard("{Enter}")
+    await waitFor(() => expect(routerRefresh).toHaveBeenCalledTimes(1))
+
+    rendered.rerender(
+      <LocalizationProvider locale="vi" dictionary={viDictionary}>
+        <TelegramConfigurationPage
+          data={{ ...marketData, featureSettings: [clearedSetting] }}
+        />
+      </LocalizationProvider>
+    )
+
+    const noDestinationStatus = within(
+      getFeatureRouteContainer(
+        viDictionary.telegram.routeDefinitions.MARKET_NEWS_ALERT.label
+      )
+    ).getByText(viDictionary.telegram.destination.noActiveDestination)
+    await waitFor(() => expect(noDestinationStatus).toHaveFocus())
   })
 
   it("blocks enabling a cleared market route until an eligible destination is saved", () => {
@@ -840,6 +900,7 @@ describe("Telegram schedule destructive actions", () => {
         workspaceId: 7,
         enabled: false,
         destination,
+        outputLanguage: null,
       },
     })
 
@@ -852,12 +913,9 @@ describe("Telegram schedule destructive actions", () => {
         },
       })
 
-      const routeRow = screen
-        .getByText(
-          viDictionary.telegram.routeDefinitions.ECONOMIC_CALENDAR_ALERT.label
-        )
-        .closest("tr")
-      expect(routeRow).not.toBeNull()
+      const routeRow = getFeatureRouteContainer(
+        viDictionary.telegram.routeDefinitions.ECONOMIC_CALENDAR_ALERT.label
+      )
 
       await user.click(
         within(routeRow as HTMLElement).getByRole("combobox", {
@@ -906,7 +964,7 @@ describe("Telegram schedule destructive actions", () => {
       .getByText(
         viDictionary.telegram.routeDefinitions.ECONOMIC_CALENDAR_ALERT.label
       )
-      .closest("tr") as HTMLElement
+      .closest("[data-feature-key]") as HTMLElement
     const newsRow = getFeatureRouteContainer(
       viDictionary.telegram.routeDefinitions.MARKET_NEWS_ALERT.label
     )
@@ -981,7 +1039,7 @@ describe("Telegram schedule destructive actions", () => {
       .getByText(
         viDictionary.telegram.routeDefinitions.ECONOMIC_CALENDAR_ALERT.label
       )
-      .closest("tr") as HTMLElement
+      .closest("[data-feature-key]") as HTMLElement
 
     await user.click(
       within(calendarRow).getByRole("combobox", {
@@ -1043,7 +1101,7 @@ describe("Telegram schedule destructive actions", () => {
       .getByText(
         viDictionary.telegram.routeDefinitions.ECONOMIC_CALENDAR_ALERT.label
       )
-      .closest("tr") as HTMLElement
+      .closest("[data-feature-key]") as HTMLElement
 
     expect(
       within(calendarRow).getByRole("combobox", {
@@ -1087,7 +1145,7 @@ describe("Telegram schedule destructive actions", () => {
       .getByText(
         viDictionary.telegram.routeDefinitions.ECONOMIC_CALENDAR_ALERT.label
       )
-      .closest("tr") as HTMLElement
+      .closest("[data-feature-key]") as HTMLElement
 
     expect(calendarRow).toHaveTextContent(
       `Legacy French (fr) — ${viDictionary.telegram.routing.languageUnavailable}`
@@ -1127,7 +1185,7 @@ describe("Telegram schedule destructive actions", () => {
       .getByText(
         viDictionary.telegram.routeDefinitions.ECONOMIC_CALENDAR_ALERT.label
       )
-      .closest("tr") as HTMLElement
+      .closest("[data-feature-key]") as HTMLElement
     expect(
       within(unassignedRow).getByRole("combobox", {
         name: calendarLanguageName,
@@ -1153,7 +1211,7 @@ describe("Telegram schedule destructive actions", () => {
       .getByText(
         viDictionary.telegram.routeDefinitions.ECONOMIC_CALENDAR_ALERT.label
       )
-      .closest("tr") as HTMLElement
+      .closest("[data-feature-key]") as HTMLElement
     expect(
       within(readOnlyRow).getByRole("combobox", { name: calendarLanguageName })
     ).toBeDisabled()
