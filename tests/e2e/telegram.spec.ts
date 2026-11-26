@@ -198,6 +198,12 @@ test.describe("P0 Telegram operations", () => {
     await createDialog.screenshot({
       path: test.info().outputPath("telegram-schedule-create-mobile.png"),
     })
+    await createDialog
+      .getByText("Ngôn ngữ đầu ra", { exact: true })
+      .scrollIntoViewIfNeeded()
+    await createDialog.screenshot({
+      path: test.info().outputPath("telegram-schedule-create-mobile-bottom.png"),
+    })
     await page.setViewportSize({ width: 1520, height: 1024 })
     await page.keyboard.press("Escape")
     await expect(createDialog).toBeHidden()
