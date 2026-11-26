@@ -1,7 +1,7 @@
 "use client"
 
 import type { ReactElement, ReactNode } from "react"
-import { useState, useTransition } from "react"
+import { useEffect, useRef, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { CheckCircle2, CircleAlert, ShieldAlert, Trash2 } from "lucide-react"
 import { toast } from "sonner"
@@ -234,6 +234,7 @@ export function ActionConfirmDialog({
   title,
   description,
   actionLabel,
+  pendingLabel,
   triggerLabel,
   triggerTooltip,
   disabled,
@@ -244,10 +245,12 @@ export function ActionConfirmDialog({
   onOpenChange,
   trigger,
   restoreFocusId,
+  successFocusId,
 }: {
   title: string
   description: string
   actionLabel: string
+  pendingLabel?: string
   triggerLabel: string
   triggerTooltip?: string
   disabled?: boolean
@@ -258,15 +261,21 @@ export function ActionConfirmDialog({
   onOpenChange?: (open: boolean) => void
   trigger?: ReactElement | null
   restoreFocusId?: string
+  successFocusId?: string
 }) {
   const router = useRouter()
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
+  const feedbackRef = useRef<HTMLParagraphElement>(null)
   const { dictionary } = useLocalization()
   const open = controlledOpen ?? uncontrolledOpen
 
-  function setOpen(nextOpen: boolean) {
+  useEffect(() => {
+    if (isPending || error) feedbackRef.current?.focus()
+  }, [error, isPending])
+
+  function setOpen(nextOpen: boolean, focusId = restoreFocusId) {
     if (onOpenChange) {
       onOpenChange(nextOpen)
     } else {
@@ -275,9 +284,9 @@ export function ActionConfirmDialog({
 
     if (!nextOpen) {
       setError(null)
-      if (restoreFocusId) {
+      if (focusId) {
         requestAnimationFrame(() => {
-          document.getElementById(restoreFocusId)?.focus()
+          document.getElementById(focusId)?.focus()
         })
       }
     }
@@ -295,7 +304,7 @@ export function ActionConfirmDialog({
 
       if (result.success) {
         toast.success(successMessage)
-        setOpen(false)
+        setOpen(false, successFocusId)
         router.refresh()
       } else {
         setError(result.error)
@@ -349,9 +358,17 @@ export function ActionConfirmDialog({
           </AlertDialogMedia>
           <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription>{description}</AlertDialogDescription>
-          {error ? (
-            <p role="alert" className="text-sm text-destructive">
-              {error}
+          {isPending || error ? (
+            <p
+              ref={feedbackRef}
+              tabIndex={-1}
+              role={isPending ? "status" : "alert"}
+              aria-live={isPending ? "polite" : "assertive"}
+              className={`rounded-sm text-sm ${
+                isPending ? "text-muted-foreground" : "text-destructive"
+              } focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none`}
+            >
+              {isPending ? (pendingLabel ?? dictionary.common.pending) : error}
             </p>
           ) : null}
         </AlertDialogHeader>
@@ -367,7 +384,14 @@ export function ActionConfirmDialog({
               handleAction()
             }}
           >
-            {isPending ? <Spinner data-icon="inline-start" /> : null}
+            {isPending ? (
+              <Spinner
+                data-icon="inline-start"
+                aria-hidden="true"
+                aria-label={undefined}
+                role="presentation"
+              />
+            ) : null}
             {actionLabel}
           </AlertDialogAction>
         </AlertDialogFooter>

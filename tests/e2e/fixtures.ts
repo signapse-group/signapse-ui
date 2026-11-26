@@ -60,6 +60,7 @@ type FixtureController = {
       | "workspace-not-selected"
       | "outage"
       | "mutation-failure"
+      | "bot-removal-blocked"
       | "permission-denied"
       | "reconnect"
       | "error-reconnect"

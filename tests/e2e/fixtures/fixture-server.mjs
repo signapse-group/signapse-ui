@@ -4166,7 +4166,9 @@ Which asset did you mean? The available data is limited. Add TSLA to your watchl
   }
 
   if (method === "GET" && pathname === "/telegram/bot-connections")
-    return state.botConnections
+    return state.botConnections.filter(
+      (connection) => connection.status !== "REMOVED"
+    )
   if (method === "GET" && pathname === "/telegram/destinations") {
     if (getScenario(state, method, pathname) === "telegram-verified-readback") {
       return [
@@ -4212,21 +4214,31 @@ Which asset did you mean? The available data is limited. Add TSLA to your watchl
     }
   }
 
-  if (
-    method === "PATCH" &&
-    /^\/telegram\/bot-connections\/\d+\/disable$/.test(pathname)
-  ) {
-    const id = Number(pathname.split("/")[3])
+  const botConnectionMatch = pathname.match(
+    /^\/telegram\/bot-connections\/(\d+)$/
+  )
+  if (method === "DELETE" && botConnectionMatch) {
+    const scenario = getScenario(state, method, pathname)
+    if (scenario === "bot-removal-blocked") {
+      return {
+        __status: 409,
+        payload: errorPayload(
+          "Remove the Telegram destinations before removing this bot.",
+          "TELEGRAM_BOT_CONNECTION_HAS_UNREMOVED_DESTINATIONS"
+        ),
+      }
+    }
+    const id = Number(botConnectionMatch[1])
     const item = state.botConnections.find((connection) => connection.id === id)
-    if (item) item.status = "DISABLED"
-    return item ?? state.botConnections[0]
-  }
-
-  if (
-    method === "DELETE" &&
-    /^\/telegram\/bot-connections\/\d+$/.test(pathname)
-  ) {
-    return { __status: 204 }
+    if (!item) {
+      return {
+        __status: 404,
+        payload: errorPayload("Telegram bot connection not found", "NOT_FOUND"),
+      }
+    }
+    item.status = "REMOVED"
+    item.lastModifiedDate = NOW
+    return { __status: 200, __empty: true }
   }
 
   if (method === "POST" && pathname === "/telegram/destinations/link-token") {
@@ -4844,6 +4856,10 @@ const server = createServer(async (request, response) => {
   }
   if (status === 204) {
     sendEmpty(response, 204)
+    return
+  }
+  if (result?.__empty) {
+    sendEmpty(response, status)
     return
   }
   if (status >= 400) {

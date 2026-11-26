@@ -2497,22 +2497,21 @@ export const en: Dictionary = {
       webhookNotRegistered: "No registration time yet",
       lastValidated: "Last validated {time}",
       readOnlyDescription:
-        "You can view these bots, but bot management permission is required for changes.",
+        "You can view these bots, but your account cannot connect or remove them.",
       replacementGuidance:
-        "To replace this bot, connect a new token, relink dependent destinations, and review routing and schedules before removing this record.",
+        "To replace this bot, connect a new token, relink dependent destinations, and review routing and schedules before removing this connection.",
       emptyTitle: "No Telegram bots yet",
       emptyDescription:
         "Connect a bot you created in BotFather to start sending notifications.",
-      actionMenu: "Telegram bot actions",
-      disableTitle: "Disable Telegram bot?",
-      disableDescription:
-        "A disabled bot cannot send notifications through destinations using this bot. This interface does not provide reactivation.",
-      disableSuccess: "Telegram bot disabled.",
-      deleteTitle: "Delete Telegram bot?",
+      deleteTitle: "Remove connection to “{botName}”?",
       deleteDescription:
-        "This action unlinks the bot from Signapse and may affect related destinations.",
-      deleteAction: "Delete bot",
-      deleteSuccess: "Telegram bot deleted.",
+        "This ends future use of the bot in Signapse. Remove all its destinations first; they will not be removed automatically. Sending history is retained, and using this bot again requires a new connection.",
+      deleteTrigger: "Remove {botName}",
+      deleteAction: "Remove bot",
+      deletePending: "Removing bot…",
+      deleteSuccess: "Telegram bot removed.",
+      deleteBlockedByDestinations:
+        "Remove every Telegram destination linked to this bot first. Nothing was changed.",
       connect: "Connect bot",
       createTitle: "Connect Telegram bot",
       createDescription:
@@ -2525,8 +2524,7 @@ export const en: Dictionary = {
       invalidData: "Bot data is invalid.",
       createSuccess: "Telegram bot connected.",
       createError: "Could not connect the Telegram bot.",
-      disableError: "Could not disable the Telegram bot.",
-      deleteError: "Could not delete the Telegram bot.",
+      deleteError: "Could not remove the Telegram bot. Try again.",
       fallbackLabel: "Bot #{id}",
     },
     destination: {

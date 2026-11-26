@@ -379,16 +379,10 @@ export const fixtureContracts = [
     status: 200,
   },
   {
-    method: "PATCH",
-    path: "/telegram/bot-connections/{id}/disable",
-    mapping: "disableTelegramBotConnection",
-    status: 200,
-  },
-  {
     method: "DELETE",
     path: "/telegram/bot-connections/{id}",
     mapping: "deleteTelegramBotConnection",
-    status: 204,
+    status: 200,
   },
   {
     method: "GET",
