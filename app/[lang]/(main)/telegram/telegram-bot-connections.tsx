@@ -232,7 +232,7 @@ function BotConnectionItem({
                   id={removeTriggerId}
                   variant="destructive"
                   size="icon-sm"
-                  className="min-h-[44px] min-w-[44px] md:min-h-8 md:min-w-8"
+                  className="min-h-[44px] min-w-[44px] md:min-h-8 md:min-w-8 focus-visible:ring-destructive dark:focus-visible:ring-destructive"
                   aria-label={removeTriggerLabel}
                   title={removeTriggerLabel}
                 >

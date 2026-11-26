@@ -9,8 +9,13 @@ async function setTelegramTheme(page: Page, theme: "light" | "dark") {
   await expect(page.locator("html")).toHaveClass(new RegExp(theme))
 }
 
-async function getDestructiveControlContrast(trigger: Locator) {
-  return trigger.evaluate((element) => {
+async function getDestructiveControlContrast(
+  trigger: Locator,
+  focusRing = false
+) {
+  return trigger.evaluate((element, measureFocusRing) => {
+    if (measureFocusRing && !element.matches(":focus-visible")) return 0
+
     function luminance(color: Uint8ClampedArray) {
       const channel = (value: number) => {
         const normalized = value / 255
@@ -34,9 +39,12 @@ async function getDestructiveControlContrast(trigger: Locator) {
 
     const style = getComputedStyle(element)
     const backgrounds: string[] = []
-    for (let ancestor: Element | null = element; ancestor;) {
-      backgrounds.push(getComputedStyle(ancestor).backgroundColor)
+    for (
+      let ancestor = measureFocusRing ? element.parentElement : element;
+      ancestor;
       ancestor = ancestor.parentElement
+    ) {
+      backgrounds.push(getComputedStyle(ancestor).backgroundColor)
     }
     context.fillStyle = "#000"
     context.fillRect(0, 0, 1, 1)
@@ -46,15 +54,32 @@ async function getDestructiveControlContrast(trigger: Locator) {
     }
     const background = context.getImageData(0, 0, 1, 1).data
 
+    let foregroundColor = style.color
+    if (measureFocusRing) {
+      const colors = style.boxShadow.match(
+        /(?:rgba?\([^)]*\)|oklab\([^)]*\)|oklch\([^)]*\)|lab\([^)]*\)|lch\([^)]*\)|color\([^)]*\))/g
+      )
+      foregroundColor =
+        colors?.find((color) => {
+          context.clearRect(0, 0, 1, 1)
+          context.fillStyle = color
+          context.fillRect(0, 0, 1, 1)
+          return context.getImageData(0, 0, 1, 1).data[3] > 0
+        }) ?? ""
+      if (!foregroundColor) return 0
+    }
+
     context.clearRect(0, 0, 1, 1)
-    context.fillStyle = style.color
+    context.fillStyle = `rgb(${background[0]} ${background[1]} ${background[2]})`
+    context.fillRect(0, 0, 1, 1)
+    context.fillStyle = foregroundColor
     context.fillRect(0, 0, 1, 1)
     const foreground = context.getImageData(0, 0, 1, 1).data
     const contrast = [luminance(foreground), luminance(background)].sort(
       (left, right) => right - left
     )
     return (contrast[0] + 0.05) / (contrast[1] + 0.05)
-  })
+  }, focusRing)
 }
 
 test.describe("P0 Telegram operations", () => {
@@ -492,12 +517,50 @@ test.describe("P0 Telegram operations", () => {
       path: testInfo.outputPath("telegram-bot-remove-wide-light.png"),
       fullPage: true,
     })
+    await removeTrigger.focus()
+    await page.keyboard.press("Shift+Tab")
+    await page.keyboard.press("Tab")
+    await expect(removeTrigger).toBeFocused()
+    await expect
+      .poll(() => getDestructiveControlContrast(removeTrigger, true))
+      .toBeGreaterThanOrEqual(3)
+    const lightFocusContrast = await getDestructiveControlContrast(
+      removeTrigger,
+      true
+    )
+    await test.step(
+      `light focus indicator contrast: ${lightFocusContrast.toFixed(2)}:1`,
+      async () => expect(lightFocusContrast).toBeGreaterThanOrEqual(3)
+    )
+    await page.screenshot({
+      path: testInfo.outputPath("telegram-bot-remove-wide-light-focused.png"),
+      fullPage: true,
+    })
     await setTelegramTheme(page, "dark")
     expect(
       await getDestructiveControlContrast(removeTrigger)
     ).toBeGreaterThanOrEqual(3)
     await page.screenshot({
       path: testInfo.outputPath("telegram-bot-remove-wide-dark.png"),
+      fullPage: true,
+    })
+    await removeTrigger.focus()
+    await page.keyboard.press("Shift+Tab")
+    await page.keyboard.press("Tab")
+    await expect(removeTrigger).toBeFocused()
+    await expect
+      .poll(() => getDestructiveControlContrast(removeTrigger, true))
+      .toBeGreaterThanOrEqual(3)
+    const darkFocusContrast = await getDestructiveControlContrast(
+      removeTrigger,
+      true
+    )
+    await test.step(
+      `dark focus indicator contrast: ${darkFocusContrast.toFixed(2)}:1`,
+      async () => expect(darkFocusContrast).toBeGreaterThanOrEqual(3)
+    )
+    await page.screenshot({
+      path: testInfo.outputPath("telegram-bot-remove-wide-dark-focused.png"),
       fullPage: true,
     })
 
