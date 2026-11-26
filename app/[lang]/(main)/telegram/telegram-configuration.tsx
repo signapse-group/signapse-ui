@@ -99,6 +99,7 @@ type RouteDefinition = {
 
 type FeatureRouteView = RouteDefinition & {
   setting?: TelegramFeatureSettingResponse
+  readbackUnverified?: boolean
 }
 
 const DEFAULT_FEATURE_LANGUAGE_VALUE = "__default__"
@@ -120,6 +121,14 @@ function getRouteDefinitions(dictionary: Dictionary): RouteDefinition[] {
   ]
 }
 
+function isCompleteMarketNewsSetting(setting: TelegramFeatureSettingResponse) {
+  return (
+    setting.featureKey === "MARKET_NEWS_ALERT" &&
+    typeof setting.workspaceId === "number" &&
+    typeof setting.enabled === "boolean"
+  )
+}
+
 export function TelegramConfigurationPage({
   data,
 }: {
@@ -135,6 +144,22 @@ export function TelegramConfigurationPage({
           (setting) => setting.featureKey === "MARKET_NEWS_ALERT"
         )
       : []
+  const hasUnidentifiedMarketNewsSetting =
+    data.sectionAccess.marketNewsRouting &&
+    data.featureSettings.some((setting) => {
+      const mayBelongToCurrentWorkspace =
+        !data.currentWorkspace ||
+        setting.workspaceId == null ||
+        setting.workspaceId === data.currentWorkspace.id
+
+      return (
+        mayBelongToCurrentWorkspace &&
+        (setting.featureKey === undefined ||
+          (data.currentWorkspace != null &&
+            setting.featureKey === "MARKET_NEWS_ALERT" &&
+            setting.workspaceId == null))
+      )
+    })
   const schedules = data.currentWorkspace
     ? data.schedules.filter(
         (schedule) => schedule.workspaceId === data.currentWorkspace?.id
@@ -155,19 +180,28 @@ export function TelegramConfigurationPage({
   const marketNewsRoute = routes.find(
     (route) => route.featureKey === "MARKET_NEWS_ALERT"
   )
-  const marketNewsSettings = data.currentWorkspace
-    ? marketNewsRoute?.setting
-      ? [marketNewsRoute.setting]
-      : []
-    : featureSettings.filter(
-        (setting) => setting.featureKey === "MARKET_NEWS_ALERT"
-      )
+  const marketNewsSettings = featureSettings.filter(
+    (setting) => setting.featureKey === "MARKET_NEWS_ALERT"
+  )
+  const marketNewsRoutes: FeatureRouteView[] = marketNewsRoute
+    ? marketNewsSettings.map((setting) => ({
+        ...marketNewsRoute,
+        setting,
+        readbackUnverified: !isCompleteMarketNewsSetting(setting),
+      }))
+    : []
+
+  if (marketNewsRoute && hasUnidentifiedMarketNewsSetting) {
+    marketNewsRoutes.push({
+      ...marketNewsRoute,
+      setting: undefined,
+      readbackUnverified: true,
+    })
+  } else if (marketNewsRoute && marketNewsRoutes.length === 0) {
+    marketNewsRoutes.push(marketNewsRoute)
+  }
   const visibleRoutes: FeatureRouteView[] = [
-    ...(marketNewsRoute
-      ? marketNewsSettings.length > 0
-        ? marketNewsSettings.map((setting) => ({ ...marketNewsRoute, setting }))
-        : [marketNewsRoute]
-      : []),
+    ...marketNewsRoutes,
     ...routes.filter((route) => route.featureKey !== "MARKET_NEWS_ALERT"),
   ]
   const activeBotConnections = data.botConnections.filter(
@@ -460,7 +494,9 @@ function ReadinessSummary({
           },
         ]
       : []),
-    ...(routes.length > 0 && data.currentWorkspace
+    ...(routes.length > 0 &&
+    data.currentWorkspace &&
+    !routes.some((route) => route.readbackUnverified)
       ? [
           {
             label: t.readiness.routing,
@@ -567,16 +603,23 @@ function FeatureRoutingSection({
       />
       <AppListTable className="mt-0">
         {marketNewsRoutes.map((route, index) => {
-          const workspaceLabel =
-            route.setting?.workspaceName ??
-            currentWorkspace?.name ??
-            (route.setting
-              ? formatMessage(t.routing.workspaceIdFallback, {
-                  id: route.setting.workspaceId,
-                })
-              : t.routing.noSavedWorkspaceSettings)
+          const workspaceLabel = route.readbackUnverified
+            ? (route.setting?.workspaceName ??
+              (route.setting?.workspaceId !== undefined
+                ? formatMessage(t.routing.workspaceIdFallback, {
+                    id: route.setting.workspaceId,
+                  })
+                : t.routing.readbackWorkspaceUnknown))
+            : (route.setting?.workspaceName ??
+              currentWorkspace?.name ??
+              (route.setting?.workspaceId !== undefined
+                ? formatMessage(t.routing.workspaceIdFallback, {
+                    id: route.setting.workspaceId,
+                  })
+                : t.routing.noSavedWorkspaceSettings))
           const workspaceId = currentWorkspace?.id ?? route.setting?.workspaceId
-          const titleId = `telegram-market-news-routing-title-${workspaceId ?? "unassigned"}`
+          const rowId = `${workspaceId ?? "unassigned"}-${index}`
+          const titleId = `telegram-market-news-routing-title-${rowId}`
           const controlRoute =
             !currentWorkspace && route.setting
               ? { ...route, label: `${route.label} — ${workspaceLabel}` }
@@ -584,7 +627,7 @@ function FeatureRoutingSection({
 
           return (
             <div
-              key={`market-news:${workspaceId ?? "unassigned"}`}
+              key={`market-news:${rowId}`}
               className={cn(
                 "p-4",
                 (index < marketNewsRoutes.length - 1 ||
@@ -608,7 +651,7 @@ function FeatureRoutingSection({
                   </span>
                 </div>
                 <FeatureRouteControls
-                  key={`card:${workspaceId ?? "unassigned"}:${route.setting?.destination?.id ?? "none"}:${route.setting?.outputLanguage?.isoCode ?? "default"}:${route.setting?.enabled ?? false}`}
+                  key={`card:${rowId}:${route.setting?.destination?.id ?? "none"}:${route.setting?.outputLanguage?.isoCode ?? "default"}:${route.setting?.enabled ?? false}`}
                   layout="card"
                   route={controlRoute}
                   activeDestinations={activeDestinations}
@@ -983,6 +1026,16 @@ function FeatureRouteControls({
   const [outputLanguageIsoCode, setOutputLanguageIsoCode] = useState(
     persistedLanguageIsoCode
   )
+  if (isMarketNewsRoute && route.readbackUnverified) {
+    return (
+      <div
+        className="col-span-2 min-w-0 text-sm text-muted-foreground"
+        role="status"
+      >
+        {t.routing.readbackUnverified}
+      </div>
+    )
+  }
   const routeSupportsLanguage = route.featureKey !== "SCHEDULED_MARKET_ANALYSIS"
   const savedDestination = route.setting?.destination ?? null
   const selectedDestinationId = isMarketNewsRoute

@@ -75,11 +75,11 @@ export interface TelegramMarketAnalysisScheduleResponse {
 }
 
 export interface TelegramFeatureSettingResponse {
-  id: number
-  featureKey: TelegramFeatureKey
-  workspaceId: number
+  id?: number
+  featureKey?: TelegramFeatureKey
+  workspaceId?: number
   workspaceName?: string
-  enabled: boolean
+  enabled?: boolean
   destination: TelegramDestinationResponse | null
   outputLanguage?: LanguageResponse
   createdDate?: string

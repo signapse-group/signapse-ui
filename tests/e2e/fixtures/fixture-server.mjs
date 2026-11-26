@@ -4255,7 +4255,9 @@ Which asset did you mean? The available data is limited. Add TSLA to your watchl
       }
       if (hasLanguage || body?.featureKey !== "MARKET_NEWS_ALERT") {
         existing.outputLanguage = outputLanguageIsoCode
-          ? state.languages.find((item) => item.isoCode === outputLanguageIsoCode)
+          ? state.languages.find(
+              (item) => item.isoCode === outputLanguageIsoCode
+            )
           : undefined
       }
       existing.lastModifiedDate = NOW

@@ -2591,6 +2591,9 @@ export const vi = {
       noWorkspaceSelected: "Chưa chọn không gian",
       noSavedWorkspaceSettings:
         "Chưa có cấu hình định tuyến đã lưu trong các không gian của bạn.",
+      readbackUnverified:
+        "Chưa thể xác minh cấu hình tuyến tin thị trường đã lưu. Hãy tải lại trước khi thay đổi.",
+      readbackWorkspaceUnknown: "Chưa xác định được không gian làm việc",
       workspaceIdFallback: "Không gian {id}",
       destinationUpdateError: "Không thể cập nhật điểm nhận cho định tuyến.",
       destinationUpdateSuccess: "Đã cập nhật điểm nhận định tuyến.",

@@ -898,3 +898,4 @@ test("keeps the market route visible without page overflow at shell breakpoints"
     )
     expect(pageOverflows, `page overflow at ${width}px`).toBe(false)
   }
+})

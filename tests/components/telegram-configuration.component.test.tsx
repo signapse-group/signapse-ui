@@ -45,7 +45,6 @@ import {
   disableTelegramMarketAnalysisSchedule,
   updateTelegramFeatureSetting,
 } from "@/app/api/telegram/action"
-import { toast } from "sonner"
 import { vi as viDictionary } from "@/app/lib/i18n/dictionaries/vi"
 import { LocalizationProvider } from "@/app/lib/i18n/provider"
 import type { TelegramConfigurationData } from "@/app/lib/telegram/definitions"
@@ -370,6 +369,97 @@ describe("Telegram schedule destructive actions", () => {
         outputLanguageIsoCode: "en",
       })
     )
+  })
+
+  it("marks a market setting with missing enabled as unverified", () => {
+    const incompleteSetting = { ...featureSettings[1] }
+    Reflect.deleteProperty(incompleteSetting, "enabled")
+
+    renderConfiguration({
+      ...data,
+      featureSettings: [incompleteSetting],
+      sectionAccess: {
+        ...data.sectionAccess,
+        featureSettings: false,
+        schedules: false,
+      },
+      manageAccess: {
+        ...data.manageAccess,
+        marketNewsRouting: true,
+      },
+    })
+
+    const marketCard = screen.getByTestId("market-news-routing-card")
+    expect(marketCard).toHaveTextContent(
+      viDictionary.telegram.routing.readbackUnverified
+    )
+    expect(within(marketCard).queryByRole("switch")).not.toBeInTheDocument()
+    expect(within(marketCard).queryByRole("combobox")).not.toBeInTheDocument()
+    expect(marketCard).not.toHaveTextContent(
+      viDictionary.telegram.common.paused
+    )
+    expect(
+      screen.getByTestId("telegram-readiness-summary")
+    ).not.toHaveTextContent("0/1 luồng đã bật")
+  })
+
+  it("does not identify a market setting when the route key is missing", () => {
+    const unidentifiedSetting = { ...featureSettings[1] }
+    Reflect.deleteProperty(unidentifiedSetting, "featureKey")
+    Reflect.deleteProperty(unidentifiedSetting, "workspaceId")
+    Reflect.deleteProperty(unidentifiedSetting, "enabled")
+
+    renderConfiguration({
+      ...data,
+      currentWorkspace: null,
+      featureSettings: [unidentifiedSetting],
+      sectionAccess: {
+        ...data.sectionAccess,
+        featureSettings: false,
+        schedules: false,
+      },
+      manageAccess: {
+        ...data.manageAccess,
+        marketNewsRouting: true,
+      },
+    })
+
+    const marketCard = screen.getByTestId("market-news-routing-card")
+    expect(marketCard).toHaveTextContent(
+      viDictionary.telegram.routing.readbackUnverified
+    )
+    expect(marketCard).not.toHaveTextContent("Operations")
+    expect(within(marketCard).queryByRole("switch")).not.toBeInTheDocument()
+    expect(within(marketCard).queryByRole("combobox")).not.toBeInTheDocument()
+  })
+
+  it("does not assign a market setting without its workspace id", () => {
+    const settingWithoutWorkspace = { ...featureSettings[1] }
+    Reflect.deleteProperty(settingWithoutWorkspace, "workspaceId")
+
+    renderConfiguration({
+      ...data,
+      featureSettings: [settingWithoutWorkspace],
+      sectionAccess: {
+        ...data.sectionAccess,
+        featureSettings: false,
+        schedules: false,
+      },
+      manageAccess: {
+        ...data.manageAccess,
+        marketNewsRouting: true,
+      },
+    })
+
+    const marketCard = screen.getByTestId("market-news-routing-card")
+    expect(marketCard).toHaveTextContent(
+      viDictionary.telegram.routing.readbackUnverified
+    )
+    expect(marketCard).toHaveTextContent(
+      viDictionary.telegram.routing.readbackWorkspaceUnknown
+    )
+    expect(marketCard).not.toHaveTextContent("Operations")
+    expect(within(marketCard).queryByRole("switch")).not.toBeInTheDocument()
   })
 
   it("keeps the saved route context on failure and refreshes only after a confirmed clear", async () => {

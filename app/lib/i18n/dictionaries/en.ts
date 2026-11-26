@@ -2614,6 +2614,9 @@ export const en: Dictionary = {
       noWorkspaceSelected: "No workspace selected",
       noSavedWorkspaceSettings:
         "No saved routing settings are available in your workspaces.",
+      readbackUnverified:
+        "Saved market-routing details could not be verified. Refresh before making changes.",
+      readbackWorkspaceUnknown: "Workspace not identified",
       workspaceIdFallback: "Workspace {id}",
       destinationUpdateError: "Could not update the route destination.",
       destinationUpdateSuccess: "Route destination updated.",
