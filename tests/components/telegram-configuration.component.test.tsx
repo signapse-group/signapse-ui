@@ -24,7 +24,6 @@ vi.mock("@/app/api/telegram/action", () => ({
   deleteTelegramMarketAnalysisSchedule: vi.fn(),
   disableTelegramBotConnection: vi.fn(),
   disableTelegramDestination: vi.fn(),
-  disableTelegramMarketAnalysisSchedule: vi.fn(),
   sendTelegramTestMessage: vi.fn(),
   updateTelegramFeatureSetting: vi.fn(),
   updateTelegramMarketAnalysisSchedule: vi.fn(),
@@ -40,7 +39,6 @@ vi.mock("sonner", () => ({
 
 import {
   deleteTelegramMarketAnalysisSchedule,
-  disableTelegramMarketAnalysisSchedule,
   updateTelegramFeatureSetting,
 } from "@/app/api/telegram/action"
 import { vi as viDictionary } from "@/app/lib/i18n/dictionaries/vi"
@@ -65,6 +63,7 @@ const schedule = {
   timezone: "Asia/Bangkok",
   localTimes: ["09:00"],
   asset: { assetId: 9, assetName: "Gold", assetSymbol: "GOLD" },
+  outputLanguage: null,
   status: "ACTIVE" as const,
 }
 
@@ -134,8 +133,8 @@ const data: TelegramConfigurationData = {
     botConnections: false,
     destinations: false,
     featureSettings: false,
-    schedules: true,
   },
+  scheduleActions: { create: true, update: true, delete: true },
 }
 
 const selectControlledWarning =
@@ -170,18 +169,128 @@ describe("Telegram schedule destructive actions", () => {
 
   beforeEach(() => {
     vi.mocked(deleteTelegramMarketAnalysisSchedule).mockReset()
-    vi.mocked(disableTelegramMarketAnalysisSchedule).mockReset()
     vi.mocked(updateTelegramFeatureSetting).mockReset()
     routerRefresh.mockReset()
+  })
+
+  it("shows owner-wide schedules with schedule read when Feature routing is unreadable", () => {
+    renderConfiguration({
+      ...data,
+      schedules: [
+        schedule,
+        {
+          ...schedule,
+          id: 12,
+          name: "Research close review",
+          workspaceId: 12,
+          workspaceName: "Research workspace",
+        },
+        { ...schedule, id: 13, name: "Removed schedule", status: "REMOVED" },
+      ],
+      sectionAccess: { ...data.sectionAccess, featureSettings: false },
+      scheduleActions: { create: true, update: true, delete: true },
+    })
+
+    expect(screen.getAllByText("Morning analysis").length).toBeGreaterThan(0)
+    expect(screen.getAllByText("Research close review").length).toBeGreaterThan(
+      0
+    )
+    expect(screen.queryByText("Removed schedule")).not.toBeInTheDocument()
+    expect(
+      screen.getByRole("button", {
+        name: viDictionary.telegram.schedule.createSchedule,
+      })
+    ).toBeVisible()
+  })
+
+  it("shows only actions authorized by their own schedule permissions", () => {
+    renderConfiguration({
+      ...data,
+      scheduleActions: { create: false, update: true, delete: false },
+    })
+
+    expect(
+      screen.queryByRole("button", {
+        name: viDictionary.telegram.schedule.createSchedule,
+      })
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getAllByRole("button", {
+        name: viDictionary.telegram.schedule.editTrigger,
+      }).length
+    ).toBeGreaterThan(0)
+    expect(
+      screen.queryByRole("button", {
+        name: viDictionary.telegram.schedule.deleteTrigger,
+      })
+    ).not.toBeInTheDocument()
+  })
+
+  it("keeps schedule read errors local and offers a retry", async () => {
+    const user = userEvent.setup()
+    renderConfiguration({
+      ...data,
+      schedules: [],
+      scheduleLoadError: true,
+      scheduleActions: { create: false, update: false, delete: false },
+    })
+
+    expect(
+      screen.getAllByText(viDictionary.telegram.schedule.loadError).length
+    ).toBeGreaterThan(0)
+    await user.click(
+      screen.getAllByRole("button", {
+        name: viDictionary.telegram.schedule.retry,
+      })[0]
+    )
+    expect(routerRefresh).toHaveBeenCalledTimes(1)
+  })
+
+  it("keeps inactive schedules removable without offering Edit when destination is null", () => {
+    renderConfiguration({
+      ...data,
+      schedules: [
+        {
+          ...schedule,
+          name: "Legacy inactive schedule",
+          destination: null,
+          outputLanguage: null,
+          status: "DISABLED",
+        },
+      ],
+      scheduleActions: { create: false, update: true, delete: true },
+    })
+
+    const inactiveRows = screen
+      .getAllByText("Legacy inactive schedule")
+      .map((element) => element.closest("tr, article"))
+      .filter((row): row is HTMLElement => row instanceof HTMLElement)
+
+    expect(inactiveRows.length).toBeGreaterThan(0)
+    inactiveRows.forEach((inactiveRow) => {
+      expect(inactiveRow).toHaveTextContent(
+        viDictionary.telegram.schedule.noDestination
+      )
+      expect(
+        within(inactiveRow).getAllByRole("button", {
+          name: viDictionary.telegram.schedule.deleteTrigger,
+        }).length
+      ).toBeGreaterThan(0)
+      expect(
+        within(inactiveRow).queryAllByRole("button", {
+          name: viDictionary.telegram.schedule.editTrigger,
+        })
+      ).toHaveLength(0)
+    })
   })
 
   it("keeps delete confirmation open through failure, supports retry, and restores focus", async () => {
     const user = userEvent.setup()
     renderConfiguration()
 
-    const trigger = screen.getByRole("button", {
+    const trigger = screen.getAllByRole("button", {
       name: viDictionary.telegram.schedule.deleteTrigger,
-    })
+    })[0]
     await user.click(trigger)
 
     const dialog = screen.getByRole("alertdialog")
@@ -219,30 +328,24 @@ describe("Telegram schedule destructive actions", () => {
     expect(trigger).toHaveFocus()
   })
 
-  it("confirms disable through the accessible action label and refreshes on success", async () => {
+  it("leaves the schedule unchanged when delete confirmation is cancelled", async () => {
     const user = userEvent.setup()
     renderConfiguration()
-    vi.mocked(disableTelegramMarketAnalysisSchedule).mockResolvedValue({
-      success: true,
-      data: schedule,
-    })
 
     await user.click(
-      screen.getByRole("button", {
-        name: viDictionary.telegram.schedule.disableTrigger,
-      })
+      screen.getAllByRole("button", {
+        name: viDictionary.telegram.schedule.deleteTrigger,
+      })[0]
     )
     const dialog = screen.getByRole("alertdialog")
     await user.click(
       within(dialog).getByRole("button", {
-        name: viDictionary.telegram.common.disable,
+        name: viDictionary.telegram.common.cancel,
       })
     )
 
-    await waitFor(() =>
-      expect(disableTelegramMarketAnalysisSchedule).toHaveBeenCalledWith(11)
-    )
-    await waitFor(() => expect(routerRefresh).toHaveBeenCalledTimes(1))
+    expect(deleteTelegramMarketAnalysisSchedule).not.toHaveBeenCalled()
+    expect(screen.getAllByText("Morning analysis").length).toBeGreaterThan(0)
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument()
   })
 
@@ -329,12 +432,6 @@ describe("Telegram schedule destructive actions", () => {
     const newsRow = screen
       .getByText(viDictionary.telegram.routeDefinitions.MARKET_NEWS_ALERT.label)
       .closest("tr") as HTMLElement
-    const scheduledRow = screen
-      .getByText(
-        viDictionary.telegram.routeDefinitions.SCHEDULED_MARKET_ANALYSIS.label
-      )
-      .closest("tr") as HTMLElement
-
     const calendarLanguage = within(calendarRow).getByRole("combobox", {
       name: viDictionary.telegram.routing.languageAria.replace(
         "{route}",
@@ -359,12 +456,9 @@ describe("Telegram schedule destructive actions", () => {
       })
     ).toBeEnabled()
     expect(
-      within(scheduledRow).queryByRole("combobox", {
-        name: viDictionary.telegram.routing.languageAria.replace(
-          "{route}",
-          viDictionary.telegram.routeDefinitions.SCHEDULED_MARKET_ANALYSIS.label
-        ),
-      })
+      screen.queryByText(
+        viDictionary.telegram.routeDefinitions.SCHEDULED_MARKET_ANALYSIS.label
+      )
     ).not.toBeInTheDocument()
 
     await user.click(calendarLanguage)
@@ -455,31 +549,11 @@ describe("Telegram schedule destructive actions", () => {
       )
     )
 
-    vi.mocked(updateTelegramFeatureSetting).mockClear()
-    const scheduledRow = screen
-      .getByText(
+    expect(
+      screen.queryByText(
         viDictionary.telegram.routeDefinitions.SCHEDULED_MARKET_ANALYSIS.label
       )
-      .closest("tr") as HTMLElement
-    fireEvent.click(
-      within(scheduledRow).getByRole("switch", {
-        name: viDictionary.telegram.routing.switchAria.replace(
-          "{route}",
-          viDictionary.telegram.routeDefinitions.SCHEDULED_MARKET_ANALYSIS.label
-        ),
-      })
-    )
-
-    await waitFor(() =>
-      expect(updateTelegramFeatureSetting).toHaveBeenCalledWith(
-        expect.objectContaining({
-          featureKey: "SCHEDULED_MARKET_ANALYSIS",
-          destinationId: 8,
-          enabled: false,
-          outputLanguageIsoCode: "en",
-        })
-      )
-    )
+    ).not.toBeInTheDocument()
   })
 
   it("keeps existing language visible but disables only its selector when the catalog fails", () => {

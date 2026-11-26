@@ -4,6 +4,7 @@ import {
   type PermissionCollection,
 } from "@/app/lib/permissions"
 import {
+  TelegramScheduleActionAccess,
   TelegramManageAccess,
   TelegramSectionAccess,
 } from "@/app/lib/telegram/definitions"
@@ -21,8 +22,12 @@ export const TELEGRAM_FEATURE_SETTING_UPDATE_PERMISSION =
   "telegram-feature-setting:update"
 export const TELEGRAM_MARKET_ANALYSIS_SCHEDULE_READ_PERMISSION =
   "telegram-market-analysis-schedule:read"
-export const TELEGRAM_MARKET_ANALYSIS_SCHEDULE_MANAGE_PERMISSION =
-  "telegram-market-analysis-schedule:manage"
+export const TELEGRAM_MARKET_ANALYSIS_SCHEDULE_CREATE_PERMISSION =
+  "telegram-market-analysis-schedule:create"
+export const TELEGRAM_MARKET_ANALYSIS_SCHEDULE_UPDATE_PERMISSION =
+  "telegram-market-analysis-schedule:update"
+export const TELEGRAM_MARKET_ANALYSIS_SCHEDULE_DELETE_PERMISSION =
+  "telegram-market-analysis-schedule:delete"
 
 export const TELEGRAM_READ_PERMISSIONS = [
   TELEGRAM_BOT_CONNECTION_READ_PERMISSION,
@@ -79,9 +84,24 @@ export function getTelegramManageAccess(
       permissions,
       TELEGRAM_FEATURE_SETTING_UPDATE_PERMISSION
     ),
-    schedules: hasPermission(
+  }
+}
+
+export function getTelegramScheduleActionAccess(
+  permissions: PermissionCollection
+): TelegramScheduleActionAccess {
+  return {
+    create: hasPermission(
       permissions,
-      TELEGRAM_MARKET_ANALYSIS_SCHEDULE_MANAGE_PERMISSION
+      TELEGRAM_MARKET_ANALYSIS_SCHEDULE_CREATE_PERMISSION
+    ),
+    update: hasPermission(
+      permissions,
+      TELEGRAM_MARKET_ANALYSIS_SCHEDULE_UPDATE_PERMISSION
+    ),
+    delete: hasPermission(
+      permissions,
+      TELEGRAM_MARKET_ANALYSIS_SCHEDULE_DELETE_PERMISSION
     ),
   }
 }

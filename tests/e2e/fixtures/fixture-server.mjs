@@ -652,6 +652,34 @@ function createState() {
         createdDate: "2025-01-06T08:00:00.000Z",
         lastModifiedDate: NOW,
       },
+      {
+        id: 52,
+        name: "Legacy inactive analysis",
+        workspaceId: secondaryWorkspace.id,
+        workspaceName: secondaryWorkspace.name,
+        destination: null,
+        timezone: "Asia/Bangkok",
+        localTimes: ["18:30"],
+        asset: { assetId: 102, assetSymbol: "ETH/USDT", assetName: "Ethereum" },
+        outputLanguage: null,
+        status: "DISABLED",
+        createdDate: "2025-01-06T08:00:00.000Z",
+        lastModifiedDate: NOW,
+      },
+      {
+        id: 53,
+        name: "Removed analysis",
+        workspaceId: primaryWorkspace.id,
+        workspaceName: primaryWorkspace.name,
+        destination,
+        timezone: "Asia/Ho_Chi_Minh",
+        localTimes: ["12:00"],
+        asset: { assetId: 101, assetSymbol: "BTC/USDT", assetName: "Bitcoin" },
+        outputLanguage: null,
+        status: "REMOVED",
+        createdDate: "2025-01-06T08:00:00.000Z",
+        lastModifiedDate: NOW,
+      },
     ],
     languages: [
       { isoCode: "vi", name: "Tiếng Việt" },
@@ -4263,7 +4291,7 @@ Which asset did you mean? The available data is limited. Add TSLA to your watchl
   }
 
   const scheduleMatch = pathname.match(
-    /^\/telegram\/market-analysis-schedules\/(\d+)(?:\/disable)?$/
+    /^\/telegram\/market-analysis-schedules\/(\d+)$/
   )
   if (scheduleMatch) {
     const id = Number(scheduleMatch[1])
@@ -4273,7 +4301,6 @@ Which asset did you mean? The available data is limited. Add TSLA to your watchl
         __status: 404,
         payload: errorPayload("Schedule not found", "NOT_FOUND"),
       }
-    if (pathname.endsWith("/disable")) existing.status = "DISABLED"
     if (method === "PUT") {
       existing.name = body?.name ?? existing.name
       existing.localTimes = body?.localTimes ?? existing.localTimes
@@ -4281,7 +4308,7 @@ Which asset did you mean? The available data is limited. Add TSLA to your watchl
     }
     if (method === "DELETE") {
       existing.status = "REMOVED"
-      return { __status: 204 }
+      return { __status: 200 }
     }
     return existing
   }

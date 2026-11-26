@@ -14,20 +14,13 @@ export const TELEGRAM_FEATURE_KEYS = [
 export type TelegramFeatureKey = (typeof TELEGRAM_FEATURE_KEYS)[number]
 
 export type TelegramConnectionStatus =
-  | "ACTIVE"
-  | "DISABLED"
-  | "REMOVED"
-  | "INVALID"
+  "ACTIVE" | "DISABLED" | "REMOVED" | "INVALID"
 
 export type TelegramDestinationStatus = "ACTIVE" | "DISABLED" | "REMOVED"
 export type TelegramScheduleStatus = "ACTIVE" | "DISABLED" | "REMOVED"
 
 export type TelegramChatType =
-  | "PRIVATE"
-  | "GROUP"
-  | "SUPERGROUP"
-  | "CHANNEL"
-  | "UNKNOWN"
+  "PRIVATE" | "GROUP" | "SUPERGROUP" | "CHANNEL" | "UNKNOWN"
 
 export interface TelegramBotConnectionResponse {
   id: number
@@ -70,12 +63,12 @@ export interface TelegramMarketAnalysisScheduleResponse {
   id: number
   name: string
   workspaceId: number
-  workspaceName?: string
-  destination?: TelegramDestinationResponse
+  workspaceName: string
+  destination: TelegramDestinationResponse | null
   timezone: string
   localTimes: string[]
-  asset?: ScheduledAssetResponse
-  outputLanguage?: LanguageResponse
+  asset: ScheduledAssetResponse
+  outputLanguage: LanguageResponse | null
   status: TelegramScheduleStatus
   createdDate?: string
   lastModifiedDate?: string
@@ -234,7 +227,12 @@ export interface TelegramManageAccess {
   botConnections: boolean
   destinations: boolean
   featureSettings: boolean
-  schedules: boolean
+}
+
+export interface TelegramScheduleActionAccess {
+  create: boolean
+  update: boolean
+  delete: boolean
 }
 
 export interface TelegramConfigurationData {
@@ -249,4 +247,5 @@ export interface TelegramConfigurationData {
   scheduleLoadError: boolean
   sectionAccess: TelegramSectionAccess
   manageAccess: TelegramManageAccess
+  scheduleActions: TelegramScheduleActionAccess
 }

@@ -421,31 +421,6 @@ export async function updateTelegramMarketAnalysisSchedule(
   }
 }
 
-export async function disableTelegramMarketAnalysisSchedule(
-  id: number
-): Promise<ActionResult<TelegramMarketAnalysisScheduleResponse>> {
-  const dictionary = await getTelegramDictionary()
-
-  try {
-    const data =
-      await fetchAuthenticated<TelegramMarketAnalysisScheduleResponse>(
-        `/telegram/market-analysis-schedules/${id}/disable`,
-        {
-          method: "PATCH",
-        }
-      )
-
-    revalidateTelegramConfiguration()
-
-    return { success: true, data }
-  } catch (error: unknown) {
-    return {
-      success: false,
-      error: getActionError(error, dictionary.telegram.schedule.disableError),
-    }
-  }
-}
-
 export async function deleteTelegramMarketAnalysisSchedule(
   id: number
 ): Promise<ActionResult> {

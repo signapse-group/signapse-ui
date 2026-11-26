@@ -23,7 +23,6 @@ const { testDictionary } = vi.hoisted(() => ({
         languageCatalogError: "Language catalog unavailable",
         createError: "Schedule create failed",
         updateError: "Schedule update failed",
-        disableError: "Schedule disable failed",
         deleteError: "Schedule delete failed",
       },
     },
@@ -55,7 +54,6 @@ import { getLanguages } from "@/app/api/languages/action"
 import {
   createTelegramMarketAnalysisSchedule,
   deleteTelegramMarketAnalysisSchedule,
-  disableTelegramMarketAnalysisSchedule,
   sendTelegramTestMessage,
   updateTelegramMarketAnalysisSchedule,
   updateTelegramFeatureSetting,
@@ -77,8 +75,12 @@ const scheduleResponse = {
   id: 11,
   name: "Morning analysis",
   workspaceId: 7,
+  workspaceName: "Workspace",
+  destination: null,
   timezone: "Asia/Bangkok",
   localTimes: ["09:00", "18:00"],
+  asset: { assetId: 9, assetSymbol: "GOLD", assetName: "Gold" },
+  outputLanguage: null,
   status: "ACTIVE" as const,
 }
 
@@ -188,18 +190,7 @@ describe("Telegram scheduled asset analysis actions", () => {
     )
   })
 
-  it("disables and deletes schedules through their mutation endpoints", async () => {
-    vi.mocked(fetchAuthenticated).mockResolvedValue(scheduleResponse)
-
-    await expect(disableTelegramMarketAnalysisSchedule(11)).resolves.toEqual({
-      success: true,
-      data: scheduleResponse,
-    })
-    expect(fetchAuthenticated).toHaveBeenCalledWith(
-      "/telegram/market-analysis-schedules/11/disable",
-      { method: "PATCH" }
-    )
-
+  it("deletes schedules through the published DELETE endpoint", async () => {
     vi.mocked(fetchAuthenticated).mockResolvedValue(undefined)
     await expect(deleteTelegramMarketAnalysisSchedule(11)).resolves.toEqual({
       success: true,
@@ -209,7 +200,7 @@ describe("Telegram scheduled asset analysis actions", () => {
       "/telegram/market-analysis-schedules/11",
       { method: "DELETE" }
     )
-    expect(revalidatePath).toHaveBeenCalledTimes(2)
+    expect(revalidatePath).toHaveBeenCalledTimes(1)
   })
 
   it("returns localized validation errors and recovers backend failures", async () => {

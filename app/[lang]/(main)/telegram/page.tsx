@@ -14,6 +14,7 @@ import { getCurrentPermissions } from "@/app/lib/permissions-server"
 import {
   canReadTelegramConfiguration,
   getTelegramManageAccess,
+  getTelegramScheduleActionAccess,
   getTelegramSectionAccess,
 } from "@/app/lib/telegram/permissions"
 import { getActiveWorkspaceForCurrentUser } from "@/app/lib/workspaces/current"
@@ -39,6 +40,7 @@ export default async function TelegramPage() {
   ])
   const sectionAccess = getTelegramSectionAccess(permissions)
   const manageAccess = getTelegramManageAccess(permissions)
+  const scheduleActions = getTelegramScheduleActionAccess(permissions)
 
   if (!canReadTelegramConfiguration(permissions)) {
     return (
@@ -54,6 +56,7 @@ export default async function TelegramPage() {
       <TelegramConfigurationContent
         sectionAccess={sectionAccess}
         manageAccess={manageAccess}
+        scheduleActions={scheduleActions}
         canReadWorkspace={hasPermission(permissions, "workspace:read")}
       />
     </Suspense>
@@ -63,10 +66,12 @@ export default async function TelegramPage() {
 async function TelegramConfigurationContent({
   sectionAccess,
   manageAccess,
+  scheduleActions,
   canReadWorkspace,
 }: {
   sectionAccess: ReturnType<typeof getTelegramSectionAccess>
   manageAccess: ReturnType<typeof getTelegramManageAccess>
+  scheduleActions: ReturnType<typeof getTelegramScheduleActionAccess>
   canReadWorkspace: boolean
 }) {
   const currentWorkspace = canReadWorkspace
@@ -81,10 +86,10 @@ async function TelegramConfigurationContent({
 
   const languagesPromise =
     sectionAccess.schedules || sectionAccess.featureSettings
-    ? getLanguages()
-        .then((catalog) => ({ data: catalog.languages, error: false }))
-        .catch(() => ({ data: [], error: true }))
-    : Promise.resolve({ data: [], error: false })
+      ? getLanguages()
+          .then((catalog) => ({ data: catalog.languages, error: false }))
+          .catch(() => ({ data: [], error: true }))
+      : Promise.resolve({ data: [], error: false })
 
   const [
     botConnections,
@@ -118,6 +123,7 @@ async function TelegramConfigurationContent({
         scheduleLoadError: schedulesResult.error,
         sectionAccess,
         manageAccess,
+        scheduleActions,
       }}
     />
   )

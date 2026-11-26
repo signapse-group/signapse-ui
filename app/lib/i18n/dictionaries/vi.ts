@@ -2613,6 +2613,7 @@ export const vi = {
       panelDescription:
         "Gửi bản phân tích AI theo giờ địa phương cho một tài sản trong danh sách theo dõi.",
       scheduleColumn: "Lịch gửi",
+      deliveryColumn: "Nơi nhận",
       workspaceColumn: "Không gian",
       destinationColumn: "Điểm nhận",
       localTimesColumn: "Giờ gửi",
@@ -2632,11 +2633,6 @@ export const vi = {
       emptyTitle: "Chưa có lịch phân tích",
       emptyDescription:
         "Tạo lịch gửi theo giờ địa phương cho không gian làm việc hiện tại.",
-      disableTitle: "Vô hiệu hóa lịch phân tích?",
-      disableDescription:
-        "Lịch sẽ dừng gửi bản phân tích thị trường. Giao diện này không hỗ trợ bật lại lịch đã vô hiệu hóa.",
-      disableTrigger: "Vô hiệu hóa lịch phân tích",
-      disableSuccess: "Đã vô hiệu hóa lịch phân tích.",
       deleteTitle: "Xóa lịch phân tích?",
       deleteDescription:
         "Lịch gửi phân tích thị trường sẽ bị xóa vĩnh viễn và không thể hoàn tác.",
@@ -2664,6 +2660,8 @@ export const vi = {
       assetPlaceholder: "Chọn tài sản",
       assetDescription:
         "Chỉ các tài sản trong danh sách theo dõi của không gian hiện tại mới được chọn.",
+      assetPreservedDescription:
+        "Lịch thuộc không gian khác nên tài sản đã lưu sẽ được giữ nguyên.",
       assetUnavailable: "Tài sản của lịch không còn trong danh sách theo dõi.",
       scheduleLegend: "Lịch gửi",
       timezoneLabel: "Múi giờ",

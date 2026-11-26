@@ -2636,6 +2636,7 @@ export const en: Dictionary = {
       panelDescription:
         "Send AI analysis at local times for one watchlist asset.",
       scheduleColumn: "Schedule",
+      deliveryColumn: "Delivery",
       workspaceColumn: "Workspace",
       destinationColumn: "Destination",
       localTimesColumn: "Send times",
@@ -2655,11 +2656,6 @@ export const en: Dictionary = {
       emptyTitle: "No analysis schedules yet",
       emptyDescription:
         "Create a local-time send schedule for the current workspace.",
-      disableTitle: "Disable analysis schedule?",
-      disableDescription:
-        "The schedule will stop sending market analysis. This interface does not support reactivating a disabled schedule.",
-      disableTrigger: "Disable analysis schedule",
-      disableSuccess: "Analysis schedule disabled.",
       deleteTitle: "Delete analysis schedule?",
       deleteDescription:
         "This permanently deletes the market-analysis send schedule. The action cannot be undone.",
@@ -2686,6 +2682,8 @@ export const en: Dictionary = {
       assetPlaceholder: "Choose an asset",
       assetDescription:
         "Only assets in the current workspace watchlist are available.",
+      assetPreservedDescription:
+        "This schedule belongs to another workspace, so its saved asset will be kept.",
       assetUnavailable: "This scheduled asset is no longer in the watchlist.",
       scheduleLegend: "Send schedule",
       timezoneLabel: "Timezone",
