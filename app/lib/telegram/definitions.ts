@@ -14,20 +14,13 @@ export const TELEGRAM_FEATURE_KEYS = [
 export type TelegramFeatureKey = (typeof TELEGRAM_FEATURE_KEYS)[number]
 
 export type TelegramConnectionStatus =
-  | "ACTIVE"
-  | "DISABLED"
-  | "REMOVED"
-  | "INVALID"
+  "ACTIVE" | "DISABLED" | "REMOVED" | "INVALID"
 
 export type TelegramDestinationStatus = "ACTIVE" | "DISABLED" | "REMOVED"
 export type TelegramScheduleStatus = "ACTIVE" | "DISABLED" | "REMOVED"
 
 export type TelegramChatType =
-  | "PRIVATE"
-  | "GROUP"
-  | "SUPERGROUP"
-  | "CHANNEL"
-  | "UNKNOWN"
+  "PRIVATE" | "GROUP" | "SUPERGROUP" | "CHANNEL" | "UNKNOWN"
 
 export interface TelegramBotConnectionResponse {
   id: number
@@ -93,12 +86,18 @@ export interface TelegramFeatureSettingResponse {
   lastModifiedDate?: string
 }
 
-export interface TelegramLinkTokenResponse {
-  botConnectionId: number
-  token?: string
-  startCommand: string
-  expiresAt?: string
+export function getTelegramLinkTokenResponseSchema() {
+  return z.object({
+    botConnectionId: z.number().int().positive(),
+    token: z.string().regex(/^[A-Za-z0-9_-]{32}$/),
+    startCommand: z.string().min(1),
+    expiresAt: z.iso.datetime({ offset: true }),
+  })
 }
+
+export type TelegramLinkTokenResponse = z.infer<
+  ReturnType<typeof getTelegramLinkTokenResponseSchema>
+>
 
 export function getCreateTelegramBotConnectionSchema(dictionary: Dictionary) {
   return z.object({
