@@ -91,6 +91,15 @@ const scheduleResponse = {
   status: "ACTIVE" as const,
 }
 
+const featureSettingResponse = {
+  id: 41,
+  featureKey: "ECONOMIC_CALENDAR_ALERT" as const,
+  workspaceId: 7,
+  enabled: false,
+  destination: null,
+  outputLanguage: null,
+}
+
 describe("Telegram scheduled asset analysis actions", () => {
   beforeEach(() => {
     vi.mocked(fetchAuthenticated).mockReset()
@@ -116,6 +125,19 @@ describe("Telegram scheduled asset analysis actions", () => {
     const query = new URLSearchParams(requestPath!.split("?")[1])
     expect(query.get("$filter")).toBe("workspace.id eq 7")
   })
+
+  it.each(["id", "featureKey", "workspaceId", "enabled"] as const)(
+    "fails closed when a route readback omits %s",
+    async (field) => {
+      const incomplete: Record<string, unknown> = {
+        ...featureSettingResponse,
+      }
+      delete incomplete[field]
+      vi.mocked(fetchAuthenticated).mockResolvedValue([incomplete])
+
+      await expect(getTelegramFeatureSettings(7)).rejects.toThrow()
+    }
+  )
 
   it("creates and updates schedules with normalized request bodies", async () => {
     vi.mocked(fetchAuthenticated).mockResolvedValue(scheduleResponse)
@@ -244,6 +266,29 @@ describe("Telegram scheduled asset analysis actions", () => {
       }
     )
   })
+
+  it.each(["id", "featureKey", "workspaceId", "enabled"] as const)(
+    "rejects an update confirmation that omits %s",
+    async (field) => {
+      const incomplete: Record<string, unknown> = {
+        ...featureSettingResponse,
+      }
+      delete incomplete[field]
+      vi.mocked(fetchAuthenticated).mockResolvedValue(incomplete)
+
+      await expect(
+        updateTelegramFeatureSetting({
+          featureKey: "ECONOMIC_CALENDAR_ALERT",
+          workspaceId: 7,
+          enabled: false,
+        })
+      ).resolves.toEqual({
+        success: false,
+        error: testDictionary.telegram.routing.updateError,
+      })
+      expect(revalidatePath).not.toHaveBeenCalled()
+    }
+  )
 
   it.each([
     [400, "No eligible destination"],

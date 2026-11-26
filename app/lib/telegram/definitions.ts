@@ -1,7 +1,10 @@
 import { z } from "zod"
 
 import type { Dictionary } from "@/app/lib/i18n/dictionary-types"
-import type { LanguageResponse } from "@/app/lib/languages/definitions"
+import {
+  LanguageResponseSchema,
+  type LanguageResponse,
+} from "@/app/lib/languages/definitions"
 import { WorkspaceWatchlistAssetListItemResponse } from "@/app/lib/watchlists/definitions"
 import type { BackendWorkspaceSummary } from "@/app/lib/users/definitions"
 
@@ -75,17 +78,49 @@ export interface TelegramMarketAnalysisScheduleResponse {
   lastModifiedDate?: string
 }
 
-export interface TelegramFeatureSettingResponse {
-  id: number
-  featureKey: TelegramFeatureKey
-  workspaceId: number
-  workspaceName?: string
-  enabled: boolean
-  destination: TelegramDestinationResponse | null
-  outputLanguage: LanguageResponse | null
-  createdDate?: string
-  lastModifiedDate?: string
-}
+const TelegramFeatureSettingDestinationResponseSchema = z.object({
+  id: z.number().int(),
+  botConnectionId: z.number().int(),
+  botUsername: z.string().optional(),
+  botDisplayLabel: z.string().optional(),
+  chatId: z.string(),
+  chatType: z.enum(["PRIVATE", "GROUP", "SUPERGROUP", "CHANNEL", "UNKNOWN"]),
+  displayLabel: z.string(),
+  chatTitle: z.string().optional(),
+  username: z.string().optional(),
+  status: z.enum(["ACTIVE", "DISABLED", "REMOVED"]),
+  createdDate: z.string().optional(),
+  lastModifiedDate: z.string().optional(),
+})
+
+export const TelegramFeatureSettingResponseSchema = z.object({
+  id: z.number().int().optional(),
+  featureKey: z.enum(TELEGRAM_FEATURE_KEYS).optional(),
+  workspaceId: z.number().int().optional(),
+  workspaceName: z.string().optional(),
+  enabled: z.boolean().optional(),
+  destination: TelegramFeatureSettingDestinationResponseSchema.nullable(),
+  outputLanguage: LanguageResponseSchema.nullable(),
+  createdDate: z.string().optional(),
+  lastModifiedDate: z.string().optional(),
+})
+
+export type TelegramFeatureSettingResponse = z.infer<
+  typeof TelegramFeatureSettingResponseSchema
+>
+
+// The published schema leaves these fields optional, but the routing UI cannot infer saved state without them.
+export const TelegramFeatureSettingReadbackSchema =
+  TelegramFeatureSettingResponseSchema.extend({
+    id: z.number().int(),
+    featureKey: z.enum(TELEGRAM_FEATURE_KEYS),
+    workspaceId: z.number().int(),
+    enabled: z.boolean(),
+  })
+
+export type TelegramFeatureSettingReadback = z.infer<
+  typeof TelegramFeatureSettingReadbackSchema
+>
 
 export function getTelegramLinkTokenResponseSchema() {
   return z.object({
@@ -270,7 +305,7 @@ export interface TelegramConfigurationData {
   botConnections: TelegramBotConnectionResponse[]
   destinations: TelegramDestinationResponse[]
   destinationsLoadError: boolean
-  featureSettings: TelegramFeatureSettingResponse[]
+  featureSettings: TelegramFeatureSettingReadback[]
   featureSettingsLoadError: boolean
   schedules: TelegramMarketAnalysisScheduleResponse[]
   currentWorkspace: BackendWorkspaceSummary | null

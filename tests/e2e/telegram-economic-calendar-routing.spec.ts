@@ -10,6 +10,8 @@ type LoadingFixture = {
   ): Promise<void>
 }
 
+const economicDestinationName = "Điểm nhận: Cảnh báo lịch kinh tế"
+
 async function captureLoadingState(
   page: Page,
   fixture: LoadingFixture,
@@ -100,7 +102,7 @@ test("first Economic calendar assignment stays Off after API readback", async ({
 
   const row = page.locator('[data-route-key="ECONOMIC_CALENDAR_ALERT"]')
   const destinationControl = row.getByRole("combobox", {
-    name: "Cảnh báo lịch kinh tế",
+    name: economicDestinationName,
     exact: true,
   })
   const routeSwitch = row.getByRole("switch", {
@@ -161,7 +163,7 @@ test("Economic calendar route access stays scoped and reflows across viewports",
 
   const row = page.locator('[data-route-key="ECONOMIC_CALENDAR_ALERT"]')
   const destinationControl = row.getByRole("combobox", {
-    name: "Cảnh báo lịch kinh tế",
+    name: economicDestinationName,
     exact: true,
   })
   const languageControl = row.getByRole("combobox", {
@@ -323,7 +325,7 @@ test("Economic calendar route access stays scoped and reflows across viewports",
 
   const assignedRow = page.locator('[data-route-key="ECONOMIC_CALENDAR_ALERT"]')
   const assignedDestinationControl = assignedRow.getByRole("combobox", {
-    name: "Cảnh báo lịch kinh tế",
+    name: economicDestinationName,
     exact: true,
   })
   const clearButton = assignedRow.getByRole("button", {
@@ -394,7 +396,7 @@ test("route access does not read destination or schedule lists by itself", async
   ).toBeVisible()
   await expect(
     row.getByRole("combobox", {
-      name: "Cảnh báo lịch kinh tế",
+      name: economicDestinationName,
       exact: true,
     })
   ).toHaveCount(0)

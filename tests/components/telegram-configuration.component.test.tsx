@@ -45,7 +45,6 @@ import {
   disableTelegramMarketAnalysisSchedule,
   updateTelegramFeatureSetting,
 } from "@/app/api/telegram/action"
-import { toast } from "sonner"
 import { en as enDictionary } from "@/app/lib/i18n/dictionaries/en"
 import { vi as viDictionary } from "@/app/lib/i18n/dictionaries/vi"
 import { LocalizationProvider } from "@/app/lib/i18n/provider"
@@ -55,6 +54,7 @@ import { TelegramConfigurationPage } from "@/app/[lang]/(main)/telegram/telegram
 const destination = {
   id: 8,
   botConnectionId: 1,
+  chatId: "chat-8",
   chatType: "PRIVATE" as const,
   displayLabel: "Operations",
   status: "ACTIVE" as const,
@@ -297,8 +297,11 @@ describe("Telegram schedule destructive actions", () => {
 
       await user.click(
         within(routeRow as HTMLElement).getByRole("combobox", {
-          name: viDictionary.telegram.routeDefinitions.ECONOMIC_CALENDAR_ALERT
-            .label,
+          name:
+            viDictionary.telegram.routing.destinationColumn +
+            ": " +
+            viDictionary.telegram.routeDefinitions.ECONOMIC_CALENDAR_ALERT
+              .label,
         })
       )
       await user.click(
@@ -333,6 +336,10 @@ describe("Telegram schedule destructive actions", () => {
     renderConfiguration({
       ...data,
       featureSettings,
+      sectionAccess: {
+        ...data.sectionAccess,
+        featureSettings: allFeatureAccess,
+      },
       manageAccess: {
         ...data.manageAccess,
         featureSettings: allFeatureAccess,
@@ -431,8 +438,10 @@ describe("Telegram schedule destructive actions", () => {
 
     await user.click(
       within(calendarRow).getByRole("combobox", {
-        name: viDictionary.telegram.routeDefinitions.ECONOMIC_CALENDAR_ALERT
-          .label,
+        name:
+          viDictionary.telegram.routing.destinationColumn +
+          ": " +
+          viDictionary.telegram.routeDefinitions.ECONOMIC_CALENDAR_ALERT.label,
       })
     )
     await user.click(await screen.findByRole("option", { name: "Backup" }))
@@ -494,6 +503,57 @@ describe("Telegram schedule destructive actions", () => {
           destinationId: 8,
           enabled: false,
           outputLanguageIsoCode: "en",
+        })
+      )
+    )
+  })
+
+  it("clears the Economic calendar language override in the shared route list", async () => {
+    const user = userEvent.setup()
+    vi.mocked(updateTelegramFeatureSetting).mockResolvedValue({
+      success: true,
+      data: featureSettings[0],
+    })
+
+    renderConfiguration({
+      ...data,
+      featureSettings,
+      sectionAccess: {
+        ...data.sectionAccess,
+        featureSettings: allFeatureAccess,
+      },
+      manageAccess: {
+        ...data.manageAccess,
+        featureSettings: allFeatureAccess,
+      },
+    })
+
+    const calendarRow = screen
+      .getByText(
+        viDictionary.telegram.routeDefinitions.ECONOMIC_CALENDAR_ALERT.label
+      )
+      .closest("tr") as HTMLElement
+    await user.click(
+      within(calendarRow).getByRole("combobox", {
+        name: viDictionary.telegram.routing.languageAria.replace(
+          "{route}",
+          viDictionary.telegram.routeDefinitions.ECONOMIC_CALENDAR_ALERT.label
+        ),
+      })
+    )
+    await user.click(
+      await screen.findByRole("option", {
+        name: viDictionary.telegram.routing.defaultLanguage,
+      })
+    )
+
+    await waitFor(() =>
+      expect(updateTelegramFeatureSetting).toHaveBeenCalledWith(
+        expect.objectContaining({
+          featureKey: "ECONOMIC_CALENDAR_ALERT",
+          workspaceId: 7,
+          enabled: true,
+          outputLanguageIsoCode: null,
         })
       )
     )
@@ -683,6 +743,7 @@ describe("Economic calendar route permissions and persistence", () => {
             featureSettings: [featureSettings[0]],
             sectionAccess: {
               ...data.sectionAccess,
+              destinations: true,
               featureSettings: {
                 ECONOMIC_CALENDAR_ALERT: true,
                 MARKET_NEWS_ALERT: false,
@@ -701,6 +762,15 @@ describe("Economic calendar route permissions and persistence", () => {
         />
       </LocalizationProvider>
     )
+
+    expect(
+      screen.getByRole("combobox", {
+        name:
+          enDictionary.telegram.routing.destinationColumn +
+          ": " +
+          enDictionary.telegram.routeDefinitions.ECONOMIC_CALENDAR_ALERT.label,
+      })
+    ).toBeVisible()
 
     const clearButton = screen.getByRole("button", {
       name: "Clear destination for Economic calendar alerts",
@@ -1038,9 +1108,69 @@ describe("Economic calendar route permissions and persistence", () => {
     })
 
     const destinationSelect = screen.getByRole("combobox", {
-      name: viDictionary.telegram.routeDefinitions.ECONOMIC_CALENDAR_ALERT
-        .label,
+      name:
+        viDictionary.telegram.routing.destinationColumn +
+        ": " +
+        viDictionary.telegram.routeDefinitions.ECONOMIC_CALENDAR_ALERT.label,
     })
+    await user.click(destinationSelect)
+    await user.click(await screen.findByRole("option", { name: "Backup" }))
+
+    await waitFor(() =>
+      expect(updateTelegramFeatureSetting).toHaveBeenCalledWith({
+        featureKey: "ECONOMIC_CALENDAR_ALERT",
+        workspaceId: 7,
+        destinationId: 9,
+        enabled: false,
+      })
+    )
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(
+        "Destination is no longer eligible."
+      )
+    )
+    expect(destinationSelect).toHaveTextContent("Operations")
+    expect(destinationSelect).not.toHaveTextContent("Backup")
+    expect(routerRefresh).not.toHaveBeenCalled()
+  })
+
+  it("keeps the Economic destination unchanged after a failed shared-row save", async () => {
+    const user = userEvent.setup()
+    vi.mocked(updateTelegramFeatureSetting).mockResolvedValue({
+      success: false,
+      error: "Destination is no longer eligible.",
+    })
+
+    renderConfiguration({
+      ...data,
+      featureSettings: [{ ...featureSettings[0], enabled: false }],
+      destinations: [
+        destination,
+        { ...destination, id: 9, displayLabel: "Backup" },
+      ],
+      sectionAccess: {
+        ...data.sectionAccess,
+        destinations: true,
+        featureSettings: allFeatureAccess,
+      },
+      manageAccess: {
+        ...data.manageAccess,
+        featureSettings: allFeatureAccess,
+      },
+    })
+
+    const calendarRow = screen
+      .getByText(
+        viDictionary.telegram.routeDefinitions.ECONOMIC_CALENDAR_ALERT.label
+      )
+      .closest("tr") as HTMLElement
+    const destinationSelect = within(calendarRow).getByRole("combobox", {
+      name:
+        viDictionary.telegram.routing.destinationColumn +
+        ": " +
+        viDictionary.telegram.routeDefinitions.ECONOMIC_CALENDAR_ALERT.label,
+    })
+
     await user.click(destinationSelect)
     await user.click(await screen.findByRole("option", { name: "Backup" }))
 

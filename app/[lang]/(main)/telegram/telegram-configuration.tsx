@@ -26,7 +26,7 @@ import {
   TelegramConfigurationData,
   TelegramDestinationResponse,
   TelegramFeatureKey,
-  TelegramFeatureSettingResponse,
+  TelegramFeatureSettingReadback,
   TelegramMarketAnalysisScheduleResponse,
   UpdateTelegramFeatureSettingRequest,
   getUpdateTelegramFeatureSettingSchema,
@@ -99,7 +99,7 @@ type RouteDefinition = {
 }
 
 type FeatureRouteView = RouteDefinition & {
-  setting?: TelegramFeatureSettingResponse
+  setting?: TelegramFeatureSettingReadback
 }
 
 const DEFAULT_FEATURE_LANGUAGE_VALUE = "__default__"
@@ -1278,7 +1278,7 @@ function EconomicCalendarRouteControls({
               >
                 <SelectTrigger
                   ref={destinationTriggerRef}
-                  aria-label={route.label}
+                  aria-label={t.routing.destinationColumn + ": " + route.label}
                   className={cn(
                     "w-full",
                     selectedDestination && canUpdate && "pe-16"
@@ -1611,7 +1611,10 @@ function FeatureRouteControls({
             onValueChange={handleDestinationChange}
             disabled={destinationControlDisabled}
           >
-            <SelectTrigger aria-label={route.label} className="w-full">
+            <SelectTrigger
+              aria-label={t.routing.destinationColumn + ": " + route.label}
+              className="w-full"
+            >
               <SelectValue placeholder={t.destination.placeholder} />
             </SelectTrigger>
             <SelectContent>

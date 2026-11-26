@@ -22,7 +22,8 @@ import {
   SaveTelegramMarketAnalysisScheduleRequest,
   TelegramBotConnectionResponse,
   TelegramDestinationResponse,
-  TelegramFeatureSettingResponse,
+  TelegramFeatureSettingReadback,
+  TelegramFeatureSettingReadbackSchema,
   TelegramLinkTokenResponse,
   TelegramMarketAnalysisScheduleResponse,
   UpdateTelegramFeatureSettingRequest,
@@ -105,13 +106,14 @@ export async function getTelegramDestinations(): Promise<
 
 export async function getTelegramFeatureSettings(
   workspaceId: number
-): Promise<TelegramFeatureSettingResponse[]> {
+): Promise<TelegramFeatureSettingReadback[]> {
   const filter = new URLSearchParams({
     $filter: `workspace.id eq ${workspaceId}`,
   })
-  return fetchAuthenticated<TelegramFeatureSettingResponse[]>(
+  const response = await fetchAuthenticated<unknown>(
     `/telegram/feature-settings?${filter}`
   )
+  return z.array(TelegramFeatureSettingReadbackSchema).parse(response)
 }
 
 export async function getTelegramMarketAnalysisSchedules(): Promise<
@@ -347,7 +349,7 @@ export async function deleteTelegramDestination(
 
 export async function updateTelegramFeatureSetting(
   request: UpdateTelegramFeatureSettingRequest
-): Promise<ActionResult<TelegramFeatureSettingResponse>> {
+): Promise<ActionResult<TelegramFeatureSettingReadback>> {
   const dictionary = await getTelegramDictionary()
   const parsed =
     getUpdateTelegramFeatureSettingSchema(dictionary).safeParse(request)
@@ -360,13 +362,14 @@ export async function updateTelegramFeatureSetting(
   }
 
   try {
-    const data = await fetchAuthenticated<TelegramFeatureSettingResponse>(
+    const response = await fetchAuthenticated<unknown>(
       "/telegram/feature-settings",
       {
         method: "PUT",
         body: JSON.stringify(parsed.data),
       }
     )
+    const data = TelegramFeatureSettingReadbackSchema.parse(response)
 
     revalidateTelegramConfiguration()
 
@@ -374,7 +377,10 @@ export async function updateTelegramFeatureSetting(
   } catch (error: unknown) {
     return {
       success: false,
-      error: getActionError(error, dictionary.telegram.routing.updateError),
+      error:
+        error instanceof z.ZodError
+          ? dictionary.telegram.routing.updateError
+          : getActionError(error, dictionary.telegram.routing.updateError),
     }
   }
 }

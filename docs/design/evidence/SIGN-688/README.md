@@ -23,7 +23,7 @@ The browser test checks page-level horizontal overflow at **1520, 1024, 767, 768
 
 Fetched `https://dev-api.signapse.cloud/v3/api-docs` again on 2026-11-26; the response `Date` header was `Thu, 26 Nov 2026 07:25:53 GMT`, and `x-build-revision` remained `b6de21490d5572bdb51624372ef860230af5df86`. [Deploy run 45763078705](https://github.com/dgminhtam/signapse/actions/runs/45763078705) completed `check`, `publish` and `deploy` successfully for that exact SHA. `/health` and `/health/readiness` each returned HTTP 200 at 06:18 UTC. The deployed revision merges the delivered SIGN-683 revision `4103670c24fa7f638824a9597e41005bba877783` as its first parent, followed by SIGN-684's OpenAPI nullable-reference correction.
 
-The published `GET /telegram/feature-settings` contract documents per-route read permissions, owner-scoped results and `workspace.id eq` filtering. FE sends that filter for the current workspace from `/me`; it does not request `/me/workspaces`. The published PUT schema and description confirm route-specific update permissions, omission-preserves semantics, atomic `destinationId: null` with `enabled: false` for clear, required nullable readback fields and 400/403/404 error cases. Assignment or enabling requires an eligible active destination and bot. These are contract and deployment checks; no live feature request was made.
+The published `GET /telegram/feature-settings` contract documents per-route read permissions, owner-scoped results and `workspace.id eq` filtering. FE sends that filter for the current workspace from `/me`; it does not request `/me/workspaces`. The published PUT schema and description confirm route-specific update permissions, omission-preserves semantics, atomic `destinationId: null` with `enabled: false` for clear, and 400/403/404 error cases. The response schema requires nullable `destination` and `outputLanguage`, but leaves top-level `id`, `featureKey`, `workspaceId` and `enabled` optional. The FE readback guard below fails visibly closed when those display-critical fields are absent. Assignment or enabling requires an eligible active destination and bot. These are contract and deployment checks; no live feature request was made.
 
 ## Local verification
 
@@ -66,3 +66,28 @@ Result: **3 passed**. The first assignment test selected an eligible destination
 The selected P0 cases passed on code candidate `81b39545`; this evidence-only follow-up adds the captured screenshots and this record without changing runtime source. Earlier loaded-state renders remain from `7ee918d`; the resumed code changes only altered the Economic route's partial-save default and the Suspense fallback, so the existing loaded-state comparison remains applicable. This visual review covers the affected route and its loading state; light theme and native 200% browser zoom were not captured.
 
 The published OpenAPI was fetched again from `https://dev-api.signapse.cloud/v3/api-docs` at **2026-11-26 09:42:31 UTC**. Its `x-build-revision` remained `b6de21490d5572bdb51624372ef860230af5df86`, matching Deploy run `45763078705`; the fetched GET/PUT operations and nullable readback schemas still match the consumer behavior documented above. `/health` returned HTTP 200 at 09:43:47 UTC. The contract confirms that a new route defaults to enabled when `enabled` is omitted, which is why FE explicitly sends `enabled: false` on first assignment.
+
+## Current review follow-up
+
+The existing PR branch was rebased onto current `origin/dev` at `755d06d38f7496662d5647243933feb9f1c29725`. The final candidate SHA and required CI/Preview status are recorded in PR #163.
+
+- Destination comboboxes now have a localized accessible name composed from the visible column label and route name. Component assertions cover Vietnamese and English; browser selectors use the same name.
+- `TelegramFeatureSettingResponseSchema` represents the published wire contract, including its optional top-level fields. `TelegramFeatureSettingReadbackSchema` requires `id`, `featureKey`, `workspaceId` and `enabled` before the UI can use a saved row. GET readbacks with missing fields produce the localized route-load error. PUT readbacks with missing fields produce the localized update error before cache revalidation or success feedback.
+- The compact 1024×768 render was compared with approved SIGN-32 attachment **10312**, `telegram-settings-compact-20261123-v2.png`; Mobile 390×844 was compared with attachment **10309**. The accessible-name and response-validation changes are nonvisual; the refreshed screenshots below were captured from the current workspace candidate.
+
+Current render captures use Chromium `chromium-vi`, dark theme, Vietnamese locale and browser zoom 100%:
+
+- Wide, **1520×1024**, expanded sidebar: [current candidate render](economic-calendar-wide-dark-vi-1520x1024.png).
+- Compact, **1024×768**, collapsed sidebar: [current candidate render](economic-calendar-compact-dark-vi-1024x768.png). Destination, language and Off switch fit in the first viewport without page-level horizontal overflow.
+- Mobile, **390×844**, navigation closed: [current candidate render](economic-calendar-mobile-dark-vi-390x844.png).
+- Off with a destination assigned, **390×844**, navigation closed: [current candidate render](economic-calendar-off-assigned-mobile-dark-vi-390x844.png).
+- Compact loading, **1024×768**: [current candidate render](economic-calendar-loading-compact-dark-vi-1024x768.png).
+- Mobile loading, **390×844**: [current candidate render](economic-calendar-loading-mobile-dark-vi-390x844.png).
+
+The selected browser run was `/opt/apps/symphony/runtime/run-fe-browser "$PWD" tests/e2e/telegram-economic-calendar-routing.spec.ts --project=chromium-vi` — **5 passed**. It covers first assignment/readback, loading layouts, scoped list access, reflow and keyboard focus after clear. Its responsive cases also check 1520, 1024, 767, 768, 1439, 1440, 390, 360 and 760 CSS pixels; 760 models the effective width of a 1520px frame at 200%, while native browser zoom stayed at 100%.
+
+The current accessibility smoke was `/opt/apps/symphony/runtime/run-fe-browser "$PWD" tests/e2e/accessibility.spec.ts --project=chromium-vi --grep 'Telegram state'` — **1 passed**, with no serious or critical axe violations. This is not a full contrast or screen-reader audit.
+
+Focused local checks on this follow-up: `pnpm exec vitest run tests/api/telegram-action.test.ts tests/components/telegram-configuration.component.test.tsx --reporter=dot` — **2 files, 50 passed**; `pnpm typecheck`, targeted ESLint, Prettier and `git diff --check` passed. The current OpenAPI fetch at **2026-11-26 11:20:58 UTC** returned `x-build-revision` `b6de21490d5572bdb51624372ef860230af5df86`; its required response fields remain only `destination` and `outputLanguage`.
+
+Light theme, native 200% browser zoom and a physical screen-reader session were not captured in this follow-up. No live feature request or Telegram delivery test was made. QA owns live dev behavior; the coordinator owns parent acceptance.
