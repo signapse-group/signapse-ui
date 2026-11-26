@@ -25,25 +25,23 @@ For UI changes, apply the scoped instructions and [UI design gate](../../../docs
 
 ## Implement and Verify
 
-Choose the highest stable public seam reaching the changed behavior; use testing or diagnosis techniques when needed. Keep slices small, run focused checks and fix failures caused by the change.
+Select checks for changed behavior and reruns after fixes under [test ownership and selection](../../../CONTRIBUTING.md#test-ownership-and-selection). Fix failures caused by the change.
 
-Apply [verification standards](../../../CONTRIBUTING.md#verification), including [test ownership and selection](../../../CONTRIBUTING.md#test-ownership-and-selection), and the [change-scope matrix](../../../docs/testing/browser-tests.md#selecting-checks-by-change-scope). Preserve required public contract documentation and actual check evidence. Missing mandatory evidence remains a gap.
+Keep required public contract documentation and check results with the PR. Use the [change-scope matrix](../../../docs/testing/browser-tests.md#selecting-checks-by-change-scope) for fixture and command details.
 
 For Symphony UI changes, record the [rendered comparison](../../../docs/design/DESIGN.md#ui-design-gate) in the existing PR or handoff before In Review.
 
 ## Decisions and Resume
 
-Apply [decision/evidence standards](../../../CONTRIBUTING.md#decisions-and-evidence). Resolve human identities from configuration/user context rather than guessing. Reconcile changed requirements and existing feedback/output on resume; reverify affected behavior while retaining valid unrelated evidence.
+Apply [decision/evidence standards](../../../CONTRIBUTING.md#decisions-and-evidence). Resolve human identities from configuration/user context rather than guessing. Reconcile changed requirements and existing feedback/output on resume.
 
-Keep the existing contract/output when an accepted change is within the contribution and invalidate affected evidence. A different deliverable requires the owner's replacement or cancellation decision. Report missing behavior or required evidence as a gap.
+Keep the existing contract and output for changes within the accepted contribution. A different deliverable requires the owner's replacement or cancellation decision.
 
 ## Reviewable output
 
 Keep the problem, final change, candidate and actual checks/limits clear in the requested PR/artifact/session. When the assignment requires independent review, provide the contract, resolved base/HEAD, ownership and raw check evidence without a predetermined verdict; the assignment supplies that role. Resolve blocking findings and reverify affected parts. Preserve candidate history and finish the requested scope.
 
 ## Symphony PR and handoff
-
-Continue here only with the Progress grant. Apply test ownership and selection to the QA/coordinator handoff.
 
 ### Prepare output and PR evidence
 
