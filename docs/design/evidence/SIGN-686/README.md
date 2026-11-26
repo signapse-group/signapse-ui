@@ -1,6 +1,6 @@
 # SIGN-686 Scheduled analysis render evidence
 
-Candidate: [`50137487ee824a331a8c1b2500e514af9e942617`](https://github.com/signapse-group/signapse-ui/commit/50137487ee824a331a8c1b2500e514af9e942617), based on `origin/dev` [`4179b7a095482228b3df21cc2e0937676c7f1b6e`](https://github.com/signapse-group/signapse-ui/commit/4179b7a095482228b3df21cc2e0937676c7f1b6e).
+Candidate: [`9db4ced81252852604dcc714afe425266f53089b`](https://github.com/signapse-group/signapse-ui/commit/9db4ced81252852604dcc714afe425266f53089b), based on `origin/dev` [`4179b7a095482228b3df21cc2e0937676c7f1b6e`](https://github.com/signapse-group/signapse-ui/commit/4179b7a095482228b3df21cc2e0937676c7f1b6e).
 
 ## Accepted direction and API
 
@@ -32,7 +32,8 @@ The fixture list contains an ACTIVE schedule with destination and language, a DI
 - `pnpm exec vitest run tests/components/telegram-configuration.component.test.tsx tests/components/telegram-schedule-form.component.test.tsx tests/api/telegram-action.test.ts` — 35 passed. Coverage includes schedule-only read, independent create/update/delete permissions, nullable destination, load/save/remove failures, retained drafts, cancel/retry and DELETE request contract.
 - `/opt/apps/symphony/runtime/run-fe-browser "$PWD" tests/e2e/telegram.spec.ts --retries=0` — 1 passed. This fixture-backed Chromium check captured the responsive list, Create/Edit dialogs, mobile form scroll and Remove confirmation.
 - `pnpm exec eslint` on changed Telegram components, actions, dictionaries, types and tests — passed.
-- `pnpm typecheck` and `pnpm test:contract` (89 operations) — passed.
+- `pnpm exec vitest run tests/core/api-contract-guard.test.ts` — 20 passed; `pnpm test:contract` — 89 operations.
+- `pnpm typecheck` — passed.
 - `pnpm exec prettier --check docs/design/evidence/SIGN-686/README.md tests/e2e/telegram.spec.ts` and `git diff --check` — passed.
 
 These are local fixture renders and checks. They do not establish live-user authorization or feature acceptance. QA retains live feature-flow verification after delivery.
