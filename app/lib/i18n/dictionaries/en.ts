@@ -2449,6 +2449,7 @@ export const en: Dictionary = {
       activeBots: "{count} active bots.",
       noBotPermission: "You do not have permission to view bots.",
       ready: "Ready",
+      unavailable: "Unavailable",
       needsConfig: "Needs setup",
       destinations: "Destinations",
       activeDestinations: "{count} active destinations.",
@@ -2480,6 +2481,7 @@ export const en: Dictionary = {
       paused: "Paused",
       currentWorkspace: "Current workspace",
       noData: "No data",
+      readError: "Could not load this section's data.",
       accessLimitedDescription:
         "The current account does not have permission to read this section.",
       currentWorkspaceScope: "Current workspace",
@@ -2649,6 +2651,8 @@ export const en: Dictionary = {
       loadErrorDescription:
         "Check your connection and try loading the schedule list again.",
       retry: "Retry",
+      optionsLoadError:
+        "Some schedule options could not be loaded. Saved schedules remain available; retry before creating or editing.",
       currentWorkspaceFallback: "Current workspace",
       noDestination: "No destination yet",
       noAsset: "Asset unavailable",

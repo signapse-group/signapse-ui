@@ -33,6 +33,18 @@ const WATCHLIST_ASSET_SEARCH = {
 }
 // ponytail: preload up to 100 workspace assets; add pagination/search if this ceiling is exceeded.
 
+function loadSection<T>(
+  load: (() => Promise<T>) | undefined,
+  fallback: T
+): Promise<{ data: T; error: boolean }> {
+  if (!load) return Promise.resolve({ data: fallback, error: false })
+
+  return Promise.resolve()
+    .then(load)
+    .then((data) => ({ data, error: false }))
+    .catch(() => ({ data: fallback, error: true }))
+}
+
 export default async function TelegramPage() {
   const [permissions, dictionary] = await Promise.all([
     getCurrentPermissions(),
@@ -74,53 +86,86 @@ async function TelegramConfigurationContent({
   scheduleActions: ReturnType<typeof getTelegramScheduleActionAccess>
   canReadWorkspace: boolean
 }) {
-  const currentWorkspace = canReadWorkspace
-    ? await getActiveWorkspaceForCurrentUser()
-    : null
-
-  const schedulesPromise = sectionAccess.schedules
-    ? getTelegramMarketAnalysisSchedules()
-        .then((data) => ({ data, error: false }))
-        .catch(() => ({ data: [], error: true }))
-    : Promise.resolve({ data: [], error: false })
-
-  const languagesPromise =
+  const currentWorkspacePromise = loadSection(
+    canReadWorkspace ? () => getActiveWorkspaceForCurrentUser() : undefined,
+    null
+  )
+  const botConnectionsPromise = loadSection(
+    sectionAccess.botConnections
+      ? () => getTelegramBotConnections()
+      : undefined,
+    []
+  )
+  const destinationsPromise = loadSection(
+    sectionAccess.destinations ? () => getTelegramDestinations() : undefined,
+    []
+  )
+  const featureSettingsPromise = loadSection(
+    sectionAccess.featureSettings
+      ? () => getTelegramFeatureSettings()
+      : undefined,
+    []
+  )
+  const schedulesPromise = loadSection(
+    sectionAccess.schedules
+      ? () => getTelegramMarketAnalysisSchedules()
+      : undefined,
+    []
+  )
+  const languagesPromise = loadSection(
     sectionAccess.schedules || sectionAccess.featureSettings
-      ? getLanguages()
-          .then((catalog) => ({ data: catalog.languages, error: false }))
-          .catch(() => ({ data: [], error: true }))
-      : Promise.resolve({ data: [], error: false })
+      ? () => getLanguages().then((catalog) => catalog.languages)
+      : undefined,
+    []
+  )
+  const watchlistAssetsPromise = currentWorkspacePromise.then(
+    ({ data: currentWorkspace }) =>
+      loadSection(
+        sectionAccess.watchlistAssets && currentWorkspace
+          ? () =>
+              getWorkspaceWatchlistAssets(WATCHLIST_ASSET_SEARCH).then(
+                (page) => page.content
+              )
+          : undefined,
+        []
+      )
+  )
 
   const [
-    botConnections,
-    destinations,
-    featureSettings,
+    currentWorkspaceResult,
+    botConnectionsResult,
+    destinationsResult,
+    featureSettingsResult,
     schedulesResult,
-    watchlistAssetsPage,
+    watchlistAssetsResult,
     languagesResult,
   ] = await Promise.all([
-    sectionAccess.botConnections ? getTelegramBotConnections() : [],
-    sectionAccess.destinations ? getTelegramDestinations() : [],
-    sectionAccess.featureSettings ? getTelegramFeatureSettings() : [],
+    currentWorkspacePromise,
+    botConnectionsPromise,
+    destinationsPromise,
+    featureSettingsPromise,
     schedulesPromise,
-    sectionAccess.watchlistAssets && currentWorkspace
-      ? getWorkspaceWatchlistAssets(WATCHLIST_ASSET_SEARCH)
-      : null,
+    watchlistAssetsPromise,
     languagesPromise,
   ])
 
   return (
     <TelegramConfigurationPage
       data={{
-        botConnections,
-        destinations,
-        featureSettings,
+        botConnections: botConnectionsResult.data,
+        destinations: destinationsResult.data,
+        featureSettings: featureSettingsResult.data,
         schedules: schedulesResult.data,
-        currentWorkspace,
-        watchlistAssets: watchlistAssetsPage?.content ?? [],
+        currentWorkspace: currentWorkspaceResult.data,
+        watchlistAssets: watchlistAssetsResult.data,
         languages: languagesResult.data,
         languageCatalogError: languagesResult.error,
         scheduleLoadError: schedulesResult.error,
+        botConnectionsLoadError: botConnectionsResult.error,
+        destinationsLoadError: destinationsResult.error,
+        featureSettingsLoadError: featureSettingsResult.error,
+        currentWorkspaceLoadError: currentWorkspaceResult.error,
+        watchlistAssetsLoadError: watchlistAssetsResult.error,
         sectionAccess,
         manageAccess,
         scheduleActions,

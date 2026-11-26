@@ -223,8 +223,13 @@ function getTimezoneLocation(timeZone: string) {
   return (parts[parts.length - 1] ?? timeZone).replaceAll("_", " ")
 }
 
-function getTimezoneGroups(dictionary: Dictionary): TimezoneGroup[] {
+function getTimezoneGroups(
+  dictionary: Dictionary,
+  selectedTimezone?: string
+): TimezoneGroup[] {
   const zones = new Set<string>(["Asia/Bangkok", "UTC"])
+
+  if (selectedTimezone) zones.add(selectedTimezone)
 
   if (typeof Intl.supportedValuesOf === "function") {
     Intl.supportedValuesOf("timeZone").forEach((timeZone) =>
@@ -441,8 +446,8 @@ function ScheduleFormFields({
 }: ScheduleFormFieldsProps) {
   const t = dictionary.telegram
   const timezoneGroups = useMemo(
-    () => getTimezoneGroups(dictionary),
-    [dictionary]
+    () => getTimezoneGroups(dictionary, values.timezone),
+    [dictionary, values.timezone]
   )
   const assetOptions = useMemo<AssetOption[]>(() => {
     const options: AssetOption[] = watchlistAssets.map((asset) => ({
@@ -1342,11 +1347,11 @@ export function UpdateTelegramScheduleDialog({
             <DialogFooter className="shrink-0 flex-col sm:flex-row">
               <Button
                 type="button"
-                variant="outline"
+                variant="ghost"
                 disabled={isPending}
                 onClick={() => handleOpenChange(false)}
               >
-                {dictionary.common.close}
+                {dictionary.common.cancel}
               </Button>
               <Button type="submit" disabled={isPending}>
                 {isPending ? (

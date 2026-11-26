@@ -44,6 +44,7 @@ import {
 import { vi as viDictionary } from "@/app/lib/i18n/dictionaries/vi"
 import { LocalizationProvider } from "@/app/lib/i18n/provider"
 import type { TelegramConfigurationData } from "@/app/lib/telegram/definitions"
+import { TooltipProvider } from "@/components/ui/tooltip"
 import { TelegramConfigurationPage } from "@/app/[lang]/(main)/telegram/telegram-configuration"
 
 const destination = {
@@ -122,6 +123,11 @@ const data: TelegramConfigurationData = {
   languages: [{ id: 1, isoCode: "en", name: "English" }],
   languageCatalogError: false,
   scheduleLoadError: false,
+  botConnectionsLoadError: false,
+  destinationsLoadError: false,
+  featureSettingsLoadError: false,
+  currentWorkspaceLoadError: false,
+  watchlistAssetsLoadError: false,
   sectionAccess: {
     botConnections: false,
     destinations: false,
@@ -144,9 +150,11 @@ function renderConfiguration(
   configurationData: TelegramConfigurationData = data
 ) {
   return render(
-    <LocalizationProvider locale="vi" dictionary={viDictionary}>
-      <TelegramConfigurationPage data={configurationData} />
-    </LocalizationProvider>
+    <TooltipProvider delay={0}>
+      <LocalizationProvider locale="vi" dictionary={viDictionary}>
+        <TelegramConfigurationPage data={configurationData} />
+      </LocalizationProvider>
+    </TooltipProvider>
   )
 }
 
@@ -224,6 +232,41 @@ describe("Telegram schedule destructive actions", () => {
         name: viDictionary.telegram.schedule.deleteTrigger,
       })
     ).not.toBeInTheDocument()
+  })
+
+  it("keeps schedules visible and reports a Feature routing read error", () => {
+    renderConfiguration({ ...data, featureSettingsLoadError: true })
+
+    expect(
+      screen.getByRole("heading", {
+        name: viDictionary.telegram.schedule.panelTitle,
+      })
+    ).toBeVisible()
+    expect(screen.getAllByText("Morning analysis").length).toBeGreaterThan(0)
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      viDictionary.telegram.common.readError
+    )
+  })
+
+  it("associates an accessible tooltip with the icon-only Remove action", () => {
+    renderConfiguration()
+
+    const removeButton = screen.getAllByRole("button", {
+      name: viDictionary.telegram.schedule.deleteTrigger,
+    })[0]
+    expect(removeButton).toHaveAttribute(
+      "title",
+      viDictionary.telegram.schedule.deleteTrigger
+    )
+    const tooltipId = removeButton.getAttribute("aria-describedby")
+    expect(tooltipId).toBeTruthy()
+    expect(document.getElementById(tooltipId!)).toHaveAttribute(
+      "role",
+      "tooltip"
+    )
+    expect(document.getElementById(tooltipId!)).toHaveTextContent(
+      viDictionary.telegram.schedule.deleteTrigger
+    )
   })
 
   it("keeps schedule read errors local and offers a retry", async () => {

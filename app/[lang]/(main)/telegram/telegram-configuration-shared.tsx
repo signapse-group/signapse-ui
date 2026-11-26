@@ -83,6 +83,27 @@ export function SectionHeader({
   )
 }
 
+export function SectionReadError({ message }: { message?: string }) {
+  const router = useRouter()
+  const { dictionary } = useLocalization()
+
+  return (
+    <div className="flex flex-wrap items-center gap-3">
+      <p role="alert" className="text-sm text-destructive">
+        {message ?? dictionary.telegram.common.readError}
+      </p>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={() => router.refresh()}
+      >
+        {dictionary.common.retry}
+      </Button>
+    </div>
+  )
+}
+
 export function ReadinessBadge({
   status,
   children,
@@ -214,6 +235,7 @@ export function ActionConfirmDialog({
   description,
   actionLabel,
   triggerLabel,
+  triggerTooltip,
   disabled,
   action,
   successMessage,
@@ -227,6 +249,7 @@ export function ActionConfirmDialog({
   description: string
   actionLabel: string
   triggerLabel: string
+  triggerTooltip?: string
   disabled?: boolean
   action: () => Promise<ActionResult<unknown>>
   successMessage: string
@@ -281,28 +304,37 @@ export function ActionConfirmDialog({
     })
   }
 
+  const triggerElement = trigger ?? (
+    <Button
+      id={restoreFocusId}
+      variant={intent === "destructive" ? "destructive" : "ghost"}
+      size="icon-sm"
+      disabled={disabled}
+      aria-label={triggerLabel}
+    >
+      {intent === "destructive" ? (
+        <Trash2 data-icon="inline-start" />
+      ) : (
+        <CircleAlert data-icon="inline-start" />
+      )}
+    </Button>
+  )
+
   return (
     <AlertDialog open={open} onOpenChange={handleOpenChange}>
-      {trigger === null ? null : (
-        <AlertDialogTrigger
-          render={
-            trigger ?? (
-              <Button
-                id={restoreFocusId}
-                variant={intent === "destructive" ? "destructive" : "ghost"}
-                size="icon-sm"
-                disabled={disabled}
-                aria-label={triggerLabel}
-              >
-                {intent === "destructive" ? (
-                  <Trash2 data-icon="inline-start" />
-                ) : (
-                  <CircleAlert data-icon="inline-start" />
-                )}
-              </Button>
-            )
-          }
-        />
+      {trigger === null ? null : triggerTooltip ? (
+        <span className="group/trigger-tooltip relative inline-flex">
+          <AlertDialogTrigger render={triggerElement} />
+          <span
+            id={restoreFocusId ? `${restoreFocusId}-tooltip` : undefined}
+            role="tooltip"
+            className="pointer-events-none invisible absolute right-1/2 bottom-full z-50 mb-2 translate-x-1/2 rounded-md bg-foreground px-3 py-1.5 text-xs whitespace-nowrap text-background shadow-sm group-focus-within/trigger-tooltip:visible group-hover/trigger-tooltip:visible"
+          >
+            {triggerTooltip}
+          </span>
+        </span>
+      ) : (
+        <AlertDialogTrigger render={triggerElement} />
       )}
       <AlertDialogContent size="sm">
         <AlertDialogHeader>

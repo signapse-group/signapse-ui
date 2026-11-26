@@ -2430,6 +2430,7 @@ export const vi = {
       activeBots: "{count} bot đang hoạt động.",
       noBotPermission: "Bạn chưa có quyền xem bot.",
       ready: "Sẵn sàng",
+      unavailable: "Không thể tải",
       needsConfig: "Cần cấu hình",
       destinations: "Điểm nhận",
       activeDestinations: "{count} điểm nhận đang hoạt động.",
@@ -2460,6 +2461,7 @@ export const vi = {
       paused: "Tạm dừng",
       currentWorkspace: "Không gian hiện tại",
       noData: "Chưa có dữ liệu",
+      readError: "Không thể tải dữ liệu của mục này.",
       accessLimitedDescription:
         "Tài khoản hiện tại không có quyền đọc khu vực này.",
       currentWorkspaceScope: "Theo không gian hiện tại",
@@ -2626,6 +2628,8 @@ export const vi = {
       loadErrorDescription:
         "Hãy kiểm tra kết nối rồi thử tải lại danh sách lịch.",
       retry: "Thử lại",
+      optionsLoadError:
+        "Không thể tải một số dữ liệu cần cho thao tác lịch. Lịch đã lưu vẫn hiển thị; hãy thử lại trước khi tạo hoặc sửa.",
       currentWorkspaceFallback: "Không gian hiện tại",
       noDestination: "Chưa có điểm nhận",
       noAsset: "Tài sản không khả dụng",

@@ -49,7 +49,6 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty"
-import { Item, ItemActions, ItemContent } from "@/components/ui/item"
 import {
   Select,
   SelectContent,
@@ -79,6 +78,7 @@ import {
   AccessLimitedRow,
   getDestinationLabel,
   ReadinessBadge,
+  SectionReadError,
   SectionHeader,
   StatusBadge,
 } from "./telegram-configuration-shared"
@@ -146,55 +146,73 @@ export function TelegramConfigurationPage({
         activeBotCount={activeBotConnections.length}
         activeDestinationCount={activeDestinations.length}
       />
-      <section
-        className="flex min-w-0 flex-col gap-4"
-        aria-labelledby="telegram-infrastructure"
-      >
-        <SectionHeader
-          id="telegram-infrastructure"
-          title={dictionary.telegram.infrastructureTitle}
-          description={dictionary.telegram.infrastructureDescription}
-        />
-        <div className="grid min-w-0 gap-4 xl:grid-cols-2">
-          <BotConnectionsCard
-            botConnections={data.botConnections}
-            canRead={data.sectionAccess.botConnections}
-            canManage={data.manageAccess.botConnections}
+      <div className="grid min-w-0 gap-6 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] xl:grid-cols-[minmax(0,1.55fr)_minmax(22rem,1fr)]">
+        <div className="flex min-w-0 flex-col gap-6">
+          <FeatureRoutingSection
+            routes={routes}
+            activeDestinations={activeDestinations}
+            currentWorkspace={data.currentWorkspace}
+            languages={data.languages}
+            languageCatalogError={data.languageCatalogError}
+            loadError={
+              data.featureSettingsLoadError || data.currentWorkspaceLoadError
+            }
+            canReadFeatureSettings={data.sectionAccess.featureSettings}
+            canUpdateFeatureSettings={data.manageAccess.featureSettings}
           />
-          <DestinationsCard
-            destinations={data.destinations}
-            activeBotConnections={activeBotConnections}
-            canRead={data.sectionAccess.destinations}
-            canReadBotConnections={data.sectionAccess.botConnections}
-            canManage={data.manageAccess.destinations}
+          <MarketAnalysisSchedulePanel
+            schedules={schedules}
+            activeDestinations={activeDestinations}
+            currentWorkspace={data.currentWorkspace}
+            watchlistAssets={data.watchlistAssets}
+            languages={data.languages}
+            languageCatalogError={data.languageCatalogError}
+            scheduleLoadError={data.scheduleLoadError}
+            optionsLoadError={
+              data.destinationsLoadError ||
+              data.currentWorkspaceLoadError ||
+              data.watchlistAssetsLoadError
+            }
+            canReadSchedules={data.sectionAccess.schedules}
+            scheduleActions={data.scheduleActions}
           />
         </div>
-      </section>
-      <FeatureRoutingSection
-        routes={routes}
-        activeDestinations={activeDestinations}
-        currentWorkspace={data.currentWorkspace}
-        languages={data.languages}
-        languageCatalogError={data.languageCatalogError}
-        canReadFeatureSettings={data.sectionAccess.featureSettings}
-        canUpdateFeatureSettings={data.manageAccess.featureSettings}
-      />
-      <MarketAnalysisSchedulePanel
-        schedules={schedules}
-        activeDestinations={activeDestinations}
-        currentWorkspace={data.currentWorkspace}
-        watchlistAssets={data.watchlistAssets}
-        languages={data.languages}
-        languageCatalogError={data.languageCatalogError}
-        scheduleLoadError={data.scheduleLoadError}
-        canReadSchedules={data.sectionAccess.schedules}
-        scheduleActions={data.scheduleActions}
-      />
+        <section
+          className="flex min-w-0 flex-col gap-4"
+          aria-labelledby="telegram-infrastructure"
+        >
+          <SectionHeader
+            id="telegram-infrastructure"
+            title={dictionary.telegram.infrastructureTitle}
+            description={dictionary.telegram.infrastructureDescription}
+          />
+          <div className="flex min-w-0 flex-col gap-4">
+            <BotConnectionsCard
+              botConnections={data.botConnections}
+              canRead={data.sectionAccess.botConnections}
+              canManage={data.manageAccess.botConnections}
+              loadError={data.botConnectionsLoadError}
+            />
+            <DestinationsCard
+              destinations={data.destinations}
+              activeBotConnections={activeBotConnections}
+              canRead={data.sectionAccess.destinations}
+              canReadBotConnections={data.sectionAccess.botConnections}
+              loadError={data.destinationsLoadError}
+              botConnectionsLoadError={data.botConnectionsLoadError}
+              canManage={data.manageAccess.destinations}
+            />
+          </div>
+        </section>
+      </div>
     </div>
   )
 }
 
 export function TelegramConfigurationSkeleton() {
+  const { dictionary } = useLocalization()
+  const t = dictionary.telegram
+
   return (
     <div className="flex w-full flex-col gap-6">
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
@@ -210,140 +228,136 @@ export function TelegramConfigurationSkeleton() {
           </Card>
         ))}
       </div>
-      <div className="grid min-w-0 gap-4 xl:grid-cols-2">
-        {Array.from({ length: 2 }).map((_, cardIndex) => (
-          <Card key={cardIndex} className="min-w-0">
-            <CardHeader>
-              <Skeleton className="h-5 w-32" />
-              <Skeleton className="h-4 w-full" />
-              <CardAction>
-                <Skeleton className="h-9 w-28" />
-              </CardAction>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-3">
-              {Array.from({ length: 2 }).map((__, itemIndex) => (
-                <Item key={itemIndex} variant="outline" className="items-start">
-                  <ItemContent className="min-w-0 gap-2">
-                    <Skeleton className="h-5 w-40" />
-                    <Skeleton className="h-4 w-56 max-w-full" />
-                    <Skeleton className="h-4 w-32" />
-                  </ItemContent>
-                  <ItemActions
-                    className={cn(
-                      "ms-auto self-start",
-                      cardIndex === 1 && "basis-full justify-end sm:basis-auto"
-                    )}
-                  >
-                    {cardIndex === 1 ? <Skeleton className="h-8 w-24" /> : null}
-                    <Skeleton className="size-8" />
-                  </ItemActions>
-                </Item>
-              ))}
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-      <AppListTable className="mt-0">
-        <Table>
-          <TableHeader>
-            <AppListTableHeaderRow>
-              <AppListTableHead>
-                <Skeleton className="h-4 w-24" />
-              </AppListTableHead>
-              <AppListTableHead>
-                <Skeleton className="h-4 w-28" />
-              </AppListTableHead>
-              <AppListTableHead>
-                <Skeleton className="h-4 w-20" />
-              </AppListTableHead>
-              <AppListTableHead>
-                <Skeleton className="h-4 w-16" />
-              </AppListTableHead>
-              <AppListTableHead>
-                <Skeleton className="h-4 w-24" />
-              </AppListTableHead>
-            </AppListTableHeaderRow>
-          </TableHeader>
-          <TableBody>
-            {Array.from({ length: 2 }).map((_, rowIndex) => (
-              <TableRow key={rowIndex}>
-                <TableCell>
-                  <Skeleton className="h-5 w-44" />
-                </TableCell>
-                <TableCell>
-                  <Skeleton className="h-5 w-32" />
-                </TableCell>
-                <TableCell>
-                  <Skeleton className="h-5 w-24" />
-                </TableCell>
-                <TableCell>
-                  <Skeleton className="h-5 w-28" />
-                </TableCell>
-                <TableCell>
-                  <Skeleton className="mx-auto h-5 w-20" />
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </AppListTable>
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div className="flex min-w-0 flex-col gap-1">
-            <Skeleton className="h-6 w-36" />
-            <Skeleton className="h-4 w-64 max-w-full" />
-          </div>
-          <Skeleton className="h-9 w-32" />
-        </div>
-        <AppListTable className="mt-0 md:hidden">
-          {Array.from({ length: 2 }).map((_, rowIndex) => (
-            <div
-              key={rowIndex}
-              className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 border-b p-4 last:border-b-0"
-            >
-              <div className="flex min-w-0 flex-col gap-2">
-                <Skeleton className="h-5 w-36 max-w-full" />
-                <Skeleton className="h-4 w-40 max-w-full" />
-                <Skeleton className="h-4 w-32 max-w-full" />
-              </div>
-              <Skeleton className="size-8" />
+      <div className="grid min-w-0 gap-6 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] xl:grid-cols-[minmax(0,1.55fr)_minmax(22rem,1fr)]">
+        <div className="flex min-w-0 flex-col gap-6">
+          <section
+            className="flex min-w-0 flex-col gap-4"
+            aria-labelledby="telegram-routing-skeleton"
+          >
+            <SectionHeader
+              id="telegram-routing-skeleton"
+              title={t.routing.sectionTitle}
+              description={t.routing.sectionDescription}
+            />
+            <AppListTable className="mt-0">
+              <Table>
+                <TableHeader>
+                  <AppListTableHeaderRow>
+                    {Array.from({ length: 5 }).map((_, index) => (
+                      <AppListTableHead key={index}>
+                        <Skeleton className="h-4 w-24" />
+                      </AppListTableHead>
+                    ))}
+                  </AppListTableHeaderRow>
+                </TableHeader>
+                <TableBody>
+                  {Array.from({ length: 2 }).map((_, rowIndex) => (
+                    <TableRow key={rowIndex}>
+                      {Array.from({ length: 5 }).map((__, columnIndex) => (
+                        <TableCell key={columnIndex}>
+                          <Skeleton className="h-5 w-28 max-w-full" />
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </AppListTable>
+          </section>
+          <section
+            className="flex min-w-0 flex-col gap-4"
+            aria-labelledby="telegram-schedule-skeleton"
+          >
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <SectionHeader
+                id="telegram-schedule-skeleton"
+                title={t.schedule.panelTitle}
+                description={t.schedule.panelDescription}
+              />
+              <Skeleton className="h-9 w-32" />
             </div>
-          ))}
-        </AppListTable>
-        <AppListTable className="mt-0 hidden md:block">
-          <Table>
-            <TableHeader>
-              <AppListTableHeaderRow>
-                <AppListTableHead>
-                  <Skeleton className="h-4 w-24" />
-                </AppListTableHead>
-                <AppListTableHead>
-                  <Skeleton className="h-4 w-24" />
-                </AppListTableHead>
-                <AppListTableHead className="w-20 text-right">
-                  <Skeleton className="ms-auto h-4 w-16" />
-                </AppListTableHead>
-              </AppListTableHeaderRow>
-            </TableHeader>
-            <TableBody>
+            <AppListTable className="mt-0 md:hidden">
               {Array.from({ length: 2 }).map((_, rowIndex) => (
-                <TableRow key={rowIndex}>
-                  <TableCell>
-                    <Skeleton className="h-5 w-48 max-w-full" />
-                    <Skeleton className="mt-1 h-4 w-40 max-w-full" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-5 w-44 max-w-full" />
-                    <Skeleton className="mt-1 h-4 w-36 max-w-full" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="ms-auto size-8" />
-                  </TableCell>
-                </TableRow>
+                <div
+                  key={rowIndex}
+                  className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 border-b p-4 last:border-b-0"
+                >
+                  <div className="flex min-w-0 flex-col gap-2">
+                    <Skeleton className="h-5 w-36 max-w-full" />
+                    <Skeleton className="h-4 w-40 max-w-full" />
+                    <Skeleton className="h-4 w-32 max-w-full" />
+                  </div>
+                  <Skeleton className="size-8" />
+                </div>
               ))}
-            </TableBody>
-          </Table>
-        </AppListTable>
+            </AppListTable>
+            <AppListTable className="mt-0 hidden md:block">
+              <Table>
+                <TableHeader>
+                  <AppListTableHeaderRow>
+                    {Array.from({ length: 3 }).map((_, index) => (
+                      <AppListTableHead key={index}>
+                        <Skeleton className="h-4 w-24" />
+                      </AppListTableHead>
+                    ))}
+                  </AppListTableHeaderRow>
+                </TableHeader>
+                <TableBody>
+                  {Array.from({ length: 2 }).map((_, rowIndex) => (
+                    <TableRow key={rowIndex}>
+                      {[0, 1, 2].map((columnIndex) => (
+                        <TableCell key={columnIndex}>
+                          <Skeleton className="h-5 w-40 max-w-full" />
+                          {columnIndex < 2 ? (
+                            <Skeleton className="mt-1 h-4 w-32 max-w-full" />
+                          ) : null}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </AppListTable>
+          </section>
+        </div>
+        <section
+          className="flex min-w-0 flex-col gap-4"
+          aria-labelledby="telegram-infrastructure-skeleton"
+        >
+          <SectionHeader
+            id="telegram-infrastructure-skeleton"
+            title={t.infrastructureTitle}
+            description={t.infrastructureDescription}
+          />
+          <div className="flex min-w-0 flex-col gap-4">
+            {Array.from({ length: 2 }).map((_, cardIndex) => (
+              <Card key={cardIndex} className="min-w-0">
+                <CardHeader>
+                  <Skeleton className="h-5 w-32" />
+                  <Skeleton className="h-4 w-full" />
+                  <CardAction>
+                    <Skeleton className="h-9 w-28" />
+                  </CardAction>
+                </CardHeader>
+                <CardContent className="flex flex-col gap-3">
+                  {Array.from({ length: 2 }).map((__, itemIndex) => (
+                    <div
+                      key={itemIndex}
+                      className="flex min-w-0 items-start gap-3 rounded-lg border p-3"
+                    >
+                      <div className="flex min-w-0 flex-1 flex-col gap-2">
+                        <Skeleton className="h-5 w-40 max-w-full" />
+                        <Skeleton className="h-4 w-56 max-w-full" />
+                        <Skeleton className="h-4 w-32 max-w-full" />
+                      </div>
+                      <Skeleton className="size-8 shrink-0" />
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </section>
       </div>
     </div>
   )
@@ -374,56 +388,88 @@ function ReadinessSummary({
   const readinessItems = [
     {
       label: t.readiness.bot,
-      description: data.sectionAccess.botConnections
-        ? formatMessage(t.readiness.activeBots, {
-            count: formatCount(activeBotCount),
-          })
-        : t.readiness.noBotPermission,
-      state: activeBotCount > 0 ? t.readiness.ready : t.readiness.needsConfig,
-      status: activeBotCount > 0 ? ("ready" as const) : ("attention" as const),
+      description: data.botConnectionsLoadError
+        ? t.common.readError
+        : data.sectionAccess.botConnections
+          ? formatMessage(t.readiness.activeBots, {
+              count: formatCount(activeBotCount),
+            })
+          : t.readiness.noBotPermission,
+      state: data.botConnectionsLoadError
+        ? t.readiness.unavailable
+        : activeBotCount > 0
+          ? t.readiness.ready
+          : t.readiness.needsConfig,
+      status:
+        activeBotCount > 0 && !data.botConnectionsLoadError
+          ? ("ready" as const)
+          : ("attention" as const),
       icon: Bot,
     },
     {
       label: t.readiness.destinations,
-      description: data.sectionAccess.destinations
-        ? formatMessage(t.readiness.activeDestinations, {
-            count: formatCount(activeDestinationCount),
-          })
-        : t.readiness.noDestinationPermission,
-      state:
-        activeDestinationCount > 0 ? t.readiness.ready : t.readiness.needsLink,
+      description: data.destinationsLoadError
+        ? t.common.readError
+        : data.sectionAccess.destinations
+          ? formatMessage(t.readiness.activeDestinations, {
+              count: formatCount(activeDestinationCount),
+            })
+          : t.readiness.noDestinationPermission,
+      state: data.destinationsLoadError
+        ? t.readiness.unavailable
+        : activeDestinationCount > 0
+          ? t.readiness.ready
+          : t.readiness.needsLink,
       status:
-        activeDestinationCount > 0
+        activeDestinationCount > 0 && !data.destinationsLoadError
           ? ("ready" as const)
           : ("attention" as const),
       icon: MessageCircle,
     },
     {
       label: t.readiness.routing,
-      description: data.currentWorkspace
-        ? formatMessage(t.readiness.configuredRoutes, {
-            configured: formatCount(configuredRoutes),
-            total: formatCount(routes.length),
-            workspace: data.currentWorkspace.name,
-          })
-        : t.readiness.noWorkspace,
+      description:
+        data.featureSettingsLoadError || data.currentWorkspaceLoadError
+          ? t.common.readError
+          : data.currentWorkspace
+            ? formatMessage(t.readiness.configuredRoutes, {
+                configured: formatCount(configuredRoutes),
+                total: formatCount(routes.length),
+                workspace: data.currentWorkspace.name,
+              })
+            : t.readiness.noWorkspace,
       state:
-        configuredRoutes > 0
-          ? t.readiness.routesEnabled
-          : t.readiness.needsReview,
+        data.featureSettingsLoadError || data.currentWorkspaceLoadError
+          ? t.readiness.unavailable
+          : configuredRoutes > 0
+            ? t.readiness.routesEnabled
+            : t.readiness.needsReview,
       status:
-        configuredRoutes > 0 ? ("ready" as const) : ("attention" as const),
+        configuredRoutes > 0 &&
+        !data.featureSettingsLoadError &&
+        !data.currentWorkspaceLoadError
+          ? ("ready" as const)
+          : ("attention" as const),
       icon: RadioTower,
     },
     {
       label: t.readiness.scheduledAnalysis,
-      description: data.sectionAccess.schedules
-        ? formatMessage(t.readiness.activeSchedules, {
-            count: formatCount(activeSchedules),
-          })
-        : t.readiness.noSchedulePermission,
-      state: activeSchedules > 0 ? t.readiness.ready : t.readiness.noSchedules,
-      status: activeSchedules > 0 ? ("ready" as const) : ("attention" as const),
+      description: data.scheduleLoadError
+        ? t.common.readError
+        : data.sectionAccess.schedules
+          ? formatMessage(t.readiness.activeSchedules, {
+              count: formatCount(activeSchedules),
+            })
+          : t.readiness.noSchedulePermission,
+      state: data.scheduleLoadError
+        ? t.readiness.unavailable
+        : activeSchedules > 0
+          ? t.readiness.ready
+          : t.readiness.noSchedules,
+      status:
+        activeSchedules > 0 && !data.scheduleLoadError
+          ? ("ready" as const)
+          : ("attention" as const),
       icon: CalendarClock,
     },
   ]
@@ -460,6 +506,7 @@ function FeatureRoutingSection({
   currentWorkspace,
   languages,
   languageCatalogError,
+  loadError,
   canReadFeatureSettings,
   canUpdateFeatureSettings,
 }: {
@@ -468,6 +515,7 @@ function FeatureRoutingSection({
   currentWorkspace: TelegramConfigurationData["currentWorkspace"]
   languages: TelegramConfigurationData["languages"]
   languageCatalogError: boolean
+  loadError: boolean
   canReadFeatureSettings: boolean
   canUpdateFeatureSettings: boolean
 }) {
@@ -505,6 +553,12 @@ function FeatureRoutingSection({
           <TableBody>
             {!canReadFeatureSettings ? (
               <AccessLimitedRow colSpan={5} title={t.routing.accessLimited} />
+            ) : loadError ? (
+              <TableRow>
+                <TableCell colSpan={5}>
+                  <SectionReadError />
+                </TableCell>
+              </TableRow>
             ) : (
               routes.map((route) => (
                 <TableRow
@@ -554,6 +608,7 @@ function MarketAnalysisSchedulePanel({
   languages,
   languageCatalogError,
   scheduleLoadError,
+  optionsLoadError,
   canReadSchedules,
   scheduleActions,
 }: {
@@ -564,6 +619,7 @@ function MarketAnalysisSchedulePanel({
   languages: TelegramConfigurationData["languages"]
   languageCatalogError: boolean
   scheduleLoadError: boolean
+  optionsLoadError: boolean
   canReadSchedules: boolean
   scheduleActions: TelegramConfigurationData["scheduleActions"]
 }) {
@@ -782,6 +838,9 @@ function MarketAnalysisSchedulePanel({
           ) : null}
         </div>
       </div>
+      {optionsLoadError ? (
+        <SectionReadError message={t.schedule.optionsLoadError} />
+      ) : null}
       <AppListTable className="mt-0 md:hidden">
         {renderMobileState()}
       </AppListTable>
@@ -854,6 +913,7 @@ function ScheduleActionButtons({
           description={t.schedule.deleteDescription}
           actionLabel={t.schedule.deleteAction}
           triggerLabel={t.schedule.deleteTrigger}
+          triggerTooltip={t.schedule.deleteTrigger}
           restoreFocusId={deleteTriggerId}
           trigger={
             <Button
@@ -862,6 +922,8 @@ function ScheduleActionButtons({
               variant="destructive"
               size="icon-sm"
               aria-label={t.schedule.deleteTrigger}
+              aria-describedby={`${deleteTriggerId}-tooltip`}
+              title={t.schedule.deleteTrigger}
             >
               <Trash2 data-icon="inline-start" />
             </Button>

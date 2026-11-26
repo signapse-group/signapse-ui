@@ -245,6 +245,11 @@ export interface TelegramConfigurationData {
   languages: LanguageResponse[]
   languageCatalogError: boolean
   scheduleLoadError: boolean
+  botConnectionsLoadError: boolean
+  destinationsLoadError: boolean
+  featureSettingsLoadError: boolean
+  currentWorkspaceLoadError: boolean
+  watchlistAssetsLoadError: boolean
   sectionAccess: TelegramSectionAccess
   manageAccess: TelegramManageAccess
   scheduleActions: TelegramScheduleActionAccess

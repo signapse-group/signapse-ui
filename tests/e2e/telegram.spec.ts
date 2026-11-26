@@ -127,6 +127,12 @@ test.describe("P0 Telegram operations", () => {
     const scheduleSection = page.locator(
       'section[aria-labelledby="telegram-schedule-heading"]'
     )
+    const routingSection = page.locator(
+      'section[aria-labelledby="telegram-routing"]'
+    )
+    const infrastructureSection = page.locator(
+      'section[aria-labelledby="telegram-infrastructure"]'
+    )
     const activeScheduleRow = page
       .getByRole("row")
       .filter({ hasText: "BTC morning analysis" })
@@ -168,6 +174,31 @@ test.describe("P0 Telegram operations", () => {
         '[aria-label="Ask Signapse"], nextjs-portal { display: none !important; }',
     })
 
+    const routingBox = await routingSection.boundingBox()
+    const scheduleBox = await scheduleSection.boundingBox()
+    const infrastructureBox = await infrastructureSection.boundingBox()
+    expect(routingBox).not.toBeNull()
+    expect(scheduleBox).not.toBeNull()
+    expect(infrastructureBox).not.toBeNull()
+    expect(scheduleBox!.x).toBe(routingBox!.x)
+    expect(infrastructureBox!.x).toBeGreaterThan(scheduleBox!.x)
+
+    await page.screenshot({
+      path: test
+        .info()
+        .outputPath("telegram-scheduled-analysis-page-wide-dark-vi.png"),
+      fullPage: true,
+    })
+    await page.emulateMedia({ colorScheme: "light" })
+    await expect(scheduleSection).toBeVisible()
+    await page.screenshot({
+      path: test
+        .info()
+        .outputPath("telegram-scheduled-analysis-page-wide-light-vi.png"),
+      fullPage: true,
+    })
+    await page.emulateMedia({ colorScheme: "dark" })
+
     for (const frame of [
       { name: "wide", width: 1520, height: 1024 },
       { name: "compact", width: 1024, height: 768 },
@@ -179,8 +210,11 @@ test.describe("P0 Telegram operations", () => {
       await expect(
         frame.width < 768 ? activeScheduleCard : activeScheduleRow
       ).toBeVisible()
-      await scheduleSection.screenshot({
-        path: test.info().outputPath(`telegram-schedule-${frame.name}.png`),
+      await page.screenshot({
+        path: test
+          .info()
+          .outputPath(`telegram-scheduled-analysis-page-${frame.name}.png`),
+        fullPage: true,
       })
     }
     await page.setViewportSize({ width: 1520, height: 1024 })
@@ -190,14 +224,34 @@ test.describe("P0 Telegram operations", () => {
     await expect(
       createDialog.getByRole("heading", { name: "Tạo lịch phân tích" })
     ).toBeVisible()
+    await expect(
+      createDialog.getByRole("combobox", { name: "Điểm nhận" })
+    ).toBeVisible()
     await createDialog.screenshot({
       path: test.info().outputPath("telegram-schedule-create-wide.png"),
     })
+    for (const frame of [
+      { name: "mobile-360", width: 360, height: 800 },
+      { name: "effective-200-percent", width: 760, height: 512 },
+    ]) {
+      await page.setViewportSize({ width: frame.width, height: frame.height })
+      await expect(createDialog).toBeVisible()
+      await expect(
+        createDialog
+          .locator('[data-slot="dialog-footer"]')
+          .getByRole("button", { name: "Đóng", exact: true })
+      ).toBeVisible()
+      await expect(
+        createDialog.getByRole("button", { name: "Tạo lịch", exact: true })
+      ).toBeVisible()
+      await createDialog.screenshot({
+        path: test
+          .info()
+          .outputPath(`telegram-schedule-create-${frame.name}.png`),
+      })
+    }
     await page.setViewportSize({ width: 390, height: 844 })
     await expect(createDialog).toBeVisible()
-    await createDialog.screenshot({
-      path: test.info().outputPath("telegram-schedule-create-mobile.png"),
-    })
     await createDialog
       .getByText("Ngôn ngữ đầu ra", { exact: true })
       .scrollIntoViewIfNeeded()
@@ -217,15 +271,57 @@ test.describe("P0 Telegram operations", () => {
     await expect(
       editDialog.getByRole("heading", { name: "Chỉnh sửa lịch phân tích" })
     ).toBeVisible()
+    const editName = editDialog.getByRole("textbox", { name: "Tên lịch" })
+    const editTimezone = editDialog.getByRole("combobox", { name: "Múi giờ" })
+    await expect(editTimezone).toHaveValue(/Asia\/Ho_Chi_Minh$/)
+    await editName.fill("BTC morning analysis draft")
+    await expect(editName).toBeFocused()
     await editDialog.screenshot({
       path: test.info().outputPath("telegram-schedule-edit-wide.png"),
     })
-    await page.keyboard.press("Escape")
-    await expect(editDialog).toBeHidden()
-
-    await activeScheduleRow
-      .getByRole("button", { name: "Xóa lịch phân tích" })
+    for (const frame of [
+      { name: "mobile-360", width: 360, height: 800 },
+      { name: "effective-200-percent", width: 760, height: 512 },
+    ]) {
+      await page.setViewportSize({ width: frame.width, height: frame.height })
+      await expect(editDialog).toBeVisible()
+      await expect(editName).toHaveValue("BTC morning analysis draft")
+      await expect(editName).toBeFocused()
+      await expect(editTimezone).toHaveValue(/Asia\/Ho_Chi_Minh$/)
+      await expect(
+        editDialog.getByRole("button", { name: "Hủy", exact: true })
+      ).toBeVisible()
+      await expect(
+        editDialog.getByRole("button", { name: "Lưu lịch", exact: true })
+      ).toBeVisible()
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= window.innerWidth
+        )
+      ).toBe(true)
+      await editDialog.screenshot({
+        path: test
+          .info()
+          .outputPath(`telegram-schedule-edit-${frame.name}.png`),
+      })
+    }
+    await editDialog.getByRole("button", { name: "Hủy", exact: true }).click()
+    const discardDialog = page.getByRole("alertdialog")
+    await expect(discardDialog).toContainText("Bỏ thay đổi chưa lưu?")
+    await discardDialog
+      .getByRole("button", { name: "Bỏ thay đổi", exact: true })
       .click()
+    await expect(editDialog).toBeHidden()
+    await page.setViewportSize({ width: 1520, height: 1024 })
+    await expect(activeScheduleRow).toContainText("BTC morning analysis")
+
+    const removeScheduleButton = activeScheduleRow.getByRole("button", {
+      name: "Xóa lịch phân tích",
+    })
+    await removeScheduleButton.hover()
+    await expect(page.getByRole("tooltip")).toHaveText("Xóa lịch phân tích")
+    await page.mouse.move(0, 0)
+    await removeScheduleButton.click()
     const scheduleDeleteDialog = page.getByRole("alertdialog")
     await expect(
       scheduleDeleteDialog.getByRole("heading", { name: "Xóa lịch phân tích?" })
@@ -270,5 +366,17 @@ test.describe("P0 Telegram operations", () => {
       })
       .click()
     await expect(newsRow).toContainText("English (en)")
+
+    await fixture.setScenario("/telegram/feature-settings", "outage", "GET")
+    await page.reload()
+    await expect(
+      page
+        .locator('section[aria-labelledby="telegram-routing"]')
+        .getByRole("alert")
+    ).toContainText("Không thể tải dữ liệu của mục này.")
+    await expect(scheduleSection).toBeVisible()
+    await expect(
+      page.getByRole("row").filter({ hasText: "BTC morning analysis" })
+    ).toBeVisible()
   })
 })

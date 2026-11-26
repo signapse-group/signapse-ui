@@ -31,6 +31,7 @@ import {
   formatTelegramDateTime,
   getBotLabel,
   sortOperationalTelegramRecords,
+  SectionReadError,
   StatusBadge,
 } from "./telegram-configuration-shared"
 import {
@@ -90,10 +91,12 @@ export function BotConnectionsCard({
   botConnections,
   canRead,
   canManage,
+  loadError,
 }: {
   botConnections: TelegramBotConnectionResponse[]
   canRead: boolean
   canManage: boolean
+  loadError: boolean
 }) {
   const { dictionary, formatDateTime, formatMessage } = useLocalization()
   const t = dictionary.telegram
@@ -118,6 +121,8 @@ export function BotConnectionsCard({
             title={t.bot.accessLimited}
             description={t.common.accessLimitedDescription}
           />
+        ) : loadError ? (
+          <SectionReadError />
         ) : (
           <>
             {!canManage ? (

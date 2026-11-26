@@ -161,6 +161,61 @@ describe("Telegram schedule form behavior", () => {
     routerRefresh.mockReset()
   })
 
+  it("keeps an API-valid timezone alias selected and unchanged in Edit", async () => {
+    const user = userEvent.setup()
+    const savedSchedule = { ...response, timezone: "Asia/Ho_Chi_Minh" }
+
+    renderWithLocalization(
+      <UpdateTelegramScheduleDialog
+        schedule={savedSchedule}
+        activeDestinations={props.activeDestinations}
+        watchlistAssets={props.watchlistAssets}
+        languages={props.languages}
+        languageCatalogError={false}
+        assetEditable
+        canUpdate
+      />
+    )
+
+    await user.click(
+      screen.getByRole("button", {
+        name: viDictionary.telegram.schedule.editTrigger,
+      })
+    )
+    const dialog = screen.getByRole("dialog")
+    const timezone = within(dialog).getByRole("combobox", {
+      name: viDictionary.telegram.schedule.timezoneLabel,
+    })
+    expect((timezone as HTMLInputElement).value).toContain("Asia/Ho_Chi_Minh")
+
+    await user.clear(
+      within(dialog).getByLabelText(viDictionary.telegram.schedule.nameLabel)
+    )
+    await user.type(
+      within(dialog).getByLabelText(viDictionary.telegram.schedule.nameLabel),
+      "Updated morning analysis"
+    )
+    vi.mocked(updateTelegramMarketAnalysisSchedule).mockResolvedValueOnce({
+      success: false,
+      error: "Update rejected",
+    })
+    await user.click(
+      within(dialog).getByRole("button", {
+        name: viDictionary.telegram.schedule.saveSchedule,
+      })
+    )
+
+    await waitFor(() =>
+      expect(updateTelegramMarketAnalysisSchedule).toHaveBeenCalledWith(
+        savedSchedule.id,
+        expect.objectContaining({
+          name: "Updated morning analysis",
+          timezone: "Asia/Ho_Chi_Minh",
+        })
+      )
+    )
+  })
+
   it("prevents create when no active destination can be selected", () => {
     renderWithLocalization(
       <CreateTelegramScheduleDialog
