@@ -174,9 +174,7 @@ function BotConnectionItem({
 }) {
   const t = dictionary.telegram
   const manageableId =
-    canManage && connection.id !== undefined && connection.status !== undefined
-      ? connection.id
-      : null
+    canManage && connection.id !== undefined ? connection.id : null
   const menuTriggerId =
     manageableId === null ? null : `telegram-bot-actions-${manageableId}`
   const [confirmation, setConfirmation] = useState<"disable" | "delete" | null>(

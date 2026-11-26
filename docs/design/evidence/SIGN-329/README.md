@@ -128,8 +128,20 @@ Compared the current fixture renders with SIGN-31 attachments 10310/10311 and SI
 
 ## Follow-up after coordinator decision on missing response fields
 
-Coordinator comment [11804](https://signapse-group.atlassian.net/browse/SIGN-329?focusedCommentId=11804) authorizes continued FE work in Progress while the producer clarifies the schema. It directs the consumer to mark missing data unverified, avoid inferring status, and avoid a create-failure message when the save outcome is unknown. The live [dev OpenAPI](https://dev-api.signapse.cloud/v3/api-docs), re-fetched at `2026-11-26T11:45:30Z`, remains revision `b6de21490d5572bdb51624372ef860230af5df86`; `TelegramBotConnectionResponse` still has no `required` list.
+Coordinator comment [11804](https://signapse-group.atlassian.net/browse/SIGN-329?focusedCommentId=11804) authorizes continued FE work in Progress while the producer clarifies the schema. It directs the consumer to mark missing data unverified, avoid inferring status, and avoid a create-failure message when the save outcome is unknown. The live [dev OpenAPI](https://dev-api.signapse.cloud/v3/api-docs), re-fetched at `2026-11-26T12:07:03Z`, remains revision `b6de21490d5572bdb51624372ef860230af5df86`; `TelegramBotConnectionResponse` still has no `required` list.
 
-The runtime allowlist now retains valid safe metadata while representing omitted or malformed `id`/`status` as unverified. A 201/200 response with no verifiable status gives localized feedback and refreshes the list instead of reporting failure or ACTIVE. A transport/5xx outcome gives a separate unconfirmed-result warning and also refreshes; known 4xx rejections retain their localized field error. Partial GET rows show an unverified badge/note and have no management actions until identity and status are available. A new 201 is announced as connected only when the returned status is `ACTIVE`.
+The runtime allowlist now retains valid safe metadata while representing omitted or malformed `id`/`status` as unverified. A 201/200 response with no verifiable status gives localized feedback and refreshes the list instead of reporting failure or ACTIVE. A transport/5xx outcome gives a separate unconfirmed-result warning and also refreshes; known 4xx rejections retain their localized field error. Partial GET rows show an unverified badge/note. With manage permission and a known ID, the row menu remains available: Disable is disabled until status is verified as `ACTIVE`, while Delete remains available. Without a usable ID, the menu is withheld. A new 201 is announced as connected only when the returned status is `ACTIVE`.
 
-Regression checks added at the action, component and P0 fixture-browser seams cover missing/invalid fields, safe projection, transport/5xx uncertainty versus known 4xx rejection, a successful POST with omitted status, a saved connection followed by an unknown 503 response, and GET readback missing both ID and status. The browser check also keeps the partial row readable at 390×844 with no horizontal overflow. The render remains fixture-only and does not establish live persistence or dev feature acceptance.
+Regression checks added at the action, component and P0 fixture-browser seams cover missing/invalid fields, safe projection, transport/5xx uncertainty versus known 4xx rejection, a successful POST with omitted status, a saved connection followed by an unknown 503 response, and GET readback missing both ID and status. The component test also verifies that a known-ID partial row keeps Delete available and prevents Disable until the status is `ACTIVE`. The expanded browser check also keeps the partial row readable at 390×844 with no horizontal overflow. The render remains fixture-only and does not establish live persistence or dev feature acceptance.
+
+### Final local verification for the partial-row action adjustment
+
+The change preserves existing management behavior for a known-ID row while failing closed on the status-dependent Disable action. It has no effect on the approved Connect dialog layout; that dialog remains compared against SIGN-31 attachments 10310/10311 above.
+
+- Focused action/component/permission suites — **75 passed**.
+- `pnpm typecheck` — pass.
+- Telegram GET/POST fixture contract guard — pass.
+- Changed-file ESLint and Prettier checks, plus `git diff --check` — pass.
+- The expanded P0 browser run is still required for the new partial-row/mobile assertion; the shared host browser lock is owned by another active Symphony session and returned `resource_busy`. No bypass or competing browser process was used.
+
+These local checks use fixtures and do not verify live authentication, persistence, or Telegram delivery. QA/coordinator retain feature acceptance on dev and Story acceptance.

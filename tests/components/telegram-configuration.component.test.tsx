@@ -851,7 +851,8 @@ describe("Telegram bot connections", () => {
     expect(routerRefresh).toHaveBeenCalledTimes(1)
   })
 
-  it("renders partial saved data as unverified without management actions", () => {
+  it("marks partial saved data unverified and keeps state-dependent actions safe", async () => {
+    const user = userEvent.setup()
     renderBotConnectionsCard({
       botConnections: [
         {
@@ -869,11 +870,22 @@ describe("Telegram bot connections", () => {
     expect(row).toHaveTextContent(
       viDictionary.telegram.bot.connectionDetailsUnverified
     )
+    const actionMenu = within(row).getByRole("button", {
+      name: viDictionary.telegram.bot.actionMenu,
+    })
+    expect(actionMenu).toBeVisible()
+    await user.click(actionMenu)
+    const menu = await screen.findByRole("menu")
     expect(
-      within(row).queryByRole("button", {
-        name: viDictionary.telegram.bot.actionMenu,
+      within(menu).getByRole("menuitem", {
+        name: viDictionary.telegram.common.disable,
       })
-    ).not.toBeInTheDocument()
+    ).toHaveAttribute("aria-disabled", "true")
+    expect(
+      within(menu).getByRole("menuitem", {
+        name: viDictionary.telegram.bot.deleteAction,
+      })
+    ).not.toHaveAttribute("aria-disabled", "true")
   })
 
   it.each([
