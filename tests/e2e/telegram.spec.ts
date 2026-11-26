@@ -1,6 +1,63 @@
 import { expect, test, waitForClientHandler } from "./fixtures"
 
 test.describe("P0 Telegram operations", () => {
+  test("creates a schedule and reads it back from the saved list", async ({
+    page,
+    fixture,
+  }) => {
+    await page.setViewportSize({ width: 1520, height: 1024 })
+    await page.goto("/vi/telegram")
+
+    const scheduleSection = page.locator(
+      'section[aria-labelledby="telegram-schedule-heading"]'
+    )
+    await scheduleSection.getByRole("button", { name: "Tạo lịch" }).click()
+
+    const dialog = page.getByRole("dialog", { name: "Tạo lịch phân tích" })
+    await dialog
+      .getByRole("textbox", { name: "Tên lịch" })
+      .fill("Readback analysis")
+
+    const destination = dialog.getByRole("combobox", { name: "Điểm nhận" })
+    await destination.click()
+    await page.getByRole("option", { name: "Operations channel" }).click()
+
+    const asset = dialog.getByRole("combobox", { name: "Tài sản theo dõi" })
+    await asset.click()
+    await page.getByRole("option", { name: "BTC/USDT — Bitcoin" }).click()
+    await dialog.getByRole("textbox", { name: "Mốc giờ gửi 1" }).fill("09:15")
+
+    await dialog.getByRole("button", { name: "Tạo lịch", exact: true }).click()
+    await expect(dialog).toBeHidden()
+    await expect(
+      page.getByText("Đã tạo lịch phân tích.", { exact: true })
+    ).toBeVisible()
+
+    const createdRow = page
+      .getByRole("row")
+      .filter({ hasText: "Readback analysis" })
+    await expect(createdRow).toContainText("BTC/USDT")
+    await expect(createdRow).toContainText("09:15")
+    await expect(createdRow).toContainText("Operations channel")
+
+    await page.reload()
+    await expect(
+      page.getByRole("row").filter({ hasText: "Readback analysis" })
+    ).toContainText("BTC/USDT")
+
+    const scheduleRequests = (await fixture.state()).requests.filter(
+      (request) =>
+        request.path === "/telegram/market-analysis-schedules" &&
+        ["GET", "POST"].includes(request.method)
+    )
+    expect(scheduleRequests.some((request) => request.method === "POST")).toBe(
+      true
+    )
+    expect(scheduleRequests.some((request) => request.method === "GET")).toBe(
+      true
+    )
+  })
+
   test("covers destination delivery states and destructive confirmation", async ({
     page,
     fixture,

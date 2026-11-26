@@ -1,42 +1,51 @@
 # SIGN-686 Scheduled analysis evidence
 
-Code candidate: [`d7c1d9bf32469aafbc258b016b1bd094526a0842`](https://github.com/signapse-group/signapse-ui/commit/d7c1d9bf32469aafbc258b016b1bd094526a0842), based on `origin/dev` [`4179b7a095482228b3df21cc2e0937676c7f1b6e`](https://github.com/signapse-group/signapse-ui/commit/4179b7a095482228b3df21cc2e0937676c7f1b6e). The evidence-only commit that adds these files does not change the application candidate.
+App-code candidate: [`ed3f785`](https://github.com/signapse-group/signapse-ui/commit/ed3f785) — the SIGN-686 implementation integrated with current `origin/dev` [`83f6658`](https://github.com/signapse-group/signapse-ui/commit/83f6658e8f41805a1e3e90d6bc64972f3a994a42). This evidence update does not change application code.
 
-## Direction and contract
+## Design and API basis
 
-The comparison uses approved Design v2 on [SIGN-657](https://signapse-group.atlassian.net/browse/SIGN-657): Create desktop 10315, Edit desktop 10318 and Create mobile 10317. Page composition follows [SIGN-32](https://signapse-group.atlassian.net/browse/SIGN-32): Wide 10308, Compact 10312 and Mobile 10309.
+Compared the candidate with the live approved references:
 
-The deployed producer contract at [`/v3/api-docs`](https://dev-api.signapse.cloud/v3/api-docs) was fetched from `dev` on 2026-11-26 08:17 UTC; `x-build-revision` was `b6de21490d5572bdb51624372ef860230af5df86`. It publishes GET/POST `/telegram/market-analysis-schedules` and PUT/DELETE `/telegram/market-analysis-schedules/{id}`, with per-action permissions and nullable destination/language response fields. DELETE accepts the documented empty 200 response.
+- [SIGN-32] list: attachment 10308 `telegram-settings-wide-20261123-v2.png`, 10312 `telegram-settings-compact-20261123-v2.png`, and 10309 `telegram-settings-mobile-20261123-v2.png`.
+- [SIGN-657] schedule dialogs: attachment 10315 `telegram-schedule-create-full-20261123-v2.png`, 10318 `telegram-schedule-edit-desktop-20261123-v2.png`, and 10317 `telegram-schedule-create-mobile-20261123-v2.png`.
+
+The list keeps Feature routing and Scheduled analysis together on the left at Wide/Compact, with bot and destination infrastructure on the right. Mobile order is Feature routing, Scheduled analysis, Bot connections, then Destinations. ACTIVE rows have Edit/Remove, DISABLED rows show Inactive and Remove only, and a missing destination is explicit. Create/Edit keep the labelled required Destination field and fixed footer; Edit uses the approved ghost Cancel action. The live attachments were downloaded from Jira and visually checked against the current render.
+
+Fetched the current [dev OpenAPI](https://dev-api.signapse.cloud/v3/api-docs) on 2026-11-26 at 15:57:54 UTC; `x-build-revision` is `b6de21490d5572bdb51624372ef860230af5df86`. It publishes GET/POST `/telegram/market-analysis-schedules` and PUT/DELETE `/telegram/market-analysis-schedules/{id}` with separate read/create/update/delete permissions. Create/update require `destinationId`; `outputLanguageIsoCode` can be omitted/null. Read responses include required `workspaceName`, `asset`, and status, with nullable `destination` and `outputLanguage`; GET omits REMOVED. DELETE accepts ACTIVE/DISABLED and succeeds with an empty 200 response. SIGN-684 comment #11791 records dev deploy run 45763078705 and a matching producer revision.
 
 ## Render captures
 
-The full-page list captures include the application shell and use the P0 fixture in Vietnamese. Wide was captured in dark and light mode. Compact, Mobile, 360px and effective 760×512 CSS width use dark mode. The 760×512 capture represents 200% from 1520×1024. Create/Edit captures show the dialog surface while it remains open; the edit draft is focused and the saved `Asia/Ho_Chi_Minh` timezone remains selected. The assistant launcher and Next.js portal are hidden where they overlap the target.
+The captures use the P0 fixture in Vietnamese: one ACTIVE schedule, one DISABLED schedule without a destination, and one REMOVED schedule. The REMOVED row is absent. The 390px full-page capture was refreshed from the current browser run; the other tracked renders match that run byte-for-byte.
 
-| State                                      | Viewport / mode   | Capture                                                                       |
-| ------------------------------------------ | ----------------- | ----------------------------------------------------------------------------- |
-| Full page, Wide                            | 1520×1024, dark   | [Wide dark](scheduled-analysis-wide-dark-vi-1520x1024.png)                    |
-| Full page, Wide                            | 1520×1024, light  | [Wide light](scheduled-analysis-wide-light-vi-1520x1024.png)                  |
-| Full page, Compact                         | 1024×768, dark    | [Compact](scheduled-analysis-compact-dark-vi-1024x768.png)                    |
-| Full page, Mobile                          | 390×844, dark     | [Mobile](scheduled-analysis-mobile-dark-vi-390x844.png)                       |
-| Full page, Mobile                          | 360×800, dark     | [360px Mobile](scheduled-analysis-mobile-dark-vi-360x800.png)                 |
-| Full page, effective 200%                  | 760×512 CSS, dark | [Effective width](scheduled-analysis-effective-760x512-200pct-dark-vi.png)    |
-| Create dialog                              | 1520×1024, dark   | [Create Wide](schedule-create-wide-dark-vi-1520x1024.png)                     |
-| Create dialog                              | 360×800, dark     | [Create 360px](schedule-create-mobile-360x800-dark-vi.png)                    |
-| Create dialog                              | 760×512 CSS, dark | [Create effective 200%](schedule-create-effective-760x512-200pct-dark-vi.png) |
-| Create dialog, scrolled to output language | 390×844, dark     | [Create mobile, scrolled](schedule-create-mobile-bottom-dark-vi-390x844.png)  |
-| Edit dialog with unsaved focused draft     | 1520×1024, dark   | [Edit Wide](schedule-edit-wide-dark-vi-1520x1024.png)                         |
-| Edit dialog with unsaved focused draft     | 360×800, dark     | [Edit 360px](schedule-edit-mobile-360x800-dark-vi.png)                        |
-| Edit dialog with unsaved focused draft     | 760×512 CSS, dark | [Edit effective 200%](schedule-edit-effective-760x512-200pct-dark-vi.png)     |
-| Remove confirmation before cancel          | 1520×1024, dark   | [Remove confirmation](schedule-remove-confirmation-dark-vi.png)               |
+| State                                      | Viewport / theme / shell           | Capture                                                                       |
+| ------------------------------------------ | ---------------------------------- | ----------------------------------------------------------------------------- |
+| Full page, Wide                            | 1520×1024, dark, expanded sidebar  | [Wide dark](scheduled-analysis-wide-dark-vi-1520x1024.png)                    |
+| Full page, Wide                            | 1520×1024, light, expanded sidebar | [Wide light](scheduled-analysis-wide-light-vi-1520x1024.png)                  |
+| Full page, Compact                         | 1024×768, dark, collapsed sidebar  | [Compact](scheduled-analysis-compact-dark-vi-1024x768.png)                    |
+| Full page, Mobile                          | 390×844, dark, sidebar closed      | [Mobile](scheduled-analysis-mobile-dark-vi-390x844.png)                       |
+| Full page, Mobile                          | 360×800, dark, sidebar closed      | [360px Mobile](scheduled-analysis-mobile-dark-vi-360x800.png)                 |
+| Full page, effective 200% width            | 760×512 CSS, dark, sidebar closed  | [Effective width](scheduled-analysis-effective-760x512-200pct-dark-vi.png)    |
+| Create dialog                              | 1520×1024, dark                    | [Create Wide](schedule-create-wide-dark-vi-1520x1024.png)                     |
+| Create dialog                              | 360×800, dark                      | [Create 360px](schedule-create-mobile-360x800-dark-vi.png)                    |
+| Create dialog                              | 760×512 CSS effective width, dark  | [Create effective 200%](schedule-create-effective-760x512-200pct-dark-vi.png) |
+| Create dialog, scrolled to output language | 390×844, dark                      | [Create mobile, scrolled](schedule-create-mobile-bottom-dark-vi-390x844.png)  |
+| Edit dialog with focused unsaved draft     | 1520×1024, dark                    | [Edit Wide](schedule-edit-wide-dark-vi-1520x1024.png)                         |
+| Edit dialog with focused unsaved draft     | 360×800, dark                      | [Edit 360px](schedule-edit-mobile-360x800-dark-vi.png)                        |
+| Edit dialog with focused unsaved draft     | 760×512 CSS effective width, dark  | [Edit effective 200%](schedule-edit-effective-760x512-200pct-dark-vi.png)     |
+| Remove confirmation before cancel          | 1520×1024, dark                    | [Remove confirmation](schedule-remove-confirmation-dark-vi.png)               |
 
-The fixture has an ACTIVE schedule, a DISABLED schedule without a destination and a REMOVED record. The captures show the saved schedule details, inactive/missing-destination labels and the absence of the REMOVED row. The browser test asserts that Edit is available only for ACTIVE, Remove follows delete permission, the draft and timezone survive viewport changes, the Edit footer stays visible, cancel confirms draft discard, and a Feature routing read failure leaves Scheduled analysis available.
+The P0 case resized while Create/Edit stayed open. At 360px and 760px CSS width, the draft, focus, and selected `Asia/Ho_Chi_Minh` timezone remained; the footer actions stayed visible and there was no page-level horizontal overflow. The 760×512 viewport is the effective-width proxy for 200% from 1520×1024, not browser-chrome zoom. On the error path, a 503 from Feature routing rendered its local error while Scheduled analysis and the ACTIVE row remained available at 1520×1024 with the sidebar expanded.
 
-## Checks and remaining local evidence
+## Local checks
 
-- `pnpm exec vitest run tests/components/telegram-configuration.component.test.tsx tests/components/telegram-schedule-form.component.test.tsx tests/api/telegram-action.test.ts` — 38 passed.
-- Scoped `pnpm exec eslint` on changed Telegram page/components, dictionaries, types and tests — passed.
+- Focused Vitest: `pnpm exec vitest run tests/api/telegram-action.test.ts tests/components/telegram-configuration.component.test.tsx tests/components/telegram-schedule-form.component.test.tsx tests/core/api-contract-guard.test.ts` — 4 files, 66 passed.
+- Scoped ESLint over changed Telegram actions, components, definitions, dictionaries, fixtures, and tests — passed.
 - `pnpm typecheck` — passed.
-- `git diff --check` — passed.
-- The selected browser command is `/opt/apps/symphony/runtime/run-fe-browser "$PWD" tests/e2e/telegram.spec.ts --retries=0`. The current candidate does not yet have a completed browser result. After the earlier partial run, repeated attempts were rejected with `resource_busy: host browser slot occupied`; its lease still identifies the active `symphony-session-74f4e296fcdc62259c4f6e631c4de97e.service` cgroup as populated. Rerun the selected P0 check in a fresh Implement session after the lease clears before In Review.
+- Prettier on changed TS/TSX/MJS files, `git diff --cached --check`, and `git diff --check` — passed.
+- `/opt/apps/symphony/runtime/run-fe-browser "$PWD" tests/e2e/telegram.spec.ts --retries=0` — 3 passed in 47.5s on the merged candidate, covering the 503 read-isolation state, schedule list/actions, form draft/timezone reflow, and Telegram fixture cases.
+- `/opt/apps/symphony/runtime/run-fe-browser "$PWD" tests/e2e/telegram.spec.ts --retries=0 --grep "creates a schedule and reads it back"` — 1 passed in 17.3s. The Create flow submits valid data, shows the saved ACTIVE row, and retains it after a fresh page read; the fixture records both POST and GET.
 
-These are local fixture renders and checks. They do not verify live-user authorization or feature acceptance. QA/coordinator owns live feature-flow acceptance after delivery.
+These local fixtures do not prove live-user authorization or schedule persistence. QA owns live feature acceptance after delivery.
+
+[SIGN-32]: https://signapse-group.atlassian.net/browse/SIGN-32
+[SIGN-657]: https://signapse-group.atlassian.net/browse/SIGN-657
