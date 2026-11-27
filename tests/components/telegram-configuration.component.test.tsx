@@ -45,6 +45,7 @@ import {
   disableTelegramMarketAnalysisSchedule,
   updateTelegramFeatureSetting,
 } from "@/app/api/telegram/action"
+import { en as enDictionary } from "@/app/lib/i18n/dictionaries/en"
 import { vi as viDictionary } from "@/app/lib/i18n/dictionaries/vi"
 import { LocalizationProvider } from "@/app/lib/i18n/provider"
 import type {
@@ -169,6 +170,58 @@ function getFeatureRouteContainer(label: string) {
     throw new Error(`Could not find a feature route containing "${label}"`)
   return cell.closest("[data-feature-key]") as HTMLElement
 }
+
+function destinationSelectorName(route: string) {
+  return viDictionary.telegram.routing.destinationSelectorAria.replace(
+    "{route}",
+    route
+  )
+}
+
+describe("Telegram destination selector accessible names", () => {
+  afterEach(() => cleanup())
+
+  it.each([
+    [
+      "en",
+      enDictionary,
+      "Market news alerts",
+      "Destination for Market news alerts",
+      "Remove the destination for Market news alerts",
+    ],
+    [
+      "vi",
+      viDictionary,
+      "Cảnh báo tin thị trường",
+      "Điểm nhận cho Cảnh báo tin thị trường",
+      "Bỏ điểm nhận của Cảnh báo tin thị trường",
+    ],
+  ] as const)(
+    "names the market destination selector with its purpose and route in %s",
+    (locale, dictionary, routeLabel, destinationName, clearName) => {
+      render(
+        <LocalizationProvider locale={locale} dictionary={dictionary}>
+          <TelegramConfigurationPage
+            data={{
+              ...data,
+              featureSettings: [featureSettings[1]],
+              manageAccess: { ...data.manageAccess, marketNewsRouting: true },
+            }}
+          />
+        </LocalizationProvider>
+      )
+
+      const marketRow = getFeatureRouteContainer(routeLabel)
+      const destinationSelect = within(marketRow).getByRole("combobox", {
+        name: destinationName,
+      })
+      expect(destinationSelect).toBeVisible()
+      expect(
+        within(marketRow).getByRole("button", { name: clearName })
+      ).toBeVisible()
+    }
+  )
+})
 
 const botConnection: TelegramBotConnectionResponse = {
   id: 23,
@@ -378,12 +431,12 @@ describe("Telegram schedule destructive actions", () => {
     expect(marketCards[1]).toHaveTextContent("Operations")
     expect(
       within(marketCards[0]).getByRole("combobox", {
-        name: "Cảnh báo tin thị trường — Workspace",
+        name: "Điểm nhận cho Cảnh báo tin thị trường — Workspace",
       })
     ).toBeDisabled()
     expect(
       within(marketCards[1]).getByRole("combobox", {
-        name: "Cảnh báo tin thị trường — Workspace Beta",
+        name: "Điểm nhận cho Cảnh báo tin thị trường — Workspace Beta",
       })
     ).toBeDisabled()
 
@@ -515,7 +568,9 @@ describe("Telegram schedule destructive actions", () => {
       viDictionary.telegram.routeDefinitions.MARKET_NEWS_ALERT.label
     )
     const destinationSelect = within(marketRow).getByRole("combobox", {
-      name: viDictionary.telegram.routeDefinitions.MARKET_NEWS_ALERT.label,
+      name: destinationSelectorName(
+        viDictionary.telegram.routeDefinitions.MARKET_NEWS_ALERT.label
+      ),
     })
     const clear = within(marketRow).getByRole("button", {
       name: viDictionary.telegram.routing.destinationClearAria.replace(
@@ -539,7 +594,9 @@ describe("Telegram schedule destructive actions", () => {
     })
     expect(
       within(marketRow).getByRole("combobox", {
-        name: viDictionary.telegram.routeDefinitions.MARKET_NEWS_ALERT.label,
+        name: destinationSelectorName(
+          viDictionary.telegram.routeDefinitions.MARKET_NEWS_ALERT.label
+        ),
       })
     ).toHaveTextContent(destination.displayLabel)
     expect(toast.error).toHaveBeenCalledWith("Destination update failed")
@@ -569,7 +626,9 @@ describe("Telegram schedule destructive actions", () => {
     )
     expect(
       within(reloadedMarketRow).getByRole("combobox", {
-        name: viDictionary.telegram.routeDefinitions.MARKET_NEWS_ALERT.label,
+        name: destinationSelectorName(
+          viDictionary.telegram.routeDefinitions.MARKET_NEWS_ALERT.label
+        ),
       })
     ).toHaveTextContent(viDictionary.telegram.destination.placeholder)
     expect(reloadedMarketRow).toHaveTextContent("Tiếng Việt")
@@ -606,7 +665,9 @@ describe("Telegram schedule destructive actions", () => {
       viDictionary.telegram.routeDefinitions.MARKET_NEWS_ALERT.label
     )
     const destinationSelect = within(marketRow).getByRole("combobox", {
-      name: viDictionary.telegram.routeDefinitions.MARKET_NEWS_ALERT.label,
+      name: destinationSelectorName(
+        viDictionary.telegram.routeDefinitions.MARKET_NEWS_ALERT.label
+      ),
     })
     await user.click(destinationSelect)
     await user.click(
@@ -760,7 +821,9 @@ describe("Telegram schedule destructive actions", () => {
     expect(routeSwitch).toBeEnabled()
     expect(
       within(marketRow).getByRole("combobox", {
-        name: viDictionary.telegram.routeDefinitions.MARKET_NEWS_ALERT.label,
+        name: destinationSelectorName(
+          viDictionary.telegram.routeDefinitions.MARKET_NEWS_ALERT.label
+        ),
       })
     ).toHaveTextContent(inactiveDestination.displayLabel)
 
@@ -801,12 +864,16 @@ describe("Telegram schedule destructive actions", () => {
     ).not.toBeChecked()
     expect(
       within(pausedMarketRow).getByRole("combobox", {
-        name: viDictionary.telegram.routeDefinitions.MARKET_NEWS_ALERT.label,
+        name: destinationSelectorName(
+          viDictionary.telegram.routeDefinitions.MARKET_NEWS_ALERT.label
+        ),
       })
     ).toHaveTextContent(inactiveDestination.displayLabel)
     await user.click(
       within(pausedMarketRow).getByRole("combobox", {
-        name: viDictionary.telegram.routeDefinitions.MARKET_NEWS_ALERT.label,
+        name: destinationSelectorName(
+          viDictionary.telegram.routeDefinitions.MARKET_NEWS_ALERT.label
+        ),
       })
     )
     await user.click(
@@ -847,7 +914,9 @@ describe("Telegram schedule destructive actions", () => {
     ).not.toBeChecked()
     expect(
       within(reassignedMarketRow).getByRole("combobox", {
-        name: viDictionary.telegram.routeDefinitions.MARKET_NEWS_ALERT.label,
+        name: destinationSelectorName(
+          viDictionary.telegram.routeDefinitions.MARKET_NEWS_ALERT.label
+        ),
       })
     ).toHaveTextContent(destination.displayLabel)
   })
@@ -956,8 +1025,9 @@ describe("Telegram schedule destructive actions", () => {
 
       await user.click(
         within(routeRow as HTMLElement).getByRole("combobox", {
-          name: viDictionary.telegram.routeDefinitions.ECONOMIC_CALENDAR_ALERT
-            .label,
+          name: destinationSelectorName(
+            viDictionary.telegram.routeDefinitions.ECONOMIC_CALENDAR_ALERT.label
+          ),
         })
       )
       await user.click(
@@ -1080,8 +1150,9 @@ describe("Telegram schedule destructive actions", () => {
 
     await user.click(
       within(calendarRow).getByRole("combobox", {
-        name: viDictionary.telegram.routeDefinitions.ECONOMIC_CALENDAR_ALERT
-          .label,
+        name: destinationSelectorName(
+          viDictionary.telegram.routeDefinitions.ECONOMIC_CALENDAR_ALERT.label
+        ),
       })
     )
     await user.click(await screen.findByRole("option", { name: "Backup" }))

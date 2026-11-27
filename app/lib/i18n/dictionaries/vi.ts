@@ -2595,6 +2595,7 @@ export const vi = {
       workspaceIdFallback: "Không gian {id}",
       destinationUpdateError: "Không thể cập nhật điểm nhận cho định tuyến.",
       destinationUpdateSuccess: "Đã cập nhật điểm nhận định tuyến.",
+      destinationSelectorAria: "Điểm nhận cho {route}",
       destinationClearAria: "Bỏ điểm nhận của {route}",
       destinationClearSuccess: "Đã bỏ điểm nhận và tắt định tuyến.",
       enableDestinationRequired:

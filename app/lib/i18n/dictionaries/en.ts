@@ -2618,6 +2618,7 @@ export const en: Dictionary = {
       workspaceIdFallback: "Workspace {id}",
       destinationUpdateError: "Could not update the route destination.",
       destinationUpdateSuccess: "Route destination updated.",
+      destinationSelectorAria: "Destination for {route}",
       destinationClearAria: "Remove the destination for {route}",
       destinationClearSuccess: "Destination removed and routing paused.",
       enableDestinationRequired:

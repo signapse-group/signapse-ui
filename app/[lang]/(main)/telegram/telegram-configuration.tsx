@@ -1213,7 +1213,9 @@ function FeatureRouteControls({
         >
           <SelectTrigger
             ref={setDestinationFocusTarget}
-            aria-label={route.label}
+            aria-label={formatMessage(t.routing.destinationSelectorAria, {
+              route: route.label,
+            })}
             className={cn(
               "w-full",
               isMarketNewsRoute && savedDestination && "pe-10"
