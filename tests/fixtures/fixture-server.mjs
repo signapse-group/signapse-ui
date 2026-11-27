@@ -4172,6 +4172,70 @@ Which asset did you mean? The available data is limited. Add TSLA to your watchl
     return state.botConnections.filter(
       (connection) => connection.status !== "REMOVED"
     )
+
+  const botConnectionReconnectMatch = pathname.match(
+    /^\/telegram\/bot-connections\/(\d+)\/reconnect$/
+  )
+  if (method === "POST" && botConnectionReconnectMatch) {
+    const scenario = getScenario(state, method, pathname)
+    if (scenario === "reconnect-token-invalid") {
+      return {
+        __status: 400,
+        payload: errorPayload("Telegram bot token could not be verified."),
+      }
+    }
+    if (scenario === "reconnect-token-mismatch") {
+      return {
+        __status: 409,
+        payload: errorPayload(
+          "The token does not belong to the selected Telegram bot connection.",
+          "TELEGRAM_BOT_ID_MISMATCH"
+        ),
+      }
+    }
+    if (scenario === "reconnect-permission-denied") {
+      return {
+        __status: 403,
+        payload: errorPayload("Reconnect permission is required.", "FORBIDDEN"),
+      }
+    }
+    if (typeof body?.botToken !== "string" || !body.botToken.trim()) {
+      return {
+        __status: 400,
+        payload: errorPayload("A bot token is required."),
+      }
+    }
+
+    const connectionId = Number(botConnectionReconnectMatch[1])
+    const connection = state.botConnections.find(
+      (item) => item.id === connectionId
+    )
+    if (!connection) {
+      return {
+        __status: 404,
+        payload: errorPayload("Telegram bot connection not found.", "NOT_FOUND"),
+      }
+    }
+    if (connection.status !== "ACTIVE" && connection.status !== "INVALID") {
+      return {
+        __status: 409,
+        payload: errorPayload("Telegram bot connection cannot be reconnected."),
+      }
+    }
+
+    connection.lastValidatedAt = NOW
+    connection.lastModifiedDate = NOW
+    if (scenario === "reconnect-webhook-failed") {
+      connection.status = "INVALID"
+      connection.failureReason = "Webhook registration failed."
+    } else {
+      connection.status = "ACTIVE"
+      delete connection.failureReason
+      connection.lastWebhookRegisteredAt = NOW
+    }
+    return connection
+  }
+
   if (method === "GET" && pathname === "/telegram/destinations") {
     if (getScenario(state, method, pathname) === "telegram-verified-readback") {
       return [

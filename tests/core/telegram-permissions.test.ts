@@ -9,6 +9,7 @@ import {
   TELEGRAM_BOT_CONNECTION_DELETE_PERMISSION,
   TELEGRAM_BOT_CONNECTION_MANAGE_PERMISSION,
   TELEGRAM_BOT_CONNECTION_READ_PERMISSION,
+  TELEGRAM_BOT_CONNECTION_UPDATE_PERMISSION,
   TELEGRAM_ECONOMIC_CALENDAR_ROUTING_READ_PERMISSION,
   TELEGRAM_ECONOMIC_CALENDAR_ROUTING_UPDATE_PERMISSION,
   TELEGRAM_FEATURE_SETTING_UPDATE_PERMISSION,
@@ -31,6 +32,7 @@ describe("Telegram configuration permissions", () => {
     )
     expect(getTelegramSectionAccess(permissions).botConnections).toBe(false)
     expect(getTelegramManageAccess(permissions).botConnections).toBe(false)
+    expect(getTelegramManageAccess(permissions).botConnectionsUpdate).toBe(false)
   })
 
   it("keeps read, manage, and delete independent from create", () => {
@@ -41,11 +43,13 @@ describe("Telegram configuration permissions", () => {
     expect(canAccessTelegramConfiguration(readOnly)).toBe(true)
     expect(getTelegramSectionAccess(readOnly).botConnections).toBe(true)
     expect(getTelegramManageAccess(readOnly).botConnections).toBe(false)
+    expect(getTelegramManageAccess(readOnly).botConnectionsUpdate).toBe(false)
 
     expect(canAccessTelegramConfiguration(manageOnly)).toBe(false)
     expect(getTelegramSectionAccess(manageOnly).botConnections).toBe(false)
     expect(getTelegramManageAccess(manageOnly)).toMatchObject({
       botConnections: true,
+      botConnectionsUpdate: false,
       botConnectionsDelete: false,
     })
 
@@ -53,8 +57,28 @@ describe("Telegram configuration permissions", () => {
     expect(getTelegramSectionAccess(deleteOnly).botConnections).toBe(false)
     expect(getTelegramManageAccess(deleteOnly)).toMatchObject({
       botConnections: false,
+      botConnectionsUpdate: false,
       botConnectionsDelete: true,
     })
+  })
+
+  it("keeps Reconnect update separate from read, create, manage, and remove", () => {
+    const updateOnly = [TELEGRAM_BOT_CONNECTION_UPDATE_PERMISSION]
+
+    expect(canAccessTelegramConfiguration(updateOnly)).toBe(false)
+    expect(getTelegramSectionAccess(updateOnly).botConnections).toBe(false)
+    expect(getTelegramManageAccess(updateOnly)).toMatchObject({
+      botConnections: false,
+      botConnectionsUpdate: true,
+      botConnectionsDelete: false,
+    })
+
+    expect(
+      getTelegramManageAccess([
+        TELEGRAM_BOT_CONNECTION_READ_PERMISSION,
+        TELEGRAM_BOT_CONNECTION_UPDATE_PERMISSION,
+      ])
+    ).toMatchObject({ botConnectionsUpdate: true })
   })
 })
 

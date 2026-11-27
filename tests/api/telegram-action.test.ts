@@ -6,12 +6,18 @@ const { testDictionary } = vi.hoisted(() => ({
       validationInvalid: "Telegram validation failed",
       botTokenRequired: "Enter the bot token.",
       bot: {
+        invalidData: "Bot data is invalid.",
         createError: "Không thể kết nối bot Telegram.",
         createTokenVerificationError:
           "Không thể xác minh token bot. Hãy kiểm tra token rồi thử lại.",
         createPermissionDenied:
           "Tài khoản của bạn cần quyền kết nối bot Telegram. Hãy liên hệ quản trị viên.",
         createConnectionConflict: "Bot Telegram này đã được kết nối.",
+        reconnectTokenMismatch:
+          "Token này thuộc một bot Telegram khác với kết nối đã chọn.",
+        reconnectPermissionDenied:
+          "Tài khoản của bạn cần quyền kết nối lại bot này. Hãy liên hệ quản trị viên.",
+        reconnectError: "Không thể kết nối lại bot này.",
         deleteError: "Could not remove the Telegram bot.",
         deleteBlockedByDestinations:
           "Remove all linked destinations before removing this bot.",
@@ -90,6 +96,7 @@ import {
   getTelegramMarketAnalysisSchedules,
   getTelegramFeatureSettings,
   sendTelegramTestMessage,
+  reconnectTelegramBotConnection,
   updateTelegramMarketAnalysisSchedule,
   updateTelegramFeatureSetting,
 } from "@/app/api/telegram/action"
@@ -891,6 +898,159 @@ describe("Telegram bot connection creation", () => {
       success: false,
       error: "Enter the bot token.",
     })
+    expect(fetchAuthenticatedWithStatus).not.toHaveBeenCalled()
+  })
+})
+
+describe("Telegram bot reconnection", () => {
+  beforeEach(() => {
+    vi.mocked(fetchAuthenticated).mockReset()
+    vi.mocked(fetchAuthenticatedWithStatus).mockReset()
+    vi.mocked(revalidatePath).mockClear()
+  })
+
+  it("posts only the selected row token and trusts its same-ID readback", async () => {
+    vi.mocked(fetchAuthenticatedWithStatus).mockResolvedValueOnce({
+      data: {
+        id: 999,
+        status: "INVALID",
+        botToken: "must-not-reach-the-client",
+      },
+      status: 200,
+    })
+    vi.mocked(fetchAuthenticated).mockResolvedValueOnce([
+      { id: 13, status: "INVALID" },
+      {
+        id: 12,
+        status: "ACTIVE",
+        botToken: "must-not-reach-the-client",
+        ownerEmail: "other-owner@example.test",
+      },
+    ])
+
+    const result = await reconnectTelegramBotConnection(12, {
+      botToken: "  fake-token  ",
+    })
+
+    expect(result).toEqual({ success: true, data: { status: "ACTIVE" } })
+    expect(JSON.stringify(result)).not.toContain("fake-token")
+    expect(fetchAuthenticatedWithStatus).toHaveBeenCalledWith(
+      "/telegram/bot-connections/12/reconnect",
+      { method: "POST", body: JSON.stringify({ botToken: "fake-token" }) }
+    )
+    expect(fetchAuthenticated).toHaveBeenCalledWith(
+      "/telegram/bot-connections"
+    )
+    expect(revalidatePath).toHaveBeenCalledWith("/telegram")
+  })
+
+  it("reports INVALID only from the selected row readback", async () => {
+    vi.mocked(fetchAuthenticatedWithStatus).mockResolvedValueOnce({
+      data: { id: 12, status: "ACTIVE" },
+      status: 200,
+    })
+    vi.mocked(fetchAuthenticated).mockResolvedValueOnce([
+      {
+        id: 12,
+        status: "INVALID",
+        failureReason: "Safe webhook failure reason",
+      },
+    ])
+
+    await expect(
+      reconnectTelegramBotConnection(12, { botToken: "fake-token" })
+    ).resolves.toEqual({ success: true, data: { status: "INVALID" } })
+  })
+
+  it("leaves success unverified when the selected row or its status is missing", async () => {
+    vi.mocked(fetchAuthenticatedWithStatus).mockResolvedValueOnce({
+      data: { id: 12, status: "ACTIVE" },
+      status: 200,
+    })
+    vi.mocked(fetchAuthenticated).mockResolvedValueOnce([
+      { id: 13, status: "ACTIVE" },
+      { id: 12, displayLabel: "Status missing" },
+    ])
+
+    await expect(
+      reconnectTelegramBotConnection(12, { botToken: "fake-token" })
+    ).resolves.toEqual({ success: true, data: {} })
+  })
+
+  it("does not infer Reconnect success from an uncontracted 2xx response", async () => {
+    vi.mocked(fetchAuthenticatedWithStatus).mockResolvedValueOnce({
+      data: { id: 12, status: "ACTIVE" },
+      status: 204,
+    })
+
+    await expect(
+      reconnectTelegramBotConnection(12, { botToken: "fake-token" })
+    ).resolves.toEqual({ success: true, data: {} })
+    expect(fetchAuthenticated).not.toHaveBeenCalled()
+    expect(revalidatePath).toHaveBeenCalledWith("/telegram")
+  })
+
+  it.each([
+    {
+      status: 400,
+      code: undefined,
+      expected: testDictionary.telegram.bot.createTokenVerificationError,
+    },
+    {
+      status: 403,
+      code: undefined,
+      expected: testDictionary.telegram.bot.reconnectPermissionDenied,
+    },
+    {
+      status: 409,
+      code: "TELEGRAM_BOT_ID_MISMATCH",
+      expected: testDictionary.telegram.bot.reconnectTokenMismatch,
+    },
+    {
+      status: 409,
+      code: "USER_PROVISIONING_REJECTED",
+      expected: testDictionary.telegram.bot.reconnectError,
+    },
+    {
+      status: 404,
+      code: "NOT_FOUND",
+      expected: testDictionary.telegram.bot.reconnectError,
+    },
+  ])("maps HTTP $status ($code) to localized copy", async (testCase) => {
+    vi.mocked(fetchAuthenticatedWithStatus).mockRejectedValueOnce(
+      backendError("Do not expose backend details", testCase.status, testCase.code)
+    )
+
+    await expect(
+      reconnectTelegramBotConnection(12, { botToken: "private-token" })
+    ).resolves.toEqual({ success: false, error: testCase.expected })
+    expect(fetchAuthenticated).not.toHaveBeenCalled()
+    expect(revalidatePath).not.toHaveBeenCalled()
+  })
+
+  it.each([new Error("fetch failed"), backendError("unavailable", 503)])(
+    "keeps an uncertain POST outcome unverified and refreshes the list",
+    async (error) => {
+      vi.mocked(fetchAuthenticatedWithStatus).mockRejectedValueOnce(error)
+
+      await expect(
+        reconnectTelegramBotConnection(12, { botToken: "private-token" })
+      ).resolves.toEqual({ success: true, data: {} })
+      expect(revalidatePath).toHaveBeenCalledWith("/telegram")
+      expect(JSON.stringify(error)).not.toContain("private-token")
+    }
+  )
+
+  it("rejects an invalid ID or empty token before calling the API", async () => {
+    await expect(
+      reconnectTelegramBotConnection(0, { botToken: "fake-token" })
+    ).resolves.toEqual({
+      success: false,
+      error: testDictionary.telegram.bot.invalidData,
+    })
+    await expect(
+      reconnectTelegramBotConnection(12, { botToken: "   " })
+    ).resolves.toEqual({ success: false, error: "Enter the bot token." })
     expect(fetchAuthenticatedWithStatus).not.toHaveBeenCalled()
   })
 })

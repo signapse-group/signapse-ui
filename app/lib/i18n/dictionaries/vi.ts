@@ -2537,6 +2537,21 @@ export const vi = {
       createPermissionDenied:
         "Tài khoản của bạn cần quyền kết nối bot Telegram. Hãy liên hệ quản trị viên.",
       createConnectionConflict: "Bot Telegram này đã được kết nối.",
+      reconnectTrigger: "Kết nối lại {botName}",
+      reconnectTitle: "Kết nối lại bot Telegram",
+      reconnectDescription:
+        "Nhập token BotFather cho {botName} ({botUsername}).",
+      reconnectAction: "Kết nối lại",
+      reconnectSuccess: "Đã kết nối lại bot Telegram.",
+      reconnectIncomplete:
+        "Đăng ký webhook thất bại. Bot vẫn ở trạng thái không hợp lệ; trạng thái hiện tại được hiển thị trên hàng.",
+      reconnectOutcomeUnverified:
+        "Chưa xác nhận được kết quả kết nối lại. Hãy kiểm tra trạng thái bot trước khi thử lại.",
+      reconnectTokenMismatch:
+        "Token này thuộc một bot Telegram khác với kết nối đã chọn.",
+      reconnectPermissionDenied:
+        "Tài khoản của bạn cần quyền kết nối lại bot này. Hãy liên hệ quản trị viên.",
+      reconnectError: "Không thể kết nối lại bot này.",
       deleteError: "Không thể gỡ bot Telegram.",
       fallbackLabel: "Bot #{id}",
     },

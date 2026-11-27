@@ -20,6 +20,7 @@ vi.mock("@/app/api/telegram/action", () => ({
   createTelegramLinkToken: vi.fn(),
   createTelegramMarketAnalysisSchedule: vi.fn(),
   deleteTelegramBotConnection: vi.fn(),
+  reconnectTelegramBotConnection: vi.fn(),
   deleteTelegramDestination: vi.fn(),
   deleteTelegramMarketAnalysisSchedule: vi.fn(),
   disableTelegramBotConnection: vi.fn(),
@@ -47,6 +48,7 @@ import {
   createTelegramLinkToken,
   deleteTelegramBotConnection,
   deleteTelegramDestination,
+  reconnectTelegramBotConnection,
   deleteTelegramMarketAnalysisSchedule,
   updateTelegramFeatureSetting,
   updateTelegramMarketAnalysisSchedule,
@@ -162,6 +164,7 @@ const data: TelegramConfigurationData = {
   },
   manageAccess: {
     botConnections: false,
+    botConnectionsUpdate: false,
     botConnectionsDelete: false,
     destinations: false,
     featureSettings: false,
@@ -774,14 +777,14 @@ const botConnection: TelegramBotConnectionResponse = {
 function renderBotConnectionsCard({
   botConnections = [],
   canRead = false,
-  canManage = false,
+  canUpdate = false,
   canCreate = false,
   canDelete = false,
   loadError = false,
 }: {
   botConnections?: TelegramBotConnectionReadback[]
   canRead?: boolean
-  canManage?: boolean
+  canUpdate?: boolean
   canCreate?: boolean
   canDelete?: boolean
   loadError?: boolean
@@ -791,7 +794,7 @@ function renderBotConnectionsCard({
       <BotConnectionsCard
         botConnections={botConnections}
         canRead={canRead}
-        canManage={canManage}
+        canUpdate={canUpdate}
         canCreate={canCreate}
         canDelete={canDelete}
         loadError={loadError}
@@ -2190,6 +2193,7 @@ describe("Telegram bot connections", () => {
 
   beforeEach(() => {
     vi.mocked(createTelegramBotConnection).mockReset()
+    vi.mocked(reconnectTelegramBotConnection).mockReset()
     routerRefresh.mockReset()
     vi.mocked(toast.error).mockClear()
     vi.mocked(toast.info).mockClear()
@@ -2215,7 +2219,7 @@ describe("Telegram bot connections", () => {
     expect(screen.queryByRole("listitem")).not.toBeInTheDocument()
   })
 
-  it("keeps read-only and manage-only permissions from creating a bot", () => {
+  it("keeps read-only permissions from creating or reconnecting a bot", () => {
     renderBotConnectionsCard({
       botConnections: [botConnection],
       canRead: true,
@@ -2230,21 +2234,174 @@ describe("Telegram bot connections", () => {
     expect(
       screen.queryByRole("button", { name: /Gỡ bot/ })
     ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: /Kết nối lại/ })
+    ).not.toBeInTheDocument()
+  })
 
-    cleanup()
+  it("shows Reconnect only for identified ACTIVE or INVALID rows with read and update", () => {
+    const invalidConnection = {
+      ...botConnection,
+      id: 13,
+      displayLabel: "Invalid bot",
+      status: "INVALID" as const,
+    }
     renderBotConnectionsCard({
-      botConnections: [botConnection],
-      canManage: true,
-      canCreate: false,
+      botConnections: [
+        botConnection,
+        invalidConnection,
+        { ...botConnection, id: 14, status: "DISABLED" },
+        { displayLabel: "Missing identity or status" },
+      ],
+      canRead: true,
+      canUpdate: true,
     })
+
+    expect(
+      screen.getByRole("button", {
+        name: viDictionary.telegram.bot.reconnectTrigger.replace(
+          "{botName}",
+          "New fixture bot"
+        ),
+      })
+    ).toBeVisible()
+    expect(
+      screen.getByRole("button", {
+        name: viDictionary.telegram.bot.reconnectTrigger.replace(
+          "{botName}",
+          "Invalid bot"
+        ),
+      })
+    ).toBeVisible()
     expect(
       screen.queryByRole("button", {
-        name: viDictionary.telegram.bot.connect,
+        name: viDictionary.telegram.bot.reconnectTrigger.replace(
+          "{botName}",
+          "Bot #14"
+        ),
       })
     ).not.toBeInTheDocument()
+    expect(screen.getAllByRole("button", { name: /Kết nối lại/ })).toHaveLength(2)
+  })
+
+  it.each([
+    { permission: "create", canCreate: true },
+    { permission: "delete", canDelete: true },
+  ])("does not grant Reconnect from $permission permission alone", (access) => {
+    renderBotConnectionsCard({
+      botConnections: [botConnection],
+      canRead: true,
+      ...access,
+    })
+
     expect(
-      screen.queryByText(botConnection.displayLabel as string)
+      screen.queryByRole("button", { name: /Kết nối lại/ })
     ).not.toBeInTheDocument()
+  })
+
+  it("opens the selected bot token dialog by keyboard and keeps localized errors focused", async () => {
+    const user = userEvent.setup()
+    vi.mocked(reconnectTelegramBotConnection).mockResolvedValue({
+      success: false,
+      error: viDictionary.telegram.bot.reconnectTokenMismatch,
+    })
+    renderBotConnectionsCard({
+      botConnections: [botConnection],
+      canRead: true,
+      canUpdate: true,
+    })
+
+    const trigger = screen.getByRole("button", {
+      name: viDictionary.telegram.bot.reconnectTrigger.replace(
+        "{botName}",
+        "New fixture bot"
+      ),
+    })
+    trigger.focus()
+    await user.keyboard("{Enter}")
+
+    const dialog = await screen.findByRole("dialog", {
+      name: viDictionary.telegram.bot.reconnectTitle,
+    })
+    expect(dialog).toHaveTextContent("New fixture bot (@new_fixture_bot)")
+    const token = within(dialog).getByLabelText(
+      viDictionary.telegram.bot.tokenLabel
+    )
+    await waitFor(() => expect(token).toHaveFocus())
+    expect(token).toHaveAttribute("type", "password")
+
+    await user.type(token, "fake-token")
+    await user.keyboard("{Enter}")
+
+    await waitFor(() =>
+      expect(reconnectTelegramBotConnection).toHaveBeenCalledWith(12, {
+        botToken: "fake-token",
+      })
+    )
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      viDictionary.telegram.bot.reconnectTokenMismatch
+    )
+    expect(token).toHaveValue("fake-token")
+    await waitFor(() => expect(token).toHaveFocus())
+    expect(toast.success).not.toHaveBeenCalled()
+    expect(routerRefresh).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    {
+      status: "ACTIVE" as const,
+      toastKind: "success",
+      expected: viDictionary.telegram.bot.reconnectSuccess,
+    },
+    {
+      status: "INVALID" as const,
+      toastKind: "warning",
+      expected: viDictionary.telegram.bot.reconnectIncomplete,
+    },
+    {
+      status: undefined,
+      toastKind: "warning",
+      expected: viDictionary.telegram.bot.reconnectOutcomeUnverified,
+    },
+  ])("reports only readback status $status", async ({ status, toastKind, expected }) => {
+    const user = userEvent.setup()
+    vi.mocked(reconnectTelegramBotConnection).mockResolvedValue({
+      success: true,
+      data: status ? { status } : {},
+    })
+    renderBotConnectionsCard({
+      botConnections: [botConnection],
+      canRead: true,
+      canUpdate: true,
+    })
+
+    await user.click(
+      screen.getByRole("button", {
+        name: viDictionary.telegram.bot.reconnectTrigger.replace(
+          "{botName}",
+          "New fixture bot"
+        ),
+      })
+    )
+    await user.type(
+      screen.getByLabelText(viDictionary.telegram.bot.tokenLabel),
+      "fake-token"
+    )
+    await user.click(
+      screen.getByRole("button", {
+        name: viDictionary.telegram.bot.reconnectAction,
+      })
+    )
+
+    await waitFor(() => {
+      if (toastKind === "success") {
+        expect(toast.success).toHaveBeenCalledWith(expected)
+      } else {
+        expect(toast.warning).toHaveBeenCalledWith(expected)
+      }
+    })
+    if (toastKind !== "success") expect(toast.success).not.toHaveBeenCalled()
+    await waitFor(() => expect(routerRefresh).toHaveBeenCalledTimes(1))
   })
 
   it("keeps a pending create open with its token after a delayed rejection", async () => {
@@ -2567,7 +2724,6 @@ describe("Telegram bot connections", () => {
     renderBotConnectionsCard({
       botConnections: [invalidConnection],
       canRead: true,
-      canManage: true,
     })
 
     expect(
@@ -2617,7 +2773,7 @@ describe("Telegram bot connection removal", () => {
         <BotConnectionsCard
           botConnections={[botConnection]}
           canRead
-          canManage={false}
+          canUpdate={false}
           canCreate={false}
           canDelete
           loadError={false}
@@ -2732,7 +2888,7 @@ describe("Telegram bot connection removal", () => {
         <BotConnectionsCard
           botConnections={[]}
           canRead
-          canManage={false}
+          canUpdate={false}
           canCreate={false}
           canDelete
           loadError={false}
