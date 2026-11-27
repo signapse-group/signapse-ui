@@ -1,5 +1,22 @@
 # SIGN-688 Economic calendar routing evidence
 
+## Current synced candidate — 2026-11-27
+
+This is the active handoff record. The render captures and candidate notes below are from pre-sync revisions; keep them as historical evidence only. The current candidate merges `origin/dev` at `c01c3dc24baebba11b070d2bfd569ff4c4d5ab27` and is PR [#163](https://github.com/signapse-group/signapse-ui/pull/163), targeting `dev`. The sync commit is [`3cee4777e26c30bb0bfacb0e49100a9c6d7320e1`](https://github.com/signapse-group/signapse-ui/commit/3cee4777e26c30bb0bfacb0e49100a9c6d7320e1); it includes the current-dev test harness migration and the Economic routing conflict resolutions.
+
+### Contract and local checks
+
+- Fetched `https://dev-api.signapse.cloud/v3/api-docs` on 2026-11-27 at 09:25 UTC; `x-build-revision` was `846afbc95bc5a7b75774a002b24c50b274b02cb7`. The current GET is filtered by route and owner workspace. The PUT preserves omitted fields, allows atomic clear with `destinationId: null` and `enabled: false`, and returns the saved route. Readback requires nullable `destination` and `outputLanguage`; FE also fails closed if display-critical route identity or enabled state is missing.
+- `pnpm test:quality` — passed: lint (23 existing warnings outside changed files), typecheck, 103 Vitest files / 921 tests, deployment verifier (5 tests), and fixture consistency (89 operations).
+- Separate `pnpm test:contract` — passed; fixture consistency covered 89 operations.
+- GitHub `Verify / check` passed for `3cee4777e26c30bb0bfacb0e49100a9c6d7320e1`: [run 45973743388](https://github.com/signapse-group/signapse-ui/actions/runs/45973743388). The required `Vercel – signapse-ui` preview for this revision is Ready: [preview](https://signapse-9c00xxurt-signapse.vercel.app). Branch protection requires those two checks; both succeeded.
+
+### Visual observation and QA handoff
+
+The preview build succeeded, but the available page fetch for `/en/telegram` returned HTTP 429 with a Vercel Security Checkpoint, so I could not inspect the rendered route or capture a screenshot for this synced candidate. The PNGs and responsive observations below were captured before the `origin/dev` sync and are not asserted to match the current merged UI. The authorized Pen Desktop MCP is on the coordinator's Windows workstation and is unavailable on this server; no Pen operation was attempted.
+
+QA owns the visual and live behavior follow-up on the delivered dev revision: compare the Economic row with SIGN-32 v2 attachments 10308, 10312 and 10309; record the state, viewport and browser zoom; cover wide, compact and mobile layouts, both themes, native 200% zoom, Off with and without a destination, clear, reassignment, enabling and error/readback behavior. No live feature API request or Telegram delivery test was made in this FE session. The coordinator owns merge, delivery and parent acceptance.
+
 Follow-up implementation and render commit: [`7ee918d47a849b353c8d278537e9d89b6f050d8f`](https://github.com/signapse-group/signapse-ui/commit/7ee918d47a849b353c8d278537e9d89b6f050d8f), based on `origin/dev` [`4179b7a095482228b3df21cc2e0937676c7f1b6e`](https://github.com/signapse-group/signapse-ui/commit/4179b7a095482228b3df21cc2e0937676c7f1b6e). This PR candidate includes the earlier implementation commit [`cc20dc4b2060c2ebc031c9a491c299e65af34c42`](https://github.com/signapse-group/signapse-ui/commit/cc20dc4b2060c2ebc031c9a491c299e65af34c42).
 
 ## Accepted design
