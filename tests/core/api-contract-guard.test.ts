@@ -5,7 +5,7 @@ import { join, resolve } from "node:path"
 
 import { afterEach, describe, expect, it, vi } from "vitest"
 
-import * as guard from "../e2e/contract-guard.mjs"
+import * as guard from "../contract/contract-guard.mjs"
 
 const contracts = [
   { method: "GET", path: "/items/{id}", mapping: "getItem", status: 200 },
@@ -26,7 +26,7 @@ describe("API contract guard", () => {
     try {
       const result = spawnSync(
         process.execPath,
-        [resolve("tests/e2e/contract-guard.mjs")],
+        [resolve("tests/contract/contract-guard.mjs")],
         {
           cwd: directory,
           env: {
@@ -46,7 +46,7 @@ describe("API contract guard", () => {
 
       const scopedResult = spawnSync(
         process.execPath,
-        [resolve("tests/e2e/contract-guard.mjs"), "--scope", "GET /me"],
+        [resolve("tests/contract/contract-guard.mjs"), "--scope", "GET /me"],
         {
           cwd: directory,
           env: {

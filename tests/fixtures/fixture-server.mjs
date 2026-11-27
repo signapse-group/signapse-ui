@@ -3,7 +3,7 @@ import { dirname } from "node:path"
 import { createServer } from "node:http"
 import { URL } from "node:url"
 
-import { contractPathMatches, fixtureContracts } from "./contract-registry.mjs"
+import { contractPathMatches, fixtureContracts } from "../contract/contract-registry.mjs"
 
 const port = Number(process.env.FIXTURE_PORT ?? 4100)
 const logFile = process.env.FIXTURE_LOG_FILE
