@@ -458,7 +458,7 @@ function ReadinessSummary({
     (schedule) => schedule.status === "ACTIVE"
   ).length
   const readinessItems = [
-    ...(data.sectionAccess.botConnections
+    ...(data.sectionAccess.botConnections && !data.botConnectionsLoadError
       ? [
           {
             label: t.readiness.bot,
@@ -473,7 +473,7 @@ function ReadinessSummary({
           },
         ]
       : []),
-    ...(data.sectionAccess.destinations
+    ...(data.sectionAccess.destinations && !data.destinationsLoadError
       ? [
           {
             label: t.readiness.destinations,
@@ -494,6 +494,7 @@ function ReadinessSummary({
       : []),
     ...(routes.length > 0 &&
     data.currentWorkspace &&
+    !data.featureSettingsLoadError &&
     !routes.some((route) => route.readbackUnverified)
       ? [
           {
@@ -515,7 +516,7 @@ function ReadinessSummary({
           },
         ]
       : []),
-    ...(data.sectionAccess.schedules
+    ...(data.sectionAccess.schedules && !data.scheduleLoadError
       ? [
           {
             label: t.readiness.scheduledAnalysis,

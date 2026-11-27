@@ -562,6 +562,72 @@ describe("Telegram schedule destructive actions", () => {
     ).not.toBeInTheDocument()
   })
 
+  const readinessReadFailures: {
+    errorKey:
+      | "botConnectionsLoadError"
+      | "destinationsLoadError"
+      | "featureSettingsLoadError"
+      | "scheduleLoadError"
+    unavailable: string
+    unaffected: string
+    failedData: Partial<TelegramConfigurationData>
+  }[] = [
+    {
+      errorKey: "botConnectionsLoadError",
+      unavailable: viDictionary.telegram.readiness.bot,
+      unaffected: viDictionary.telegram.readiness.scheduledAnalysis,
+      failedData: { botConnections: [] },
+    },
+    {
+      errorKey: "destinationsLoadError",
+      unavailable: viDictionary.telegram.readiness.destinations,
+      unaffected: viDictionary.telegram.readiness.scheduledAnalysis,
+      failedData: { destinations: [] },
+    },
+    {
+      errorKey: "featureSettingsLoadError",
+      unavailable: viDictionary.telegram.readiness.routing,
+      unaffected: viDictionary.telegram.readiness.scheduledAnalysis,
+      failedData: { featureSettings: [] },
+    },
+    {
+      errorKey: "scheduleLoadError",
+      unavailable: viDictionary.telegram.readiness.scheduledAnalysis,
+      unaffected: viDictionary.telegram.readiness.routing,
+      failedData: { schedules: [] },
+    },
+  ]
+
+  it.each(readinessReadFailures)(
+    "hides only the $unavailable readiness metric when its read fails",
+    ({ errorKey, unavailable, unaffected, failedData }) => {
+      const readableData: TelegramConfigurationData = {
+        ...data,
+        botConnections: [{ id: 12, status: "ACTIVE" }],
+        featureSettings: [featureSettings[0]],
+        sectionAccess: {
+          ...data.sectionAccess,
+          botConnections: true,
+          destinations: true,
+          featureSettings: true,
+          marketNewsRouting: true,
+          schedules: true,
+        },
+      }
+      const failedReadData: TelegramConfigurationData = {
+        ...readableData,
+        ...failedData,
+        [errorKey]: true,
+      }
+
+      renderConfiguration(failedReadData)
+
+      const readiness = screen.getByTestId("telegram-readiness-summary")
+      expect(readiness).not.toHaveTextContent(unavailable)
+      expect(readiness).toHaveTextContent(unaffected)
+    }
+  )
+
   it("shows and updates each owned market route setting without workspace access", async () => {
     const user = userEvent.setup()
     const secondMarketSetting = {

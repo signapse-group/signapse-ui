@@ -77,6 +77,7 @@ import {
   deleteTelegramMarketAnalysisSchedule,
   getTelegramBotConnections,
   getTelegramDestinations,
+  getTelegramMarketAnalysisSchedules,
   sendTelegramTestMessage,
   updateTelegramMarketAnalysisSchedule,
   updateTelegramFeatureSetting,
@@ -228,6 +229,56 @@ describe("Telegram scheduled asset analysis actions", () => {
       expect.objectContaining({ method: "PUT" })
     )
     expect(revalidatePath).toHaveBeenCalledWith("/telegram")
+  })
+
+  it("reads saved schedule fields after create and keeps the ACTIVE record on edit", async () => {
+    const editedSchedule = {
+      ...scheduleResponse,
+      name: "Afternoon analysis",
+      timezone: "UTC",
+      localTimes: ["12:00"],
+    }
+    vi.mocked(fetchAuthenticated)
+      .mockResolvedValueOnce(scheduleResponse)
+      .mockResolvedValueOnce([scheduleResponse])
+      .mockResolvedValueOnce(editedSchedule)
+      .mockResolvedValueOnce([editedSchedule])
+
+    const created =
+      await createTelegramMarketAnalysisSchedule(scheduleRequest())
+    expect(created).toEqual({ success: true, data: scheduleResponse })
+    await expect(getTelegramMarketAnalysisSchedules()).resolves.toEqual([
+      scheduleResponse,
+    ])
+
+    const updated = await updateTelegramMarketAnalysisSchedule(11, {
+      ...scheduleRequest(),
+      name: "Afternoon analysis",
+      timezone: "UTC",
+      localTimes: ["12:00"],
+    })
+    expect(updated).toEqual({ success: true, data: editedSchedule })
+    const editedReadback = await getTelegramMarketAnalysisSchedules()
+    expect(editedReadback).toEqual([editedSchedule])
+    expect(editedReadback[0]).toMatchObject({
+      id: scheduleResponse.id,
+      status: "ACTIVE",
+    })
+
+    expect(fetchAuthenticated).toHaveBeenNthCalledWith(
+      3,
+      "/telegram/market-analysis-schedules/11",
+      expect.objectContaining({ method: "PUT" })
+    )
+
+    expect(fetchAuthenticated).toHaveBeenNthCalledWith(
+      2,
+      "/telegram/market-analysis-schedules"
+    )
+    expect(fetchAuthenticated).toHaveBeenNthCalledWith(
+      4,
+      "/telegram/market-analysis-schedules"
+    )
   })
 
   it("preserves and explicitly clears feature output-language overrides", async () => {
