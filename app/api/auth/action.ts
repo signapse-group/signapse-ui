@@ -30,6 +30,11 @@ export type BackendApiError = Error & {
   timestamp?: string
 }
 
+type AuthenticatedApiResponse<T> = {
+  data: T
+  status: number
+}
+
 async function getFixtureTestRunHeaders(): Promise<Record<string, string>> {
   if (!isP0FixtureModeEnabled()) {
     return {}
@@ -49,11 +54,11 @@ async function getFixtureTestRunHeaders(): Promise<Record<string, string>> {
   }
 }
 
-async function apiFetch<T>(
+async function apiFetchWithStatus<T>(
   urlPath: string,
   options: RequestInit = {},
   timeoutMs = API_TIMEOUT_MS
-): Promise<T> {
+): Promise<AuthenticatedApiResponse<T>> {
   const method = (options.method ?? "GET").toUpperCase()
   const route = normalizeBackendRoute(urlPath)
 
@@ -167,17 +172,20 @@ async function apiFetch<T>(
 
         if (response.status === 204) {
           operation.setOutcome("empty")
-          return null as T
+          return { data: null as T, status: response.status }
         }
 
         const text = await response.text()
         if (!text) {
           operation.setOutcome("empty")
-          return null as T
+          return { data: null as T, status: response.status }
         }
 
         try {
-          return JSON.parse(text) as T
+          return {
+            data: JSON.parse(text) as T,
+            status: response.status,
+          }
         } catch (error) {
           recordTransportFailure(operation, "parse_error", "parse")
           failureRecorded = true
@@ -194,6 +202,15 @@ async function apiFetch<T>(
       }
     }
   )
+}
+
+async function apiFetch<T>(
+  urlPath: string,
+  options: RequestInit = {},
+  timeoutMs = API_TIMEOUT_MS
+): Promise<T> {
+  const { data } = await apiFetchWithStatus<T>(urlPath, options, timeoutMs)
+  return data
 }
 
 export async function getClerkToken(): Promise<string> {
@@ -228,21 +245,34 @@ export async function getBackendAuthHeaders(): Promise<Record<string, string>> {
   )
 }
 
-export async function fetchAuthenticated<T>(
-  urlPath: string,
-  options: RequestInit = {}
-): Promise<T> {
+async function getAuthenticatedOptions(
+  options: RequestInit
+): Promise<RequestInit> {
   const authHeaders = await getBackendAuthHeaders()
 
-  const finalOptions: RequestInit = {
+  return {
     ...options,
     headers: {
       ...authHeaders,
       ...((options.headers || {}) as Record<string, string>),
     },
   }
+}
 
+export async function fetchAuthenticated<T>(
+  urlPath: string,
+  options: RequestInit = {}
+): Promise<T> {
+  const finalOptions = await getAuthenticatedOptions(options)
   return apiFetch<T>(urlPath, finalOptions)
+}
+
+export async function fetchAuthenticatedWithStatus<T>(
+  urlPath: string,
+  options: RequestInit = {}
+): Promise<AuthenticatedApiResponse<T>> {
+  const finalOptions = await getAuthenticatedOptions(options)
+  return apiFetchWithStatus<T>(urlPath, finalOptions)
 }
 
 function recordTransportFailure(

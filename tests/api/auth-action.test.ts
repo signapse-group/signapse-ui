@@ -26,6 +26,7 @@ vi.mock("@/app/lib/i18n/server", () => ({
 import { auth } from "@clerk/nextjs/server"
 import {
   fetchAuthenticated,
+  fetchAuthenticatedWithStatus,
   getBackendAuthHeaders,
   getClerkToken,
 } from "@/app/api/auth/action"
@@ -78,6 +79,27 @@ describe("authenticated transport", () => {
       propagateContext: false,
     })
     expect(consoleError).not.toHaveBeenCalled()
+  })
+
+  it("preserves successful HTTP status when a caller needs the response outcome", async () => {
+    const created = { id: 12, status: "ACTIVE" }
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify(created), { status: 201 })
+    )
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify(created), { status: 200 })
+    )
+
+    await expect(
+      fetchAuthenticatedWithStatus("/telegram/bot-connections", {
+        method: "POST",
+      })
+    ).resolves.toEqual({ data: created, status: 201 })
+    await expect(
+      fetchAuthenticatedWithStatus("/telegram/bot-connections", {
+        method: "POST",
+      })
+    ).resolves.toEqual({ data: created, status: 200 })
   })
 
   it("handles empty success responses and missing configuration", async () => {

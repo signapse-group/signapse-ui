@@ -10,7 +10,7 @@ import type { ActionResult } from "@/app/lib/definitions"
 import type { Dictionary } from "@/app/lib/i18n/dictionary-types"
 import { useLocalization } from "@/app/lib/i18n/provider"
 import {
-  TelegramBotConnectionResponse,
+  TelegramBotConnectionReadback,
   TelegramChatType,
   TelegramConnectionStatus,
   TelegramDestinationResponse,
@@ -53,14 +53,17 @@ const TELEGRAM_STATUS_PRIORITY: Record<string, number> = {
 }
 
 export function sortOperationalTelegramRecords<
-  T extends { status: string; id: number },
+  T extends { status?: string; id?: number },
 >(records: T[]) {
   return records
     .filter((record) => record.status !== "REMOVED")
     .sort(
       (left, right) =>
-        (TELEGRAM_STATUS_PRIORITY[left.status] ?? 99) -
-          (TELEGRAM_STATUS_PRIORITY[right.status] ?? 99) || left.id - right.id
+        (TELEGRAM_STATUS_PRIORITY[left.status ?? ""] ?? 99) -
+          (TELEGRAM_STATUS_PRIORITY[right.status ?? ""] ?? 99) ||
+        (left.id !== undefined && right.id !== undefined
+          ? left.id - right.id
+          : 0)
     )
 }
 
@@ -127,9 +130,17 @@ export function ReadinessBadge({
 export function StatusBadge({
   status,
 }: {
-  status: TelegramConnectionStatus | TelegramDestinationStatus
+  status: TelegramConnectionStatus | TelegramDestinationStatus | undefined
 }) {
   const { dictionary } = useLocalization()
+  if (status === undefined) {
+    return (
+      <Badge variant="outline">
+        {dictionary.telegram.bot.statusUnverified}
+      </Badge>
+    )
+  }
+
   const label = dictionary.telegram.statuses[status]
 
   if (status === "ACTIVE") {
@@ -151,15 +162,19 @@ export function formatChatType(
 }
 
 export function getBotLabel(
-  connection: TelegramBotConnectionResponse,
+  connection: TelegramBotConnectionReadback,
   dictionary: Dictionary
 ) {
-  return (
+  const label =
     connection.displayLabel?.trim() ||
     connection.botUsername?.trim() ||
-    connection.botFirstName?.trim() ||
-    formatLabel(dictionary.telegram.bot.fallbackLabel, connection.id)
-  )
+    connection.botFirstName?.trim()
+
+  if (label) return label
+
+  return connection.id === undefined
+    ? dictionary.telegram.bot.unverifiedLabel
+    : formatLabel(dictionary.telegram.bot.fallbackLabel, connection.id)
 }
 
 export function getDestinationLabel(

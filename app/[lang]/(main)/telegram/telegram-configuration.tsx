@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useEffect, useId, useRef, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import {
   Bot,
@@ -8,6 +8,7 @@ import {
   MessageCircle,
   RadioTower,
   Trash2,
+  X,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -20,12 +21,12 @@ import { useLocalization } from "@/app/lib/i18n/provider"
 import { isSelectableLanguage } from "@/app/lib/languages/definitions"
 import type { LanguageResponse } from "@/app/lib/languages/definitions"
 import {
+  TelegramBotConnectionResponse,
   TelegramConfigurationData,
   TelegramDestinationResponse,
   TelegramFeatureKey,
   TelegramFeatureSettingResponse,
   TelegramMarketAnalysisScheduleResponse,
-  UpdateTelegramFeatureSettingRequest,
   getUpdateTelegramFeatureSettingSchema,
 } from "@/app/lib/telegram/definitions"
 import {
@@ -49,6 +50,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty"
+import { Item, ItemActions, ItemContent } from "@/components/ui/item"
 import {
   Select,
   SelectContent,
@@ -91,6 +93,7 @@ type RouteDefinition = {
 
 type FeatureRouteView = RouteDefinition & {
   setting?: TelegramFeatureSettingResponse
+  readbackUnverified?: boolean
 }
 
 const DEFAULT_FEATURE_LANGUAGE_VALUE = "__default__"
@@ -112,54 +115,117 @@ function getRouteDefinitions(dictionary: Dictionary): RouteDefinition[] {
   ]
 }
 
+function isCompleteMarketNewsSetting(setting: TelegramFeatureSettingResponse) {
+  return (
+    setting.featureKey === "MARKET_NEWS_ALERT" &&
+    typeof setting.workspaceId === "number" &&
+    typeof setting.enabled === "boolean"
+  )
+}
+
 export function TelegramConfigurationPage({
   data,
+  canCreateBotConnections = false,
 }: {
   data: TelegramConfigurationData
+  canCreateBotConnections?: boolean
 }) {
   const { dictionary } = useLocalization()
   const featureSettings = data.currentWorkspace
     ? data.featureSettings.filter(
         (setting) => setting.workspaceId === data.currentWorkspace?.id
       )
-    : []
+    : data.sectionAccess.marketNewsRouting
+      ? data.featureSettings.filter(
+          (setting) => setting.featureKey === "MARKET_NEWS_ALERT"
+        )
+      : []
+  const hasUnidentifiedMarketNewsSetting =
+    data.sectionAccess.marketNewsRouting &&
+    data.featureSettings.some((setting) => {
+      const mayBelongToCurrentWorkspace =
+        !data.currentWorkspace ||
+        setting.workspaceId == null ||
+        setting.workspaceId === data.currentWorkspace.id
+
+      return (
+        mayBelongToCurrentWorkspace &&
+        (setting.featureKey === undefined ||
+          (data.currentWorkspace != null &&
+            setting.featureKey === "MARKET_NEWS_ALERT" &&
+            setting.workspaceId == null))
+      )
+    })
   const schedules = data.schedules
-  const routes = getRouteDefinitions(dictionary).map((route) => ({
-    ...route,
-    setting: featureSettings.find(
-      (setting) => setting.featureKey === route.featureKey
-    ),
-  }))
+  const canShowSchedulePanel =
+    data.sectionAccess.schedules ||
+    data.scheduleActions.create ||
+    data.scheduleActions.update ||
+    data.scheduleActions.delete
+  const routes = getRouteDefinitions(dictionary)
+    .filter((route) =>
+      route.featureKey === "MARKET_NEWS_ALERT"
+        ? data.sectionAccess.marketNewsRouting
+        : data.sectionAccess.featureSettings
+    )
+    .map((route) => ({
+      ...route,
+      setting: featureSettings.find(
+        (setting) => setting.featureKey === route.featureKey
+      ),
+    }))
+  const marketNewsRoute = routes.find(
+    (route) => route.featureKey === "MARKET_NEWS_ALERT"
+  )
+  const marketNewsSettings = featureSettings.filter(
+    (setting) => setting.featureKey === "MARKET_NEWS_ALERT"
+  )
+  const marketNewsRoutes: FeatureRouteView[] = marketNewsRoute
+    ? marketNewsSettings.map((setting) => ({
+        ...marketNewsRoute,
+        setting,
+        readbackUnverified: !isCompleteMarketNewsSetting(setting),
+      }))
+    : []
+
+  if (marketNewsRoute && hasUnidentifiedMarketNewsSetting) {
+    marketNewsRoutes.push({
+      ...marketNewsRoute,
+      setting: undefined,
+      readbackUnverified: true,
+    })
+  } else if (marketNewsRoute && marketNewsRoutes.length === 0) {
+    marketNewsRoutes.push(marketNewsRoute)
+  }
+  const visibleRoutes: FeatureRouteView[] = [
+    ...marketNewsRoutes,
+    ...routes.filter((route) => route.featureKey !== "MARKET_NEWS_ALERT"),
+  ]
   const activeBotConnections = data.botConnections.filter(
-    (connection) => connection.status === "ACTIVE"
+    (connection): connection is TelegramBotConnectionResponse =>
+      connection.status === "ACTIVE" && connection.id !== undefined
   )
   const activeDestinations = data.destinations.filter(
     (destination) => destination.status === "ACTIVE"
   )
 
   return (
-    <div className="flex w-full flex-col gap-6">
-      <ReadinessSummary
-        data={data}
-        routes={routes}
-        schedules={schedules}
-        activeBotCount={activeBotConnections.length}
-        activeDestinationCount={activeDestinations.length}
-      />
-      <div className="grid min-w-0 gap-6 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] xl:grid-cols-[minmax(0,1.55fr)_minmax(22rem,1fr)]">
-        <div className="flex min-w-0 flex-col gap-6">
-          <FeatureRoutingSection
-            routes={routes}
-            activeDestinations={activeDestinations}
-            currentWorkspace={data.currentWorkspace}
-            languages={data.languages}
-            languageCatalogError={data.languageCatalogError}
-            loadError={
-              data.featureSettingsLoadError || data.currentWorkspaceLoadError
-            }
-            canReadFeatureSettings={data.sectionAccess.featureSettings}
-            canUpdateFeatureSettings={data.manageAccess.featureSettings}
-          />
+    <div className="grid w-full min-w-0 gap-6 min-[1440px]:grid-cols-[minmax(0,1.5fr)_minmax(22rem,1fr)] lg:grid-cols-[minmax(0,1.15fr)_minmax(20rem,1fr)]">
+      <div className="flex min-w-0 flex-col gap-6">
+        <FeatureRoutingSection
+          routes={visibleRoutes}
+          activeDestinations={activeDestinations}
+          languages={data.languages}
+          languageCatalogError={data.languageCatalogError}
+          canUpdateFeatureSettings={data.manageAccess.featureSettings}
+          canUpdateMarketNewsRouting={data.manageAccess.marketNewsRouting}
+          canReadDestinations={data.sectionAccess.destinations}
+          currentWorkspace={data.currentWorkspace}
+          loadError={
+            data.featureSettingsLoadError || data.currentWorkspaceLoadError
+          }
+        />
+        {canShowSchedulePanel ? (
           <MarketAnalysisSchedulePanel
             schedules={schedules}
             activeDestinations={activeDestinations}
@@ -176,7 +242,9 @@ export function TelegramConfigurationPage({
             canReadSchedules={data.sectionAccess.schedules}
             scheduleActions={data.scheduleActions}
           />
-        </div>
+        ) : null}
+      </div>
+      <div className="flex min-w-0 flex-col gap-6">
         <section
           className="flex min-w-0 flex-col gap-4"
           aria-labelledby="telegram-infrastructure"
@@ -186,11 +254,12 @@ export function TelegramConfigurationPage({
             title={dictionary.telegram.infrastructureTitle}
             description={dictionary.telegram.infrastructureDescription}
           />
-          <div className="flex min-w-0 flex-col gap-4">
+          <div className="grid min-w-0 gap-4">
             <BotConnectionsCard
               botConnections={data.botConnections}
               canRead={data.sectionAccess.botConnections}
               canManage={data.manageAccess.botConnections}
+              canCreate={canCreateBotConnections}
               canDelete={data.manageAccess.botConnectionsDelete}
               loadError={data.botConnectionsLoadError}
             />
@@ -199,166 +268,168 @@ export function TelegramConfigurationPage({
               activeBotConnections={activeBotConnections}
               canRead={data.sectionAccess.destinations}
               canReadBotConnections={data.sectionAccess.botConnections}
+              canManage={data.manageAccess.destinations}
               loadError={data.destinationsLoadError}
               botConnectionsLoadError={data.botConnectionsLoadError}
-              canManage={data.manageAccess.destinations}
             />
           </div>
         </section>
+        <ReadinessSummary
+          data={data}
+          routes={visibleRoutes}
+          schedules={schedules}
+          activeBotCount={activeBotConnections.length}
+          activeDestinationCount={activeDestinations.length}
+        />
       </div>
     </div>
   )
 }
 
 export function TelegramConfigurationSkeleton() {
-  const { dictionary } = useLocalization()
-  const t = dictionary.telegram
-
   return (
-    <div className="flex w-full flex-col gap-6">
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, index) => (
-          <Card key={index} size="sm">
-            <CardHeader>
-              <Skeleton className="h-5 w-28" />
-              <Skeleton className="h-4 w-full" />
-            </CardHeader>
-            <CardContent>
-              <Skeleton className="h-5 w-20" />
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-      <div className="grid min-w-0 gap-6 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] xl:grid-cols-[minmax(0,1.55fr)_minmax(22rem,1fr)]">
-        <div className="flex min-w-0 flex-col gap-6">
-          <section
-            className="flex min-w-0 flex-col gap-4"
-            aria-labelledby="telegram-routing-skeleton"
-          >
-            <SectionHeader
-              id="telegram-routing-skeleton"
-              title={t.routing.sectionTitle}
-              description={t.routing.sectionDescription}
-            />
-            <AppListTable className="mt-0">
-              <Table>
-                <TableHeader>
-                  <AppListTableHeaderRow>
-                    {Array.from({ length: 5 }).map((_, index) => (
-                      <AppListTableHead key={index}>
-                        <Skeleton className="h-4 w-24" />
-                      </AppListTableHead>
-                    ))}
-                  </AppListTableHeaderRow>
-                </TableHeader>
-                <TableBody>
-                  {Array.from({ length: 2 }).map((_, rowIndex) => (
-                    <TableRow key={rowIndex}>
-                      {Array.from({ length: 5 }).map((__, columnIndex) => (
-                        <TableCell key={columnIndex}>
-                          <Skeleton className="h-5 w-28 max-w-full" />
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </AppListTable>
-          </section>
-          <section
-            className="flex min-w-0 flex-col gap-4"
-            aria-labelledby="telegram-schedule-skeleton"
-          >
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <SectionHeader
-                id="telegram-schedule-skeleton"
-                title={t.schedule.panelTitle}
-                description={t.schedule.panelDescription}
-              />
-              <Skeleton className="h-9 w-32" />
-            </div>
-            <AppListTable className="mt-0 md:hidden">
-              {Array.from({ length: 2 }).map((_, rowIndex) => (
-                <div
-                  key={rowIndex}
-                  className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 border-b p-4 last:border-b-0"
-                >
-                  <div className="flex min-w-0 flex-col gap-2">
-                    <Skeleton className="h-5 w-36 max-w-full" />
-                    <Skeleton className="h-4 w-40 max-w-full" />
-                    <Skeleton className="h-4 w-32 max-w-full" />
-                  </div>
-                  <Skeleton className="size-8" />
-                </div>
-              ))}
-            </AppListTable>
-            <AppListTable className="mt-0 hidden md:block">
-              <Table>
-                <TableHeader>
-                  <AppListTableHeaderRow>
-                    {Array.from({ length: 3 }).map((_, index) => (
-                      <AppListTableHead key={index}>
-                        <Skeleton className="h-4 w-24" />
-                      </AppListTableHead>
-                    ))}
-                  </AppListTableHeaderRow>
-                </TableHeader>
-                <TableBody>
-                  {Array.from({ length: 2 }).map((_, rowIndex) => (
-                    <TableRow key={rowIndex}>
-                      {[0, 1, 2].map((columnIndex) => (
-                        <TableCell key={columnIndex}>
-                          <Skeleton className="h-5 w-40 max-w-full" />
-                          {columnIndex < 2 ? (
-                            <Skeleton className="mt-1 h-4 w-32 max-w-full" />
-                          ) : null}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </AppListTable>
-          </section>
-        </div>
-        <section
-          className="flex min-w-0 flex-col gap-4"
-          aria-labelledby="telegram-infrastructure-skeleton"
-        >
-          <SectionHeader
-            id="telegram-infrastructure-skeleton"
-            title={t.infrastructureTitle}
-            description={t.infrastructureDescription}
-          />
-          <div className="flex min-w-0 flex-col gap-4">
-            {Array.from({ length: 2 }).map((_, cardIndex) => (
-              <Card key={cardIndex} className="min-w-0">
-                <CardHeader>
-                  <Skeleton className="h-5 w-32" />
-                  <Skeleton className="h-4 w-full" />
-                  <CardAction>
-                    <Skeleton className="h-9 w-28" />
-                  </CardAction>
-                </CardHeader>
-                <CardContent className="flex flex-col gap-3">
-                  {Array.from({ length: 2 }).map((__, itemIndex) => (
-                    <div
-                      key={itemIndex}
-                      className="flex min-w-0 items-start gap-3 rounded-lg border p-3"
+    <div className="grid w-full min-w-0 gap-6 min-[1440px]:grid-cols-[minmax(0,1.5fr)_minmax(22rem,1fr)] lg:grid-cols-[minmax(0,1.15fr)_minmax(20rem,1fr)]">
+      <div className="order-2 flex min-w-0 flex-col gap-6">
+        <div className="grid min-w-0 gap-4">
+          {Array.from({ length: 2 }).map((_, cardIndex) => (
+            <Card key={cardIndex} className="min-w-0">
+              <CardHeader>
+                <Skeleton className="h-5 w-32" />
+                <Skeleton className="h-4 w-full" />
+                <CardAction>
+                  <Skeleton className="h-9 w-28" />
+                </CardAction>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-3">
+                {Array.from({ length: 2 }).map((__, itemIndex) => (
+                  <Item
+                    key={itemIndex}
+                    variant="outline"
+                    className="items-start"
+                  >
+                    <ItemContent className="min-w-0 gap-2">
+                      <Skeleton className="h-5 w-40" />
+                      <Skeleton className="h-4 w-56 max-w-full" />
+                      <Skeleton className="h-4 w-32" />
+                    </ItemContent>
+                    <ItemActions
+                      className={cn(
+                        "ms-auto self-start",
+                        cardIndex === 1 &&
+                          "basis-full justify-end sm:basis-auto"
+                      )}
                     >
-                      <div className="flex min-w-0 flex-1 flex-col gap-2">
-                        <Skeleton className="h-5 w-40 max-w-full" />
-                        <Skeleton className="h-4 w-56 max-w-full" />
-                        <Skeleton className="h-4 w-32 max-w-full" />
-                      </div>
-                      <Skeleton className="size-8 shrink-0" />
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-            ))}
+                      {cardIndex === 1 ? (
+                        <Skeleton className="h-8 w-24" />
+                      ) : null}
+                      <Skeleton className="size-8" />
+                    </ItemActions>
+                  </Item>
+                ))}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        <div className="grid gap-3 min-[1440px]:grid-cols-2">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <Card key={index} size="sm">
+              <CardHeader>
+                <Skeleton className="h-5 w-28" />
+                <Skeleton className="h-4 w-full" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-5 w-20" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+      <div className="order-1 flex min-w-0 flex-col gap-6">
+        <div className="space-y-2">
+          <Skeleton className="h-5 w-36" />
+          <Skeleton className="h-4 w-full" />
+        </div>
+        <AppListTable className="mt-0">
+          <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 border-b border-border p-4">
+            <div className="min-w-0">
+              <Skeleton className="h-5 w-40" />
+              <Skeleton className="mt-2 h-4 w-56 max-w-full" />
+              <Skeleton className="mt-2 h-4 w-32" />
+            </div>
+            <Skeleton className="h-8 w-32" />
+            <div className="col-span-2 grid gap-3 md:grid-cols-2">
+              <div className="space-y-1">
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-9 w-full" />
+              </div>
+              <div className="space-y-1">
+                <Skeleton className="h-4 w-28" />
+                <Skeleton className="h-9 w-full" />
+              </div>
+            </div>
           </div>
-        </section>
+          <Table>
+            <TableHeader>
+              <AppListTableHeaderRow>
+                <AppListTableHead>
+                  <Skeleton className="h-4 w-24" />
+                </AppListTableHead>
+                <AppListTableHead>
+                  <Skeleton className="h-4 w-28" />
+                </AppListTableHead>
+                <AppListTableHead>
+                  <Skeleton className="h-4 w-20" />
+                </AppListTableHead>
+                <AppListTableHead>
+                  <Skeleton className="h-4 w-16" />
+                </AppListTableHead>
+                <AppListTableHead>
+                  <Skeleton className="h-4 w-24" />
+                </AppListTableHead>
+              </AppListTableHeaderRow>
+            </TableHeader>
+            <TableBody>
+              {Array.from({ length: 2 }).map((_, rowIndex) => (
+                <TableRow key={rowIndex}>
+                  <TableCell>
+                    <Skeleton className="h-5 w-44" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-5 w-32" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-5 w-24" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-5 w-28" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="mx-auto h-5 w-20" />
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </AppListTable>
+        <div className="flex min-w-0 flex-col gap-4">
+          <div className="space-y-2">
+            <Skeleton className="h-5 w-40" />
+            <Skeleton className="h-4 w-full" />
+          </div>
+          <div className="flex flex-col gap-4 rounded-lg border bg-muted/20 p-4">
+            <div className="flex items-center justify-between gap-4">
+              <Skeleton className="h-5 w-36" />
+              <Skeleton className="h-9 w-24" />
+            </div>
+            <div className="overflow-x-auto">
+              <div className="grid min-w-[72rem] grid-cols-8 gap-3">
+                {Array.from({ length: 8 }).map((_, columnIndex) => (
+                  <Skeleton key={columnIndex} className="h-10 w-full" />
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   )
@@ -387,100 +458,87 @@ function ReadinessSummary({
     (schedule) => schedule.status === "ACTIVE"
   ).length
   const readinessItems = [
-    {
-      label: t.readiness.bot,
-      description: data.botConnectionsLoadError
-        ? t.common.readError
-        : data.sectionAccess.botConnections
-          ? formatMessage(t.readiness.activeBots, {
+    ...(data.sectionAccess.botConnections
+      ? [
+          {
+            label: t.readiness.bot,
+            description: formatMessage(t.readiness.activeBots, {
               count: formatCount(activeBotCount),
-            })
-          : t.readiness.noBotPermission,
-      state: data.botConnectionsLoadError
-        ? t.readiness.unavailable
-        : activeBotCount > 0
-          ? t.readiness.ready
-          : t.readiness.needsConfig,
-      status:
-        activeBotCount > 0 && !data.botConnectionsLoadError
-          ? ("ready" as const)
-          : ("attention" as const),
-      icon: Bot,
-    },
-    {
-      label: t.readiness.destinations,
-      description: data.destinationsLoadError
-        ? t.common.readError
-        : data.sectionAccess.destinations
-          ? formatMessage(t.readiness.activeDestinations, {
+            }),
+            state:
+              activeBotCount > 0 ? t.readiness.ready : t.readiness.needsConfig,
+            status:
+              activeBotCount > 0 ? ("ready" as const) : ("attention" as const),
+            icon: Bot,
+          },
+        ]
+      : []),
+    ...(data.sectionAccess.destinations
+      ? [
+          {
+            label: t.readiness.destinations,
+            description: formatMessage(t.readiness.activeDestinations, {
               count: formatCount(activeDestinationCount),
-            })
-          : t.readiness.noDestinationPermission,
-      state: data.destinationsLoadError
-        ? t.readiness.unavailable
-        : activeDestinationCount > 0
-          ? t.readiness.ready
-          : t.readiness.needsLink,
-      status:
-        activeDestinationCount > 0 && !data.destinationsLoadError
-          ? ("ready" as const)
-          : ("attention" as const),
-      icon: MessageCircle,
-    },
-    {
-      label: t.readiness.routing,
-      description:
-        data.featureSettingsLoadError || data.currentWorkspaceLoadError
-          ? t.common.readError
-          : !data.sectionAccess.featureSettings
-            ? t.routing.accessLimited
-            : data.currentWorkspace
-              ? formatMessage(t.readiness.configuredRoutes, {
-                  configured: formatCount(configuredRoutes),
-                  total: formatCount(routes.length),
-                  workspace: data.currentWorkspace.name,
-                })
-              : t.readiness.noWorkspace,
-      state:
-        data.featureSettingsLoadError ||
-        data.currentWorkspaceLoadError ||
-        !data.sectionAccess.featureSettings
-          ? t.readiness.unavailable
-          : configuredRoutes > 0
-            ? t.readiness.routesEnabled
-            : t.readiness.needsReview,
-      status:
-        configuredRoutes > 0 &&
-        !data.featureSettingsLoadError &&
-        !data.currentWorkspaceLoadError
-          ? ("ready" as const)
-          : ("attention" as const),
-      icon: RadioTower,
-    },
-    {
-      label: t.readiness.scheduledAnalysis,
-      description: data.scheduleLoadError
-        ? t.common.readError
-        : data.sectionAccess.schedules
-          ? formatMessage(t.readiness.activeSchedules, {
+            }),
+            state:
+              activeDestinationCount > 0
+                ? t.readiness.ready
+                : t.readiness.needsLink,
+            status:
+              activeDestinationCount > 0
+                ? ("ready" as const)
+                : ("attention" as const),
+            icon: MessageCircle,
+          },
+        ]
+      : []),
+    ...(routes.length > 0 &&
+    data.currentWorkspace &&
+    !routes.some((route) => route.readbackUnverified)
+      ? [
+          {
+            label: t.readiness.routing,
+            description: formatMessage(t.readiness.configuredRoutes, {
+              configured: formatCount(configuredRoutes),
+              total: formatCount(routes.length),
+              workspace: data.currentWorkspace.name,
+            }),
+            state:
+              configuredRoutes > 0
+                ? t.readiness.routesEnabled
+                : t.readiness.needsReview,
+            status:
+              configuredRoutes > 0
+                ? ("ready" as const)
+                : ("attention" as const),
+            icon: RadioTower,
+          },
+        ]
+      : []),
+    ...(data.sectionAccess.schedules
+      ? [
+          {
+            label: t.readiness.scheduledAnalysis,
+            description: formatMessage(t.readiness.activeSchedules, {
               count: formatCount(activeSchedules),
-            })
-          : t.readiness.noSchedulePermission,
-      state: data.scheduleLoadError
-        ? t.readiness.unavailable
-        : activeSchedules > 0
-          ? t.readiness.ready
-          : t.readiness.noSchedules,
-      status:
-        activeSchedules > 0 && !data.scheduleLoadError
-          ? ("ready" as const)
-          : ("attention" as const),
-      icon: CalendarClock,
-    },
+            }),
+            state:
+              activeSchedules > 0 ? t.readiness.ready : t.readiness.noSchedules,
+            status:
+              activeSchedules > 0 ? ("ready" as const) : ("attention" as const),
+            icon: CalendarClock,
+          },
+        ]
+      : []),
   ]
 
+  if (readinessItems.length === 0) return null
+
   return (
-    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+    <div
+      className="grid gap-3 min-[1440px]:grid-cols-2"
+      data-testid="telegram-readiness-summary"
+    >
       {readinessItems.map((item) => {
         const Icon = item.icon
 
@@ -511,22 +569,23 @@ function FeatureRoutingSection({
   currentWorkspace,
   languages,
   languageCatalogError,
-  loadError,
-  canReadFeatureSettings,
   canUpdateFeatureSettings,
+  canUpdateMarketNewsRouting,
+  canReadDestinations,
+  loadError,
 }: {
   routes: FeatureRouteView[]
   activeDestinations: TelegramDestinationResponse[]
   currentWorkspace: TelegramConfigurationData["currentWorkspace"]
   languages: TelegramConfigurationData["languages"]
   languageCatalogError: boolean
-  loadError: boolean
-  canReadFeatureSettings: boolean
   canUpdateFeatureSettings: boolean
+  canUpdateMarketNewsRouting: boolean
+  canReadDestinations: boolean
+  loadError: boolean
 }) {
-  const { dictionary } = useLocalization()
+  const { dictionary, formatMessage } = useLocalization()
   const t = dictionary.telegram
-
   return (
     <section className="flex flex-col gap-4" aria-labelledby="telegram-routing">
       <SectionHeader
@@ -535,71 +594,87 @@ function FeatureRoutingSection({
         description={t.routing.sectionDescription}
       />
       <AppListTable className="mt-0">
-        <Table>
-          <TableHeader>
-            <AppListTableHeaderRow>
-              <AppListTableHead className="w-[32%]">
-                {t.routing.featureColumn}
-              </AppListTableHead>
-              <AppListTableHead className="w-40">
-                {t.routing.workspaceColumn}
-              </AppListTableHead>
-              <AppListTableHead className="w-52">
-                {t.routing.destinationColumn}
-              </AppListTableHead>
-              <AppListTableHead className="w-64">
-                {t.routing.languageColumn}
-              </AppListTableHead>
-              <AppListTableHead className="w-32 text-center">
-                {t.routing.enabledColumn}
-              </AppListTableHead>
-            </AppListTableHeaderRow>
-          </TableHeader>
-          <TableBody>
-            {!canReadFeatureSettings ? (
-              <AccessLimitedRow colSpan={5} title={t.routing.accessLimited} />
-            ) : loadError ? (
-              <TableRow>
-                <TableCell colSpan={5}>
-                  <SectionReadError />
-                </TableCell>
-              </TableRow>
-            ) : (
-              routes.map((route) => (
-                <TableRow
-                  key={route.featureKey}
-                  className="border-border transition-colors hover:bg-muted/50"
-                >
-                  <TableCell className="align-top whitespace-normal">
-                    <div className="flex min-w-0 flex-col gap-1">
-                      <span className="font-medium text-foreground">
-                        {route.label}
+        {loadError ? (
+          <div className="p-4">
+            <SectionReadError />
+          </div>
+        ) : routes.length === 0 ? (
+          <Table>
+            <TableBody>
+              <AccessLimitedRow colSpan={1} title={t.routing.accessLimited} />
+            </TableBody>
+          </Table>
+        ) : (
+          routes.map((route, index) => {
+            const isMarketNewsRoute = route.featureKey === "MARKET_NEWS_ALERT"
+            const workspaceId =
+              currentWorkspace?.id ?? route.setting?.workspaceId
+            const workspaceLabel = route.readbackUnverified
+              ? (route.setting?.workspaceName ??
+                (route.setting?.workspaceId !== undefined
+                  ? formatMessage(t.routing.workspaceIdFallback, {
+                      id: route.setting.workspaceId,
+                    })
+                  : t.routing.readbackWorkspaceUnknown))
+              : (route.setting?.workspaceName ??
+                currentWorkspace?.name ??
+                (route.setting?.workspaceId !== undefined
+                  ? formatMessage(t.routing.workspaceIdFallback, {
+                      id: route.setting.workspaceId,
+                    })
+                  : t.routing.noSavedWorkspaceSettings))
+            const rowId = `${route.featureKey}-${workspaceId ?? index}`
+            const titleId = `telegram-route-title-${rowId}`
+            const controlRoute =
+              isMarketNewsRoute && !currentWorkspace && route.setting
+                ? { ...route, label: `${route.label} — ${workspaceLabel}` }
+                : route
+
+            return (
+              <div
+                key={rowId}
+                className={cn(
+                  "p-4",
+                  index < routes.length - 1 && "border-b border-border"
+                )}
+                data-feature-key={route.featureKey}
+                data-testid={
+                  isMarketNewsRoute ? "market-news-routing-card" : undefined
+                }
+                aria-labelledby={titleId}
+              >
+                <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-3">
+                  <div className="min-w-0 flex-1">
+                    <h3 id={titleId} className="font-medium text-foreground">
+                      {route.label}
+                    </h3>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {route.description}
+                    </p>
+                    {isMarketNewsRoute ? (
+                      <span className="mt-2 block text-xs text-muted-foreground">
+                        {workspaceLabel}
                       </span>
-                      <span className="text-sm text-muted-foreground">
-                        {route.description}
-                      </span>
-                      <code className="w-fit rounded bg-muted px-1.5 py-0.5 text-xs text-foreground">
-                        {route.featureKey}
-                      </code>
-                    </div>
-                  </TableCell>
-                  <TableCell className="align-top text-sm text-muted-foreground">
-                    {currentWorkspace?.name ?? t.routing.noWorkspaceSelected}
-                  </TableCell>
+                    ) : null}
+                  </div>
                   <FeatureRouteControls
-                    key={`${route.featureKey}:${route.setting?.destination?.id ?? "none"}:${route.setting?.outputLanguage?.isoCode ?? "default"}`}
-                    route={route}
+                    route={controlRoute}
                     activeDestinations={activeDestinations}
-                    currentWorkspaceId={currentWorkspace?.id}
-                    canUpdate={canUpdateFeatureSettings}
+                    currentWorkspaceId={workspaceId}
+                    canReadDestinations={canReadDestinations}
+                    canUpdate={
+                      isMarketNewsRoute
+                        ? canUpdateMarketNewsRouting
+                        : canUpdateFeatureSettings
+                    }
                     languages={languages}
                     languageCatalogError={languageCatalogError}
                   />
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+                </div>
+              </div>
+            )
+          })
+        )}
       </AppListTable>
     </section>
   )
@@ -688,7 +763,8 @@ function MarketAnalysisSchedulePanel({
             ) : null}
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
-            {formatScheduledAsset(schedule)} · {schedule.workspaceName}
+            {formatScheduledAsset(schedule, dictionary)} ·{" "}
+            {schedule.workspaceName}
           </p>
         </TableCell>
         <TableCell className="align-top text-sm whitespace-normal text-muted-foreground">
@@ -778,7 +854,8 @@ function MarketAnalysisSchedulePanel({
             ) : null}
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
-            {formatScheduledAsset(schedule)} · {schedule.workspaceName}
+            {formatScheduledAsset(schedule, dictionary)} ·{" "}
+            {schedule.workspaceName}
           </p>
           <div className="mt-2 flex min-w-0 flex-col gap-1 text-sm text-muted-foreground">
             <span>
@@ -949,6 +1026,7 @@ function FeatureRouteControls({
   route,
   activeDestinations,
   currentWorkspaceId,
+  canReadDestinations,
   canUpdate,
   languages,
   languageCatalogError,
@@ -956,46 +1034,150 @@ function FeatureRouteControls({
   route: FeatureRouteView
   activeDestinations: TelegramDestinationResponse[]
   currentWorkspaceId?: number
+  canReadDestinations: boolean
   canUpdate: boolean
   languages: LanguageResponse[]
   languageCatalogError: boolean
 }) {
   const router = useRouter()
+  const [isPending, startTransition] = useTransition()
+  const destinationFocusTarget = useRef<HTMLElement | null>(null)
+  const restoreFocusAfterClear = useRef(false)
+  const controlId = useId()
+  const { dictionary, formatMessage } = useLocalization()
+  const t = dictionary.telegram
+  const isMarketNewsRoute = route.featureKey === "MARKET_NEWS_ALERT"
   const persistedDestinationId = route.setting?.destination?.id.toString() ?? ""
   const persistedLanguageIsoCode = route.setting?.outputLanguage?.isoCode ?? ""
   const [destinationId, setDestinationId] = useState(persistedDestinationId)
   const [outputLanguageIsoCode, setOutputLanguageIsoCode] = useState(
     persistedLanguageIsoCode
   )
-  const [isPending, startTransition] = useTransition()
-  const { dictionary, formatMessage } = useLocalization()
-  const t = dictionary.telegram
+
+  useEffect(() => {
+    if (!restoreFocusAfterClear.current) return
+
+    destinationFocusTarget.current?.focus()
+    restoreFocusAfterClear.current = false
+  }, [persistedDestinationId])
+
+  function setDestinationFocusTarget(element: HTMLElement | null) {
+    destinationFocusTarget.current = element
+  }
+
+  if (isMarketNewsRoute && route.readbackUnverified) {
+    return (
+      <div
+        className="col-span-2 min-w-0 text-sm text-muted-foreground"
+        role="status"
+      >
+        {t.routing.readbackUnverified}
+      </div>
+    )
+  }
   const routeSupportsLanguage = route.featureKey !== "SCHEDULED_MARKET_ANALYSIS"
-  const hasDestination = activeDestinations.some(
-    (destination) => destination.id.toString() === destinationId
+  const savedDestination = route.setting?.destination ?? null
+  const selectedDestinationId = isMarketNewsRoute
+    ? persistedDestinationId
+    : destinationId
+  const hasSelectedActiveDestination = Boolean(
+    canReadDestinations &&
+    activeDestinations.some(
+      (destination) => destination.id.toString() === selectedDestinationId
+    ) &&
+    (!isMarketNewsRoute || savedDestination?.status === "ACTIVE")
   )
+  const canUpdateRoute = canUpdate && Boolean(currentWorkspaceId)
   const destinationControlDisabled =
-    !canUpdate || !currentWorkspaceId || isPending
-  const controlsDisabled =
-    !canUpdate || !currentWorkspaceId || !hasDestination || isPending
+    !canUpdateRoute ||
+    !canReadDestinations ||
+    activeDestinations.length === 0 ||
+    isPending
+  const switchDisabled =
+    !canUpdateRoute ||
+    isPending ||
+    (!hasSelectedActiveDestination &&
+      (!isMarketNewsRoute || !route.setting?.enabled))
+  const languageControlDisabled =
+    !canUpdateRoute ||
+    (!isMarketNewsRoute && !hasSelectedActiveDestination) ||
+    isPending ||
+    languageCatalogError
+  const shouldExplainMissingDestination =
+    isMarketNewsRoute &&
+    canUpdateRoute &&
+    !route.setting?.enabled &&
+    !hasSelectedActiveDestination
+  const missingDestinationDescription = canReadDestinations
+    ? t.routing.enableDestinationRequired
+    : t.routing.destinationReadRequired
+  const switchDescription =
+    isMarketNewsRoute && route.setting && !canUpdate
+      ? t.routing.routeReadOnlyDescription
+      : shouldExplainMissingDestination
+        ? missingDestinationDescription
+        : null
+  const destinationItems = [
+    ...(isMarketNewsRoute && savedDestination
+      ? [
+          {
+            value: persistedDestinationId,
+            label: getDestinationLabel(savedDestination, dictionary),
+            disabled:
+              savedDestination.status !== "ACTIVE" ||
+              !canReadDestinations ||
+              !activeDestinations.some(
+                (destination) => destination.id === savedDestination.id
+              ),
+          },
+        ]
+      : []),
+    ...activeDestinations
+      .filter(
+        (destination) =>
+          !isMarketNewsRoute ||
+          destination.id.toString() !== persistedDestinationId
+      )
+      .map((destination) => ({
+        value: destination.id.toString(),
+        label: getDestinationLabel(destination, dictionary),
+        disabled: false,
+      })),
+  ]
 
   function updateRoute(
-    overrides: Partial<UpdateTelegramFeatureSettingRequest>,
+    overrides: {
+      destinationId?: number | null
+      enabled?: boolean
+      outputLanguageIsoCode?: string | null
+    },
     successMessage: string
   ) {
-    const nextDestinationId =
-      overrides.destinationId?.toString() ?? destinationId
+    if (!currentWorkspaceId) return
+    if (!isMarketNewsRoute && !destinationId && overrides.destinationId == null)
+      return
 
-    if (!currentWorkspaceId || !nextDestinationId) return
-
-    const request = getUpdateTelegramFeatureSettingSchema().safeParse({
-      featureKey: route.featureKey,
-      workspaceId: currentWorkspaceId,
-      destinationId: Number(nextDestinationId),
-      enabled: route.setting?.enabled ?? false,
-      outputLanguageIsoCode: outputLanguageIsoCode || undefined,
-      ...overrides,
-    })
+    const requestInput = isMarketNewsRoute
+      ? {
+          featureKey: route.featureKey,
+          workspaceId: currentWorkspaceId,
+          ...(route.setting ? {} : { enabled: false }),
+          ...overrides,
+        }
+      : {
+          featureKey: route.featureKey,
+          workspaceId: currentWorkspaceId,
+          destinationId: Number(
+            typeof overrides.destinationId === "number"
+              ? overrides.destinationId
+              : destinationId
+          ),
+          enabled: route.setting?.enabled ?? false,
+          outputLanguageIsoCode: outputLanguageIsoCode || undefined,
+          ...overrides,
+        }
+    const request =
+      getUpdateTelegramFeatureSettingSchema().safeParse(requestInput)
 
     if (!request.success) {
       toast.error(t.routing.updateError)
@@ -1006,6 +1188,10 @@ function FeatureRouteControls({
       const result = await updateTelegramFeatureSetting(request.data)
 
       if (result.success) {
+        if (isMarketNewsRoute && overrides.destinationId === null) {
+          restoreFocusAfterClear.current = true
+          destinationFocusTarget.current?.focus()
+        }
         toast.success(successMessage)
         router.refresh()
       } else {
@@ -1017,7 +1203,7 @@ function FeatureRouteControls({
   function handleDestinationChange(value: string | null) {
     if (value === null) return
 
-    setDestinationId(value)
+    if (!isMarketNewsRoute) setDestinationId(value)
     updateRoute(
       { destinationId: Number(value) },
       t.routing.destinationUpdateSuccess
@@ -1028,9 +1214,13 @@ function FeatureRouteControls({
     if (value === null || !routeSupportsLanguage) return
 
     const nextLanguage = value === DEFAULT_FEATURE_LANGUAGE_VALUE ? "" : value
-    setOutputLanguageIsoCode(nextLanguage)
+    if (!isMarketNewsRoute) setOutputLanguageIsoCode(nextLanguage)
     updateRoute(
-      { outputLanguageIsoCode: nextLanguage || undefined },
+      {
+        outputLanguageIsoCode: isMarketNewsRoute
+          ? nextLanguage || null
+          : nextLanguage || undefined,
+      },
       nextLanguage
         ? t.routing.languageUpdateSuccess
         : t.routing.languageClearSuccess
@@ -1038,6 +1228,11 @@ function FeatureRouteControls({
   }
 
   function handleCheckedChange(enabled: boolean) {
+    if (enabled && !hasSelectedActiveDestination) {
+      toast.error(t.routing.enableDestinationRequired)
+      return
+    }
+
     updateRoute(
       { enabled },
       enabled ? t.routing.enabledSuccess : t.routing.disabledSuccess
@@ -1076,138 +1271,202 @@ function FeatureRouteControls({
     })),
   ]
 
-  const languageDescriptionId = `telegram-route-${route.featureKey}-language-description`
+  const languageDescriptionId = `telegram-route-language-description-${controlId}`
   const languageDescription = languageCatalogError
     ? t.routing.languageCatalogError
-    : !hasDestination
+    : !isMarketNewsRoute && !hasSelectedActiveDestination
       ? t.routing.languageDestinationRequired
       : null
-
-  return (
-    <>
-      <TableCell className="align-top whitespace-normal">
-        {activeDestinations.length === 0 ? (
-          <span className="text-sm text-muted-foreground">
-            {t.destination.noActiveDestination}
-          </span>
-        ) : (
-          <Select
-            items={activeDestinations.map((destination) => ({
-              value: destination.id.toString(),
-              label: getDestinationLabel(destination, dictionary),
-            }))}
-            value={destinationId || null}
-            onValueChange={handleDestinationChange}
-            disabled={destinationControlDisabled}
-          >
-            <SelectTrigger aria-label={route.label} className="w-full">
-              <SelectValue placeholder={t.destination.placeholder} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                {activeDestinations.map((destination) => (
-                  <SelectItem
-                    key={destination.id}
-                    value={destination.id.toString()}
-                  >
-                    {getDestinationLabel(destination, dictionary)}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-        )}
-      </TableCell>
-      <TableCell className="align-top whitespace-normal">
-        {routeSupportsLanguage ? (
-          <div className="flex min-w-0 flex-col gap-1">
-            <Select
-              items={languageItems}
-              value={outputLanguageIsoCode || DEFAULT_FEATURE_LANGUAGE_VALUE}
-              onValueChange={handleLanguageChange}
-              disabled={
-                controlsDisabled ||
-                languageCatalogError ||
-                !routeSupportsLanguage
-              }
-            >
-              <SelectTrigger
-                className="w-full"
-                aria-label={formatMessage(t.routing.languageAria, {
-                  route: route.label,
-                })}
-                aria-describedby={
-                  languageDescription ? languageDescriptionId : undefined
-                }
-              >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  <SelectItem value={DEFAULT_FEATURE_LANGUAGE_VALUE}>
-                    {t.routing.defaultLanguage}
-                  </SelectItem>
-                  {languageOptions.map((language) => (
-                    <SelectItem key={language.isoCode} value={language.isoCode}>
-                      {language.name || language.isoCode} ({language.isoCode})
-                      {!hasCurrentLanguageInCatalog &&
-                      language.isoCode === currentOutputLanguage?.isoCode
-                        ? ` — ${t.routing.languageUnavailable}`
-                        : ""}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-            {languageDescription ? (
-              <span
-                id={languageDescriptionId}
-                className="text-xs text-muted-foreground"
-                role="status"
-              >
-                {languageDescription}
-              </span>
-            ) : null}
-          </div>
-        ) : (
-          <span className="text-sm text-muted-foreground">
-            {t.routing.languageNotApplicable}
-          </span>
-        )}
-      </TableCell>
-      <TableCell className="align-top">
-        <div
-          className="mx-auto inline-flex h-8 w-32 items-center justify-between gap-2 rounded-lg border border-input bg-transparent px-2.5 text-sm shadow-xs data-[disabled=true]:opacity-60"
-          data-disabled={controlsDisabled ? true : undefined}
+  const switchDescriptionId = `telegram-route-switch-description-${controlId}`
+  const destinationControl =
+    !savedDestination && activeDestinations.length === 0 ? (
+      <span
+        ref={setDestinationFocusTarget}
+        className="text-sm text-muted-foreground"
+        role="status"
+        tabIndex={-1}
+      >
+        {t.destination.noActiveDestination}
+      </span>
+    ) : (
+      <div className="relative">
+        <Select
+          items={destinationItems}
+          value={selectedDestinationId || null}
+          onValueChange={handleDestinationChange}
+          disabled={destinationControlDisabled}
         >
-          <span
-            className={cn(
-              "min-w-14 text-left text-xs font-medium",
-              route.setting?.enabled
-                ? "text-foreground"
-                : "text-muted-foreground"
-            )}
-          >
-            {route.setting?.enabled ? t.common.enabled : t.common.paused}
-          </span>
-          <Switch
-            checked={Boolean(route.setting?.enabled)}
-            disabled={controlsDisabled}
-            onCheckedChange={handleCheckedChange}
-            aria-label={formatMessage(t.routing.switchAria, {
+          <SelectTrigger
+            ref={setDestinationFocusTarget}
+            aria-label={formatMessage(t.routing.destinationSelectorAria, {
               route: route.label,
             })}
-          />
+            className={cn(
+              "w-full",
+              isMarketNewsRoute && savedDestination && "pe-10"
+            )}
+          >
+            <SelectValue placeholder={t.destination.placeholder} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              {destinationItems.map((destination) => (
+                <SelectItem
+                  key={destination.value}
+                  value={destination.value}
+                  disabled={destination.disabled}
+                >
+                  {destination.label}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
+        {isMarketNewsRoute && savedDestination ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="absolute end-0 top-1/2 z-10 -translate-y-1/2"
+            aria-label={formatMessage(t.routing.destinationClearAria, {
+              route: route.label,
+            })}
+            disabled={!canUpdateRoute || isPending}
+            onClick={() =>
+              updateRoute(
+                { destinationId: null, enabled: false },
+                t.routing.destinationClearSuccess
+              )
+            }
+          >
+            <X data-icon="inline-start" aria-hidden="true" />
+          </Button>
+        ) : null}
+      </div>
+    )
+  const languageControl = routeSupportsLanguage ? (
+    <div className="flex min-w-0 flex-col gap-1">
+      <Select
+        items={languageItems}
+        value={
+          (isMarketNewsRoute
+            ? persistedLanguageIsoCode
+            : outputLanguageIsoCode) || DEFAULT_FEATURE_LANGUAGE_VALUE
+        }
+        onValueChange={handleLanguageChange}
+        disabled={languageControlDisabled}
+      >
+        <SelectTrigger
+          className="w-full"
+          aria-label={formatMessage(t.routing.languageAria, {
+            route: route.label,
+          })}
+          aria-describedby={
+            languageDescription ? languageDescriptionId : undefined
+          }
+        >
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectGroup>
+            <SelectItem value={DEFAULT_FEATURE_LANGUAGE_VALUE}>
+              {t.routing.defaultLanguage}
+            </SelectItem>
+            {languageOptions.map((language) => (
+              <SelectItem key={language.isoCode} value={language.isoCode}>
+                {language.name || language.isoCode} ({language.isoCode})
+                {!hasCurrentLanguageInCatalog &&
+                language.isoCode === currentOutputLanguage?.isoCode
+                  ? ` — ${t.routing.languageUnavailable}`
+                  : ""}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        </SelectContent>
+      </Select>
+      {languageDescription ? (
+        <span
+          id={languageDescriptionId}
+          className="text-xs text-muted-foreground"
+          role="status"
+        >
+          {languageDescription}
+        </span>
+      ) : null}
+    </div>
+  ) : (
+    <span className="text-sm text-muted-foreground">
+      {t.routing.languageNotApplicable}
+    </span>
+  )
+  const switchControl = (
+    <div className="flex flex-col items-center gap-1">
+      <div
+        className={cn(
+          "ms-auto inline-flex h-8 w-32 items-center justify-between gap-2 rounded-lg border border-input bg-transparent px-2.5 text-sm shadow-xs data-[disabled=true]:opacity-60"
+        )}
+        data-disabled={switchDisabled ? true : undefined}
+      >
+        <span
+          className={cn(
+            "min-w-14 text-left text-xs font-medium",
+            route.setting?.enabled ? "text-foreground" : "text-muted-foreground"
+          )}
+        >
+          {route.setting?.enabled ? t.common.enabled : t.common.paused}
+        </span>
+        <Switch
+          checked={Boolean(route.setting?.enabled)}
+          disabled={switchDisabled}
+          onCheckedChange={handleCheckedChange}
+          aria-label={formatMessage(t.routing.switchAria, {
+            route: route.label,
+          })}
+          aria-describedby={switchDescription ? switchDescriptionId : undefined}
+        />
+      </div>
+      {switchDescription ? (
+        <span
+          id={switchDescriptionId}
+          className="max-w-32 text-center text-xs text-muted-foreground"
+          role="status"
+        >
+          {switchDescription}
+        </span>
+      ) : null}
+    </div>
+  )
+
+  return (
+    <div className="contents">
+      <div className="col-start-2 row-start-1 justify-self-end">
+        {switchControl}
+      </div>
+      <div className="col-span-2 grid gap-3 md:grid-cols-2">
+        <div className="flex min-w-0 flex-col gap-1">
+          <span className="text-xs font-medium text-muted-foreground">
+            {t.routing.destinationColumn}
+          </span>
+          {destinationControl}
         </div>
-      </TableCell>
-    </>
+        <div className="flex min-w-0 flex-col gap-1">
+          <span className="text-xs font-medium text-muted-foreground">
+            {t.routing.languageColumn}
+          </span>
+          {languageControl}
+        </div>
+      </div>
+    </div>
   )
 }
 
 function formatScheduledAsset(
-  schedule: TelegramMarketAnalysisScheduleResponse
+  schedule: TelegramMarketAnalysisScheduleResponse,
+  dictionary: Dictionary
 ) {
   const asset = schedule.asset
+
+  if (!asset) return dictionary.telegram.schedule.noAsset
 
   return (
     [asset.assetSymbol, asset.assetName].filter(Boolean).join(" — ") ||

@@ -11,6 +11,8 @@ import {
 
 export const TELEGRAM_BOT_CONNECTION_READ_PERMISSION =
   "telegram-bot-connection:read"
+export const TELEGRAM_BOT_CONNECTION_CREATE_PERMISSION =
+  "telegram-bot-connection:create"
 export const TELEGRAM_BOT_CONNECTION_MANAGE_PERMISSION =
   "telegram-bot-connection:manage"
 export const TELEGRAM_BOT_CONNECTION_DELETE_PERMISSION =
@@ -22,6 +24,10 @@ export const TELEGRAM_FEATURE_SETTING_READ_PERMISSION =
   "telegram-feature-setting:read"
 export const TELEGRAM_FEATURE_SETTING_UPDATE_PERMISSION =
   "telegram-feature-setting:update"
+export const TELEGRAM_MARKET_NEWS_ROUTING_READ_PERMISSION =
+  "telegram-market-news-routing:read"
+export const TELEGRAM_MARKET_NEWS_ROUTING_UPDATE_PERMISSION =
+  "telegram-market-news-routing:update"
 export const TELEGRAM_MARKET_ANALYSIS_SCHEDULE_READ_PERMISSION =
   "telegram-market-analysis-schedule:read"
 export const TELEGRAM_MARKET_ANALYSIS_SCHEDULE_CREATE_PERMISSION =
@@ -35,11 +41,13 @@ export const TELEGRAM_READ_PERMISSIONS = [
   TELEGRAM_BOT_CONNECTION_READ_PERMISSION,
   TELEGRAM_DESTINATION_READ_PERMISSION,
   TELEGRAM_FEATURE_SETTING_READ_PERMISSION,
+  TELEGRAM_MARKET_NEWS_ROUTING_READ_PERMISSION,
   TELEGRAM_MARKET_ANALYSIS_SCHEDULE_READ_PERMISSION,
 ] as const
 
 export const TELEGRAM_NAV_PERMISSIONS = [
   ...TELEGRAM_READ_PERMISSIONS,
+  TELEGRAM_BOT_CONNECTION_CREATE_PERMISSION,
   TELEGRAM_MARKET_ANALYSIS_SCHEDULE_CREATE_PERMISSION,
   TELEGRAM_MARKET_ANALYSIS_SCHEDULE_UPDATE_PERMISSION,
   TELEGRAM_MARKET_ANALYSIS_SCHEDULE_DELETE_PERMISSION,
@@ -66,6 +74,10 @@ export function getTelegramSectionAccess(
     featureSettings: hasPermission(
       permissions,
       TELEGRAM_FEATURE_SETTING_READ_PERMISSION
+    ),
+    marketNewsRouting: hasPermission(
+      permissions,
+      TELEGRAM_MARKET_NEWS_ROUTING_READ_PERMISSION
     ),
     schedules: hasPermission(
       permissions,
@@ -94,6 +106,10 @@ export function getTelegramManageAccess(
     featureSettings: hasPermission(
       permissions,
       TELEGRAM_FEATURE_SETTING_UPDATE_PERMISSION
+    ),
+    marketNewsRouting: hasPermission(
+      permissions,
+      TELEGRAM_MARKET_NEWS_ROUTING_UPDATE_PERMISSION
     ),
   }
 }

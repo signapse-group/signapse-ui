@@ -2,7 +2,7 @@
 
 import { type FormEvent, useRef, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import { Bot, CalendarClock, RefreshCw, Send, Trash2 } from "lucide-react"
+import { Bot, CalendarClock, RefreshCw, Send, Trash2, X } from "lucide-react"
 import { toast } from "sonner"
 
 import {
@@ -13,7 +13,7 @@ import type { Dictionary } from "@/app/lib/i18n/dictionary-types"
 import { useLocalization } from "@/app/lib/i18n/provider"
 import {
   getCreateTelegramBotConnectionSchema,
-  TelegramBotConnectionResponse,
+  TelegramBotConnectionReadback,
 } from "@/app/lib/telegram/definitions"
 import { AppTimeMetadata } from "@/components/app-time-metadata"
 import {
@@ -74,12 +74,14 @@ export function BotConnectionsCard({
   botConnections,
   canRead,
   canManage,
+  canCreate,
   canDelete,
   loadError,
 }: {
-  botConnections: TelegramBotConnectionResponse[]
+  botConnections: TelegramBotConnectionReadback[]
   canRead: boolean
   canManage: boolean
+  canCreate: boolean
   canDelete: boolean
   loadError: boolean
 }) {
@@ -101,9 +103,9 @@ export function BotConnectionsCard({
           {t.bot.sectionTitle}
         </CardTitle>
         <CardDescription>{t.bot.sectionDescription}</CardDescription>
-        {canManage ? (
+        {canCreate ? (
           <CardAction>
-            <ConnectBotDialog canManage={canManage} />
+            <ConnectBotDialog canRead={canRead} />
           </CardAction>
         ) : null}
       </CardHeader>
@@ -124,9 +126,9 @@ export function BotConnectionsCard({
             ) : null}
             {records.length > 0 ? (
               <ItemGroup>
-                {records.map((connection) => (
+                {records.map((connection, index) => (
                   <BotConnectionItem
-                    key={connection.id}
+                    key={connection.id ?? `unverified-${index}`}
                     connection={connection}
                     canDelete={canDelete}
                     formatTime={formatTime}
@@ -160,14 +162,16 @@ function BotConnectionItem({
   formatMessage,
   dictionary,
 }: {
-  connection: TelegramBotConnectionResponse
+  connection: TelegramBotConnectionReadback
   canDelete: boolean
   formatTime: (value?: string) => string
   formatMessage: ReturnType<typeof useLocalization>["formatMessage"]
   dictionary: Dictionary
 }) {
   const t = dictionary.telegram
-  const removeTriggerId = "telegram-bot-remove-" + connection.id
+  const removableId = canDelete ? connection.id : undefined
+  const removeTriggerId =
+    removableId === undefined ? null : `telegram-bot-remove-${removableId}`
   const [confirmationOpen, setConfirmationOpen] = useState(false)
   const label = getBotLabel(connection, dictionary)
   const removeTriggerLabel = formatMessage(t.bot.deleteTrigger, {
@@ -184,6 +188,11 @@ function BotConnectionItem({
             </ItemTitle>
             <StatusBadge status={connection.status} />
           </ItemHeader>
+          {connection.id === undefined || connection.status === undefined ? (
+            <p className="text-xs text-muted-foreground" role="note">
+              {t.bot.connectionDetailsUnverified}
+            </p>
+          ) : null}
           <ItemDescription className="line-clamp-none break-words">
             {connection.botUsername
               ? "@" + connection.botUsername.replace(/^@/, "")
@@ -207,19 +216,17 @@ function BotConnectionItem({
             </AppTimeMetadata>
           </div>
           {connection.status === "INVALID" ? (
-            <>
-              {connection.failureReason ? (
-                <p className="text-sm text-destructive" role="alert">
-                  {connection.failureReason}
-                </p>
-              ) : null}
-              <p className="text-xs text-muted-foreground">
-                {t.bot.replacementGuidance}
+            <div className="flex flex-col gap-1">
+              <p className="text-sm text-destructive">
+                {t.bot.webhookRegistrationFailed}
               </p>
-            </>
+              <p className="text-xs text-muted-foreground">
+                {t.bot.setupIncomplete}
+              </p>
+            </div>
           ) : null}
         </ItemContent>
-        {canDelete ? (
+        {removableId !== undefined && removeTriggerId !== null ? (
           <ItemActions className="ms-auto self-start">
             <ActionConfirmDialog
               title={formatMessage(t.bot.deleteTitle, { botName: label })}
@@ -227,7 +234,7 @@ function BotConnectionItem({
               actionLabel={t.bot.deleteAction}
               pendingLabel={t.bot.deletePending}
               triggerLabel={removeTriggerLabel}
-              action={() => deleteTelegramBotConnection(connection.id)}
+              action={() => deleteTelegramBotConnection(removableId)}
               successMessage={t.bot.deleteSuccess}
               open={confirmationOpen}
               onOpenChange={setConfirmationOpen}
@@ -254,14 +261,14 @@ function BotConnectionItem({
   )
 }
 
-function ConnectBotDialog({ canManage }: { canManage: boolean }) {
+function ConnectBotDialog({ canRead }: { canRead: boolean }) {
   const router = useRouter()
   const tokenRef = useRef<HTMLInputElement>(null)
   const [open, setOpen] = useState(false)
   const [token, setToken] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
-  const { dictionary } = useLocalization()
+  const { dictionary, formatMessage } = useLocalization()
   const t = dictionary.telegram
 
   function handleOpenChange(nextOpen: boolean) {
@@ -274,7 +281,6 @@ function ConnectBotDialog({ canManage }: { canManage: boolean }) {
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (!canManage) return
 
     const request = getCreateTelegramBotConnectionSchema(dictionary).safeParse({
       botToken: token,
@@ -291,23 +297,81 @@ function ConnectBotDialog({ canManage }: { canManage: boolean }) {
       const result = await createTelegramBotConnection(request.data)
 
       if (result.success) {
-        toast.success(t.bot.createSuccess)
+        const { connection, created } = result.data
+        const status = connection.status
+        let unverifiedMessage: string
+        if (created === null) {
+          unverifiedMessage = canRead
+            ? t.bot.createOutcomeUnverified
+            : t.bot.createOutcomeUnverifiedWithoutRead
+        } else if (created) {
+          unverifiedMessage = canRead
+            ? t.bot.createStatusUnverified
+            : t.bot.createStatusUnverifiedWithoutRead
+        } else {
+          unverifiedMessage = canRead
+            ? t.bot.alreadyConnectedStatusUnverified
+            : t.bot.alreadyConnectedStatusUnverifiedWithoutRead
+        }
+
+        if (created === null || status === undefined) {
+          toast.warning(unverifiedMessage)
+        } else {
+          const statusLabel = dictionary.telegram.statuses[status]
+
+          if (created && status === "ACTIVE") {
+            toast.success(t.bot.createSuccess)
+          } else if (status === "INVALID") {
+            const incompleteMessage = formatMessage(
+              created
+                ? t.bot.createIncomplete
+                : t.bot.alreadyConnectedIncomplete,
+              { status: statusLabel }
+            )
+            toast.warning(
+              created
+                ? incompleteMessage
+                : `${incompleteMessage} ${t.bot.webhookRegistrationFailed}`
+            )
+          } else if (!created) {
+            toast.info(
+              formatMessage(t.bot.alreadyConnected, {
+                status: statusLabel,
+              })
+            )
+          } else {
+            toast.warning(
+              formatMessage(t.bot.createNotActive, { status: statusLabel })
+            )
+          }
+        }
+
         handleOpenChange(false)
         router.refresh()
       } else {
         setError(result.error)
-        toast.error(result.error)
+        requestAnimationFrame(() => tokenRef.current?.focus())
       }
     })
   }
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger render={<Button disabled={!canManage} />}>
+    <Dialog
+      open={open}
+      disablePointerDismissal={isPending}
+      onOpenChange={(nextOpen, eventDetails) => {
+        if (!nextOpen && isPending) {
+          eventDetails.cancel()
+          return
+        }
+        handleOpenChange(nextOpen)
+      }}
+    >
+      <DialogTrigger render={<Button />}>
         <Bot data-icon="inline-start" />
         {t.bot.connect}
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent showCloseButton={false}>
         <DialogHeader>
           <DialogTitle>{t.bot.createTitle}</DialogTitle>
           <DialogDescription>{t.bot.createDescription}</DialogDescription>
@@ -327,17 +391,24 @@ function ConnectBotDialog({ canManage }: { canManage: boolean }) {
                 placeholder={t.bot.tokenPlaceholder}
                 value={token}
                 aria-invalid={Boolean(error)}
+                aria-describedby={
+                  error
+                    ? "telegram-bot-token-description telegram-bot-token-error"
+                    : "telegram-bot-token-description"
+                }
                 disabled={isPending}
                 onChange={(event) => {
                   setToken(event.target.value)
                   if (error) setError(null)
                 }}
               />
-              <FieldDescription>{t.bot.tokenDescription}</FieldDescription>
-              <FieldError>{error}</FieldError>
+              <FieldDescription id="telegram-bot-token-description">
+                {t.bot.tokenDescription}
+              </FieldDescription>
+              <FieldError id="telegram-bot-token-error">{error}</FieldError>
             </Field>
           </FieldGroup>
-          <DialogFooter>
+          <DialogFooter className="flex-col sm:flex-row">
             <DialogClose
               render={
                 <Button type="button" variant="outline" disabled={isPending} />
@@ -345,9 +416,12 @@ function ConnectBotDialog({ canManage }: { canManage: boolean }) {
             >
               {dictionary.common.close}
             </DialogClose>
-            <Button type="submit" disabled={isPending || !canManage}>
+            <Button type="submit" disabled={isPending}>
               {isPending ? (
-                <Spinner data-icon="inline-start" />
+                <Spinner
+                  aria-label={dictionary.common.loading}
+                  data-icon="inline-start"
+                />
               ) : (
                 <Send data-icon="inline-start" />
               )}
@@ -355,6 +429,19 @@ function ConnectBotDialog({ canManage }: { canManage: boolean }) {
             </Button>
           </DialogFooter>
         </form>
+        <DialogClose
+          render={
+            <Button
+              aria-label={dictionary.common.close}
+              variant="ghost"
+              className="absolute top-2 right-2"
+              size="icon-sm"
+              disabled={isPending}
+            />
+          }
+        >
+          <X aria-hidden="true" />
+        </DialogClose>
       </DialogContent>
     </Dialog>
   )

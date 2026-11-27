@@ -13,6 +13,7 @@ import { hasPermission } from "@/app/lib/permissions"
 import { getCurrentPermissions } from "@/app/lib/permissions-server"
 import {
   canAccessTelegramConfiguration,
+  TELEGRAM_BOT_CONNECTION_CREATE_PERMISSION,
   getTelegramManageAccess,
   getTelegramScheduleActionAccess,
   getTelegramSectionAccess,
@@ -53,6 +54,10 @@ export default async function TelegramPage() {
   const sectionAccess = getTelegramSectionAccess(permissions)
   const manageAccess = getTelegramManageAccess(permissions)
   const scheduleActions = getTelegramScheduleActionAccess(permissions)
+  const canCreateBotConnections = hasPermission(
+    permissions,
+    TELEGRAM_BOT_CONNECTION_CREATE_PERMISSION
+  )
 
   if (!canAccessTelegramConfiguration(permissions)) {
     return (
@@ -70,6 +75,7 @@ export default async function TelegramPage() {
         manageAccess={manageAccess}
         scheduleActions={scheduleActions}
         canReadWorkspace={hasPermission(permissions, "workspace:read")}
+        canCreateBotConnections={canCreateBotConnections}
       />
     </Suspense>
   )
@@ -80,11 +86,13 @@ async function TelegramConfigurationContent({
   manageAccess,
   scheduleActions,
   canReadWorkspace,
+  canCreateBotConnections,
 }: {
   sectionAccess: ReturnType<typeof getTelegramSectionAccess>
   manageAccess: ReturnType<typeof getTelegramManageAccess>
   scheduleActions: ReturnType<typeof getTelegramScheduleActionAccess>
   canReadWorkspace: boolean
+  canCreateBotConnections: boolean
 }) {
   const currentWorkspacePromise = loadSection(
     canReadWorkspace ? () => getActiveWorkspaceForCurrentUser() : undefined,
@@ -101,7 +109,7 @@ async function TelegramConfigurationContent({
     []
   )
   const featureSettingsPromise = loadSection(
-    sectionAccess.featureSettings
+    sectionAccess.featureSettings || sectionAccess.marketNewsRouting
       ? () => getTelegramFeatureSettings()
       : undefined,
     []
@@ -115,6 +123,7 @@ async function TelegramConfigurationContent({
   const languagesPromise = loadSection(
     sectionAccess.schedules ||
       sectionAccess.featureSettings ||
+      sectionAccess.marketNewsRouting ||
       scheduleActions.create ||
       scheduleActions.update
       ? () => getLanguages().then((catalog) => catalog.languages)
@@ -173,6 +182,7 @@ async function TelegramConfigurationContent({
         manageAccess,
         scheduleActions,
       }}
+      canCreateBotConnections={canCreateBotConnections}
     />
   )
 }
