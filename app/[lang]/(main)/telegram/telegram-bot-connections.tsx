@@ -8,6 +8,7 @@ import { toast } from "sonner"
 import {
   createTelegramBotConnection,
   deleteTelegramBotConnection,
+  reconnectTelegramBotConnection,
 } from "@/app/api/telegram/action"
 import type { Dictionary } from "@/app/lib/i18n/dictionary-types"
 import { useLocalization } from "@/app/lib/i18n/provider"
@@ -73,14 +74,14 @@ import { Button } from "@/components/ui/button"
 export function BotConnectionsCard({
   botConnections,
   canRead,
-  canManage,
+  canUpdate,
   canCreate,
   canDelete,
   loadError,
 }: {
   botConnections: TelegramBotConnectionReadback[]
   canRead: boolean
-  canManage: boolean
+  canUpdate: boolean
   canCreate: boolean
   canDelete: boolean
   loadError: boolean
@@ -119,7 +120,7 @@ export function BotConnectionsCard({
           <SectionReadError />
         ) : (
           <>
-            {!canManage && !canDelete ? (
+            {!canUpdate && !canDelete ? (
               <p className="text-sm text-muted-foreground" role="note">
                 {t.bot.readOnlyDescription}
               </p>
@@ -130,6 +131,7 @@ export function BotConnectionsCard({
                   <BotConnectionItem
                     key={connection.id ?? `unverified-${index}`}
                     connection={connection}
+                    canUpdate={canUpdate}
                     canDelete={canDelete}
                     formatTime={formatTime}
                     formatMessage={formatMessage}
@@ -157,18 +159,26 @@ export function BotConnectionsCard({
 
 function BotConnectionItem({
   connection,
+  canUpdate,
   canDelete,
   formatTime,
   formatMessage,
   dictionary,
 }: {
   connection: TelegramBotConnectionReadback
+  canUpdate: boolean
   canDelete: boolean
   formatTime: (value?: string) => string
   formatMessage: ReturnType<typeof useLocalization>["formatMessage"]
   dictionary: Dictionary
 }) {
   const t = dictionary.telegram
+  const reconnectableId =
+    canUpdate &&
+    connection.id !== undefined &&
+    (connection.status === "ACTIVE" || connection.status === "INVALID")
+      ? connection.id
+      : undefined
   const removableId = canDelete ? connection.id : undefined
   const removeTriggerId =
     removableId === undefined ? null : `telegram-bot-remove-${removableId}`
@@ -226,38 +236,225 @@ function BotConnectionItem({
             </div>
           ) : null}
         </ItemContent>
-        {removableId !== undefined && removeTriggerId !== null ? (
+        {reconnectableId !== undefined ||
+        (removableId !== undefined && removeTriggerId !== null) ? (
           <ItemActions className="ms-auto self-start">
-            <ActionConfirmDialog
-              title={formatMessage(t.bot.deleteTitle, { botName: label })}
-              description={t.bot.deleteDescription}
-              actionLabel={t.bot.deleteAction}
-              pendingLabel={t.bot.deletePending}
-              triggerLabel={removeTriggerLabel}
-              action={() => deleteTelegramBotConnection(removableId)}
-              successMessage={t.bot.deleteSuccess}
-              open={confirmationOpen}
-              onOpenChange={setConfirmationOpen}
-              trigger={
-                <Button
-                  type="button"
-                  id={removeTriggerId}
-                  variant="destructive"
-                  size="icon-sm"
-                  className="min-h-[44px] min-w-[44px] focus-visible:ring-destructive md:min-h-8 md:min-w-8 dark:focus-visible:ring-destructive"
-                  aria-label={removeTriggerLabel}
-                  title={removeTriggerLabel}
-                >
-                  <Trash2 data-icon="inline-start" />
-                </Button>
-              }
-              restoreFocusId={removeTriggerId}
-              successFocusId="telegram-bot-connections-heading"
-            />
+            {reconnectableId !== undefined ? (
+              <ReconnectBotDialog
+                connection={connection}
+                connectionId={reconnectableId}
+                label={label}
+              />
+            ) : null}
+            {removableId !== undefined && removeTriggerId !== null ? (
+              <ActionConfirmDialog
+                title={formatMessage(t.bot.deleteTitle, { botName: label })}
+                description={t.bot.deleteDescription}
+                actionLabel={t.bot.deleteAction}
+                pendingLabel={t.bot.deletePending}
+                triggerLabel={removeTriggerLabel}
+                action={() => deleteTelegramBotConnection(removableId)}
+                successMessage={t.bot.deleteSuccess}
+                open={confirmationOpen}
+                onOpenChange={setConfirmationOpen}
+                trigger={
+                  <Button
+                    type="button"
+                    id={removeTriggerId}
+                    variant="destructive"
+                    size="icon-sm"
+                    className="min-h-[44px] min-w-[44px] focus-visible:ring-destructive md:min-h-8 md:min-w-8 dark:focus-visible:ring-destructive"
+                    aria-label={removeTriggerLabel}
+                    title={removeTriggerLabel}
+                  >
+                    <Trash2 data-icon="inline-start" />
+                  </Button>
+                }
+                restoreFocusId={removeTriggerId}
+                successFocusId="telegram-bot-connections-heading"
+              />
+            ) : null}
           </ItemActions>
         ) : null}
       </Item>
     </>
+  )
+}
+
+function ReconnectBotDialog({
+  connection,
+  connectionId,
+  label,
+}: {
+  connection: TelegramBotConnectionReadback
+  connectionId: number
+  label: string
+}) {
+  const router = useRouter()
+  const tokenRef = useRef<HTMLInputElement>(null)
+  const [open, setOpen] = useState(false)
+  const [token, setToken] = useState("")
+  const [error, setError] = useState<string | null>(null)
+  const [isPending, startTransition] = useTransition()
+  const { dictionary, formatMessage } = useLocalization()
+  const t = dictionary.telegram
+  const username = connection.botUsername
+    ? `@${connection.botUsername.replace(/^@/, "")}`
+    : t.bot.noUsername
+  const triggerLabel = formatMessage(t.bot.reconnectTrigger, {
+    botName: label,
+  })
+  const tokenId = `telegram-reconnect-token-${connectionId}`
+  const errorId = `${tokenId}-error`
+  const descriptionId = `${tokenId}-description`
+
+  function handleOpenChange(nextOpen: boolean) {
+    setOpen(nextOpen)
+    if (!nextOpen) {
+      setToken("")
+      setError(null)
+    }
+  }
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    const request = getCreateTelegramBotConnectionSchema(dictionary).safeParse({
+      botToken: token,
+    })
+
+    if (!request.success) {
+      setError(request.error.issues[0]?.message ?? t.bot.invalidData)
+      requestAnimationFrame(() => tokenRef.current?.focus())
+      return
+    }
+
+    setError(null)
+    startTransition(async () => {
+      const result = await reconnectTelegramBotConnection(
+        connectionId,
+        request.data
+      )
+
+      if (result.success) {
+        if (result.data.status === "ACTIVE") {
+          toast.success(t.bot.reconnectSuccess)
+        } else if (result.data.status === "INVALID") {
+          toast.warning(t.bot.reconnectIncomplete)
+        } else {
+          toast.warning(t.bot.reconnectOutcomeUnverified)
+        }
+
+        handleOpenChange(false)
+        router.refresh()
+      } else {
+        setError(result.error)
+        requestAnimationFrame(() => tokenRef.current?.focus())
+      }
+    })
+  }
+
+  return (
+    <Dialog
+      open={open}
+      disablePointerDismissal={isPending}
+      onOpenChange={(nextOpen, eventDetails) => {
+        if (!nextOpen && isPending) {
+          eventDetails.cancel()
+          return
+        }
+        handleOpenChange(nextOpen)
+      }}
+    >
+      <DialogTrigger
+        render={
+          <Button
+            type="button"
+            id={`telegram-bot-reconnect-${connectionId}`}
+            variant="outline"
+            size="icon-sm"
+            className="min-h-[44px] min-w-[44px] md:min-h-8 md:min-w-8"
+            aria-label={triggerLabel}
+            title={triggerLabel}
+          />
+        }
+      >
+        <RefreshCw aria-hidden="true" />
+      </DialogTrigger>
+      <DialogContent showCloseButton={false}>
+        <DialogHeader>
+          <DialogTitle>{t.bot.reconnectTitle}</DialogTitle>
+          <DialogDescription>
+            {formatMessage(t.bot.reconnectDescription, {
+              botName: label,
+              botUsername: username,
+            })}
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <FieldGroup>
+            <Field data-invalid={Boolean(error)}>
+              <FieldLabel htmlFor={tokenId}>{t.bot.tokenLabel}</FieldLabel>
+              <Input
+                ref={tokenRef}
+                id={tokenId}
+                name="botToken"
+                type="password"
+                autoComplete="new-password"
+                placeholder={t.bot.tokenPlaceholder}
+                value={token}
+                aria-invalid={Boolean(error)}
+                aria-describedby={
+                  error ? `${descriptionId} ${errorId}` : descriptionId
+                }
+                disabled={isPending}
+                onChange={(event) => {
+                  setToken(event.target.value)
+                  if (error) setError(null)
+                }}
+              />
+              <FieldDescription id={descriptionId}>
+                {t.bot.tokenDescription}
+              </FieldDescription>
+              <FieldError id={errorId}>{error}</FieldError>
+            </Field>
+          </FieldGroup>
+          <DialogFooter className="flex-col sm:flex-row">
+            <DialogClose
+              render={
+                <Button type="button" variant="outline" disabled={isPending} />
+              }
+            >
+              {dictionary.common.close}
+            </DialogClose>
+            <Button type="submit" disabled={isPending}>
+              {isPending ? (
+                <Spinner
+                  aria-label={dictionary.common.loading}
+                  data-icon="inline-start"
+                />
+              ) : (
+                <RefreshCw data-icon="inline-start" />
+              )}
+              {t.bot.reconnectAction}
+            </Button>
+          </DialogFooter>
+        </form>
+        <DialogClose
+          render={
+            <Button
+              aria-label={dictionary.common.close}
+              variant="ghost"
+              className="absolute top-2 right-2"
+              size="icon-sm"
+              disabled={isPending}
+            />
+          }
+        >
+          <X aria-hidden="true" />
+        </DialogClose>
+      </DialogContent>
+    </Dialog>
   )
 }
 

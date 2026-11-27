@@ -2557,6 +2557,21 @@ export const en: Dictionary = {
       createPermissionDenied:
         "Your account needs permission to connect a Telegram bot. Contact an administrator.",
       createConnectionConflict: "This Telegram bot is already connected.",
+      reconnectTrigger: "Reconnect {botName}",
+      reconnectTitle: "Reconnect Telegram bot",
+      reconnectDescription:
+        "Enter a BotFather token for {botName} ({botUsername}).",
+      reconnectAction: "Reconnect",
+      reconnectSuccess: "Telegram bot reconnected.",
+      reconnectIncomplete:
+        "Webhook registration failed. The bot remains invalid; its current status is shown on the row.",
+      reconnectOutcomeUnverified:
+        "The reconnect result could not be confirmed. Check the bot's status before trying again.",
+      reconnectTokenMismatch:
+        "This token belongs to a different Telegram bot than the selected connection.",
+      reconnectPermissionDenied:
+        "Your account needs permission to reconnect this bot. Contact an administrator.",
+      reconnectError: "Could not reconnect this bot.",
       deleteError: "Could not remove the Telegram bot.",
       fallbackLabel: "Bot #{id}",
     },

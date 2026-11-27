@@ -81,6 +81,29 @@ function getCreateBotActionError(
   return dictionary.telegram.bot.createError
 }
 
+function getReconnectBotActionError(
+  error: unknown,
+  dictionary: Dictionary
+): string {
+  const apiError =
+    error instanceof Error ? (error as BackendApiError) : undefined
+
+  if (apiError?.status === 400) {
+    return dictionary.telegram.bot.createTokenVerificationError
+  }
+  if (apiError?.status === 403) {
+    return dictionary.telegram.bot.reconnectPermissionDenied
+  }
+  if (
+    apiError?.status === 409 &&
+    apiError.code === "TELEGRAM_BOT_ID_MISMATCH"
+  ) {
+    return dictionary.telegram.bot.reconnectTokenMismatch
+  }
+
+  return dictionary.telegram.bot.reconnectError
+}
+
 function isTelegramTestMessageOutcomeUnknown(error: unknown): boolean {
   return (
     error instanceof Error &&
@@ -273,6 +296,74 @@ export async function createTelegramBotConnection(
         created: null,
       },
     }
+  }
+}
+
+export async function reconnectTelegramBotConnection(
+  connectionId: number,
+  request: { botToken: string }
+): Promise<ActionResult<{ status?: "ACTIVE" | "INVALID" }>> {
+  const dictionary = await getTelegramDictionary()
+  const parsedId = z.number().int().positive().safeParse(connectionId)
+
+  if (!parsedId.success) {
+    return { success: false, error: dictionary.telegram.bot.invalidData }
+  }
+
+  const parsed =
+    getCreateTelegramBotConnectionSchema(dictionary).safeParse(request)
+
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: getValidationError(parsed.error, dictionary),
+    }
+  }
+
+  try {
+    const response = await fetchAuthenticatedWithStatus<unknown>(
+      `/telegram/bot-connections/${parsedId.data}/reconnect`,
+      {
+        method: "POST",
+        body: JSON.stringify(parsed.data),
+      }
+    )
+
+    if (response.status !== 200) {
+      revalidateTelegramConfiguration()
+      return { success: true, data: {} }
+    }
+  } catch (error: unknown) {
+    const status =
+      error instanceof Error ? (error as BackendApiError).status : undefined
+
+    if (typeof status === "number" && status >= 400 && status < 500) {
+      return {
+        success: false,
+        error: getReconnectBotActionError(error, dictionary),
+      }
+    }
+
+    revalidateTelegramConfiguration()
+    return { success: true, data: {} }
+  }
+
+  let status: "ACTIVE" | "INVALID" | undefined
+  try {
+    const connection = (await getTelegramBotConnections()).find(
+      (item) => item.id === parsedId.data
+    )
+    if (connection?.status === "ACTIVE" || connection?.status === "INVALID") {
+      status = connection.status
+    }
+  } catch {
+    // The page refresh below lets the list recover even if this readback fails.
+  }
+
+  revalidateTelegramConfiguration()
+  return {
+    success: true,
+    data: status ? { status } : {},
   }
 }
 
