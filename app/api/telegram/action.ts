@@ -46,15 +46,27 @@ function getActionError(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback
 }
 
-function getCreateBotActionError(error: unknown, fallback: string): string {
-  if (error instanceof Error) {
-    const status = (error as BackendApiError).status
-    if (typeof status === "number" && status >= 400) {
-      return error.message
-    }
+function getCreateBotActionError(
+  error: unknown,
+  dictionary: Dictionary
+): string {
+  const apiError =
+    error instanceof Error ? (error as BackendApiError) : undefined
+
+  if (apiError?.status === 400) {
+    return dictionary.telegram.bot.createTokenVerificationError
+  }
+  if (apiError?.status === 403) {
+    return dictionary.telegram.bot.createPermissionDenied
+  }
+  if (
+    apiError?.status === 409 &&
+    apiError.code === "TELEGRAM_BOT_CONNECTION_ALREADY_EXISTS"
+  ) {
+    return dictionary.telegram.bot.createConnectionConflict
   }
 
-  return fallback
+  return dictionary.telegram.bot.createError
 }
 
 function isTelegramTestMessageOutcomeUnknown(error: unknown): boolean {
@@ -210,10 +222,7 @@ export async function createTelegramBotConnection(
     if (typeof status === "number" && status >= 400 && status < 500) {
       return {
         success: false,
-        error: getCreateBotActionError(
-          error,
-          dictionary.telegram.bot.createError
-        ),
+        error: getCreateBotActionError(error, dictionary),
       }
     }
 

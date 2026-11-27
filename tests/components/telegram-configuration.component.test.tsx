@@ -709,7 +709,9 @@ describe("Telegram bot connections", () => {
       })
     ).not.toBeInTheDocument()
     expect(screen.getByText(botConnection.displayLabel as string)).toBeVisible()
-    expect(screen.queryByRole("button", { name: /Gỡ bot/ })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: /Gỡ bot/ })
+    ).not.toBeInTheDocument()
 
     cleanup()
     renderBotConnectionsCard({
@@ -731,7 +733,7 @@ describe("Telegram bot connections", () => {
     const user = userEvent.setup()
     vi.mocked(createTelegramBotConnection).mockResolvedValue({
       success: false,
-      error: "Token verification failed.",
+      error: viDictionary.telegram.bot.createTokenVerificationError,
     })
     renderBotConnectionsCard({ canCreate: true })
 
@@ -759,7 +761,7 @@ describe("Telegram bot connections", () => {
       })
     )
     expect(screen.getByRole("alert")).toHaveTextContent(
-      "Token verification failed."
+      viDictionary.telegram.bot.createTokenVerificationError
     )
     expect(token).toHaveValue("fake-token")
     expect(token).toHaveAttribute("aria-invalid", "true")
@@ -869,7 +871,9 @@ describe("Telegram bot connections", () => {
     expect(
       within(row).getByRole("button", { name: "Gỡ bot Status not returned" })
     ).toBeVisible()
-    expect(within(row).queryByText(viDictionary.telegram.common.disable)).not.toBeInTheDocument()
+    expect(
+      within(row).queryByText(viDictionary.telegram.common.disable)
+    ).not.toBeInTheDocument()
   })
 
   it.each([

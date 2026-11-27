@@ -6,7 +6,12 @@ const { testDictionary } = vi.hoisted(() => ({
       validationInvalid: "Telegram validation failed",
       botTokenRequired: "Enter the bot token.",
       bot: {
-        createError: "Could not connect the Telegram bot.",
+        createError: "Không thể kết nối bot Telegram.",
+        createTokenVerificationError:
+          "Không thể xác minh token bot. Hãy kiểm tra token rồi thử lại.",
+        createPermissionDenied:
+          "Tài khoản của bạn cần quyền kết nối bot Telegram. Hãy liên hệ quản trị viên.",
+        createConnectionConflict: "Bot Telegram này đã được kết nối.",
         deleteError: "Could not remove the Telegram bot.",
         deleteBlockedByDestinations:
           "Remove all linked destinations before removing this bot.",
@@ -105,9 +110,13 @@ const botConnectionResponse = {
   status: "ACTIVE" as const,
 }
 
-function backendError(message: string, status: number) {
-  const error = new Error(message) as Error & { status: number }
+function backendError(message: string, status: number, code?: string) {
+  const error = new Error(message) as Error & {
+    status: number
+    code?: string
+  }
   error.status = status
+  error.code = code
   return error
 }
 
@@ -427,19 +436,47 @@ describe("Telegram bot connection creation", () => {
     expect(revalidatePath).toHaveBeenCalledWith("/telegram")
   })
 
-  it("returns localized backend verification, permission, and conflict errors", async () => {
-    for (const [status, message] of [
-      [400, "Token verification failed."],
-      [403, "You cannot create Telegram bot connections."],
-      [409, "This Telegram bot is already connected."],
-    ] as const) {
-      vi.mocked(fetchAuthenticatedWithStatus).mockRejectedValueOnce(
-        backendError(message, status)
-      )
+  it("maps known API rejections and falls back to Vietnamese copy for other 4xx responses", async () => {
+    const cases = [
+      {
+        error: backendError("The Telegram bot token is invalid.", 400),
+        expected: testDictionary.telegram.bot.createTokenVerificationError,
+      },
+      {
+        error: backendError(
+          "Missing permission telegram-bot-connection:create",
+          403
+        ),
+        expected: testDictionary.telegram.bot.createPermissionDenied,
+      },
+      {
+        error: backendError(
+          "This Telegram bot is already connected.",
+          409,
+          "TELEGRAM_BOT_CONNECTION_ALREADY_EXISTS"
+        ),
+        expected: testDictionary.telegram.bot.createConnectionConflict,
+      },
+      {
+        error: backendError(
+          "The identity provider rejected account provisioning.",
+          409,
+          "USER_PROVISIONING_REJECTED"
+        ),
+        expected: testDictionary.telegram.bot.createError,
+      },
+      {
+        error: backendError("English validation detail", 422),
+        expected: testDictionary.telegram.bot.createError,
+      },
+    ]
+
+    for (const { error, expected } of cases) {
+      vi.mocked(fetchAuthenticatedWithStatus).mockRejectedValueOnce(error)
 
       await expect(
         createTelegramBotConnection({ botToken: "fake-token" })
-      ).resolves.toEqual({ success: false, error: message })
+      ).resolves.toEqual({ success: false, error: expected })
     }
 
     expect(revalidatePath).not.toHaveBeenCalled()
@@ -485,7 +522,7 @@ describe("Telegram bot connection creation", () => {
       createTelegramBotConnection({ botToken: "fake-token" })
     ).resolves.toEqual({
       success: false,
-      error: "Token verification failed.",
+      error: testDictionary.telegram.bot.createTokenVerificationError,
     })
     expect(revalidatePath).not.toHaveBeenCalled()
   })

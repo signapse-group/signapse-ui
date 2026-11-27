@@ -2541,6 +2541,11 @@ export const en: Dictionary = {
       createIncomplete:
         "The bot was added with status {status}, but webhook registration failed. Setup is incomplete.",
       createError: "Could not connect the Telegram bot.",
+      createTokenVerificationError:
+        "Could not verify the bot token. Check the token and try again.",
+      createPermissionDenied:
+        "Your account needs permission to connect a Telegram bot. Contact an administrator.",
+      createConnectionConflict: "This Telegram bot is already connected.",
       deleteError: "Could not remove the Telegram bot.",
       fallbackLabel: "Bot #{id}",
     },

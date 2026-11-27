@@ -2521,6 +2521,11 @@ export const vi = {
       createIncomplete:
         "Bot đã được thêm với trạng thái {status}, nhưng đăng ký webhook thất bại. Thiết lập chưa hoàn tất.",
       createError: "Không thể kết nối bot Telegram.",
+      createTokenVerificationError:
+        "Không thể xác minh token bot. Hãy kiểm tra token rồi thử lại.",
+      createPermissionDenied:
+        "Tài khoản của bạn cần quyền kết nối bot Telegram. Hãy liên hệ quản trị viên.",
+      createConnectionConflict: "Bot Telegram này đã được kết nối.",
       deleteError: "Không thể gỡ bot Telegram.",
       fallbackLabel: "Bot #{id}",
     },

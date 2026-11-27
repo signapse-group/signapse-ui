@@ -167,3 +167,21 @@ Verification from the issue workspace on the merged working tree:
 - `git diff --check` — passed after this evidence update.
 
 These checks use fixtures and do not establish live authentication, persistence, Telegram delivery, browser behavior on the current candidate, or feature acceptance on dev. QA owns those browser and live feature checks; the coordinator owns Story acceptance. The response schema's optional `id`/`status` fields remain a producer contract discrepancy under comment 11804.
+
+## Follow-up after review comment 11879
+
+The [dev OpenAPI](https://dev-api.signapse.cloud/v3/api-docs) was fetched again at `2026-11-27T03:50:11Z`, build revision `b6de21490d5572bdb51624372ef860230af5df86`. It still does not guarantee that each POST error body follows the requested locale: `Content-Language` and `Vary: Accept-Language` are documented only when a localized body is returned. POST documents 400 for token/request validation, 403 for missing create permission, and 409 with code `TELEGRAM_BOT_CONNECTION_ALREADY_EXISTS` for another owner's connection. A separate `USER_PROVISIONING_REJECTED` can also use 409.
+
+The FE maps 400 and 403 to localized token-verification and permission messages, and maps 409 to the conflict message only for the documented conflict code. Every other 4xx response uses the localized generic create error. Provider messages are no longer forwarded. Action fixtures use Vietnamese copy for 400, 403, the recognized conflict, a different 409 code and 422. The component fixture checks the Vietnamese `role="alert"`, retained token, invalid-field association, and keyboard/focus behavior.
+
+Design references were confirmed against the current Jira attachment list and downloaded for comparison: SIGN-31 attachments 10310 (`telegram-connect-bot-desktop-20261123-v2.png`) and 10311 (`telegram-connect-bot-mobile-20261123-v2.png`), plus SIGN-32 attachments 10308 (`telegram-settings-wide-20261123-v2.png`), 10312 (`telegram-settings-compact-20261123-v2.png`) and 10309 (`telegram-settings-mobile-20261123-v2.png`). They show the approved dark theme, token dialog, and Bot connections layout. This follow-up changes error copy only and does not change the form or page layout. No browser render was made for this candidate; the earlier local images remain comparison evidence only. QA should verify localized rejection text and wrapping, keyboard announcement/focus, and the dialog at Wide 1520×1024, Compact 1024×768, Mobile 390×844/360px, and actual 200% browser zoom in the current Preview, as assigned by comment 11871.
+
+### Follow-up checks
+
+- Focused Telegram action/component command: `pnpm exec vitest run tests/api/telegram-action.test.ts tests/components/telegram-configuration.component.test.tsx` — **64 passed**.
+- `pnpm typecheck` — passed.
+- `pnpm test:contract` — fixture consistency passed for **89 operations**.
+- Changed-file ESLint, Prettier and `git diff --check` — passed.
+- Two full `pnpm test:quality` attempts reached lint (0 errors / 23 warnings) and typecheck successfully, but the Vitest run reported intermittent failures outside the changed behavior: an account-profile picker timeout on the first run and two destination-link dialog option lookups on the second. The account-profile file passed 9/9 on isolated rerun, and the focused Telegram action/component suites passed after the second run. The current PR's GitHub `Verify / check` is still required.
+
+These local fixtures do not verify live authentication, persistence, Telegram delivery, or browser behavior on the current candidate. QA owns responsive/browser and live feature verification on dev; the coordinator owns Story acceptance.
