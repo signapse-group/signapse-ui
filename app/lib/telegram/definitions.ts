@@ -81,8 +81,8 @@ export interface TelegramDestinationResponse {
 
 export interface ScheduledAssetResponse {
   assetId: number
-  assetSymbol?: string
-  assetName?: string
+  assetSymbol: string
+  assetName: string
 }
 
 export interface TelegramMarketAnalysisScheduleResponse {
