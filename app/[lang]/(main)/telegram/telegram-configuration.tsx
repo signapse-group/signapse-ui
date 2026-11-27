@@ -730,7 +730,7 @@ function MarketAnalysisSchedulePanel({
             <EmptyMedia variant="icon">
               <CalendarClock />
             </EmptyMedia>
-            <EmptyTitle>{t.schedule.loadError}</EmptyTitle>
+            <EmptyTitle role="alert">{t.schedule.loadError}</EmptyTitle>
             <EmptyDescription>
               {t.schedule.loadErrorDescription}
             </EmptyDescription>

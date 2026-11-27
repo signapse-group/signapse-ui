@@ -632,6 +632,26 @@ describe("Telegram schedule destructive actions", () => {
     ).not.toBeInTheDocument()
   })
 
+  it("announces the desktop schedule read error and keeps Retry available", () => {
+    const { container } = renderConfiguration({
+      ...data,
+      scheduleLoadError: true,
+    })
+    const desktopTable = container.querySelector(
+      '[class~="hidden"][class~="md:block"]'
+    )
+
+    expect(desktopTable).not.toBeNull()
+    expect(
+      within(desktopTable as HTMLElement).getByRole("alert")
+    ).toHaveTextContent(viDictionary.telegram.schedule.loadError)
+    expect(
+      within(desktopTable as HTMLElement).getByRole("button", {
+        name: viDictionary.telegram.schedule.retry,
+      })
+    ).toBeEnabled()
+  })
+
   const readinessReadFailures: {
     errorKey:
       | "botConnectionsLoadError"
