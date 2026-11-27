@@ -1,6 +1,6 @@
 # SIGN-686 Scheduled analysis evidence
 
-The implementation branch is synchronized with `origin/dev` at [`c01c3dc`](https://github.com/signapse-group/signapse-ui/commit/c01c3dc24baebba11b070d2bfd569ff4c4d5ab27) for [PR #164](https://github.com/signapse-group/signapse-ui/pull/164). The screenshots and browser outcomes below are preserved from schedule candidate `8e5304a`, before this dev sync. They remain visual evidence for list/dialog geometry, ACTIVE and DISABLED states, the missing-destination state, and keyboard flows. They do not verify the current head's create-only panel visibility, action permissions, or live API readback.
+The implementation branch is synchronized with `origin/dev` at [`c01c3dc`](https://github.com/signapse-group/signapse-ui/commit/c01c3dc24baebba11b070d2bfd569ff4c4d5ab27); the change is tracked in [PR #164](https://github.com/signapse-group/signapse-ui/pull/164) and includes merge commit [`c42a44b3`](https://github.com/signapse-group/signapse-ui/commit/c42a44b38de4e38d231c2502ab1e8b0a88812214). The screenshots and browser outcomes below are preserved from schedule candidate `8e5304a`, before this dev sync. They remain visual evidence for list/dialog geometry, ACTIVE and DISABLED states, the missing-destination state, and keyboard flows. They do not verify the current head's create-only panel visibility, action permissions, or live API readback.
 
 ## Design and API basis
 
@@ -53,7 +53,7 @@ The focused responsive Remove check opened the confirmation at 1520×1024, resiz
 - Scoped Prettier check for the Telegram UI, API action, permission/types/locales, component and API tests, fixture server, and evidence README — passed.
 - `pnpm exec vitest run tests/components/telegram-configuration.component.test.tsx --reporter=dot` — 47 passed after the responsive duplicate-control and focus assertions were aligned with the two layouts and success heading.
 - `git diff --cached --check` and `git diff --check` — passed on the final staged candidate.
-- PR Verify and Vercel Preview checks for the synchronized head are pending until the branch is pushed. No current-head browser run or numeric contrast measurement is claimed. The full browser suite is outside this handoff.
+- For merge candidate [`c42a44b3`](https://github.com/signapse-group/signapse-ui/commit/c42a44b38de4e38d231c2502ab1e8b0a88812214), [Verify run 45968901271](https://github.com/signapse-group/signapse-ui/actions/runs/45968901271), [signapse-ui Preview](https://vercel.com/signapse/signapse-ui/J3m7wPFLXARYWWGJUbtR7Cxc8W5p), and [signapse-prod Preview](https://vercel.com/signapse/signapse-prod/4WFSYGrj3WUcmnRD3DuaaJbqDm1q) passed. No current-head browser run or numeric contrast measurement is claimed. The full browser suite is outside this handoff.
 
 The prior-candidate browser checks above remain useful for shared form/list geometry and keyboard behavior, but QA should verify the synchronized Preview for independent schedule permissions, create-only navigation, Feature routing read failure isolation, readback after Create/Edit, denied-update draft preservation, Remove cancel/retry and fresh list read, ACTIVE/DISABLED/REMOVED fixture handling, 767/768 reflow, and input/destination boundary contrast in light and dark themes. Local fixtures do not prove live-user authorization or schedule persistence; QA owns live feature acceptance.
 
