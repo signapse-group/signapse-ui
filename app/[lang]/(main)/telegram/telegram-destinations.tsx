@@ -114,21 +114,22 @@ import { Button } from "@/components/ui/button"
 
 export function DestinationsCard({
   destinations,
+  loadError,
   activeBotConnections,
   canRead,
   canReadBotConnections,
-  loadError,
   botConnectionsLoadError,
   canManage,
 }: {
   destinations: TelegramDestinationResponse[]
+  loadError: boolean
   activeBotConnections: TelegramBotConnectionResponse[]
   canRead: boolean
   canReadBotConnections: boolean
-  loadError: boolean
   botConnectionsLoadError: boolean
   canManage: boolean
 }) {
+  const router = useRouter()
   const { dictionary, formatDateTime } = useLocalization()
   const t = dictionary.telegram
   const records = sortOperationalTelegramRecords(destinations)
@@ -181,7 +182,23 @@ export function DestinationsCard({
                 {t.destination.readOnlyDescription}
               </p>
             ) : null}
-            {records.length > 0 ? (
+            {loadError ? (
+              <div
+                role="alert"
+                className="flex flex-col items-start gap-3 rounded-lg border border-destructive/40 bg-destructive/5 p-4"
+              >
+                <p className="text-sm text-destructive">
+                  {t.destination.loadError}
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => router.refresh()}
+                >
+                  {t.routing.retry}
+                </Button>
+              </div>
+            ) : records.length > 0 ? (
               <ItemGroup>
                 {records.map((destination) => (
                   <DestinationItem

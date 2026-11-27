@@ -2429,6 +2429,7 @@ export const vi = {
       bot: "Bot Telegram",
       activeBots: "{count} bot đang hoạt động.",
       noBotPermission: "Bạn chưa có quyền xem bot.",
+      accessLimited: "Giới hạn quyền truy cập",
       ready: "Sẵn sàng",
       unavailable: "Không thể tải",
       needsConfig: "Cần cấu hình",
@@ -2437,6 +2438,8 @@ export const vi = {
       noDestinationPermission: "Bạn chưa có quyền xem điểm nhận.",
       needsLink: "Cần liên kết",
       routing: "Định tuyến",
+      noRoutingPermission: "Bạn chưa có quyền xem định tuyến.",
+      routingLoadError: "Không thể tải cấu hình định tuyến đã lưu.",
       configuredRoutes: "{configured}/{total} luồng đã bật trong {workspace}.",
       noWorkspace: "Chưa có không gian làm việc hiện tại.",
       routesEnabled: "Có luồng bật",
@@ -2542,6 +2545,7 @@ export const vi = {
       sectionDescription:
         "Chat, group hoặc channel đã xác minh bằng lệnh /start qua bot được chọn.",
       accessLimited: "Không có quyền xem điểm nhận",
+      loadError: "Không thể tải danh sách điểm nhận để chọn.",
       readOnlyDescription:
         "Bạn có thể xem các điểm nhận này, nhưng cần quyền quản lý điểm nhận để thay đổi.",
       noChatMetadata: "Chưa có metadata chat",
@@ -2620,10 +2624,23 @@ export const vi = {
       enabledColumn: "Bật gửi",
       accessLimited: "Không có quyền xem định tuyến",
       noWorkspaceSelected: "Chưa chọn không gian",
+      settingsLoadError: "Không thể tải cấu hình định tuyến.",
+      settingsLoadErrorDescription:
+        "Không thể tải cấu hình định tuyến đã lưu. Hãy thử tải lại.",
+      retry: "Thử lại",
+      noDestination: "Chưa gán điểm nhận",
+      destinationReadOnly: "Cần quyền xem danh sách điểm nhận để thay đổi.",
+      unavailableDestination: "Không khả dụng",
+      clearDestination: "Xóa điểm nhận cho {route}",
+      destinationClearRequiresDisabled:
+        "Hãy tạm dừng định tuyến trước khi xóa điểm nhận.",
+      saving: "Đang lưu cấu hình định tuyến…",
       noSavedWorkspaceSettings:
         "Chưa có cấu hình định tuyến đã lưu trong các không gian của bạn.",
       readbackUnverified:
         "Chưa thể xác minh cấu hình tuyến tin thị trường đã lưu. Hãy tải lại trước khi thay đổi.",
+      economicCalendarReadbackUnverified:
+        "Chưa thể xác minh cấu hình cảnh báo lịch kinh tế đã lưu. Hãy tải lại trước khi thay đổi.",
       readbackWorkspaceUnknown: "Chưa xác định được không gian làm việc",
       workspaceIdFallback: "Không gian {id}",
       destinationUpdateError: "Không thể cập nhật điểm nhận cho định tuyến.",
@@ -2654,6 +2671,8 @@ export const vi = {
       languageNotApplicable: "Không áp dụng ở cấp luồng",
       languageUpdateSuccess: "Đã cập nhật ngôn ngữ đầu ra.",
       languageClearSuccess: "Đã xóa ghi đè ngôn ngữ đầu ra.",
+      updatePermissionDenied:
+        "Bạn không có quyền cập nhật định tuyến Telegram này.",
       updateError: "Không thể cập nhật định tuyến Telegram.",
     },
     schedule: {

@@ -10,7 +10,10 @@ import {
 import { getAllWorkspaceWatchlistAssets } from "@/app/api/watchlists/action"
 import { getServerDictionary } from "@/app/lib/i18n/server"
 import { hasPermission } from "@/app/lib/permissions"
-import { getCurrentPermissions } from "@/app/lib/permissions-server"
+import {
+  getCurrentPermissions,
+  getCurrentWorkspaceSummary,
+} from "@/app/lib/permissions-server"
 import {
   canAccessTelegramConfiguration,
   TELEGRAM_BOT_CONNECTION_CREATE_PERMISSION,
@@ -68,7 +71,16 @@ export default async function TelegramPage() {
   }
 
   return (
-    <Suspense fallback={<TelegramConfigurationSkeleton />}>
+    <Suspense
+      fallback={
+        <TelegramConfigurationSkeleton
+          sectionAccess={sectionAccess}
+          canReadWorkspace={hasPermission(permissions, "workspace:read")}
+          canCreateBotConnections={canCreateBotConnections}
+          canManageDestinations={manageAccess.destinations}
+        />
+      }
+    >
       <TelegramConfigurationContent
         sectionAccess={sectionAccess}
         manageAccess={manageAccess}
@@ -97,6 +109,15 @@ async function TelegramConfigurationContent({
     canReadWorkspace ? () => getActiveWorkspaceForCurrentUser() : undefined,
     null
   )
+  const economicCalendarWorkspacePromise = currentWorkspacePromise.then(
+    ({ data: currentWorkspace }) =>
+      loadSection(
+        sectionAccess.economicCalendarRouting
+          ? async () => currentWorkspace ?? (await getCurrentWorkspaceSummary())
+          : undefined,
+        null
+      )
+  )
   const botConnectionsPromise = loadSection(
     sectionAccess.botConnections
       ? () => getTelegramBotConnections()
@@ -108,10 +129,29 @@ async function TelegramConfigurationContent({
     []
   )
   const featureSettingsPromise = loadSection(
-    sectionAccess.featureSettings || sectionAccess.marketNewsRouting
-      ? () => getTelegramFeatureSettings()
+    sectionAccess.marketNewsRouting
+      ? () => getTelegramFeatureSettings({ featureKey: "MARKET_NEWS_ALERT" })
       : undefined,
     []
+  )
+  const economicCalendarSettingsPromise = economicCalendarWorkspacePromise.then(
+    ({ data: economicCalendarWorkspace, error: workspaceError }) =>
+      loadSection(
+        sectionAccess.economicCalendarRouting && economicCalendarWorkspace
+          ? () =>
+              getTelegramFeatureSettings({
+                workspaceId: economicCalendarWorkspace.id,
+                featureKey: "ECONOMIC_CALENDAR_ALERT",
+              })
+          : undefined,
+        []
+      ).then((settings) => ({
+        ...settings,
+        error:
+          settings.error ||
+          (sectionAccess.economicCalendarRouting &&
+            (workspaceError || economicCalendarWorkspace === null)),
+      }))
   )
   const schedulesPromise = loadSection(
     sectionAccess.schedules
@@ -121,8 +161,8 @@ async function TelegramConfigurationContent({
   )
   const languagesPromise = loadSection(
     sectionAccess.schedules ||
-      sectionAccess.featureSettings ||
       sectionAccess.marketNewsRouting ||
+      sectionAccess.economicCalendarRouting ||
       scheduleActions.create ||
       scheduleActions.update
       ? () => getLanguages().then((catalog) => catalog.languages)
@@ -141,17 +181,21 @@ async function TelegramConfigurationContent({
 
   const [
     currentWorkspaceResult,
+    economicCalendarWorkspaceResult,
     botConnectionsResult,
     destinationsResult,
     featureSettingsResult,
+    economicCalendarSettingsResult,
     schedulesResult,
     watchlistAssetsResult,
     languagesResult,
   ] = await Promise.all([
     currentWorkspacePromise,
+    economicCalendarWorkspacePromise,
     botConnectionsPromise,
     destinationsPromise,
     featureSettingsPromise,
+    economicCalendarSettingsPromise,
     schedulesPromise,
     watchlistAssetsPromise,
     languagesPromise,
@@ -162,7 +206,12 @@ async function TelegramConfigurationContent({
       data={{
         botConnections: botConnectionsResult.data,
         destinations: destinationsResult.data,
+        destinationsLoadError: destinationsResult.error,
         featureSettings: featureSettingsResult.data,
+        featureSettingsLoadError: featureSettingsResult.error,
+        economicCalendarSettings: economicCalendarSettingsResult.data,
+        economicCalendarWorkspace: economicCalendarWorkspaceResult.data,
+        economicCalendarLoadError: economicCalendarSettingsResult.error,
         schedules: schedulesResult.data,
         currentWorkspace: currentWorkspaceResult.data,
         watchlistAssets: watchlistAssetsResult.data,
@@ -170,8 +219,6 @@ async function TelegramConfigurationContent({
         languageCatalogError: languagesResult.error,
         scheduleLoadError: schedulesResult.error,
         botConnectionsLoadError: botConnectionsResult.error,
-        destinationsLoadError: destinationsResult.error,
-        featureSettingsLoadError: featureSettingsResult.error,
         currentWorkspaceLoadError: currentWorkspaceResult.error,
         watchlistAssetsLoadError: watchlistAssetsResult.error,
         sectionAccess,

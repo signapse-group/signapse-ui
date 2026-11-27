@@ -9,6 +9,8 @@ import {
   TELEGRAM_BOT_CONNECTION_DELETE_PERMISSION,
   TELEGRAM_BOT_CONNECTION_MANAGE_PERMISSION,
   TELEGRAM_BOT_CONNECTION_READ_PERMISSION,
+  TELEGRAM_ECONOMIC_CALENDAR_ROUTING_READ_PERMISSION,
+  TELEGRAM_ECONOMIC_CALENDAR_ROUTING_UPDATE_PERMISSION,
   TELEGRAM_FEATURE_SETTING_UPDATE_PERMISSION,
   TELEGRAM_MARKET_NEWS_ROUTING_READ_PERMISSION,
   TELEGRAM_MARKET_NEWS_ROUTING_UPDATE_PERMISSION,
@@ -118,5 +120,58 @@ describe("Scheduled analysis permissions", () => {
       update: false,
       delete: false,
     })
+  })
+})
+
+describe("Telegram Economic calendar routing permissions", () => {
+  it("grants route read without workspace, destination-list, schedule, or other-route access", () => {
+    const permissions = [TELEGRAM_ECONOMIC_CALENDAR_ROUTING_READ_PERMISSION]
+
+    expect(canAccessTelegramConfiguration(permissions)).toBe(true)
+    expect(getTelegramSectionAccess(permissions)).toMatchObject({
+      economicCalendarRouting: true,
+      featureSettings: false,
+      marketNewsRouting: false,
+      botConnections: false,
+      destinations: false,
+      schedules: false,
+      watchlistAssets: false,
+    })
+    expect(getTelegramManageAccess(permissions).economicCalendarRouting).toBe(
+      false
+    )
+  })
+
+  it("does not grant Economic calendar access from another route or the legacy permission", () => {
+    for (const permission of [
+      TELEGRAM_MARKET_NEWS_ROUTING_READ_PERMISSION,
+      "telegram-feature-setting:read",
+    ]) {
+      expect(
+        getTelegramSectionAccess([permission]).economicCalendarRouting
+      ).toBe(false)
+    }
+
+    expect(
+      getTelegramManageAccess([TELEGRAM_FEATURE_SETTING_UPDATE_PERMISSION])
+        .economicCalendarRouting
+    ).toBe(false)
+  })
+
+  it("keeps Economic calendar update separate from route read and other update permissions", () => {
+    const updateOnly = [TELEGRAM_ECONOMIC_CALENDAR_ROUTING_UPDATE_PERMISSION]
+
+    expect(canAccessTelegramConfiguration(updateOnly)).toBe(false)
+    expect(getTelegramManageAccess(updateOnly).economicCalendarRouting).toBe(
+      true
+    )
+    expect(
+      getTelegramManageAccess([TELEGRAM_MARKET_NEWS_ROUTING_UPDATE_PERMISSION])
+        .economicCalendarRouting
+    ).toBe(false)
+    expect(
+      getTelegramSectionAccess([TELEGRAM_FEATURE_SETTING_UPDATE_PERMISSION])
+        .economicCalendarRouting
+    ).toBe(false)
   })
 })

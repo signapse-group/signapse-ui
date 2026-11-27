@@ -20,9 +20,14 @@ const getCurrentMe = cache(async () => {
   }
 })
 
-export const getCurrentWorkspaceId = cache(async (): Promise<number | null> => {
+export const getCurrentWorkspaceSummary = cache(async () => {
   const me = await getCurrentMe()
-  return me?.currentWorkspace?.id ?? null
+  return me?.currentWorkspace ?? null
+})
+
+export const getCurrentWorkspaceId = cache(async (): Promise<number | null> => {
+  const workspace = await getCurrentWorkspaceSummary()
+  return workspace?.id ?? null
 })
 
 export const getCurrentPermissions = cache(async (): Promise<string[]> => {
