@@ -1,7 +1,7 @@
 "use client"
 
 import type { ReactElement, ReactNode } from "react"
-import { useState, useTransition } from "react"
+import { useEffect, useRef, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { CheckCircle2, CircleAlert, ShieldAlert, Trash2 } from "lucide-react"
 import { toast } from "sonner"
@@ -10,7 +10,7 @@ import type { ActionResult } from "@/app/lib/definitions"
 import type { Dictionary } from "@/app/lib/i18n/dictionary-types"
 import { useLocalization } from "@/app/lib/i18n/provider"
 import {
-  TelegramBotConnectionResponse,
+  TelegramBotConnectionReadback,
   TelegramChatType,
   TelegramConnectionStatus,
   TelegramDestinationResponse,
@@ -53,14 +53,17 @@ const TELEGRAM_STATUS_PRIORITY: Record<string, number> = {
 }
 
 export function sortOperationalTelegramRecords<
-  T extends { status: string; id: number },
+  T extends { status?: string; id?: number },
 >(records: T[]) {
   return records
     .filter((record) => record.status !== "REMOVED")
     .sort(
       (left, right) =>
-        (TELEGRAM_STATUS_PRIORITY[left.status] ?? 99) -
-          (TELEGRAM_STATUS_PRIORITY[right.status] ?? 99) || left.id - right.id
+        (TELEGRAM_STATUS_PRIORITY[left.status ?? ""] ?? 99) -
+          (TELEGRAM_STATUS_PRIORITY[right.status ?? ""] ?? 99) ||
+        (left.id !== undefined && right.id !== undefined
+          ? left.id - right.id
+          : 0)
     )
 }
 
@@ -106,9 +109,17 @@ export function ReadinessBadge({
 export function StatusBadge({
   status,
 }: {
-  status: TelegramConnectionStatus | TelegramDestinationStatus
+  status: TelegramConnectionStatus | TelegramDestinationStatus | undefined
 }) {
   const { dictionary } = useLocalization()
+  if (status === undefined) {
+    return (
+      <Badge variant="outline">
+        {dictionary.telegram.bot.statusUnverified}
+      </Badge>
+    )
+  }
+
   const label = dictionary.telegram.statuses[status]
 
   if (status === "ACTIVE") {
@@ -130,15 +141,19 @@ export function formatChatType(
 }
 
 export function getBotLabel(
-  connection: TelegramBotConnectionResponse,
+  connection: TelegramBotConnectionReadback,
   dictionary: Dictionary
 ) {
-  return (
+  const label =
     connection.displayLabel?.trim() ||
     connection.botUsername?.trim() ||
-    connection.botFirstName?.trim() ||
-    formatLabel(dictionary.telegram.bot.fallbackLabel, connection.id)
-  )
+    connection.botFirstName?.trim()
+
+  if (label) return label
+
+  return connection.id === undefined
+    ? dictionary.telegram.bot.unverifiedLabel
+    : formatLabel(dictionary.telegram.bot.fallbackLabel, connection.id)
 }
 
 export function getDestinationLabel(
@@ -213,6 +228,7 @@ export function ActionConfirmDialog({
   title,
   description,
   actionLabel,
+  pendingLabel,
   triggerLabel,
   disabled,
   action,
@@ -222,10 +238,12 @@ export function ActionConfirmDialog({
   onOpenChange,
   trigger,
   restoreFocusId,
+  successFocusId,
 }: {
   title: string
   description: string
   actionLabel: string
+  pendingLabel?: string
   triggerLabel: string
   disabled?: boolean
   action: () => Promise<ActionResult<unknown>>
@@ -235,15 +253,21 @@ export function ActionConfirmDialog({
   onOpenChange?: (open: boolean) => void
   trigger?: ReactElement | null
   restoreFocusId?: string
+  successFocusId?: string
 }) {
   const router = useRouter()
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
+  const feedbackRef = useRef<HTMLParagraphElement>(null)
   const { dictionary } = useLocalization()
   const open = controlledOpen ?? uncontrolledOpen
 
-  function setOpen(nextOpen: boolean) {
+  useEffect(() => {
+    if (isPending || error) feedbackRef.current?.focus()
+  }, [error, isPending])
+
+  function setOpen(nextOpen: boolean, focusId = restoreFocusId) {
     if (onOpenChange) {
       onOpenChange(nextOpen)
     } else {
@@ -252,9 +276,9 @@ export function ActionConfirmDialog({
 
     if (!nextOpen) {
       setError(null)
-      if (restoreFocusId) {
+      if (focusId) {
         requestAnimationFrame(() => {
-          document.getElementById(restoreFocusId)?.focus()
+          document.getElementById(focusId)?.focus()
         })
       }
     }
@@ -272,7 +296,7 @@ export function ActionConfirmDialog({
 
       if (result.success) {
         toast.success(successMessage)
-        setOpen(false)
+        setOpen(false, successFocusId)
         router.refresh()
       } else {
         setError(result.error)
@@ -317,9 +341,17 @@ export function ActionConfirmDialog({
           </AlertDialogMedia>
           <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription>{description}</AlertDialogDescription>
-          {error ? (
-            <p role="alert" className="text-sm text-destructive">
-              {error}
+          {isPending || error ? (
+            <p
+              ref={feedbackRef}
+              tabIndex={-1}
+              role={isPending ? "status" : "alert"}
+              aria-live={isPending ? "polite" : "assertive"}
+              className={`rounded-sm text-sm ${
+                isPending ? "text-muted-foreground" : "text-destructive"
+              } focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none`}
+            >
+              {isPending ? (pendingLabel ?? dictionary.common.pending) : error}
             </p>
           ) : null}
         </AlertDialogHeader>
@@ -335,7 +367,14 @@ export function ActionConfirmDialog({
               handleAction()
             }}
           >
-            {isPending ? <Spinner data-icon="inline-start" /> : null}
+            {isPending ? (
+              <Spinner
+                data-icon="inline-start"
+                aria-hidden="true"
+                aria-label={undefined}
+                role="presentation"
+              />
+            ) : null}
             {actionLabel}
           </AlertDialogAction>
         </AlertDialogFooter>

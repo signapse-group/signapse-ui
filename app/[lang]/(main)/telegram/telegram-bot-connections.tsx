@@ -2,27 +2,18 @@
 
 import { type FormEvent, useRef, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import {
-  Bot,
-  CalendarClock,
-  MoreHorizontal,
-  PowerOff,
-  RefreshCw,
-  Send,
-  Trash2,
-} from "lucide-react"
+import { Bot, CalendarClock, RefreshCw, Send, Trash2, X } from "lucide-react"
 import { toast } from "sonner"
 
 import {
   createTelegramBotConnection,
   deleteTelegramBotConnection,
-  disableTelegramBotConnection,
 } from "@/app/api/telegram/action"
 import type { Dictionary } from "@/app/lib/i18n/dictionary-types"
 import { useLocalization } from "@/app/lib/i18n/provider"
 import {
   getCreateTelegramBotConnectionSchema,
-  TelegramBotConnectionResponse,
+  TelegramBotConnectionReadback,
 } from "@/app/lib/telegram/definitions"
 import { AppTimeMetadata } from "@/components/app-time-metadata"
 import {
@@ -76,24 +67,20 @@ import {
   ItemTitle,
 } from "@/components/ui/item"
 import { Spinner } from "@/components/ui/spinner"
-import {
-  DropdownMenu,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { DropdownMenuContentInOverlay as DropdownMenuContent } from "@/components/ui/dropdown-menu-content-in-overlay"
 import { Button } from "@/components/ui/button"
 
 export function BotConnectionsCard({
   botConnections,
   canRead,
   canManage,
+  canCreate,
+  canDelete,
 }: {
-  botConnections: TelegramBotConnectionResponse[]
+  botConnections: TelegramBotConnectionReadback[]
   canRead: boolean
   canManage: boolean
+  canCreate: boolean
+  canDelete: boolean
 }) {
   const { dictionary, formatDateTime, formatMessage } = useLocalization()
   const t = dictionary.telegram
@@ -104,11 +91,18 @@ export function BotConnectionsCard({
   return (
     <Card className="min-w-0">
       <CardHeader>
-        <CardTitle>{t.bot.sectionTitle}</CardTitle>
+        <CardTitle
+          id="telegram-bot-connections-heading"
+          role="heading"
+          aria-level={3}
+          tabIndex={-1}
+        >
+          {t.bot.sectionTitle}
+        </CardTitle>
         <CardDescription>{t.bot.sectionDescription}</CardDescription>
-        {canManage ? (
+        {canCreate ? (
           <CardAction>
-            <ConnectBotDialog canManage={canManage} />
+            <ConnectBotDialog canRead={canRead} />
           </CardAction>
         ) : null}
       </CardHeader>
@@ -120,18 +114,18 @@ export function BotConnectionsCard({
           />
         ) : (
           <>
-            {!canManage ? (
+            {!canManage && !canDelete ? (
               <p className="text-sm text-muted-foreground" role="note">
                 {t.bot.readOnlyDescription}
               </p>
             ) : null}
             {records.length > 0 ? (
               <ItemGroup>
-                {records.map((connection) => (
+                {records.map((connection, index) => (
                   <BotConnectionItem
-                    key={connection.id}
+                    key={connection.id ?? `unverified-${index}`}
                     connection={connection}
-                    canManage={canManage}
+                    canDelete={canDelete}
                     formatTime={formatTime}
                     formatMessage={formatMessage}
                     dictionary={dictionary}
@@ -158,23 +152,26 @@ export function BotConnectionsCard({
 
 function BotConnectionItem({
   connection,
-  canManage,
+  canDelete,
   formatTime,
   formatMessage,
   dictionary,
 }: {
-  connection: TelegramBotConnectionResponse
-  canManage: boolean
+  connection: TelegramBotConnectionReadback
+  canDelete: boolean
   formatTime: (value?: string) => string
   formatMessage: ReturnType<typeof useLocalization>["formatMessage"]
   dictionary: Dictionary
 }) {
   const t = dictionary.telegram
-  const menuTriggerId = "telegram-bot-actions-" + connection.id
-  const [confirmation, setConfirmation] = useState<"disable" | "delete" | null>(
-    null
-  )
+  const removableId = canDelete ? connection.id : undefined
+  const removeTriggerId =
+    removableId === undefined ? null : `telegram-bot-remove-${removableId}`
+  const [confirmationOpen, setConfirmationOpen] = useState(false)
   const label = getBotLabel(connection, dictionary)
+  const removeTriggerLabel = formatMessage(t.bot.deleteTrigger, {
+    botName: label,
+  })
 
   return (
     <>
@@ -186,6 +183,11 @@ function BotConnectionItem({
             </ItemTitle>
             <StatusBadge status={connection.status} />
           </ItemHeader>
+          {connection.id === undefined || connection.status === undefined ? (
+            <p className="text-xs text-muted-foreground" role="note">
+              {t.bot.connectionDetailsUnverified}
+            </p>
+          ) : null}
           <ItemDescription className="line-clamp-none break-words">
             {connection.botUsername
               ? "@" + connection.botUsername.replace(/^@/, "")
@@ -209,96 +211,59 @@ function BotConnectionItem({
             </AppTimeMetadata>
           </div>
           {connection.status === "INVALID" ? (
-            <>
-              {connection.failureReason ? (
-                <p className="text-sm text-destructive" role="alert">
-                  {connection.failureReason}
-                </p>
-              ) : null}
-              <p className="text-xs text-muted-foreground">
-                {t.bot.replacementGuidance}
+            <div className="flex flex-col gap-1">
+              <p className="text-sm text-destructive">
+                {t.bot.webhookRegistrationFailed}
               </p>
-            </>
+              <p className="text-xs text-muted-foreground">
+                {t.bot.setupIncomplete}
+              </p>
+            </div>
           ) : null}
         </ItemContent>
-        {canManage ? (
+        {removableId !== undefined && removeTriggerId !== null ? (
           <ItemActions className="ms-auto self-start">
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <Button
-                    id={menuTriggerId}
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label={t.bot.actionMenu}
-                  />
-                }
-              >
-                <MoreHorizontal />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuGroup>
-                  <DropdownMenuItem
-                    disabled={connection.status !== "ACTIVE"}
-                    onClick={() => setConfirmation("disable")}
-                  >
-                    <PowerOff />
-                    {t.common.disable}
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    variant="destructive"
-                    onClick={() => setConfirmation("delete")}
-                  >
-                    <Trash2 />
-                    {t.bot.deleteAction}
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <ActionConfirmDialog
+              title={formatMessage(t.bot.deleteTitle, { botName: label })}
+              description={t.bot.deleteDescription}
+              actionLabel={t.bot.deleteAction}
+              pendingLabel={t.bot.deletePending}
+              triggerLabel={removeTriggerLabel}
+              action={() => deleteTelegramBotConnection(removableId)}
+              successMessage={t.bot.deleteSuccess}
+              open={confirmationOpen}
+              onOpenChange={setConfirmationOpen}
+              trigger={
+                <Button
+                  type="button"
+                  id={removeTriggerId}
+                  variant="destructive"
+                  size="icon-sm"
+                  className="min-h-[44px] min-w-[44px] focus-visible:ring-destructive md:min-h-8 md:min-w-8 dark:focus-visible:ring-destructive"
+                  aria-label={removeTriggerLabel}
+                  title={removeTriggerLabel}
+                >
+                  <Trash2 data-icon="inline-start" />
+                </Button>
+              }
+              restoreFocusId={removeTriggerId}
+              successFocusId="telegram-bot-connections-heading"
+            />
           </ItemActions>
         ) : null}
       </Item>
-      <ActionConfirmDialog
-        title={
-          confirmation === "disable" ? t.bot.disableTitle : t.bot.deleteTitle
-        }
-        description={
-          confirmation === "disable"
-            ? t.bot.disableDescription
-            : t.bot.deleteDescription
-        }
-        actionLabel={
-          confirmation === "disable" ? t.common.disable : t.bot.deleteAction
-        }
-        triggerLabel={t.bot.actionMenu}
-        action={() =>
-          confirmation === "disable"
-            ? disableTelegramBotConnection(connection.id)
-            : deleteTelegramBotConnection(connection.id)
-        }
-        successMessage={
-          confirmation === "disable"
-            ? t.bot.disableSuccess
-            : t.bot.deleteSuccess
-        }
-        open={confirmation !== null}
-        onOpenChange={(open) => setConfirmation(open ? confirmation : null)}
-        trigger={null}
-        restoreFocusId={menuTriggerId}
-      />
     </>
   )
 }
 
-function ConnectBotDialog({ canManage }: { canManage: boolean }) {
+function ConnectBotDialog({ canRead }: { canRead: boolean }) {
   const router = useRouter()
   const tokenRef = useRef<HTMLInputElement>(null)
   const [open, setOpen] = useState(false)
   const [token, setToken] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
-  const { dictionary } = useLocalization()
+  const { dictionary, formatMessage } = useLocalization()
   const t = dictionary.telegram
 
   function handleOpenChange(nextOpen: boolean) {
@@ -311,7 +276,6 @@ function ConnectBotDialog({ canManage }: { canManage: boolean }) {
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (!canManage) return
 
     const request = getCreateTelegramBotConnectionSchema(dictionary).safeParse({
       botToken: token,
@@ -328,23 +292,81 @@ function ConnectBotDialog({ canManage }: { canManage: boolean }) {
       const result = await createTelegramBotConnection(request.data)
 
       if (result.success) {
-        toast.success(t.bot.createSuccess)
+        const { connection, created } = result.data
+        const status = connection.status
+        let unverifiedMessage: string
+        if (created === null) {
+          unverifiedMessage = canRead
+            ? t.bot.createOutcomeUnverified
+            : t.bot.createOutcomeUnverifiedWithoutRead
+        } else if (created) {
+          unverifiedMessage = canRead
+            ? t.bot.createStatusUnverified
+            : t.bot.createStatusUnverifiedWithoutRead
+        } else {
+          unverifiedMessage = canRead
+            ? t.bot.alreadyConnectedStatusUnverified
+            : t.bot.alreadyConnectedStatusUnverifiedWithoutRead
+        }
+
+        if (created === null || status === undefined) {
+          toast.warning(unverifiedMessage)
+        } else {
+          const statusLabel = dictionary.telegram.statuses[status]
+
+          if (created && status === "ACTIVE") {
+            toast.success(t.bot.createSuccess)
+          } else if (status === "INVALID") {
+            const incompleteMessage = formatMessage(
+              created
+                ? t.bot.createIncomplete
+                : t.bot.alreadyConnectedIncomplete,
+              { status: statusLabel }
+            )
+            toast.warning(
+              created
+                ? incompleteMessage
+                : `${incompleteMessage} ${t.bot.webhookRegistrationFailed}`
+            )
+          } else if (!created) {
+            toast.info(
+              formatMessage(t.bot.alreadyConnected, {
+                status: statusLabel,
+              })
+            )
+          } else {
+            toast.warning(
+              formatMessage(t.bot.createNotActive, { status: statusLabel })
+            )
+          }
+        }
+
         handleOpenChange(false)
         router.refresh()
       } else {
         setError(result.error)
-        toast.error(result.error)
+        requestAnimationFrame(() => tokenRef.current?.focus())
       }
     })
   }
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger render={<Button disabled={!canManage} />}>
+    <Dialog
+      open={open}
+      disablePointerDismissal={isPending}
+      onOpenChange={(nextOpen, eventDetails) => {
+        if (!nextOpen && isPending) {
+          eventDetails.cancel()
+          return
+        }
+        handleOpenChange(nextOpen)
+      }}
+    >
+      <DialogTrigger render={<Button />}>
         <Bot data-icon="inline-start" />
         {t.bot.connect}
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent showCloseButton={false}>
         <DialogHeader>
           <DialogTitle>{t.bot.createTitle}</DialogTitle>
           <DialogDescription>{t.bot.createDescription}</DialogDescription>
@@ -364,17 +386,24 @@ function ConnectBotDialog({ canManage }: { canManage: boolean }) {
                 placeholder={t.bot.tokenPlaceholder}
                 value={token}
                 aria-invalid={Boolean(error)}
+                aria-describedby={
+                  error
+                    ? "telegram-bot-token-description telegram-bot-token-error"
+                    : "telegram-bot-token-description"
+                }
                 disabled={isPending}
                 onChange={(event) => {
                   setToken(event.target.value)
                   if (error) setError(null)
                 }}
               />
-              <FieldDescription>{t.bot.tokenDescription}</FieldDescription>
-              <FieldError>{error}</FieldError>
+              <FieldDescription id="telegram-bot-token-description">
+                {t.bot.tokenDescription}
+              </FieldDescription>
+              <FieldError id="telegram-bot-token-error">{error}</FieldError>
             </Field>
           </FieldGroup>
-          <DialogFooter>
+          <DialogFooter className="flex-col sm:flex-row">
             <DialogClose
               render={
                 <Button type="button" variant="outline" disabled={isPending} />
@@ -382,9 +411,12 @@ function ConnectBotDialog({ canManage }: { canManage: boolean }) {
             >
               {dictionary.common.close}
             </DialogClose>
-            <Button type="submit" disabled={isPending || !canManage}>
+            <Button type="submit" disabled={isPending}>
               {isPending ? (
-                <Spinner data-icon="inline-start" />
+                <Spinner
+                  aria-label={dictionary.common.loading}
+                  data-icon="inline-start"
+                />
               ) : (
                 <Send data-icon="inline-start" />
               )}
@@ -392,6 +424,19 @@ function ConnectBotDialog({ canManage }: { canManage: boolean }) {
             </Button>
           </DialogFooter>
         </form>
+        <DialogClose
+          render={
+            <Button
+              aria-label={dictionary.common.close}
+              variant="ghost"
+              className="absolute top-2 right-2"
+              size="icon-sm"
+              disabled={isPending}
+            />
+          }
+        >
+          <X aria-hidden="true" />
+        </DialogClose>
       </DialogContent>
     </Dialog>
   )

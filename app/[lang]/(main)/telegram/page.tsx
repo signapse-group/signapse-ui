@@ -15,10 +15,12 @@ import {
   getCurrentWorkspaceSummary,
 } from "@/app/lib/permissions-server"
 import {
-  canReadTelegramConfiguration,
+  canAccessTelegramConfiguration,
+  TELEGRAM_BOT_CONNECTION_CREATE_PERMISSION,
   getTelegramManageAccess,
   getTelegramSectionAccess,
 } from "@/app/lib/telegram/permissions"
+import { getActiveWorkspaceForCurrentUser } from "@/app/lib/workspaces/current"
 import { AccessDenied } from "@/components/access-denied"
 
 import {
@@ -41,8 +43,11 @@ export default async function TelegramPage() {
   ])
   const sectionAccess = getTelegramSectionAccess(permissions)
   const manageAccess = getTelegramManageAccess(permissions)
-
-  if (!canReadTelegramConfiguration(permissions)) {
+  const canCreateBotConnections = hasPermission(
+    permissions,
+    TELEGRAM_BOT_CONNECTION_CREATE_PERMISSION
+  )
+  if (!canAccessTelegramConfiguration(permissions)) {
     return (
       <AccessDenied
         description={dictionary.telegram.readDenied}
@@ -59,6 +64,7 @@ export default async function TelegramPage() {
         sectionAccess={sectionAccess}
         manageAccess={manageAccess}
         canReadWorkspace={hasPermission(permissions, "workspace:read")}
+        canCreateBotConnections={canCreateBotConnections}
       />
     </Suspense>
   )
@@ -68,15 +74,19 @@ async function TelegramConfigurationContent({
   sectionAccess,
   manageAccess,
   canReadWorkspace,
+  canCreateBotConnections,
 }: {
   sectionAccess: ReturnType<typeof getTelegramSectionAccess>
   manageAccess: ReturnType<typeof getTelegramManageAccess>
   canReadWorkspace: boolean
+  canCreateBotConnections: boolean
 }) {
-  const currentWorkspace = await getCurrentWorkspaceSummary()
-  const canReadAnyFeatureSettings = Object.values(
-    sectionAccess.featureSettings
-  ).some(Boolean)
+  const currentWorkspace = canReadWorkspace
+    ? await getActiveWorkspaceForCurrentUser()
+    : null
+  const economicCalendarWorkspace = sectionAccess.economicCalendarRouting
+    ? (currentWorkspace ?? (await getCurrentWorkspaceSummary()))
+    : null
 
   const schedulesPromise = sectionAccess.schedules
     ? getTelegramMarketAnalysisSchedules()
@@ -85,33 +95,54 @@ async function TelegramConfigurationContent({
     : Promise.resolve({ data: [], error: false })
 
   const languagesPromise =
-    sectionAccess.schedules || (canReadAnyFeatureSettings && currentWorkspace)
+    sectionAccess.schedules ||
+    sectionAccess.marketNewsRouting ||
+    sectionAccess.economicCalendarRouting
       ? getLanguages()
           .then((catalog) => ({ data: catalog.languages, error: false }))
           .catch(() => ({ data: [], error: true }))
       : Promise.resolve({ data: [], error: false })
 
+  const destinationsPromise = sectionAccess.destinations
+    ? getTelegramDestinations()
+        .then((data) => ({ data, error: false }))
+        .catch(() => ({ data: [], error: true }))
+    : Promise.resolve({ data: [], error: false })
+
+  const marketNewsSettingsPromise = sectionAccess.marketNewsRouting
+    ? getTelegramFeatureSettings({ featureKey: "MARKET_NEWS_ALERT" })
+        .then((data) => ({ data, error: false }))
+        .catch(() => ({ data: [], error: true }))
+    : Promise.resolve({ data: [], error: false })
+
+  const economicCalendarSettingsPromise =
+    sectionAccess.economicCalendarRouting && economicCalendarWorkspace
+      ? getTelegramFeatureSettings({
+          workspaceId: economicCalendarWorkspace.id,
+          featureKey: "ECONOMIC_CALENDAR_ALERT",
+        })
+          .then((data) => ({ data, error: false }))
+          .catch(() => ({ data: [], error: true }))
+      : Promise.resolve({
+          data: [],
+          error: sectionAccess.economicCalendarRouting,
+        })
+
   const [
     botConnections,
     destinationsResult,
-    featureSettingsResult,
+    marketNewsSettingsResult,
+    economicCalendarSettingsResult,
     schedulesResult,
     watchlistAssetsPage,
     languagesResult,
   ] = await Promise.all([
     sectionAccess.botConnections ? getTelegramBotConnections() : [],
-    sectionAccess.destinations
-      ? getTelegramDestinations()
-          .then((data) => ({ data, error: false }))
-          .catch(() => ({ data: [], error: true }))
-      : Promise.resolve({ data: [], error: false }),
-    canReadAnyFeatureSettings && currentWorkspace
-      ? getTelegramFeatureSettings(currentWorkspace.id)
-          .then((data) => ({ data, error: false }))
-          .catch(() => ({ data: [], error: true }))
-      : Promise.resolve({ data: [], error: false }),
+    destinationsPromise,
+    marketNewsSettingsPromise,
+    economicCalendarSettingsPromise,
     schedulesPromise,
-    canReadWorkspace && sectionAccess.watchlistAssets && currentWorkspace
+    sectionAccess.watchlistAssets && currentWorkspace
       ? getWorkspaceWatchlistAssets(WATCHLIST_ASSET_SEARCH)
       : null,
     languagesPromise,
@@ -123,8 +154,11 @@ async function TelegramConfigurationContent({
         botConnections,
         destinations: destinationsResult.data,
         destinationsLoadError: destinationsResult.error,
-        featureSettings: featureSettingsResult.data,
-        featureSettingsLoadError: featureSettingsResult.error,
+        featureSettings: marketNewsSettingsResult.data,
+        featureSettingsLoadError: marketNewsSettingsResult.error,
+        economicCalendarSettings: economicCalendarSettingsResult.data,
+        economicCalendarWorkspace,
+        economicCalendarLoadError: economicCalendarSettingsResult.error,
         schedules: schedulesResult.data,
         currentWorkspace,
         watchlistAssets: watchlistAssetsPage?.content ?? [],
@@ -134,6 +168,7 @@ async function TelegramConfigurationContent({
         sectionAccess,
         manageAccess,
       }}
+      canCreateBotConnections={canCreateBotConnections}
     />
   )
 }

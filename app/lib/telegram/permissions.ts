@@ -10,8 +10,12 @@ import {
 
 export const TELEGRAM_BOT_CONNECTION_READ_PERMISSION =
   "telegram-bot-connection:read"
+export const TELEGRAM_BOT_CONNECTION_CREATE_PERMISSION =
+  "telegram-bot-connection:create"
 export const TELEGRAM_BOT_CONNECTION_MANAGE_PERMISSION =
   "telegram-bot-connection:manage"
+export const TELEGRAM_BOT_CONNECTION_DELETE_PERMISSION =
+  "telegram-bot-connection:delete"
 export const TELEGRAM_DESTINATION_READ_PERMISSION = "telegram-destination:read"
 export const TELEGRAM_DESTINATION_MANAGE_PERMISSION =
   "telegram-destination:manage"
@@ -41,12 +45,15 @@ export const TELEGRAM_READ_PERMISSIONS = [
   TELEGRAM_MARKET_ANALYSIS_SCHEDULE_READ_PERMISSION,
 ] as const
 
-export const TELEGRAM_NAV_PERMISSIONS = TELEGRAM_READ_PERMISSIONS
+export const TELEGRAM_NAV_PERMISSIONS = [
+  ...TELEGRAM_READ_PERMISSIONS,
+  TELEGRAM_BOT_CONNECTION_CREATE_PERMISSION,
+] as const
 
-export function canReadTelegramConfiguration(
+export function canAccessTelegramConfiguration(
   permissions: PermissionCollection
 ): boolean {
-  return hasAnyPermission(permissions, TELEGRAM_READ_PERMISSIONS)
+  return hasAnyPermission(permissions, TELEGRAM_NAV_PERMISSIONS)
 }
 
 export function getTelegramSectionAccess(
@@ -61,20 +68,18 @@ export function getTelegramSectionAccess(
       permissions,
       TELEGRAM_DESTINATION_READ_PERMISSION
     ),
-    featureSettings: {
-      ECONOMIC_CALENDAR_ALERT: hasPermission(
-        permissions,
-        TELEGRAM_ECONOMIC_CALENDAR_ROUTING_READ_PERMISSION
-      ),
-      MARKET_NEWS_ALERT: hasPermission(
-        permissions,
-        TELEGRAM_MARKET_NEWS_ROUTING_READ_PERMISSION
-      ),
-      SCHEDULED_MARKET_ANALYSIS: hasPermission(
-        permissions,
-        TELEGRAM_FEATURE_SETTING_READ_PERMISSION
-      ),
-    },
+    featureSettings: hasPermission(
+      permissions,
+      TELEGRAM_FEATURE_SETTING_READ_PERMISSION
+    ),
+    economicCalendarRouting: hasPermission(
+      permissions,
+      TELEGRAM_ECONOMIC_CALENDAR_ROUTING_READ_PERMISSION
+    ),
+    marketNewsRouting: hasPermission(
+      permissions,
+      TELEGRAM_MARKET_NEWS_ROUTING_READ_PERMISSION
+    ),
     schedules: hasPermission(
       permissions,
       TELEGRAM_MARKET_ANALYSIS_SCHEDULE_READ_PERMISSION
@@ -91,24 +96,26 @@ export function getTelegramManageAccess(
       permissions,
       TELEGRAM_BOT_CONNECTION_MANAGE_PERMISSION
     ),
+    botConnectionsDelete: hasPermission(
+      permissions,
+      TELEGRAM_BOT_CONNECTION_DELETE_PERMISSION
+    ),
     destinations: hasPermission(
       permissions,
       TELEGRAM_DESTINATION_MANAGE_PERMISSION
     ),
-    featureSettings: {
-      ECONOMIC_CALENDAR_ALERT: hasPermission(
-        permissions,
-        TELEGRAM_ECONOMIC_CALENDAR_ROUTING_UPDATE_PERMISSION
-      ),
-      MARKET_NEWS_ALERT: hasPermission(
-        permissions,
-        TELEGRAM_MARKET_NEWS_ROUTING_UPDATE_PERMISSION
-      ),
-      SCHEDULED_MARKET_ANALYSIS: hasPermission(
-        permissions,
-        TELEGRAM_FEATURE_SETTING_UPDATE_PERMISSION
-      ),
-    },
+    featureSettings: hasPermission(
+      permissions,
+      TELEGRAM_FEATURE_SETTING_UPDATE_PERMISSION
+    ),
+    economicCalendarRouting: hasPermission(
+      permissions,
+      TELEGRAM_ECONOMIC_CALENDAR_ROUTING_UPDATE_PERMISSION
+    ),
+    marketNewsRouting: hasPermission(
+      permissions,
+      TELEGRAM_MARKET_NEWS_ROUTING_UPDATE_PERMISSION
+    ),
     schedules: hasPermission(
       permissions,
       TELEGRAM_MARKET_ANALYSIS_SCHEDULE_MANAGE_PERMISSION

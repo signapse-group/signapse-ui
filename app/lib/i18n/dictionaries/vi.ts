@@ -2474,39 +2474,68 @@ export const vi = {
       accessLimited: "Không có quyền xem bot Telegram",
       noUsername: "Chưa có username",
       noBotName: "Chưa có tên bot",
+      statusUnverified: "Chưa xác minh trạng thái",
+      connectionDetailsUnverified:
+        "Một số dữ liệu kết nối chưa được trả về. Hãy tải lại để xác minh bản ghi đã lưu.",
+      unverifiedLabel: "Bot Telegram chưa xác minh",
       webhookRegistered: "Đã đăng ký {time}",
       webhookNotRegistered: "Chưa có thời điểm đăng ký",
       lastValidated: "Xác thực gần nhất {time}",
       readOnlyDescription:
-        "Bạn có thể xem các bot này, nhưng cần quyền quản lý bot để thay đổi.",
-      replacementGuidance:
-        "Để thay bot này, hãy kết nối token mới, liên kết lại các điểm nhận phụ thuộc và rà soát định tuyến cùng lịch gửi trước khi xóa bản ghi này.",
+        "Bạn có thể xem các bot hiện có. Cần quyền quản lý để cập nhật hoặc gỡ một kết nối.",
+      webhookRegistrationFailed: "Đăng ký webhook thất bại.",
+      setupIncomplete: "Thiết lập bot chưa hoàn tất.",
+      reconnectGuidance:
+        "Dùng Reconnect trên hàng của bot này để hoàn tất thiết lập.",
+      alreadyConnected:
+        "Bot này đã có trong danh sách kết nối. Trạng thái đã lưu: {status}.",
+      alreadyConnectedIncomplete:
+        "Bot này đã có trong danh sách kết nối với trạng thái {status}, nhưng thiết lập chưa hoàn tất.",
+      createStatusUnverified:
+        "Bot đã được thêm nhưng chưa xác minh được trạng thái hiện tại. Hãy kiểm tra danh sách kết nối trước khi thử lại.",
+      createOutcomeUnverified:
+        "Chưa xác nhận được kết quả kết nối. Hãy kiểm tra danh sách trước khi thử lại.",
+      createOutcomeUnverifiedWithoutRead:
+        "Chưa xác nhận được kết quả yêu cầu kết nối. Tài khoản này không có quyền xem danh sách kết nối; hãy nhờ quản trị viên kiểm tra trước khi thử lại.",
+      createStatusUnverifiedWithoutRead:
+        "Bot đã được tạo nhưng chưa xác minh được trạng thái đã lưu. Tài khoản này không có quyền xem danh sách kết nối; hãy nhờ quản trị viên kiểm tra trước khi thử lại.",
+      alreadyConnectedStatusUnverified:
+        "Bot đã được kết nối nhưng chưa xác minh được trạng thái đã lưu. Hãy kiểm tra danh sách trước khi thực hiện thao tác khác.",
+      alreadyConnectedStatusUnverifiedWithoutRead:
+        "Bot này đã được kết nối trong tài khoản này nhưng chưa xác minh được trạng thái đã lưu. Tài khoản này không có quyền xem danh sách kết nối; hãy nhờ quản trị viên kiểm tra trước khi thử lại.",
+      createNotActive:
+        "Bot đã được thêm với trạng thái {status}; chưa xác nhận bot đang hoạt động.",
       emptyTitle: "Chưa có bot Telegram",
       emptyDescription:
         "Kết nối bot do bạn tạo trong BotFather để bắt đầu gửi thông báo.",
-      actionMenu: "Thao tác bot Telegram",
-      disableTitle: "Vô hiệu hóa bot Telegram?",
-      disableDescription:
-        "Bot bị vô hiệu hóa sẽ không gửi thông báo qua các điểm nhận đang dùng bot này. Giao diện này không hỗ trợ bật lại.",
-      disableSuccess: "Đã vô hiệu hóa bot Telegram.",
-      deleteTitle: "Xóa bot Telegram?",
+      deleteTitle: "Gỡ kết nối bot “{botName}”?",
       deleteDescription:
-        "Hành động này hủy liên kết bot khỏi Signapse và có thể ảnh hưởng các điểm nhận liên quan.",
-      deleteAction: "Xóa bot",
-      deleteSuccess: "Đã xóa bot Telegram.",
-      connect: "Kết nối bot",
+        "Thao tác này kết thúc việc sử dụng bot trong Signapse. Hãy gỡ tất cả điểm nhận của bot trước; chúng sẽ không bị gỡ tự động. Lịch sử gửi được giữ lại. Muốn dùng lại bot, bạn cần tạo kết nối mới.",
+      deleteTrigger: "Gỡ bot {botName}",
+      deleteAction: "Gỡ bot",
+      deletePending: "Đang gỡ bot…",
+      deleteSuccess: "Đã gỡ kết nối bot Telegram.",
+      deleteBlockedByDestinations:
+        "Trước tiên hãy gỡ tất cả điểm nhận Telegram đang liên kết với bot này. Chưa có dữ liệu nào bị thay đổi.",
+      connect: "Kết nối bot mới",
       createTitle: "Kết nối bot Telegram",
       createDescription:
         "Dán token bot do BotFather cấp để Signapse xác thực và đăng ký webhook.",
       tokenLabel: "Token bot",
-      tokenPlaceholder: "123456:ABC...",
-      tokenDescription: "Token chỉ gửi một lần khi tạo kết nối.",
+      tokenPlaceholder: "Dán token BotFather",
+      tokenDescription: "Token này sẽ không hiển thị lại sau khi kết nối.",
       connectBot: "Kết nối bot",
       invalidData: "Dữ liệu bot không hợp lệ.",
       createSuccess: "Đã kết nối bot Telegram.",
+      createIncomplete:
+        "Bot đã được thêm với trạng thái {status}, nhưng đăng ký webhook thất bại. Thiết lập chưa hoàn tất.",
       createError: "Không thể kết nối bot Telegram.",
-      disableError: "Không thể vô hiệu hóa bot Telegram.",
-      deleteError: "Không thể xóa bot Telegram.",
+      createTokenVerificationError:
+        "Không thể xác minh token bot. Hãy kiểm tra token rồi thử lại.",
+      createPermissionDenied:
+        "Tài khoản của bạn cần quyền kết nối bot Telegram. Hãy liên hệ quản trị viên.",
+      createConnectionConflict: "Bot Telegram này đã được kết nối.",
+      deleteError: "Không thể gỡ bot Telegram.",
       fallbackLabel: "Bot #{id}",
     },
     destination: {
@@ -2601,12 +2630,28 @@ export const vi = {
       destinationReadOnly: "Cần quyền xem danh sách điểm nhận để thay đổi.",
       unavailableDestination: "Không khả dụng",
       clearDestination: "Xóa điểm nhận cho {route}",
-      destinationClearSuccess: "Đã xóa điểm nhận và tạm dừng định tuyến.",
       destinationClearRequiresDisabled:
         "Hãy tạm dừng định tuyến trước khi xóa điểm nhận.",
       saving: "Đang lưu cấu hình định tuyến…",
+      noSavedWorkspaceSettings:
+        "Chưa có cấu hình định tuyến đã lưu trong các không gian của bạn.",
+      readbackUnverified:
+        "Chưa thể xác minh cấu hình tuyến tin thị trường đã lưu. Hãy tải lại trước khi thay đổi.",
+      economicCalendarReadbackUnverified:
+        "Chưa thể xác minh cấu hình cảnh báo lịch kinh tế đã lưu. Hãy tải lại trước khi thay đổi.",
+      readbackWorkspaceUnknown: "Chưa xác định được không gian làm việc",
+      workspaceIdFallback: "Không gian {id}",
       destinationUpdateError: "Không thể cập nhật điểm nhận cho định tuyến.",
       destinationUpdateSuccess: "Đã cập nhật điểm nhận định tuyến.",
+      destinationSelectorAria: "Điểm nhận cho {route}",
+      destinationClearAria: "Bỏ điểm nhận của {route}",
+      destinationClearSuccess: "Đã bỏ điểm nhận và tắt định tuyến.",
+      enableDestinationRequired:
+        "Hãy chọn một điểm nhận đang hoạt động trước khi bật định tuyến.",
+      destinationReadRequired:
+        "Cần quyền xem điểm nhận để chọn điểm nhận hợp lệ trước khi bật định tuyến.",
+      routeReadOnlyDescription:
+        "Bạn có thể xem cấu hình nhưng không có quyền thay đổi định tuyến này.",
       statusUpdateError: "Không thể cập nhật trạng thái định tuyến.",
       enabledSuccess: "Đã bật định tuyến Telegram.",
       disabledSuccess: "Đã tạm dừng định tuyến Telegram.",
@@ -2624,9 +2669,12 @@ export const vi = {
       languageNotApplicable: "Không áp dụng ở cấp luồng",
       languageUpdateSuccess: "Đã cập nhật ngôn ngữ đầu ra.",
       languageClearSuccess: "Đã xóa ghi đè ngôn ngữ đầu ra.",
+      updatePermissionDenied:
+        "Bạn không có quyền cập nhật định tuyến Telegram này.",
       updateError: "Không thể cập nhật định tuyến Telegram.",
     },
     schedule: {
+      sectionTitle: "Phân tích theo lịch",
       panelTitle: "Lịch gửi phân tích",
       panelDescription:
         "Gửi bản phân tích AI theo giờ địa phương cho một tài sản trong danh sách theo dõi.",

@@ -12,7 +12,8 @@ Focused regression coverage:
 - `tests/core/graph-view-{demo,node-labels,edge-picking}.test.ts`: graph attributes, labels and picking.
 - `tests/components/graph-view-sigma-drag.component.test.tsx`: interaction and cancellation behavior.
 - `tests/components/graph-node-inspector-metadata.component.test.tsx`: inspector content.
-- `tests/e2e/graph-view-sigma-workspace.spec.ts` and the graph case in `quick-detail.spec.ts`: fixture browser flows targeting the canonical route.
+
+The fixture browser flows for the canonical route are archived in Git history. [Sigma workspace spec](https://github.com/signapse-group/signapse-ui/blob/dc7d7d06ab6d4a108b8da38356bff23219e524f1/tests/e2e/graph-view-sigma-workspace.spec.ts) · [Quick detail spec](https://github.com/signapse-group/signapse-ui/blob/dc7d7d06ab6d4a108b8da38356bff23219e524f1/tests/e2e/quick-detail.spec.ts)
 
 Migration verification on 2026-10-29 reuses the accepted demo behavior contract. Live workspace acceptance remains with the user; local fixture evidence does not claim backend or account coverage.
 
