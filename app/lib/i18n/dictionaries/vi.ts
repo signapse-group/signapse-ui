@@ -2714,6 +2714,10 @@ export const vi = {
         "Chỉ các tài sản trong danh sách theo dõi của không gian hiện tại mới được chọn.",
       assetPreservedDescription:
         "Lịch thuộc không gian khác nên tài sản đã lưu sẽ được giữ nguyên.",
+      assetPreservedWatchlistDescription:
+        "Danh sách tài sản theo dõi của workspace hiện tại không khả dụng nên tài sản đã lưu sẽ được giữ nguyên.",
+      assetPreservedWorkspaceDescription:
+        "Không có workspace hiện tại nên tài sản đã lưu sẽ được giữ nguyên.",
       assetUnavailable: "Tài sản của lịch không còn trong danh sách theo dõi.",
       scheduleLegend: "Lịch gửi",
       timezoneLabel: "Múi giờ",

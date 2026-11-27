@@ -2736,6 +2736,10 @@ export const en: Dictionary = {
         "Only assets in the current workspace watchlist are available.",
       assetPreservedDescription:
         "This schedule belongs to another workspace, so its saved asset will be kept.",
+      assetPreservedWatchlistDescription:
+        "The current workspace watchlist isn't available, so the saved asset will stay unchanged.",
+      assetPreservedWorkspaceDescription:
+        "A current workspace isn't available, so the saved asset will stay unchanged.",
       assetUnavailable: "This scheduled asset is no longer in the watchlist.",
       scheduleLegend: "Send schedule",
       timezoneLabel: "Timezone",

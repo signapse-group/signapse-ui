@@ -429,6 +429,12 @@ describe("Telegram schedule destructive actions", () => {
           name: viDictionary.telegram.schedule.assetLabel,
         })
       ).toBeDisabled()
+      expect(
+        within(dialog).getByText(
+          viDictionary.telegram.schedule.assetPreservedWatchlistDescription,
+          { exact: true }
+        )
+      ).toBeVisible()
 
       const name = within(dialog).getByLabelText(
         viDictionary.telegram.schedule.nameLabel

@@ -189,6 +189,7 @@ describe("Telegram schedule form behavior", () => {
         languages={props.languages}
         languageCatalogError={false}
         assetEditable
+        assetPreservedReason="otherWorkspace"
         canUpdate
       />
     )
@@ -387,6 +388,7 @@ describe("Telegram schedule form behavior", () => {
         languageCatalogError={false}
         canUpdate
         assetEditable
+        assetPreservedReason="otherWorkspace"
       />
     )
 
@@ -436,6 +438,7 @@ describe("Telegram schedule form behavior", () => {
         languageCatalogError={false}
         canUpdate
         assetEditable={false}
+        assetPreservedReason="otherWorkspace"
       />
     )
 

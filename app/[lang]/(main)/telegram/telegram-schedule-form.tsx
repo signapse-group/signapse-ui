@@ -99,6 +99,9 @@ type ScheduleFormValues = {
   outputLanguageIsoCode: string
 }
 
+type AssetPreservedReason =
+  "watchlistUnavailable" | "workspaceUnavailable" | "otherWorkspace"
+
 type ScheduleFormErrors = Partial<Record<keyof ScheduleFormValues, string>>
 
 type ScheduleFormFieldsProps = {
@@ -110,6 +113,7 @@ type ScheduleFormFieldsProps = {
   watchlistAssets: WorkspaceWatchlistAssetListItemResponse[]
   currentAsset?: ScheduledAssetResponse
   assetEditable?: boolean
+  assetPreservedReason?: AssetPreservedReason
   languages: LanguageResponse[]
   currentOutputLanguage?: LanguageResponse
   languageCatalogError: boolean
@@ -433,6 +437,7 @@ function ScheduleFormFields({
   watchlistAssets,
   currentAsset,
   assetEditable = true,
+  assetPreservedReason,
   languages,
   currentOutputLanguage,
   languageCatalogError,
@@ -625,7 +630,11 @@ function ScheduleFormFields({
             <FieldDescription id={descriptionId("assetId")}>
               {assetEditable
                 ? t.schedule.assetDescription
-                : t.schedule.assetPreservedDescription}
+                : assetPreservedReason === "watchlistUnavailable"
+                  ? t.schedule.assetPreservedWatchlistDescription
+                  : assetPreservedReason === "workspaceUnavailable"
+                    ? t.schedule.assetPreservedWorkspaceDescription
+                    : t.schedule.assetPreservedDescription}
             </FieldDescription>
             <FieldError id={errorId("assetId")}>{errors.assetId}</FieldError>
           </Field>
@@ -1133,6 +1142,7 @@ export function UpdateTelegramScheduleDialog({
   languageCatalogError,
   canUpdate,
   assetEditable,
+  assetPreservedReason,
 }: {
   schedule: TelegramMarketAnalysisScheduleResponse
   activeDestinations: TelegramDestinationResponse[]
@@ -1141,6 +1151,7 @@ export function UpdateTelegramScheduleDialog({
   languageCatalogError: boolean
   canUpdate: boolean
   assetEditable: boolean
+  assetPreservedReason: AssetPreservedReason
 }) {
   const router = useRouter()
   const { dictionary } = useLocalization()
@@ -1329,6 +1340,7 @@ export function UpdateTelegramScheduleDialog({
                 watchlistAssets={watchlistAssets}
                 currentAsset={schedule.asset}
                 assetEditable={assetEditable}
+                assetPreservedReason={assetPreservedReason}
                 languages={languages}
                 currentOutputLanguage={schedule.outputLanguage ?? undefined}
                 languageCatalogError={languageCatalogError}

@@ -1008,6 +1008,13 @@ function ScheduleActionButtons({
             watchlistAssetsAvailable &&
             currentWorkspace?.id === schedule.workspaceId
           }
+          assetPreservedReason={
+            !watchlistAssetsAvailable
+              ? "watchlistUnavailable"
+              : currentWorkspace
+                ? "otherWorkspace"
+                : "workspaceUnavailable"
+          }
           canUpdate={scheduleActions.update}
         />
       ) : null}
