@@ -40,6 +40,7 @@ import {
   getDestinationLabel,
   getBotLabel,
   sortOperationalTelegramRecords,
+  SectionReadError,
   StatusBadge,
 } from "./telegram-configuration-shared"
 import { TelegramDestinationTestMessageButton } from "./telegram-destination-test-message-button"
@@ -104,15 +105,19 @@ import { Button } from "@/components/ui/button"
 
 export function DestinationsCard({
   destinations,
+  loadError,
   activeBotConnections,
   canRead,
   canReadBotConnections,
+  botConnectionsLoadError,
   canManage,
 }: {
   destinations: TelegramDestinationResponse[]
+  loadError: boolean
   activeBotConnections: TelegramBotConnectionResponse[]
   canRead: boolean
   canReadBotConnections: boolean
+  botConnectionsLoadError: boolean
   canManage: boolean
 }) {
   const { dictionary, formatDateTime } = useLocalization()
@@ -126,9 +131,11 @@ export function DestinationsCard({
     !canManage || !canReadBotConnections || activeBotConnections.length === 0
   const linkUnavailableReason = !canReadBotConnections
     ? t.destination.botReadPermissionRequired
-    : activeBotConnections.length === 0
-      ? t.destination.noActiveBotToLink
-      : null
+    : botConnectionsLoadError
+      ? t.common.readError
+      : activeBotConnections.length === 0
+        ? t.destination.noActiveBotToLink
+        : null
 
   return (
     <Card className="min-w-0">
@@ -165,6 +172,8 @@ export function DestinationsCard({
             title={t.destination.accessLimited}
             description={t.common.accessLimitedDescription}
           />
+        ) : loadError ? (
+          <SectionReadError message={t.destination.loadError} />
         ) : (
           <>
             {!canManage ? (

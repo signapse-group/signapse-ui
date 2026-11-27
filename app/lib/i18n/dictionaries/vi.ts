@@ -2429,13 +2429,17 @@ export const vi = {
       bot: "Bot Telegram",
       activeBots: "{count} bot đang hoạt động.",
       noBotPermission: "Bạn chưa có quyền xem bot.",
+      accessLimited: "Giới hạn quyền truy cập",
       ready: "Sẵn sàng",
+      unavailable: "Không thể tải",
       needsConfig: "Cần cấu hình",
       destinations: "Điểm nhận",
       activeDestinations: "{count} điểm nhận đang hoạt động.",
       noDestinationPermission: "Bạn chưa có quyền xem điểm nhận.",
       needsLink: "Cần liên kết",
       routing: "Định tuyến",
+      noRoutingPermission: "Bạn chưa có quyền xem định tuyến.",
+      routingLoadError: "Không thể tải cấu hình định tuyến đã lưu.",
       configuredRoutes: "{configured}/{total} luồng đã bật trong {workspace}.",
       noWorkspace: "Chưa có không gian làm việc hiện tại.",
       routesEnabled: "Có luồng bật",
@@ -2460,6 +2464,7 @@ export const vi = {
       paused: "Tạm dừng",
       currentWorkspace: "Không gian hiện tại",
       noData: "Chưa có dữ liệu",
+      readError: "Không thể tải dữ liệu của mục này.",
       accessLimitedDescription:
         "Tài khoản hiện tại không có quyền đọc khu vực này.",
       currentWorkspaceScope: "Theo không gian hiện tại",
@@ -2540,6 +2545,7 @@ export const vi = {
       sectionDescription:
         "Chat, group hoặc channel đã xác minh bằng lệnh /start qua bot được chọn.",
       accessLimited: "Không có quyền xem điểm nhận",
+      loadError: "Không thể tải danh sách điểm nhận để chọn.",
       readOnlyDescription:
         "Bạn có thể xem các điểm nhận này, nhưng cần quyền quản lý điểm nhận để thay đổi.",
       noChatMetadata: "Chưa có metadata chat",
@@ -2615,10 +2621,23 @@ export const vi = {
       enabledColumn: "Bật gửi",
       accessLimited: "Không có quyền xem định tuyến",
       noWorkspaceSelected: "Chưa chọn không gian",
+      settingsLoadError: "Không thể tải cấu hình định tuyến.",
+      settingsLoadErrorDescription:
+        "Không thể tải cấu hình định tuyến đã lưu. Hãy thử tải lại.",
+      retry: "Thử lại",
+      noDestination: "Chưa gán điểm nhận",
+      destinationReadOnly: "Cần quyền xem danh sách điểm nhận để thay đổi.",
+      unavailableDestination: "Không khả dụng",
+      clearDestination: "Xóa điểm nhận cho {route}",
+      destinationClearRequiresDisabled:
+        "Hãy tạm dừng định tuyến trước khi xóa điểm nhận.",
+      saving: "Đang lưu cấu hình định tuyến…",
       noSavedWorkspaceSettings:
         "Chưa có cấu hình định tuyến đã lưu trong các không gian của bạn.",
       readbackUnverified:
         "Chưa thể xác minh cấu hình tuyến tin thị trường đã lưu. Hãy tải lại trước khi thay đổi.",
+      economicCalendarReadbackUnverified:
+        "Chưa thể xác minh cấu hình cảnh báo lịch kinh tế đã lưu. Hãy tải lại trước khi thay đổi.",
       readbackWorkspaceUnknown: "Chưa xác định được không gian làm việc",
       workspaceIdFallback: "Không gian {id}",
       destinationUpdateError: "Không thể cập nhật điểm nhận cho định tuyến.",
@@ -2649,6 +2668,8 @@ export const vi = {
       languageNotApplicable: "Không áp dụng ở cấp luồng",
       languageUpdateSuccess: "Đã cập nhật ngôn ngữ đầu ra.",
       languageClearSuccess: "Đã xóa ghi đè ngôn ngữ đầu ra.",
+      updatePermissionDenied:
+        "Bạn không có quyền cập nhật định tuyến Telegram này.",
       updateError: "Không thể cập nhật định tuyến Telegram.",
     },
     schedule: {
@@ -2657,18 +2678,22 @@ export const vi = {
       panelDescription:
         "Gửi bản phân tích AI theo giờ địa phương cho một tài sản trong danh sách theo dõi.",
       scheduleColumn: "Lịch gửi",
+      deliveryColumn: "Nơi nhận",
       workspaceColumn: "Không gian",
       destinationColumn: "Điểm nhận",
       localTimesColumn: "Giờ gửi",
       assetColumn: "Tài sản",
       languageColumn: "Ngôn ngữ đầu ra",
       statusColumn: "Trạng thái",
+      inactiveStatus: "Không hoạt động",
       accessLimited: "Không có quyền xem lịch phân tích",
       readOnlyDescription: "Bạn có thể xem lịch nhưng không có quyền thay đổi.",
       loadError: "Không thể tải các lịch phân tích.",
       loadErrorDescription:
         "Hãy kiểm tra kết nối rồi thử tải lại danh sách lịch.",
       retry: "Thử lại",
+      optionsLoadError:
+        "Không thể tải một số dữ liệu cần cho thao tác lịch. Lịch đã lưu vẫn hiển thị; hãy thử lại trước khi tạo hoặc sửa.",
       currentWorkspaceFallback: "Không gian hiện tại",
       noDestination: "Chưa có điểm nhận",
       noAsset: "Tài sản không khả dụng",
@@ -2676,17 +2701,12 @@ export const vi = {
       emptyTitle: "Chưa có lịch phân tích",
       emptyDescription:
         "Tạo lịch gửi theo giờ địa phương cho không gian làm việc hiện tại.",
-      disableTitle: "Vô hiệu hóa lịch phân tích?",
-      disableDescription:
-        "Lịch sẽ dừng gửi bản phân tích thị trường. Giao diện này không hỗ trợ bật lại lịch đã vô hiệu hóa.",
-      disableTrigger: "Vô hiệu hóa lịch phân tích",
-      disableSuccess: "Đã vô hiệu hóa lịch phân tích.",
-      deleteTitle: "Xóa lịch phân tích?",
+      deleteTitle: "Gỡ lịch phân tích?",
       deleteDescription:
-        "Lịch gửi phân tích thị trường sẽ bị xóa vĩnh viễn và không thể hoàn tác.",
-      deleteAction: "Xóa lịch",
-      deleteTrigger: "Xóa lịch phân tích",
-      deleteSuccess: "Đã xóa lịch phân tích.",
+        "Thao tác này chuyển lịch sang trạng thái đã gỡ, dừng các lượt chạy mới và đưa lịch ra khỏi danh sách có thể quản lý. Lịch sử đã ghi được bảo toàn.",
+      deleteAction: "Gỡ lịch",
+      deleteTrigger: "Gỡ lịch phân tích",
+      deleteSuccess: "Đã gỡ lịch phân tích. Lịch sử đã ghi được bảo toàn.",
       editTrigger: "Sửa lịch phân tích",
       createSchedule: "Tạo lịch",
       dialogEditTitle: "Chỉnh sửa lịch phân tích",
@@ -2708,6 +2728,12 @@ export const vi = {
       assetPlaceholder: "Chọn tài sản",
       assetDescription:
         "Chỉ các tài sản trong danh sách theo dõi của không gian hiện tại mới được chọn.",
+      assetPreservedDescription:
+        "Lịch thuộc không gian khác nên tài sản đã lưu sẽ được giữ nguyên.",
+      assetPreservedWatchlistDescription:
+        "Danh sách tài sản theo dõi của workspace hiện tại không khả dụng nên tài sản đã lưu sẽ được giữ nguyên.",
+      assetPreservedWorkspaceDescription:
+        "Không có workspace hiện tại nên tài sản đã lưu sẽ được giữ nguyên.",
       assetUnavailable: "Tài sản của lịch không còn trong danh sách theo dõi.",
       scheduleLegend: "Lịch gửi",
       timezoneLabel: "Múi giờ",
@@ -2747,12 +2773,12 @@ export const vi = {
       createError: "Không thể tạo lịch phân tích Telegram.",
       updateError: "Không thể cập nhật lịch phân tích Telegram.",
       disableError: "Không thể vô hiệu hóa lịch phân tích Telegram.",
-      deleteError: "Không thể xóa lịch phân tích Telegram.",
+      deleteError: "Không thể gỡ lịch phân tích Telegram. Hãy thử lại.",
     },
     statuses: {
       ACTIVE: "Đang hoạt động",
       INVALID: "Không hợp lệ",
-      REMOVED: "Đã xóa",
+      REMOVED: "Đã gỡ",
       DISABLED: "Đã vô hiệu hóa",
     },
     chatTypes: {

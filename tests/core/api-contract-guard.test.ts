@@ -5,6 +5,7 @@ import { join, resolve } from "node:path"
 
 import { afterEach, describe, expect, it, vi } from "vitest"
 
+import { fixtureContracts } from "../contract/contract-registry.mjs"
 import * as guard from "../contract/contract-guard.mjs"
 
 const contracts = [
@@ -41,7 +42,9 @@ describe("API contract guard", () => {
       expect(result.status).toBe(0)
       expect(result.stdout).toContain("Fixture consistency")
       expect(result.stdout).toContain("Scope: full")
-      expect(result.stdout).toContain("passed for 88 operations")
+      expect(result.stdout).toContain(
+        `passed for ${fixtureContracts.length} operations`
+      )
       expect(result.stdout).not.toContain("live")
 
       const scopedResult = spawnSync(

@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation"
 import {
   Bot,
   CalendarClock,
-  CircleAlert,
   MessageCircle,
   RadioTower,
   Trash2,
@@ -15,7 +14,6 @@ import { toast } from "sonner"
 
 import {
   deleteTelegramMarketAnalysisSchedule,
-  disableTelegramMarketAnalysisSchedule,
   updateTelegramFeatureSetting,
 } from "@/app/api/telegram/action"
 import type { Dictionary } from "@/app/lib/i18n/dictionary-types"
@@ -37,12 +35,6 @@ import {
   AppListTableHead,
   AppListTableHeaderRow,
 } from "@/components/app-list-table"
-import {
-  AppListToolbar,
-  AppListToolbarLeading,
-  AppListToolbarTrailing,
-} from "@/components/app-list-toolbar"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -88,6 +80,7 @@ import {
   AccessLimitedRow,
   getDestinationLabel,
   ReadinessBadge,
+  SectionReadError,
   SectionHeader,
   StatusBadge,
 } from "./telegram-configuration-shared"
@@ -100,10 +93,13 @@ type RouteDefinition = {
 
 type FeatureRouteView = RouteDefinition & {
   setting?: TelegramFeatureSettingResponse
+  loadError?: boolean
   readbackUnverified?: boolean
 }
 
 const DEFAULT_FEATURE_LANGUAGE_VALUE = "__default__"
+const TELEGRAM_CONFIGURATION_LAYOUT_CLASS =
+  "grid w-full min-w-0 gap-6 min-[1440px]:grid-cols-[minmax(0,1.5fr)_minmax(22rem,1fr)] lg:grid-cols-[minmax(0,1.15fr)_minmax(20rem,1fr)]"
 
 function getRouteDefinitions(dictionary: Dictionary): RouteDefinition[] {
   const routes = dictionary.telegram.routeDefinitions
@@ -130,6 +126,21 @@ function isCompleteMarketNewsSetting(setting: TelegramFeatureSettingResponse) {
   )
 }
 
+function isCompleteEconomicCalendarSetting(
+  setting: TelegramFeatureSettingResponse,
+  workspaceId: number
+) {
+  return (
+    setting.featureKey === "ECONOMIC_CALENDAR_ALERT" &&
+    setting.workspaceId === workspaceId &&
+    typeof setting.id === "number" &&
+    typeof setting.enabled === "boolean" &&
+    (setting.outputLanguage === null ||
+      Boolean(setting.outputLanguage?.isoCode?.trim())) &&
+    !(setting.enabled && setting.destination === null)
+  )
+}
+
 export function TelegramConfigurationPage({
   data,
   canCreateBotConnections = false,
@@ -147,6 +158,45 @@ export function TelegramConfigurationPage({
           (setting) => setting.featureKey === "MARKET_NEWS_ALERT"
         )
       : []
+  const economicCalendarRoute = getRouteDefinitions(dictionary).find(
+    (route) => route.featureKey === "ECONOMIC_CALENDAR_ALERT"
+  )
+  const economicCalendarSettings = data.economicCalendarSettings.filter(
+    (setting) =>
+      setting.featureKey === "ECONOMIC_CALENDAR_ALERT" &&
+      setting.workspaceId === data.economicCalendarWorkspace?.id
+  )
+  const singleEconomicCalendarSetting =
+    economicCalendarSettings.length === 1
+      ? economicCalendarSettings[0]
+      : undefined
+  const hasUnidentifiedEconomicCalendarSetting =
+    data.economicCalendarSettings.some(
+      (setting) =>
+        setting.featureKey !== "ECONOMIC_CALENDAR_ALERT" ||
+        setting.workspaceId !== data.economicCalendarWorkspace?.id
+    ) || economicCalendarSettings.length > 1
+  const economicCalendarRouteView: FeatureRouteView | null =
+    data.sectionAccess.economicCalendarRouting && economicCalendarRoute
+      ? {
+          ...economicCalendarRoute,
+          setting: !hasUnidentifiedEconomicCalendarSetting
+            ? singleEconomicCalendarSetting
+            : undefined,
+          loadError:
+            data.economicCalendarLoadError ||
+            data.economicCalendarWorkspace === null,
+          readbackUnverified:
+            !data.economicCalendarLoadError &&
+            data.economicCalendarWorkspace !== null &&
+            (hasUnidentifiedEconomicCalendarSetting ||
+              (singleEconomicCalendarSetting !== undefined &&
+                !isCompleteEconomicCalendarSetting(
+                  singleEconomicCalendarSetting,
+                  data.economicCalendarWorkspace.id
+                ))),
+        }
+      : null
   const hasUnidentifiedMarketNewsSetting =
     data.sectionAccess.marketNewsRouting &&
     data.featureSettings.some((setting) => {
@@ -163,16 +213,17 @@ export function TelegramConfigurationPage({
             setting.workspaceId == null))
       )
     })
-  const schedules = data.currentWorkspace
-    ? data.schedules.filter(
-        (schedule) => schedule.workspaceId === data.currentWorkspace?.id
-      )
-    : []
+  const schedules = data.schedules
+  const canShowSchedulePanel =
+    data.sectionAccess.schedules ||
+    data.scheduleActions.create ||
+    data.scheduleActions.update ||
+    data.scheduleActions.delete
   const routes = getRouteDefinitions(dictionary)
     .filter((route) =>
       route.featureKey === "MARKET_NEWS_ALERT"
         ? data.sectionAccess.marketNewsRouting
-        : data.sectionAccess.featureSettings
+        : false
     )
     .map((route) => ({
       ...route,
@@ -190,6 +241,7 @@ export function TelegramConfigurationPage({
     ? marketNewsSettings.map((setting) => ({
         ...marketNewsRoute,
         setting,
+        loadError: data.featureSettingsLoadError,
         readbackUnverified: !isCompleteMarketNewsSetting(setting),
       }))
     : []
@@ -198,14 +250,18 @@ export function TelegramConfigurationPage({
     marketNewsRoutes.push({
       ...marketNewsRoute,
       setting: undefined,
+      loadError: data.featureSettingsLoadError,
       readbackUnverified: true,
     })
   } else if (marketNewsRoute && marketNewsRoutes.length === 0) {
-    marketNewsRoutes.push(marketNewsRoute)
+    marketNewsRoutes.push({
+      ...marketNewsRoute,
+      loadError: data.featureSettingsLoadError,
+    })
   }
   const visibleRoutes: FeatureRouteView[] = [
     ...marketNewsRoutes,
-    ...routes.filter((route) => route.featureKey !== "MARKET_NEWS_ALERT"),
+    ...(economicCalendarRouteView ? [economicCalendarRouteView] : []),
   ]
   const activeBotConnections = data.botConnections.filter(
     (connection): connection is TelegramBotConnectionResponse =>
@@ -216,43 +272,43 @@ export function TelegramConfigurationPage({
   )
 
   return (
-    <div className="grid w-full min-w-0 gap-6 min-[1440px]:grid-cols-[minmax(0,1.5fr)_minmax(22rem,1fr)] lg:grid-cols-[minmax(0,1.15fr)_minmax(20rem,1fr)]">
+    <div className={TELEGRAM_CONFIGURATION_LAYOUT_CLASS}>
       <div className="flex min-w-0 flex-col gap-6">
         <FeatureRoutingSection
           routes={visibleRoutes}
           activeDestinations={activeDestinations}
+          destinationsLoadError={data.destinationsLoadError}
           languages={data.languages}
           languageCatalogError={data.languageCatalogError}
-          canUpdateFeatureSettings={data.manageAccess.featureSettings}
+          canUpdateEconomicCalendarRouting={
+            data.manageAccess.economicCalendarRouting
+          }
           canUpdateMarketNewsRouting={data.manageAccess.marketNewsRouting}
           canReadDestinations={data.sectionAccess.destinations}
           currentWorkspace={data.currentWorkspace}
+          economicCalendarWorkspace={data.economicCalendarWorkspace}
         />
-        {data.sectionAccess.schedules ? (
-          <section
-            className="flex min-w-0 flex-col gap-4"
-            aria-labelledby="telegram-scheduled-analysis"
-          >
-            <SectionHeader
-              id="telegram-scheduled-analysis"
-              title={dictionary.telegram.schedule.sectionTitle}
-              description={
-                dictionary.telegram.routeDefinitions.SCHEDULED_MARKET_ANALYSIS
-                  .description
-              }
-            />
-            <MarketAnalysisSchedulePanel
-              schedules={schedules}
-              activeDestinations={activeDestinations}
-              currentWorkspace={data.currentWorkspace}
-              watchlistAssets={data.watchlistAssets}
-              languages={data.languages}
-              languageCatalogError={data.languageCatalogError}
-              scheduleLoadError={data.scheduleLoadError}
-              canReadSchedules={data.sectionAccess.schedules}
-              canManageSchedules={data.manageAccess.schedules}
-            />
-          </section>
+        {canShowSchedulePanel ? (
+          <MarketAnalysisSchedulePanel
+            schedules={schedules}
+            activeDestinations={activeDestinations}
+            currentWorkspace={data.currentWorkspace}
+            watchlistAssets={data.watchlistAssets}
+            watchlistAssetsAvailable={
+              data.sectionAccess.watchlistAssets &&
+              !data.watchlistAssetsLoadError
+            }
+            languages={data.languages}
+            languageCatalogError={data.languageCatalogError}
+            scheduleLoadError={data.scheduleLoadError}
+            optionsLoadError={
+              data.destinationsLoadError ||
+              data.currentWorkspaceLoadError ||
+              data.watchlistAssetsLoadError
+            }
+            canReadSchedules={data.sectionAccess.schedules}
+            scheduleActions={data.scheduleActions}
+          />
         ) : null}
       </div>
       <div className="flex min-w-0 flex-col gap-6">
@@ -272,13 +328,16 @@ export function TelegramConfigurationPage({
               canManage={data.manageAccess.botConnections}
               canCreate={canCreateBotConnections}
               canDelete={data.manageAccess.botConnectionsDelete}
+              loadError={data.botConnectionsLoadError}
             />
             <DestinationsCard
               destinations={data.destinations}
+              loadError={data.destinationsLoadError}
               activeBotConnections={activeBotConnections}
               canRead={data.sectionAccess.destinations}
               canReadBotConnections={data.sectionAccess.botConnections}
               canManage={data.manageAccess.destinations}
+              botConnectionsLoadError={data.botConnectionsLoadError}
             />
           </div>
         </section>
@@ -294,9 +353,114 @@ export function TelegramConfigurationPage({
   )
 }
 
-export function TelegramConfigurationSkeleton() {
+export function TelegramConfigurationSkeleton({
+  sectionAccess,
+  canReadWorkspace = false,
+  canCreateBotConnections = false,
+  canManageDestinations = false,
+}: {
+  sectionAccess: TelegramConfigurationData["sectionAccess"]
+  canReadWorkspace?: boolean
+  canCreateBotConnections?: boolean
+  canManageDestinations?: boolean
+}) {
+  const economicCalendarOnly =
+    sectionAccess.economicCalendarRouting &&
+    !sectionAccess.botConnections &&
+    !sectionAccess.destinations &&
+    !sectionAccess.featureSettings &&
+    !sectionAccess.marketNewsRouting &&
+    !sectionAccess.schedules
+
+  if (economicCalendarOnly) {
+    return (
+      <div
+        className={TELEGRAM_CONFIGURATION_LAYOUT_CLASS}
+        data-testid="telegram-configuration-skeleton"
+        aria-busy="true"
+      >
+        <div className="flex min-w-0 flex-col gap-6">
+          <section className="flex min-w-0 flex-col gap-4">
+            <div className="space-y-2" aria-hidden="true">
+              <Skeleton className="h-5 w-36" />
+              <Skeleton className="h-4 w-full max-w-xl" />
+            </div>
+            <AppListTable className="mt-0">
+              <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 p-4 sm:grid-cols-2">
+                <div className="min-w-0 space-y-2" aria-hidden="true">
+                  <Skeleton className="h-5 w-48 max-w-full" />
+                  <Skeleton className="h-4 w-56 max-w-full" />
+                </div>
+                <Skeleton
+                  className="h-8 w-32 justify-self-end"
+                  aria-hidden="true"
+                />
+                <div
+                  className="col-span-2 grid gap-3 md:grid-cols-2"
+                  aria-hidden="true"
+                >
+                  <Skeleton className="h-9 w-full" />
+                  <Skeleton className="h-9 w-full" />
+                </div>
+              </div>
+            </AppListTable>
+          </section>
+        </div>
+        <div className="flex min-w-0 flex-col gap-6">
+          <section
+            className="flex min-w-0 flex-col gap-4"
+            data-testid="telegram-infrastructure-skeleton"
+            aria-hidden="true"
+          >
+            <div className="space-y-2">
+              <Skeleton className="h-5 w-36" />
+              <Skeleton className="h-4 w-full" />
+            </div>
+            <div className="grid min-w-0 gap-4">
+              {[canCreateBotConnections, canManageDestinations].map(
+                (hasAction, cardIndex) => (
+                  <Card key={cardIndex} className="min-w-0">
+                    <CardHeader>
+                      <Skeleton className="h-5 w-32" />
+                      <Skeleton className="h-4 w-full" />
+                      {hasAction ? (
+                        <CardAction>
+                          <Skeleton className="h-9 w-28" />
+                        </CardAction>
+                      ) : null}
+                    </CardHeader>
+                    <CardContent className="flex min-w-0 flex-col gap-3">
+                      <Skeleton className="h-12 w-full" />
+                    </CardContent>
+                  </Card>
+                )
+              )}
+            </div>
+          </section>
+          {canReadWorkspace ? (
+            <div
+              className="grid gap-3 min-[1440px]:grid-cols-2"
+              data-testid="telegram-readiness-skeleton"
+              aria-hidden="true"
+            >
+              <Card size="sm" className="min-w-0">
+                <CardHeader>
+                  <Skeleton className="h-5 w-28" />
+                  <Skeleton className="h-4 w-full" />
+                  <CardAction>
+                    <Skeleton className="h-6 w-20" />
+                  </CardAction>
+                </CardHeader>
+              </Card>
+            </div>
+          ) : null}
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className="grid w-full min-w-0 gap-6 min-[1440px]:grid-cols-[minmax(0,1.5fr)_minmax(22rem,1fr)] lg:grid-cols-[minmax(0,1.15fr)_minmax(20rem,1fr)]">
+    <div className={TELEGRAM_CONFIGURATION_LAYOUT_CLASS}>
       <div className="order-2 flex min-w-0 flex-col gap-6">
         <div className="grid min-w-0 gap-4">
           {Array.from({ length: 2 }).map((_, cardIndex) => (
@@ -466,7 +630,7 @@ function ReadinessSummary({
     (schedule) => schedule.status === "ACTIVE"
   ).length
   const readinessItems = [
-    ...(data.sectionAccess.botConnections
+    ...(data.sectionAccess.botConnections && !data.botConnectionsLoadError
       ? [
           {
             label: t.readiness.bot,
@@ -481,7 +645,7 @@ function ReadinessSummary({
           },
         ]
       : []),
-    ...(data.sectionAccess.destinations
+    ...(data.sectionAccess.destinations && !data.destinationsLoadError
       ? [
           {
             label: t.readiness.destinations,
@@ -502,7 +666,8 @@ function ReadinessSummary({
       : []),
     ...(routes.length > 0 &&
     data.currentWorkspace &&
-    !routes.some((route) => route.readbackUnverified)
+    !data.featureSettingsLoadError &&
+    !routes.some((route) => route.readbackUnverified || route.loadError)
       ? [
           {
             label: t.readiness.routing,
@@ -523,7 +688,7 @@ function ReadinessSummary({
           },
         ]
       : []),
-    ...(data.sectionAccess.schedules
+    ...(data.sectionAccess.schedules && !data.scheduleLoadError
       ? [
           {
             label: t.readiness.scheduledAnalysis,
@@ -574,19 +739,23 @@ function ReadinessSummary({
 function FeatureRoutingSection({
   routes,
   activeDestinations,
+  destinationsLoadError,
   currentWorkspace,
+  economicCalendarWorkspace,
   languages,
   languageCatalogError,
-  canUpdateFeatureSettings,
+  canUpdateEconomicCalendarRouting,
   canUpdateMarketNewsRouting,
   canReadDestinations,
 }: {
   routes: FeatureRouteView[]
   activeDestinations: TelegramDestinationResponse[]
+  destinationsLoadError: boolean
   currentWorkspace: TelegramConfigurationData["currentWorkspace"]
+  economicCalendarWorkspace: TelegramConfigurationData["economicCalendarWorkspace"]
   languages: TelegramConfigurationData["languages"]
   languageCatalogError: boolean
-  canUpdateFeatureSettings: boolean
+  canUpdateEconomicCalendarRouting: boolean
   canUpdateMarketNewsRouting: boolean
   canReadDestinations: boolean
 }) {
@@ -608,9 +777,13 @@ function FeatureRoutingSection({
           </Table>
         ) : (
           routes.map((route, index) => {
+            const isEconomicCalendarRoute =
+              route.featureKey === "ECONOMIC_CALENDAR_ALERT"
             const isMarketNewsRoute = route.featureKey === "MARKET_NEWS_ALERT"
-            const workspaceId =
-              currentWorkspace?.id ?? route.setting?.workspaceId
+            const routeWorkspace = isEconomicCalendarRoute
+              ? economicCalendarWorkspace
+              : currentWorkspace
+            const workspaceId = routeWorkspace?.id ?? route.setting?.workspaceId
             const workspaceLabel = route.readbackUnverified
               ? (route.setting?.workspaceName ??
                 (route.setting?.workspaceId !== undefined
@@ -619,7 +792,9 @@ function FeatureRoutingSection({
                     })
                   : t.routing.readbackWorkspaceUnknown))
               : (route.setting?.workspaceName ??
-                currentWorkspace?.name ??
+                (isEconomicCalendarRoute
+                  ? undefined
+                  : currentWorkspace?.name) ??
                 (route.setting?.workspaceId !== undefined
                   ? formatMessage(t.routing.workspaceIdFallback, {
                       id: route.setting.workspaceId,
@@ -641,7 +816,11 @@ function FeatureRoutingSection({
                 )}
                 data-feature-key={route.featureKey}
                 data-testid={
-                  isMarketNewsRoute ? "market-news-routing-card" : undefined
+                  isEconomicCalendarRoute
+                    ? "economic-calendar-routing-card"
+                    : isMarketNewsRoute
+                      ? "market-news-routing-card"
+                      : undefined
                 }
                 aria-labelledby={titleId}
               >
@@ -662,12 +841,13 @@ function FeatureRoutingSection({
                   <FeatureRouteControls
                     route={controlRoute}
                     activeDestinations={activeDestinations}
+                    destinationsLoadError={destinationsLoadError}
                     currentWorkspaceId={workspaceId}
                     canReadDestinations={canReadDestinations}
                     canUpdate={
-                      isMarketNewsRoute
-                        ? canUpdateMarketNewsRouting
-                        : canUpdateFeatureSettings
+                      isEconomicCalendarRoute
+                        ? canUpdateEconomicCalendarRouting
+                        : canUpdateMarketNewsRouting
                     }
                     languages={languages}
                     languageCatalogError={languageCatalogError}
@@ -687,21 +867,25 @@ function MarketAnalysisSchedulePanel({
   activeDestinations,
   currentWorkspace,
   watchlistAssets,
+  watchlistAssetsAvailable,
   languages,
   languageCatalogError,
   scheduleLoadError,
+  optionsLoadError,
   canReadSchedules,
-  canManageSchedules,
+  scheduleActions,
 }: {
   schedules: TelegramMarketAnalysisScheduleResponse[]
   activeDestinations: TelegramDestinationResponse[]
   currentWorkspace: TelegramConfigurationData["currentWorkspace"]
   watchlistAssets: TelegramConfigurationData["watchlistAssets"]
+  watchlistAssetsAvailable: boolean
   languages: TelegramConfigurationData["languages"]
   languageCatalogError: boolean
   scheduleLoadError: boolean
+  optionsLoadError: boolean
   canReadSchedules: boolean
-  canManageSchedules: boolean
+  scheduleActions: TelegramConfigurationData["scheduleActions"]
 }) {
   const router = useRouter()
   const { dictionary } = useLocalization()
@@ -709,242 +893,343 @@ function MarketAnalysisSchedulePanel({
   const operationalSchedules = schedules.filter(
     (schedule) => schedule.status !== "REMOVED"
   )
+  const hasScheduleActions = Object.values(scheduleActions).some(Boolean)
 
-  return (
-    <div className="flex flex-col gap-4 rounded-lg border bg-background p-4">
-      <AppListToolbar>
-        <AppListToolbarLeading>
+  const renderDesktopState = () => {
+    if (!canReadSchedules) {
+      return <AccessLimitedRow colSpan={3} title={t.schedule.accessLimited} />
+    }
+
+    if (scheduleLoadError) {
+      return (
+        <AppListTableEmptyState colSpan={3}>
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <CalendarClock />
+            </EmptyMedia>
+            <EmptyTitle role="alert">{t.schedule.loadError}</EmptyTitle>
+            <EmptyDescription>
+              {t.schedule.loadErrorDescription}
+            </EmptyDescription>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => router.refresh()}
+            >
+              {t.schedule.retry}
+            </Button>
+          </EmptyHeader>
+        </AppListTableEmptyState>
+      )
+    }
+
+    if (operationalSchedules.length === 0) {
+      return (
+        <AppListTableEmptyState colSpan={3}>
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <CalendarClock />
+            </EmptyMedia>
+            <EmptyTitle>{t.schedule.emptyTitle}</EmptyTitle>
+            <EmptyDescription>{t.schedule.emptyDescription}</EmptyDescription>
+          </EmptyHeader>
+        </AppListTableEmptyState>
+      )
+    }
+
+    return operationalSchedules.map((schedule) => (
+      <TableRow key={schedule.id} className="border-border hover:bg-muted/50">
+        <TableCell className="align-top whitespace-normal">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <span className="font-medium text-foreground">{schedule.name}</span>
+            {schedule.status === "DISABLED" ? (
+              <StatusBadge
+                status={schedule.status}
+                label={t.schedule.inactiveStatus}
+              />
+            ) : null}
+          </div>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {formatScheduledAsset(schedule, dictionary)} ·{" "}
+            {schedule.workspaceName}
+          </p>
+        </TableCell>
+        <TableCell className="align-top text-sm whitespace-normal text-muted-foreground">
           <div className="flex min-w-0 flex-col gap-1">
-            <h3 className="text-sm font-semibold text-foreground">
-              {t.schedule.panelTitle}
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              {t.schedule.panelDescription}
+            <span>
+              {schedule.localTimes.join(", ")} · {schedule.timezone}
+            </span>
+            <span>
+              {schedule.destination
+                ? getDestinationLabel(schedule.destination, dictionary)
+                : t.schedule.noDestination}
+              {" · "}
+              {schedule.outputLanguage?.name ??
+                schedule.outputLanguage?.isoCode ??
+                t.schedule.defaultLanguage}
+            </span>
+          </div>
+        </TableCell>
+        <TableCell className="align-top">
+          <ScheduleActionButtons
+            schedule={schedule}
+            scheduleActions={scheduleActions}
+            activeDestinations={activeDestinations}
+            currentWorkspace={currentWorkspace}
+            watchlistAssets={watchlistAssets}
+            watchlistAssetsAvailable={watchlistAssetsAvailable}
+            languages={languages}
+            languageCatalogError={languageCatalogError}
+            layout="desktop"
+          />
+        </TableCell>
+      </TableRow>
+    ))
+  }
+
+  const renderMobileState = () => {
+    if (!canReadSchedules) {
+      return (
+        <p role="status" className="p-4 text-sm text-muted-foreground">
+          {t.schedule.accessLimited}
+        </p>
+      )
+    }
+
+    if (scheduleLoadError) {
+      return (
+        <div className="flex flex-col items-start gap-3 p-4">
+          <div>
+            <p role="alert" className="font-medium">
+              {t.schedule.loadError}
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {t.schedule.loadErrorDescription}
             </p>
           </div>
-          {!canReadSchedules ? null : canManageSchedules ? (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => router.refresh()}
+          >
+            {t.schedule.retry}
+          </Button>
+        </div>
+      )
+    }
+
+    if (operationalSchedules.length === 0) {
+      return (
+        <div className="p-4">
+          <p className="font-medium">{t.schedule.emptyTitle}</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {t.schedule.emptyDescription}
+          </p>
+        </div>
+      )
+    }
+
+    return operationalSchedules.map((schedule) => (
+      <article
+        key={schedule.id}
+        className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-3 border-b p-4 last:border-b-0"
+      >
+        <div className="min-w-0 break-words">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <span className="font-medium text-foreground">{schedule.name}</span>
+            {schedule.status === "DISABLED" ? (
+              <StatusBadge
+                status={schedule.status}
+                label={t.schedule.inactiveStatus}
+              />
+            ) : null}
+          </div>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {formatScheduledAsset(schedule, dictionary)} ·{" "}
+            {schedule.workspaceName}
+          </p>
+          <div className="mt-2 flex min-w-0 flex-col gap-1 text-sm text-muted-foreground">
+            <span>
+              {schedule.localTimes.join(", ")} · {schedule.timezone}
+            </span>
+            <span>
+              {schedule.destination
+                ? getDestinationLabel(schedule.destination, dictionary)
+                : t.schedule.noDestination}
+              {" · "}
+              {schedule.outputLanguage?.name ??
+                schedule.outputLanguage?.isoCode ??
+                t.schedule.defaultLanguage}
+            </span>
+          </div>
+        </div>
+        <ScheduleActionButtons
+          schedule={schedule}
+          scheduleActions={scheduleActions}
+          activeDestinations={activeDestinations}
+          currentWorkspace={currentWorkspace}
+          watchlistAssets={watchlistAssets}
+          watchlistAssetsAvailable={watchlistAssetsAvailable}
+          languages={languages}
+          languageCatalogError={languageCatalogError}
+          layout="mobile"
+        />
+      </article>
+    ))
+  }
+
+  return (
+    <section
+      className="flex flex-col gap-4"
+      aria-labelledby="telegram-schedule-heading"
+    >
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex min-w-0 flex-col gap-1">
+          <h2
+            id="telegram-schedule-heading"
+            tabIndex={-1}
+            className="text-lg font-semibold text-foreground"
+          >
+            {t.schedule.panelTitle}
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            {t.schedule.panelDescription}
+          </p>
+        </div>
+        <div className="flex flex-col items-start gap-1 md:ms-auto md:items-end">
+          {scheduleActions.create ? (
             <CreateTelegramScheduleDialog
               activeDestinations={activeDestinations}
               currentWorkspace={currentWorkspace}
               watchlistAssets={watchlistAssets}
               languages={languages}
               languageCatalogError={languageCatalogError}
-              canManage={canManageSchedules}
+              canCreate={scheduleActions.create}
             />
-          ) : (
+          ) : !hasScheduleActions ? (
             <span className="text-sm text-muted-foreground">
               {t.schedule.readOnlyDescription}
             </span>
-          )}
-        </AppListToolbarLeading>
-        <AppListToolbarTrailing>
-          <Badge
-            className="h-auto max-w-full shrink whitespace-normal"
-            variant="outline"
-          >
-            {t.common.currentWorkspaceScope}
-          </Badge>
-        </AppListToolbarTrailing>
-      </AppListToolbar>
-      <AppListTable className="mt-0">
-        <div className="overflow-x-auto">
-          <Table className="min-w-[72rem]">
-            <TableHeader>
-              <AppListTableHeaderRow>
-                <AppListTableHead className="w-[20%]">
-                  {t.schedule.scheduleColumn}
-                </AppListTableHead>
-                <AppListTableHead className="w-44">
-                  {t.schedule.workspaceColumn}
-                </AppListTableHead>
-                <AppListTableHead className="w-52">
-                  {t.schedule.destinationColumn}
-                </AppListTableHead>
-                <AppListTableHead className="w-44">
-                  {t.schedule.localTimesColumn}
-                </AppListTableHead>
-                <AppListTableHead className="w-44">
-                  {t.schedule.assetColumn}
-                </AppListTableHead>
-                <AppListTableHead className="w-44">
-                  {t.schedule.languageColumn}
-                </AppListTableHead>
-                <AppListTableHead className="w-32">
-                  {t.schedule.statusColumn}
-                </AppListTableHead>
-                <AppListTableHead className="w-32 text-right">
-                  {t.common.actions}
-                </AppListTableHead>
-              </AppListTableHeaderRow>
-            </TableHeader>
-            <TableBody>
-              {!canReadSchedules ? (
-                <AccessLimitedRow
-                  colSpan={8}
-                  title={t.schedule.accessLimited}
-                />
-              ) : scheduleLoadError ? (
-                <AppListTableEmptyState colSpan={8}>
-                  <EmptyHeader>
-                    <EmptyMedia variant="icon">
-                      <CalendarClock />
-                    </EmptyMedia>
-                    <EmptyTitle>{t.schedule.loadError}</EmptyTitle>
-                    <EmptyDescription>
-                      {t.schedule.loadErrorDescription}
-                    </EmptyDescription>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => router.refresh()}
-                    >
-                      {t.schedule.retry}
-                    </Button>
-                  </EmptyHeader>
-                </AppListTableEmptyState>
-              ) : operationalSchedules.length > 0 ? (
-                operationalSchedules.map((schedule) => {
-                  const disableTriggerId = `telegram-schedule-disable-${schedule.id}`
-                  const deleteTriggerId = `telegram-schedule-delete-${schedule.id}`
-
-                  return (
-                    <TableRow
-                      key={schedule.id}
-                      className="border-border transition-colors hover:bg-muted/50"
-                    >
-                      <TableCell className="align-top break-words whitespace-normal">
-                        <div className="flex min-w-0 flex-col gap-1">
-                          <span className="font-medium text-foreground">
-                            {schedule.name}
-                          </span>
-                          <span className="text-sm text-muted-foreground">
-                            {schedule.timezone}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="align-top text-sm text-muted-foreground">
-                        {schedule.workspaceName ??
-                          currentWorkspace?.name ??
-                          t.schedule.currentWorkspaceFallback}
-                      </TableCell>
-                      <TableCell className="align-top text-sm break-words whitespace-normal text-muted-foreground">
-                        {schedule.destination
-                          ? getDestinationLabel(
-                              schedule.destination,
-                              dictionary
-                            )
-                          : t.schedule.noDestination}
-                      </TableCell>
-                      <TableCell className="align-top text-sm whitespace-normal text-muted-foreground">
-                        {schedule.localTimes.join(", ")}
-                      </TableCell>
-                      <TableCell className="align-top text-sm break-words whitespace-normal text-muted-foreground">
-                        {formatScheduledAsset(schedule, dictionary)}
-                      </TableCell>
-                      <TableCell className="align-top text-sm break-words whitespace-normal text-muted-foreground">
-                        {schedule.outputLanguage?.name ??
-                          schedule.outputLanguage?.isoCode ??
-                          t.schedule.defaultLanguage}
-                      </TableCell>
-                      <TableCell className="align-top">
-                        <StatusBadge status={schedule.status} />
-                      </TableCell>
-                      <TableCell className="align-top">
-                        <div className="flex flex-wrap justify-end gap-1">
-                          {canManageSchedules &&
-                          schedule.status === "ACTIVE" ? (
-                            <UpdateTelegramScheduleDialog
-                              schedule={schedule}
-                              activeDestinations={activeDestinations}
-                              currentWorkspace={currentWorkspace}
-                              watchlistAssets={watchlistAssets}
-                              languages={languages}
-                              languageCatalogError={languageCatalogError}
-                              canManage={canManageSchedules}
-                            />
-                          ) : null}
-                          {canManageSchedules &&
-                          schedule.status === "ACTIVE" ? (
-                            <ActionConfirmDialog
-                              intent="warning"
-                              title={t.schedule.disableTitle}
-                              description={t.schedule.disableDescription}
-                              actionLabel={t.common.disable}
-                              triggerLabel={t.schedule.disableTrigger}
-                              restoreFocusId={disableTriggerId}
-                              trigger={
-                                <Button
-                                  id={disableTriggerId}
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon-sm"
-                                  aria-label={t.schedule.disableTrigger}
-                                >
-                                  <CircleAlert data-icon="inline-start" />
-                                </Button>
-                              }
-                              action={() =>
-                                disableTelegramMarketAnalysisSchedule(
-                                  schedule.id
-                                )
-                              }
-                              successMessage={t.schedule.disableSuccess}
-                            />
-                          ) : null}
-                          {canManageSchedules ? (
-                            <ActionConfirmDialog
-                              title={t.schedule.deleteTitle}
-                              description={t.schedule.deleteDescription}
-                              actionLabel={t.schedule.deleteAction}
-                              triggerLabel={t.schedule.deleteTrigger}
-                              restoreFocusId={deleteTriggerId}
-                              trigger={
-                                <Button
-                                  id={deleteTriggerId}
-                                  type="button"
-                                  variant="destructive"
-                                  size="icon-sm"
-                                  aria-label={t.schedule.deleteTrigger}
-                                >
-                                  <Trash2 data-icon="inline-start" />
-                                </Button>
-                              }
-                              action={() =>
-                                deleteTelegramMarketAnalysisSchedule(
-                                  schedule.id
-                                )
-                              }
-                              successMessage={t.schedule.deleteSuccess}
-                            />
-                          ) : null}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })
-              ) : (
-                <AppListTableEmptyState colSpan={8}>
-                  <EmptyHeader>
-                    <EmptyMedia variant="icon">
-                      <CalendarClock />
-                    </EmptyMedia>
-                    <EmptyTitle>{t.schedule.emptyTitle}</EmptyTitle>
-                    <EmptyDescription>
-                      {t.schedule.emptyDescription}
-                    </EmptyDescription>
-                  </EmptyHeader>
-                </AppListTableEmptyState>
-              )}
-            </TableBody>
-          </Table>
+          ) : null}
         </div>
+      </div>
+      {optionsLoadError ? (
+        <SectionReadError message={t.schedule.optionsLoadError} />
+      ) : null}
+      <AppListTable className="mt-0 md:hidden">
+        {renderMobileState()}
       </AppListTable>
+      <AppListTable className="mt-0 hidden md:block">
+        <Table className="w-full table-fixed">
+          <TableHeader>
+            <AppListTableHeaderRow>
+              <AppListTableHead className="w-1/2">
+                {t.schedule.scheduleColumn}
+              </AppListTableHead>
+              <AppListTableHead>{t.schedule.deliveryColumn}</AppListTableHead>
+              <AppListTableHead className="w-20 text-right">
+                {t.common.actions}
+              </AppListTableHead>
+            </AppListTableHeaderRow>
+          </TableHeader>
+          <TableBody>{renderDesktopState()}</TableBody>
+        </Table>
+      </AppListTable>
+    </section>
+  )
+}
+
+function ScheduleActionButtons({
+  schedule,
+  scheduleActions,
+  activeDestinations,
+  currentWorkspace,
+  watchlistAssets,
+  watchlistAssetsAvailable,
+  languages,
+  languageCatalogError,
+  layout,
+}: {
+  schedule: TelegramMarketAnalysisScheduleResponse
+  scheduleActions: TelegramConfigurationData["scheduleActions"]
+  activeDestinations: TelegramDestinationResponse[]
+  currentWorkspace: TelegramConfigurationData["currentWorkspace"]
+  watchlistAssets: TelegramConfigurationData["watchlistAssets"]
+  watchlistAssetsAvailable: boolean
+  languages: TelegramConfigurationData["languages"]
+  languageCatalogError: boolean
+  layout: "mobile" | "desktop"
+}) {
+  const { dictionary } = useLocalization()
+  const t = dictionary.telegram
+  const deleteTriggerId =
+    "telegram-schedule-delete-" + schedule.id + "-" + layout
+  const otherDeleteTriggerId = `telegram-schedule-delete-${schedule.id}-${layout === "mobile" ? "desktop" : "mobile"}`
+
+  return (
+    <div
+      className={
+        layout === "mobile"
+          ? "flex shrink-0 items-start gap-2"
+          : "flex flex-wrap justify-end gap-1"
+      }
+    >
+      {scheduleActions.update && schedule.status === "ACTIVE" ? (
+        <UpdateTelegramScheduleDialog
+          schedule={schedule}
+          activeDestinations={activeDestinations}
+          watchlistAssets={watchlistAssets}
+          languages={languages}
+          languageCatalogError={languageCatalogError}
+          assetEditable={
+            watchlistAssetsAvailable &&
+            currentWorkspace?.id === schedule.workspaceId
+          }
+          assetPreservedReason={
+            !watchlistAssetsAvailable
+              ? "watchlistUnavailable"
+              : currentWorkspace
+                ? "otherWorkspace"
+                : "workspaceUnavailable"
+          }
+          canUpdate={scheduleActions.update}
+        />
+      ) : null}
+      {scheduleActions.delete ? (
+        <ActionConfirmDialog
+          title={t.schedule.deleteTitle}
+          description={t.schedule.deleteDescription}
+          actionLabel={t.schedule.deleteAction}
+          triggerLabel={t.schedule.deleteTrigger}
+          triggerTooltip={t.schedule.deleteTrigger}
+          restoreFocusId={deleteTriggerId}
+          restoreFocusCandidates={[otherDeleteTriggerId]}
+          successFocusId="telegram-schedule-heading"
+          trigger={
+            <Button
+              id={deleteTriggerId}
+              type="button"
+              variant="destructive"
+              size="icon-sm"
+              aria-label={t.schedule.deleteTrigger}
+              aria-describedby={`${deleteTriggerId}-tooltip`}
+              title={t.schedule.deleteTrigger}
+            >
+              <Trash2 data-icon="inline-start" />
+            </Button>
+          }
+          action={() => deleteTelegramMarketAnalysisSchedule(schedule.id)}
+          successMessage={t.schedule.deleteSuccess}
+        />
+      ) : null}
     </div>
   )
 }
+
 function FeatureRouteControls({
   route,
   activeDestinations,
+  destinationsLoadError,
   currentWorkspaceId,
   canReadDestinations,
   canUpdate,
@@ -953,6 +1238,7 @@ function FeatureRouteControls({
 }: {
   route: FeatureRouteView
   activeDestinations: TelegramDestinationResponse[]
+  destinationsLoadError: boolean
   currentWorkspaceId?: number
   canReadDestinations: boolean
   canUpdate: boolean
@@ -961,12 +1247,33 @@ function FeatureRouteControls({
 }) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
-  const destinationFocusTarget = useRef<HTMLElement | null>(null)
+  const destinationFocusTarget = useRef<HTMLButtonElement | HTMLElement | null>(
+    null
+  )
+  const languageFocusTarget = useRef<HTMLButtonElement | null>(null)
+  const switchFocusTarget = useRef<HTMLButtonElement | null>(null)
   const restoreFocusAfterClear = useRef(false)
+  const focusReadbackStatusAfterUpdate = useRef(false)
+  const readbackStatusTarget = useRef<HTMLDivElement | null>(null)
+  const [unverifiedUpdate, setUnverifiedUpdate] = useState<{
+    featureKey: FeatureRouteView["featureKey"]
+    workspaceId: number
+    routeAtUpdate: FeatureRouteView
+  } | null>(null)
+  const updateReadbackUnverified = Boolean(
+    unverifiedUpdate &&
+    (route === unverifiedUpdate.routeAtUpdate ||
+      route.loadError ||
+      route.readbackUnverified ||
+      route.setting?.featureKey !== unverifiedUpdate.featureKey ||
+      route.setting?.workspaceId !== unverifiedUpdate.workspaceId)
+  )
   const controlId = useId()
   const { dictionary, formatMessage } = useLocalization()
   const t = dictionary.telegram
   const isMarketNewsRoute = route.featureKey === "MARKET_NEWS_ALERT"
+  const isEconomicCalendarRoute = route.featureKey === "ECONOMIC_CALENDAR_ALERT"
+  const isPersistedRoute = isMarketNewsRoute || isEconomicCalendarRoute
   const persistedDestinationId = route.setting?.destination?.id.toString() ?? ""
   const persistedLanguageIsoCode = route.setting?.outputLanguage?.isoCode ?? ""
   const [destinationId, setDestinationId] = useState(persistedDestinationId)
@@ -975,37 +1282,106 @@ function FeatureRouteControls({
   )
 
   useEffect(() => {
+    if (!focusReadbackStatusAfterUpdate.current) return
+
+    focusReadbackStatusAfterUpdate.current = false
+    readbackStatusTarget.current?.focus()
+  }, [updateReadbackUnverified])
+
+  useEffect(() => {
     if (!restoreFocusAfterClear.current) return
 
-    destinationFocusTarget.current?.focus()
     restoreFocusAfterClear.current = false
-  }, [persistedDestinationId])
+
+    for (const focusTarget of [
+      destinationFocusTarget.current,
+      languageFocusTarget.current,
+      switchFocusTarget.current,
+    ]) {
+      if (
+        !focusTarget?.isConnected ||
+        (focusTarget instanceof HTMLButtonElement && focusTarget.disabled)
+      ) {
+        continue
+      }
+
+      focusTarget.focus()
+      if (document.activeElement === focusTarget) break
+    }
+  }, [persistedDestinationId, persistedLanguageIsoCode, route.setting?.enabled])
 
   function setDestinationFocusTarget(element: HTMLElement | null) {
     destinationFocusTarget.current = element
   }
 
-  if (isMarketNewsRoute && route.readbackUnverified) {
+  if (isPersistedRoute && route.loadError) {
     return (
       <div
-        className="col-span-2 min-w-0 text-sm text-muted-foreground"
-        role="status"
+        className="col-span-2 flex min-w-0 flex-col gap-2 text-sm"
+        role="alert"
       >
-        {t.routing.readbackUnverified}
+        <span className="text-destructive">{t.routing.settingsLoadError}</span>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="w-fit"
+          onClick={() => router.refresh()}
+        >
+          {t.routing.retry}
+        </Button>
+      </div>
+    )
+  }
+
+  if (
+    isPersistedRoute &&
+    (route.readbackUnverified || updateReadbackUnverified)
+  ) {
+    return (
+      <div className="col-span-2 flex min-w-0 flex-col items-start gap-2">
+        <div
+          ref={readbackStatusTarget}
+          className="min-w-0 text-sm text-muted-foreground"
+          role="status"
+          tabIndex={-1}
+        >
+          {isEconomicCalendarRoute
+            ? t.routing.economicCalendarReadbackUnverified
+            : t.routing.readbackUnverified}
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="w-fit"
+          onClick={() => router.refresh()}
+        >
+          {t.routing.retry}
+        </Button>
       </div>
     )
   }
   const routeSupportsLanguage = route.featureKey !== "SCHEDULED_MARKET_ANALYSIS"
   const savedDestination = route.setting?.destination ?? null
-  const selectedDestinationId = isMarketNewsRoute
+  const savedDestinationLabel = savedDestination
+    ? `${getDestinationLabel(savedDestination, dictionary)}${
+        isEconomicCalendarRoute && savedDestination.status !== "ACTIVE"
+          ? ` — ${t.routing.unavailableDestination}`
+          : ""
+      }`
+    : null
+  const selectedDestinationId = isPersistedRoute
     ? persistedDestinationId
     : destinationId
   const hasSelectedActiveDestination = Boolean(
-    canReadDestinations &&
-    activeDestinations.some(
-      (destination) => destination.id.toString() === selectedDestinationId
-    ) &&
-    (!isMarketNewsRoute || savedDestination?.status === "ACTIVE")
+    selectedDestinationId &&
+    (canReadDestinations
+      ? activeDestinations.some(
+          (destination) => destination.id.toString() === selectedDestinationId
+        )
+      : savedDestination?.status === "ACTIVE") &&
+    (!isPersistedRoute || savedDestination?.status === "ACTIVE")
   )
   const canUpdateRoute = canUpdate && Boolean(currentWorkspaceId)
   const destinationControlDisabled =
@@ -1016,15 +1392,16 @@ function FeatureRouteControls({
   const switchDisabled =
     !canUpdateRoute ||
     isPending ||
-    (!hasSelectedActiveDestination &&
+    (!isEconomicCalendarRoute &&
+      !hasSelectedActiveDestination &&
       (!isMarketNewsRoute || !route.setting?.enabled))
   const languageControlDisabled =
     !canUpdateRoute ||
-    (!isMarketNewsRoute && !hasSelectedActiveDestination) ||
+    (!isPersistedRoute && !hasSelectedActiveDestination) ||
     isPending ||
     languageCatalogError
   const shouldExplainMissingDestination =
-    isMarketNewsRoute &&
+    isPersistedRoute &&
     canUpdateRoute &&
     !route.setting?.enabled &&
     !hasSelectedActiveDestination
@@ -1032,17 +1409,21 @@ function FeatureRouteControls({
     ? t.routing.enableDestinationRequired
     : t.routing.destinationReadRequired
   const switchDescription =
-    isMarketNewsRoute && route.setting && !canUpdate
+    isEconomicCalendarRoute && !canUpdate
       ? t.routing.routeReadOnlyDescription
-      : shouldExplainMissingDestination
-        ? missingDestinationDescription
-        : null
+      : isMarketNewsRoute && route.setting && !canUpdate
+        ? t.routing.routeReadOnlyDescription
+        : shouldExplainMissingDestination
+          ? missingDestinationDescription
+          : null
   const destinationItems = [
-    ...(isMarketNewsRoute && savedDestination
+    ...(isPersistedRoute && savedDestination
       ? [
           {
             value: persistedDestinationId,
-            label: getDestinationLabel(savedDestination, dictionary),
+            label:
+              savedDestinationLabel ??
+              getDestinationLabel(savedDestination, dictionary),
             disabled:
               savedDestination.status !== "ACTIVE" ||
               !canReadDestinations ||
@@ -1055,7 +1436,7 @@ function FeatureRouteControls({
     ...activeDestinations
       .filter(
         (destination) =>
-          !isMarketNewsRoute ||
+          !isPersistedRoute ||
           destination.id.toString() !== persistedDestinationId
       )
       .map((destination) => ({
@@ -1074,10 +1455,10 @@ function FeatureRouteControls({
     successMessage: string
   ) {
     if (!currentWorkspaceId) return
-    if (!isMarketNewsRoute && !destinationId && overrides.destinationId == null)
+    if (!isPersistedRoute && !destinationId && overrides.destinationId == null)
       return
 
-    const requestInput = isMarketNewsRoute
+    const requestInput = isPersistedRoute
       ? {
           featureKey: route.featureKey,
           workspaceId: currentWorkspaceId,
@@ -1097,7 +1478,7 @@ function FeatureRouteControls({
           ...overrides,
         }
     const request =
-      getUpdateTelegramFeatureSettingSchema().safeParse(requestInput)
+      getUpdateTelegramFeatureSettingSchema(dictionary).safeParse(requestInput)
 
     if (!request.success) {
       toast.error(t.routing.updateError)
@@ -1108,9 +1489,26 @@ function FeatureRouteControls({
       const result = await updateTelegramFeatureSetting(request.data)
 
       if (result.success) {
-        if (isMarketNewsRoute && overrides.destinationId === null) {
+        if ("readbackUnverified" in result.data) {
+          focusReadbackStatusAfterUpdate.current = true
+          setUnverifiedUpdate({
+            featureKey: request.data.featureKey,
+            workspaceId: request.data.workspaceId,
+            routeAtUpdate: route,
+          })
+          router.refresh()
+          return
+        }
+
+        setUnverifiedUpdate(null)
+        if (isPersistedRoute && overrides.destinationId === null) {
           restoreFocusAfterClear.current = true
-          destinationFocusTarget.current?.focus()
+          if (
+            destinationFocusTarget.current instanceof HTMLButtonElement &&
+            !destinationFocusTarget.current.disabled
+          ) {
+            destinationFocusTarget.current.focus()
+          }
         }
         toast.success(successMessage)
         router.refresh()
@@ -1123,7 +1521,7 @@ function FeatureRouteControls({
   function handleDestinationChange(value: string | null) {
     if (value === null) return
 
-    if (!isMarketNewsRoute) setDestinationId(value)
+    if (!isPersistedRoute) setDestinationId(value)
     updateRoute(
       { destinationId: Number(value) },
       t.routing.destinationUpdateSuccess
@@ -1134,10 +1532,10 @@ function FeatureRouteControls({
     if (value === null || !routeSupportsLanguage) return
 
     const nextLanguage = value === DEFAULT_FEATURE_LANGUAGE_VALUE ? "" : value
-    if (!isMarketNewsRoute) setOutputLanguageIsoCode(nextLanguage)
+    if (!isPersistedRoute) setOutputLanguageIsoCode(nextLanguage)
     updateRoute(
       {
-        outputLanguageIsoCode: isMarketNewsRoute
+        outputLanguageIsoCode: isPersistedRoute
           ? nextLanguage || null
           : nextLanguage || undefined,
       },
@@ -1148,7 +1546,7 @@ function FeatureRouteControls({
   }
 
   function handleCheckedChange(enabled: boolean) {
-    if (enabled && !hasSelectedActiveDestination) {
+    if (enabled && !hasSelectedActiveDestination && !isEconomicCalendarRoute) {
       toast.error(t.routing.enableDestinationRequired)
       return
     }
@@ -1194,12 +1592,70 @@ function FeatureRouteControls({
   const languageDescriptionId = `telegram-route-language-description-${controlId}`
   const languageDescription = languageCatalogError
     ? t.routing.languageCatalogError
-    : !isMarketNewsRoute && !hasSelectedActiveDestination
+    : !isPersistedRoute && !hasSelectedActiveDestination
       ? t.routing.languageDestinationRequired
       : null
   const switchDescriptionId = `telegram-route-switch-description-${controlId}`
+  const clearDestinationButton =
+    isPersistedRoute && savedDestination ? (
+      <Button
+        type="button"
+        variant="ghost"
+        size={isEconomicCalendarRoute ? "icon-sm" : "icon"}
+        className={
+          isEconomicCalendarRoute
+            ? "size-7 shrink-0"
+            : "absolute end-0 top-1/2 z-10 -translate-y-1/2"
+        }
+        aria-label={formatMessage(t.routing.destinationClearAria, {
+          route: route.label,
+        })}
+        disabled={!canUpdateRoute || isPending}
+        onClick={() =>
+          updateRoute(
+            { destinationId: null, enabled: false },
+            t.routing.destinationClearSuccess
+          )
+        }
+      >
+        <X aria-hidden="true" />
+      </Button>
+    ) : null
   const destinationControl =
-    !savedDestination && activeDestinations.length === 0 ? (
+    isEconomicCalendarRoute && !canReadDestinations ? (
+      <div className="flex min-w-0 items-center justify-between gap-2">
+        <div className="flex min-w-0 flex-col gap-1">
+          <span className="truncate text-sm text-muted-foreground">
+            {savedDestination ? savedDestinationLabel : t.routing.noDestination}
+          </span>
+          <span className="text-xs text-muted-foreground" role="status">
+            {t.routing.destinationReadOnly}
+          </span>
+        </div>
+        {clearDestinationButton}
+      </div>
+    ) : isEconomicCalendarRoute && destinationsLoadError ? (
+      <div className="flex min-w-0 items-center justify-between gap-2">
+        <div className="flex min-w-0 flex-col gap-1">
+          <span className="truncate text-sm text-muted-foreground">
+            {savedDestination ? savedDestinationLabel : t.routing.noDestination}
+          </span>
+          <span role="alert" className="text-xs text-destructive">
+            {t.destination.loadError}
+          </span>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="w-fit"
+            onClick={() => router.refresh()}
+          >
+            {t.routing.retry}
+          </Button>
+        </div>
+        {clearDestinationButton}
+      </div>
+    ) : !savedDestination && activeDestinations.length === 0 ? (
       <span
         ref={setDestinationFocusTarget}
         className="text-sm text-muted-foreground"
@@ -1221,9 +1677,10 @@ function FeatureRouteControls({
             aria-label={formatMessage(t.routing.destinationSelectorAria, {
               route: route.label,
             })}
+            aria-busy={isPending}
             className={cn(
               "w-full",
-              isMarketNewsRoute && savedDestination && "pe-10"
+              isPersistedRoute && savedDestination && "pe-10"
             )}
           >
             <SelectValue placeholder={t.destination.placeholder} />
@@ -1242,25 +1699,14 @@ function FeatureRouteControls({
             </SelectGroup>
           </SelectContent>
         </Select>
-        {isMarketNewsRoute && savedDestination ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="absolute end-0 top-1/2 z-10 -translate-y-1/2"
-            aria-label={formatMessage(t.routing.destinationClearAria, {
-              route: route.label,
-            })}
-            disabled={!canUpdateRoute || isPending}
-            onClick={() =>
-              updateRoute(
-                { destinationId: null, enabled: false },
-                t.routing.destinationClearSuccess
-              )
-            }
-          >
-            <X data-icon="inline-start" aria-hidden="true" />
-          </Button>
+        {clearDestinationButton ? (
+          isEconomicCalendarRoute ? (
+            <div className="absolute end-0 top-1/2 z-10 -translate-y-1/2">
+              {clearDestinationButton}
+            </div>
+          ) : (
+            clearDestinationButton
+          )
         ) : null}
       </div>
     )
@@ -1269,7 +1715,7 @@ function FeatureRouteControls({
       <Select
         items={languageItems}
         value={
-          (isMarketNewsRoute
+          (isPersistedRoute
             ? persistedLanguageIsoCode
             : outputLanguageIsoCode) || DEFAULT_FEATURE_LANGUAGE_VALUE
         }
@@ -1277,7 +1723,9 @@ function FeatureRouteControls({
         disabled={languageControlDisabled}
       >
         <SelectTrigger
+          ref={languageFocusTarget}
           className="w-full"
+          aria-busy={isPending}
           aria-label={formatMessage(t.routing.languageAria, {
             route: route.label,
           })}
@@ -1336,6 +1784,7 @@ function FeatureRouteControls({
           {route.setting?.enabled ? t.common.enabled : t.common.paused}
         </span>
         <Switch
+          ref={switchFocusTarget}
           checked={Boolean(route.setting?.enabled)}
           disabled={switchDisabled}
           onCheckedChange={handleCheckedChange}
@@ -1343,6 +1792,7 @@ function FeatureRouteControls({
             route: route.label,
           })}
           aria-describedby={switchDescription ? switchDescriptionId : undefined}
+          aria-busy={isPending}
         />
       </div>
       {switchDescription ? (
@@ -1352,6 +1802,11 @@ function FeatureRouteControls({
           role="status"
         >
           {switchDescription}
+        </span>
+      ) : null}
+      {isPending ? (
+        <span className="sr-only" role="status">
+          {t.routing.saving}
         </span>
       ) : null}
     </div>

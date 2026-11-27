@@ -1,9 +1,13 @@
 import { z } from "zod"
 
 import type { Dictionary } from "@/app/lib/i18n/dictionary-types"
-import type { LanguageResponse } from "@/app/lib/languages/definitions"
+import {
+  LanguageResponseSchema,
+  type LanguageResponse,
+} from "@/app/lib/languages/definitions"
 import { WorkspaceWatchlistAssetListItemResponse } from "@/app/lib/watchlists/definitions"
 import { WorkspaceResponse } from "@/app/lib/workspaces/definitions"
+import type { BackendWorkspaceSummary } from "@/app/lib/users/definitions"
 
 export const TELEGRAM_FEATURE_KEYS = [
   "ECONOMIC_CALENDAR_ALERT",
@@ -81,36 +85,89 @@ export interface TelegramDestinationResponse {
 
 export interface ScheduledAssetResponse {
   assetId: number
-  assetSymbol?: string
-  assetName?: string
+  assetSymbol: string
+  assetName: string
 }
 
 export interface TelegramMarketAnalysisScheduleResponse {
   id: number
   name: string
   workspaceId: number
-  workspaceName?: string
-  destination?: TelegramDestinationResponse
+  workspaceName: string
+  destination: TelegramDestinationResponse | null
   timezone: string
   localTimes: string[]
-  asset?: ScheduledAssetResponse
-  outputLanguage?: LanguageResponse
+  asset: ScheduledAssetResponse
+  outputLanguage: LanguageResponse | null
   status: TelegramScheduleStatus
   createdDate?: string
   lastModifiedDate?: string
 }
 
-export interface TelegramFeatureSettingResponse {
-  id?: number
-  featureKey?: TelegramFeatureKey
-  workspaceId?: number
-  workspaceName?: string
-  enabled?: boolean
-  destination: TelegramDestinationResponse | null
-  outputLanguage: LanguageResponse | null
-  createdDate?: string
-  lastModifiedDate?: string
-}
+const TelegramFeatureSettingDestinationResponseSchema = z.object({
+  id: z.number().int(),
+  botConnectionId: z.number().int(),
+  botUsername: z.string().optional(),
+  botDisplayLabel: z.string().optional(),
+  chatId: z.string(),
+  chatType: z.enum(["PRIVATE", "GROUP", "SUPERGROUP", "CHANNEL", "UNKNOWN"]),
+  displayLabel: z.string(),
+  chatTitle: z.string().optional(),
+  username: z.string().optional(),
+  status: z.enum(["ACTIVE", "DISABLED", "REMOVED"]),
+  createdDate: z.string().optional(),
+  lastModifiedDate: z.string().optional(),
+})
+
+export const TelegramFeatureSettingResponseSchema = z.object({
+  id: z.number().int().optional(),
+  featureKey: z.enum(TELEGRAM_FEATURE_KEYS).optional(),
+  workspaceId: z.number().int().optional(),
+  workspaceName: z.string().optional(),
+  enabled: z.boolean().optional(),
+  destination: TelegramFeatureSettingDestinationResponseSchema.nullable(),
+  outputLanguage: LanguageResponseSchema.nullable(),
+  createdDate: z.string().optional(),
+  lastModifiedDate: z.string().optional(),
+})
+
+export type TelegramFeatureSettingResponse = z.infer<
+  typeof TelegramFeatureSettingResponseSchema
+>
+
+export const TelegramFeatureSettingReadbackSchema =
+  TelegramFeatureSettingResponseSchema.extend({
+    id: z.number().int(),
+    featureKey: z.enum(TELEGRAM_FEATURE_KEYS),
+    workspaceId: z.number().int(),
+    enabled: z.boolean(),
+  }).superRefine((setting, context) => {
+    if (setting.enabled && setting.destination === null) {
+      context.addIssue({
+        code: "custom",
+        path: ["destination"],
+        message: "Enabled Telegram routing requires a destination.",
+      })
+    }
+
+    if (
+      setting.outputLanguage !== null &&
+      !setting.outputLanguage.isoCode?.trim()
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["outputLanguage", "isoCode"],
+        message: "Saved Telegram routing language is incomplete.",
+      })
+    }
+  })
+
+export type TelegramFeatureSettingReadback = z.infer<
+  typeof TelegramFeatureSettingReadbackSchema
+>
+
+export type TelegramFeatureSettingUpdateResult =
+  TelegramFeatureSettingReadback | { readbackUnverified: true }
 
 export function getTelegramLinkTokenResponseSchema() {
   return z.object({
@@ -137,36 +194,75 @@ export function getCreateTelegramLinkTokenSchema() {
   })
 }
 
-export function getUpdateTelegramFeatureSettingSchema() {
+export function getUpdateTelegramFeatureSettingSchema(dictionary?: Dictionary) {
   const workspaceId = z.coerce.number().int().positive()
   const destinationId = z.coerce.number().int().positive()
 
-  return z.discriminatedUnion("featureKey", [
-    z.object({
-      featureKey: z.literal("MARKET_NEWS_ALERT"),
-      workspaceId,
-      destinationId: z.union([destinationId, z.null()]).optional(),
-      enabled: z.boolean().optional(),
-      outputLanguageIsoCode: z.preprocess(
-        (value) => (typeof value === "string" ? value.trim() || null : value),
-        z.string().trim().nullable().optional()
-      ),
-    }),
-    z.object({
-      featureKey: z.enum([
-        "ECONOMIC_CALENDAR_ALERT",
-        "SCHEDULED_MARKET_ANALYSIS",
-      ]),
-      workspaceId,
-      destinationId,
-      enabled: z.boolean().optional(),
-      outputLanguageIsoCode: z.preprocess(
-        (value) =>
-          typeof value === "string" && value.trim() ? value.trim() : undefined,
-        z.string().optional()
-      ),
-    }),
-  ])
+  return z
+    .discriminatedUnion("featureKey", [
+      z.object({
+        featureKey: z.literal("MARKET_NEWS_ALERT"),
+        workspaceId,
+        destinationId: z.union([destinationId, z.null()]).optional(),
+        enabled: z.boolean().optional(),
+        outputLanguageIsoCode: z.preprocess(
+          (value) => (typeof value === "string" ? value.trim() || null : value),
+          z.string().trim().nullable().optional()
+        ),
+      }),
+      z.object({
+        featureKey: z.literal("ECONOMIC_CALENDAR_ALERT"),
+        workspaceId,
+        destinationId: z.union([destinationId, z.null()]).optional(),
+        enabled: z.boolean().optional(),
+        outputLanguageIsoCode: z.preprocess(
+          (value) => (typeof value === "string" ? value.trim() || null : value),
+          z.string().trim().nullable().optional()
+        ),
+      }),
+      z.object({
+        featureKey: z.literal("SCHEDULED_MARKET_ANALYSIS"),
+        workspaceId,
+        destinationId,
+        enabled: z.boolean().optional(),
+        outputLanguageIsoCode: z.preprocess(
+          (value) =>
+            typeof value === "string" && value.trim()
+              ? value.trim()
+              : undefined,
+          z.string().optional()
+        ),
+      }),
+    ])
+    .superRefine((request, context) => {
+      if (
+        request.featureKey === "SCHEDULED_MARKET_ANALYSIS" &&
+        request.destinationId == null
+      ) {
+        context.addIssue({
+          code: "custom",
+          path: ["destinationId"],
+          message:
+            dictionary?.telegram.destinationRequired ??
+            "Choose an active destination.",
+        })
+        return
+      }
+
+      if (
+        request.featureKey !== "SCHEDULED_MARKET_ANALYSIS" &&
+        request.destinationId === null &&
+        request.enabled !== false
+      ) {
+        context.addIssue({
+          code: "custom",
+          path: ["enabled"],
+          message:
+            dictionary?.telegram.routing.destinationClearRequiresDisabled ??
+            "Disable routing before clearing its destination.",
+        })
+      }
+    })
 }
 
 export function getSaveTelegramMarketAnalysisScheduleSchema(
@@ -222,11 +318,10 @@ export function getSaveTelegramMarketAnalysisScheduleSchema(
             seen.add(value)
           })
         }),
-      outputLanguageIsoCode: z.preprocess(
-        (value) =>
-          typeof value === "string" && value.trim() ? value.trim() : undefined,
-        outputLanguageSchema.optional()
-      ),
+      outputLanguageIsoCode: z.preprocess((value) => {
+        if (value === null || value === undefined) return undefined
+        return typeof value === "string" ? value.trim() || undefined : value
+      }, outputLanguageSchema.optional()),
     })
     .strict()
 }
@@ -269,6 +364,7 @@ export interface TelegramSectionAccess {
   botConnections: boolean
   destinations: boolean
   featureSettings: boolean
+  economicCalendarRouting: boolean
   marketNewsRouting: boolean
   schedules: boolean
   watchlistAssets: boolean
@@ -279,20 +375,35 @@ export interface TelegramManageAccess {
   botConnectionsDelete: boolean
   destinations: boolean
   featureSettings: boolean
+  economicCalendarRouting: boolean
   marketNewsRouting: boolean
-  schedules: boolean
+}
+
+export interface TelegramScheduleActionAccess {
+  create: boolean
+  update: boolean
+  delete: boolean
 }
 
 export interface TelegramConfigurationData {
   botConnections: TelegramBotConnectionReadback[]
   destinations: TelegramDestinationResponse[]
+  destinationsLoadError: boolean
   featureSettings: TelegramFeatureSettingResponse[]
+  featureSettingsLoadError: boolean
+  economicCalendarSettings: TelegramFeatureSettingResponse[]
+  economicCalendarWorkspace: BackendWorkspaceSummary | null
+  economicCalendarLoadError: boolean
   schedules: TelegramMarketAnalysisScheduleResponse[]
   currentWorkspace: WorkspaceResponse | null
   watchlistAssets: WorkspaceWatchlistAssetListItemResponse[]
   languages: LanguageResponse[]
   languageCatalogError: boolean
   scheduleLoadError: boolean
+  botConnectionsLoadError: boolean
+  currentWorkspaceLoadError: boolean
+  watchlistAssetsLoadError: boolean
   sectionAccess: TelegramSectionAccess
   manageAccess: TelegramManageAccess
+  scheduleActions: TelegramScheduleActionAccess
 }

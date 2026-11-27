@@ -3,7 +3,10 @@ import { dirname } from "node:path"
 import { createServer } from "node:http"
 import { URL } from "node:url"
 
-import { contractPathMatches, fixtureContracts } from "../contract/contract-registry.mjs"
+import {
+  contractPathMatches,
+  fixtureContracts,
+} from "../contract/contract-registry.mjs"
 
 const port = Number(process.env.FIXTURE_PORT ?? 4100)
 const logFile = process.env.FIXTURE_LOG_FILE
@@ -649,6 +652,34 @@ function createState() {
         asset: { assetId: 101, assetSymbol: "BTC/USDT", assetName: "Bitcoin" },
         outputLanguage: { id: 1, isoCode: "vi", name: "Tiếng Việt" },
         status: "ACTIVE",
+        createdDate: "2025-01-06T08:00:00.000Z",
+        lastModifiedDate: NOW,
+      },
+      {
+        id: 52,
+        name: "Legacy inactive analysis",
+        workspaceId: secondaryWorkspace.id,
+        workspaceName: secondaryWorkspace.name,
+        destination: null,
+        timezone: "Asia/Bangkok",
+        localTimes: ["18:30"],
+        asset: { assetId: 102, assetSymbol: "ETH/USDT", assetName: "Ethereum" },
+        outputLanguage: null,
+        status: "DISABLED",
+        createdDate: "2025-01-06T08:00:00.000Z",
+        lastModifiedDate: NOW,
+      },
+      {
+        id: 53,
+        name: "Removed analysis",
+        workspaceId: primaryWorkspace.id,
+        workspaceName: primaryWorkspace.name,
+        destination,
+        timezone: "Asia/Ho_Chi_Minh",
+        localTimes: ["12:00"],
+        asset: { assetId: 101, assetSymbol: "BTC/USDT", assetName: "Bitcoin" },
+        outputLanguage: null,
+        status: "REMOVED",
         createdDate: "2025-01-06T08:00:00.000Z",
         lastModifiedDate: NOW,
       },
@@ -4181,8 +4212,36 @@ Which asset did you mean? The available data is limited. Add TSLA to your watchl
 
     return state.destinations
   }
-  if (method === "GET" && pathname === "/telegram/feature-settings")
+  if (method === "GET" && pathname === "/telegram/feature-settings") {
+    const scenario = getScenario(state, method, pathname)
+    if (
+      scenario === "economic-calendar-off-unassigned" ||
+      scenario === "economic-calendar-off-assigned"
+    ) {
+      const setting = state.featureSettings.find(
+        (item) => item.featureKey === "ECONOMIC_CALENDAR_ALERT"
+      )
+      if (setting) {
+        setting.enabled = false
+        setting.destination =
+          scenario === "economic-calendar-off-assigned"
+            ? state.destinations[0]
+            : null
+        setting.outputLanguage =
+          scenario === "economic-calendar-off-assigned"
+            ? { id: 2, isoCode: "en", name: "English" }
+            : null
+      }
+      state.scenarios[`${method} ${pathname}`] = "success"
+    }
+    if (scenario === "economic-calendar-missing-setting") {
+      state.featureSettings = state.featureSettings.filter(
+        (setting) => setting.featureKey !== "ECONOMIC_CALENDAR_ALERT"
+      )
+      state.scenarios[`${method} ${pathname}`] = "success"
+    }
     return state.featureSettings
+  }
   if (method === "GET" && pathname === "/telegram/market-analysis-schedules")
     return state.schedules
   if (method === "GET" && pathname === "/languages") {
@@ -4270,21 +4329,106 @@ Which asset did you mean? The available data is limited. Add TSLA to your watchl
         item.workspaceId === Number(body?.workspaceId)
     )
     if (existing) {
-      existing.enabled = body?.enabled ?? existing.enabled
-      existing.destination = state.destinations.find(
-        (item) => item.id === Number(body?.destinationId)
+      const nextEnabled = body?.enabled ?? existing.enabled
+      const nextDestination = Object.hasOwn(body ?? {}, "destinationId")
+        ? body.destinationId === null
+          ? null
+          : (state.destinations.find(
+              (item) => item.id === Number(body.destinationId)
+            ) ?? null)
+        : existing.destination
+      const nextOutputLanguage = Object.hasOwn(
+        body ?? {},
+        "outputLanguageIsoCode"
       )
-      const outputLanguageIsoCode =
-        typeof body?.outputLanguageIsoCode === "string"
-          ? body.outputLanguageIsoCode.trim()
-          : ""
-      existing.outputLanguage = outputLanguageIsoCode
-        ? state.languages.find((item) => item.isoCode === outputLanguageIsoCode)
-        : undefined
+        ? typeof body.outputLanguageIsoCode === "string" &&
+          body.outputLanguageIsoCode.trim()
+          ? (state.languages.find(
+              (item) => item.isoCode === body.outputLanguageIsoCode.trim()
+            ) ?? null)
+          : null
+        : existing.outputLanguage
+      const destinationIsEligible =
+        nextDestination?.status === "ACTIVE" &&
+        state.botConnections.some(
+          (connection) =>
+            connection.id === nextDestination.botConnectionId &&
+            connection.status === "ACTIVE"
+        )
+
+      if (
+        (body?.destinationId === null && nextEnabled !== false) ||
+        (body?.enabled === true && !destinationIsEligible) ||
+        (Object.hasOwn(body ?? {}, "destinationId") &&
+          body.destinationId !== null &&
+          !destinationIsEligible)
+      ) {
+        return {
+          __status: 400,
+          payload: errorPayload(
+            "Choose an eligible destination",
+            "FIXTURE_VALIDATION"
+          ),
+        }
+      }
+
+      existing.enabled = nextEnabled
+      existing.destination = nextDestination
+      existing.outputLanguage = nextOutputLanguage
       existing.lastModifiedDate = NOW
       return existing
     }
-    return state.featureSettings[0]
+    const nextEnabled = body?.enabled ?? true
+    const nextDestination = Object.hasOwn(body ?? {}, "destinationId")
+      ? body.destinationId === null
+        ? null
+        : (state.destinations.find(
+            (item) => item.id === Number(body.destinationId)
+          ) ?? null)
+      : null
+    const destinationIsEligible =
+      nextDestination?.status === "ACTIVE" &&
+      state.botConnections.some(
+        (connection) =>
+          connection.id === nextDestination.botConnectionId &&
+          connection.status === "ACTIVE"
+      )
+
+    if (
+      (nextEnabled && !destinationIsEligible) ||
+      (nextDestination && !destinationIsEligible)
+    ) {
+      return {
+        __status: 400,
+        payload: errorPayload(
+          "Choose an eligible destination",
+          "FIXTURE_VALIDATION"
+        ),
+      }
+    }
+
+    const created = {
+      id:
+        Math.max(0, ...state.featureSettings.map((setting) => setting.id)) + 1,
+      featureKey: body?.featureKey,
+      workspaceId: Number(body?.workspaceId),
+      workspaceName:
+        state.workspaces.find(
+          (workspace) => workspace.id === Number(body?.workspaceId)
+        )?.name ?? null,
+      enabled: nextEnabled,
+      destination: nextDestination,
+      outputLanguage:
+        typeof body?.outputLanguageIsoCode === "string"
+          ? (state.languages.find(
+              (language) => language.isoCode === body.outputLanguageIsoCode
+            ) ?? null)
+          : null,
+      createdDate: NOW,
+      lastModifiedDate: NOW,
+    }
+    state.featureSettings.push(created)
+    return created
   }
 
   if (method === "POST" && pathname === "/telegram/market-analysis-schedules") {
@@ -4316,7 +4460,7 @@ Which asset did you mean? The available data is limited. Add TSLA to your watchl
   }
 
   const scheduleMatch = pathname.match(
-    /^\/telegram\/market-analysis-schedules\/(\d+)(?:\/disable)?$/
+    /^\/telegram\/market-analysis-schedules\/(\d+)$/
   )
   if (scheduleMatch) {
     const id = Number(scheduleMatch[1])
@@ -4326,7 +4470,6 @@ Which asset did you mean? The available data is limited. Add TSLA to your watchl
         __status: 404,
         payload: errorPayload("Schedule not found", "NOT_FOUND"),
       }
-    if (pathname.endsWith("/disable")) existing.status = "DISABLED"
     if (method === "PUT") {
       existing.name = body?.name ?? existing.name
       existing.localTimes = body?.localTimes ?? existing.localTimes
@@ -4334,7 +4477,7 @@ Which asset did you mean? The available data is limited. Add TSLA to your watchl
     }
     if (method === "DELETE") {
       existing.status = "REMOVED"
-      return { __status: 204 }
+      return { __status: 200 }
     }
     return existing
   }
@@ -4558,6 +4701,7 @@ async function handleControl(request, response, url, body) {
       feedbackScenarios: state.feedbackScenarios,
       permissions: state.permissions,
       aiTaskConfigurations: state.aiTaskConfigurations,
+      schedules: state.schedules,
       newsOutlets: state.newsOutlets,
       marketConversations: state.marketConversations,
       marketConversationTurns: state.marketConversationTurns.map(
