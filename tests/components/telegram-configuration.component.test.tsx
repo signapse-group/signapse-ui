@@ -2371,7 +2371,7 @@ describe("Telegram destination removal", () => {
 
     await user.click(routeDestination)
     expect(
-      screen.getByRole("option", { name: destination.displayLabel })
+      await screen.findByRole("option", { name: destination.displayLabel })
     ).toBeVisible()
     await user.keyboard("{Escape}")
 
