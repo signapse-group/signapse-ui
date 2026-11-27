@@ -170,3 +170,25 @@ Verification on the runtime candidate:
 - `pnpm test:contract` — passed fixture consistency for **89 operations**.
 - `pnpm test:quality` completed lint and typecheck, then Vitest reported **102 files / 927 tests passed** and one unrelated `AccountProfileForm` test timed out at 5 seconds. That same test passed when run alone; no profile code or tests changed.
 - GitHub exact-head `Verify / check` [run 46009894265](https://github.com/signapse-group/signapse-ui/actions/runs/46009894265/job/140542414117) passed. The exact-head Vercel `signapse-ui` Preview check passed and the deployment is Ready. No live feature API request, Telegram delivery test or current browser render was made.
+
+## Review correction follow-up — 2026-11-27
+
+Runtime candidate [`5fd9ce506680be9e7b2bbe8e4f2f2a6590ae994b`](https://github.com/signapse-group/signapse-ui/commit/5fd9ce506680be9e7b2bbe8e4f2f2a6590ae994b) fixes the three findings on the previous PR head:
+
+- The published `PUT /telegram/feature-settings` contract distinguishes `403 USER_INACTIVE` from a missing route permission. The FE returns localized neutral update-error copy for `USER_INACTIVE`, while other 401/403 failures keep the permission message. Regressions cover both responses in Vietnamese and English.
+- After a successful PUT with incomplete response, an empty filtered GET no longer releases controls or presents the old route state. The row stays unverified until a changed render contains a complete setting for the same route and workspace. The regression continues through a later complete matching readback and confirms the controls return then.
+- If the destination list fails to load, Readiness no longer reports the fallback empty list as zero active destinations or “Needs linking”; the Destinations card retains its own error and Retry state.
+
+The dev OpenAPI at `https://dev-api.signapse.cloud/v3/api-docs` was fetched at **2026-11-27 14:29:13 UTC**: HTTP 200, `info.version` `v0`, and no `x-build-revision` header. GET/PUT `/telegram/feature-settings` describe route-specific permissions and owner-workspace scope; the 403 ErrorBody example identifies `USER_INACTIVE` separately. The producer revision could not be matched from this response.
+
+Verification on the runtime candidate:
+
+- The three targeted regressions were observed failing before their fixes, then passing.
+- `pnpm exec vitest run tests/api/telegram-action.test.ts tests/components/telegram-configuration.component.test.tsx --reporter=dot` — **2 files, 98 passed**.
+- `pnpm test:quality` — **passed**: lint had no errors (23 existing warnings outside changed files), typecheck passed, **103 files / 931 tests** passed, contract fixture consistency passed for **89 operations**, and all **5** deployment-verifier tests passed.
+- Prettier check on all four changed source/test files and `git diff --check` — passed.
+- GitHub exact-head `Verify / check` [run 46018921070](https://github.com/signapse-group/signapse-ui/actions/runs/46018921070/job/140573154232) passed. The matching `signapse-ui` Preview [deployment](https://vercel.com/signapse/signapse-ui/E7vwPLA5gVXRDU6Af1yKtDMs4yhP) reached Ready.
+
+The approved [SIGN-32 v2](https://signapse-group.atlassian.net/browse/SIGN-32) PNGs **10308** (wide), **10312** (compact) and **10309** (mobile) were downloaded from Jira again and inspected. A render of this candidate could not be captured: `/en/telegram` returned HTTP 302 to Vercel SSO. The images above remain historical and are not claimed for this candidate. The authorized local Pen Desktop MCP is unavailable on this server; no Pen operation was attempted.
+
+QA should compare the delivered candidate with SIGN-32 v2 at **1520×1024** (expanded sidebar), **1024×768** (collapsed sidebar) and **390×844** (navigation closed), including both themes and native **200%** zoom. Check route-only and route-plus-`workspace:read` loading layouts, Off with and without destination, destination-list failure, incomplete PUT plus empty readback, complete readback, clear/reassignment, keyboard focus, and page overflow. Confirm that protected infrastructure values stay absent and controls remain hidden until a complete matching readback. No live feature API request or Telegram delivery test was made; QA owns these browser-dependent observations on dev.
