@@ -4163,8 +4163,36 @@ Which asset did you mean? The available data is limited. Add TSLA to your watchl
 
     return state.destinations
   }
-  if (method === "GET" && pathname === "/telegram/feature-settings")
+  if (method === "GET" && pathname === "/telegram/feature-settings") {
+    const scenario = getScenario(state, method, pathname)
+    if (
+      scenario === "economic-calendar-off-unassigned" ||
+      scenario === "economic-calendar-off-assigned"
+    ) {
+      const setting = state.featureSettings.find(
+        (item) => item.featureKey === "ECONOMIC_CALENDAR_ALERT"
+      )
+      if (setting) {
+        setting.enabled = false
+        setting.destination =
+          scenario === "economic-calendar-off-assigned"
+            ? state.destinations[0]
+            : null
+        setting.outputLanguage =
+          scenario === "economic-calendar-off-assigned"
+            ? { id: 2, isoCode: "en", name: "English" }
+            : null
+      }
+      state.scenarios[`${method} ${pathname}`] = "success"
+    }
+    if (scenario === "economic-calendar-missing-setting") {
+      state.featureSettings = state.featureSettings.filter(
+        (setting) => setting.featureKey !== "ECONOMIC_CALENDAR_ALERT"
+      )
+      state.scenarios[`${method} ${pathname}`] = "success"
+    }
     return state.featureSettings
+  }
   if (method === "GET" && pathname === "/telegram/market-analysis-schedules")
     return state.schedules
   if (method === "GET" && pathname === "/languages") {
@@ -4250,21 +4278,106 @@ Which asset did you mean? The available data is limited. Add TSLA to your watchl
         item.workspaceId === Number(body?.workspaceId)
     )
     if (existing) {
-      existing.enabled = body?.enabled ?? existing.enabled
-      existing.destination = state.destinations.find(
-        (item) => item.id === Number(body?.destinationId)
+      const nextEnabled = body?.enabled ?? existing.enabled
+      const nextDestination = Object.hasOwn(body ?? {}, "destinationId")
+        ? body.destinationId === null
+          ? null
+          : (state.destinations.find(
+              (item) => item.id === Number(body.destinationId)
+            ) ?? null)
+        : existing.destination
+      const nextOutputLanguage = Object.hasOwn(
+        body ?? {},
+        "outputLanguageIsoCode"
       )
-      const outputLanguageIsoCode =
-        typeof body?.outputLanguageIsoCode === "string"
-          ? body.outputLanguageIsoCode.trim()
-          : ""
-      existing.outputLanguage = outputLanguageIsoCode
-        ? state.languages.find((item) => item.isoCode === outputLanguageIsoCode)
-        : undefined
+        ? typeof body.outputLanguageIsoCode === "string" &&
+          body.outputLanguageIsoCode.trim()
+          ? (state.languages.find(
+              (item) => item.isoCode === body.outputLanguageIsoCode.trim()
+            ) ?? null)
+          : null
+        : existing.outputLanguage
+      const destinationIsEligible =
+        nextDestination?.status === "ACTIVE" &&
+        state.botConnections.some(
+          (connection) =>
+            connection.id === nextDestination.botConnectionId &&
+            connection.status === "ACTIVE"
+        )
+
+      if (
+        (body?.destinationId === null && nextEnabled !== false) ||
+        (body?.enabled === true && !destinationIsEligible) ||
+        (Object.hasOwn(body ?? {}, "destinationId") &&
+          body.destinationId !== null &&
+          !destinationIsEligible)
+      ) {
+        return {
+          __status: 400,
+          payload: errorPayload(
+            "Choose an eligible destination",
+            "FIXTURE_VALIDATION"
+          ),
+        }
+      }
+
+      existing.enabled = nextEnabled
+      existing.destination = nextDestination
+      existing.outputLanguage = nextOutputLanguage
       existing.lastModifiedDate = NOW
       return existing
     }
-    return state.featureSettings[0]
+    const nextEnabled = body?.enabled ?? true
+    const nextDestination = Object.hasOwn(body ?? {}, "destinationId")
+      ? body.destinationId === null
+        ? null
+        : (state.destinations.find(
+            (item) => item.id === Number(body.destinationId)
+          ) ?? null)
+      : null
+    const destinationIsEligible =
+      nextDestination?.status === "ACTIVE" &&
+      state.botConnections.some(
+        (connection) =>
+          connection.id === nextDestination.botConnectionId &&
+          connection.status === "ACTIVE"
+      )
+
+    if (
+      (nextEnabled && !destinationIsEligible) ||
+      (nextDestination && !destinationIsEligible)
+    ) {
+      return {
+        __status: 400,
+        payload: errorPayload(
+          "Choose an eligible destination",
+          "FIXTURE_VALIDATION"
+        ),
+      }
+    }
+
+    const created = {
+      id:
+        Math.max(0, ...state.featureSettings.map((setting) => setting.id)) + 1,
+      featureKey: body?.featureKey,
+      workspaceId: Number(body?.workspaceId),
+      workspaceName:
+        state.workspaces.find(
+          (workspace) => workspace.id === Number(body?.workspaceId)
+        )?.name ?? null,
+      enabled: nextEnabled,
+      destination: nextDestination,
+      outputLanguage:
+        typeof body?.outputLanguageIsoCode === "string"
+          ? (state.languages.find(
+              (language) => language.isoCode === body.outputLanguageIsoCode
+            ) ?? null)
+          : null,
+      createdDate: NOW,
+      lastModifiedDate: NOW,
+    }
+    state.featureSettings.push(created)
+    return created
   }
 
   if (method === "POST" && pathname === "/telegram/market-analysis-schedules") {

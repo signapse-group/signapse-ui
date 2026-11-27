@@ -10,7 +10,10 @@ import {
 import { getWorkspaceWatchlistAssets } from "@/app/api/watchlists/action"
 import { getServerDictionary } from "@/app/lib/i18n/server"
 import { hasPermission } from "@/app/lib/permissions"
-import { getCurrentPermissions } from "@/app/lib/permissions-server"
+import {
+  getCurrentPermissions,
+  getCurrentWorkspaceSummary,
+} from "@/app/lib/permissions-server"
 import {
   canAccessTelegramConfiguration,
   TELEGRAM_BOT_CONNECTION_CREATE_PERMISSION,
@@ -54,7 +57,16 @@ export default async function TelegramPage() {
   }
 
   return (
-    <Suspense fallback={<TelegramConfigurationSkeleton />}>
+    <Suspense
+      fallback={
+        <TelegramConfigurationSkeleton
+          sectionAccess={sectionAccess}
+          canReadWorkspace={hasPermission(permissions, "workspace:read")}
+          canCreateBotConnections={canCreateBotConnections}
+          canManageDestinations={manageAccess.destinations}
+        />
+      }
+    >
       <TelegramConfigurationContent
         sectionAccess={sectionAccess}
         manageAccess={manageAccess}
@@ -79,6 +91,9 @@ async function TelegramConfigurationContent({
   const currentWorkspace = canReadWorkspace
     ? await getActiveWorkspaceForCurrentUser()
     : null
+  const economicCalendarWorkspace = sectionAccess.economicCalendarRouting
+    ? (currentWorkspace ?? (await getCurrentWorkspaceSummary()))
+    : null
 
   const schedulesPromise = sectionAccess.schedules
     ? getTelegramMarketAnalysisSchedules()
@@ -88,26 +103,51 @@ async function TelegramConfigurationContent({
 
   const languagesPromise =
     sectionAccess.schedules ||
-    sectionAccess.featureSettings ||
-    sectionAccess.marketNewsRouting
+    sectionAccess.marketNewsRouting ||
+    sectionAccess.economicCalendarRouting
       ? getLanguages()
           .then((catalog) => ({ data: catalog.languages, error: false }))
           .catch(() => ({ data: [], error: true }))
       : Promise.resolve({ data: [], error: false })
 
+  const destinationsPromise = sectionAccess.destinations
+    ? getTelegramDestinations()
+        .then((data) => ({ data, error: false }))
+        .catch(() => ({ data: [], error: true }))
+    : Promise.resolve({ data: [], error: false })
+
+  const marketNewsSettingsPromise = sectionAccess.marketNewsRouting
+    ? getTelegramFeatureSettings({ featureKey: "MARKET_NEWS_ALERT" })
+        .then((data) => ({ data, error: false }))
+        .catch(() => ({ data: [], error: true }))
+    : Promise.resolve({ data: [], error: false })
+
+  const economicCalendarSettingsPromise =
+    sectionAccess.economicCalendarRouting && economicCalendarWorkspace
+      ? getTelegramFeatureSettings({
+          workspaceId: economicCalendarWorkspace.id,
+          featureKey: "ECONOMIC_CALENDAR_ALERT",
+        })
+          .then((data) => ({ data, error: false }))
+          .catch(() => ({ data: [], error: true }))
+      : Promise.resolve({
+          data: [],
+          error: sectionAccess.economicCalendarRouting,
+        })
+
   const [
     botConnections,
-    destinations,
-    featureSettings,
+    destinationsResult,
+    marketNewsSettingsResult,
+    economicCalendarSettingsResult,
     schedulesResult,
     watchlistAssetsPage,
     languagesResult,
   ] = await Promise.all([
     sectionAccess.botConnections ? getTelegramBotConnections() : [],
-    sectionAccess.destinations ? getTelegramDestinations() : [],
-    sectionAccess.featureSettings || sectionAccess.marketNewsRouting
-      ? getTelegramFeatureSettings()
-      : [],
+    destinationsPromise,
+    marketNewsSettingsPromise,
+    economicCalendarSettingsPromise,
     schedulesPromise,
     sectionAccess.watchlistAssets && currentWorkspace
       ? getWorkspaceWatchlistAssets(WATCHLIST_ASSET_SEARCH)
@@ -119,8 +159,13 @@ async function TelegramConfigurationContent({
     <TelegramConfigurationPage
       data={{
         botConnections,
-        destinations,
-        featureSettings,
+        destinations: destinationsResult.data,
+        destinationsLoadError: destinationsResult.error,
+        featureSettings: marketNewsSettingsResult.data,
+        featureSettingsLoadError: marketNewsSettingsResult.error,
+        economicCalendarSettings: economicCalendarSettingsResult.data,
+        economicCalendarWorkspace,
+        economicCalendarLoadError: economicCalendarSettingsResult.error,
         schedules: schedulesResult.data,
         currentWorkspace,
         watchlistAssets: watchlistAssetsPage?.content ?? [],

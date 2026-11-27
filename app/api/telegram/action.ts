@@ -17,6 +17,7 @@ import { isSelectableLanguage } from "@/app/lib/languages/definitions"
 import {
   CreateTelegramBotConnectionRequest,
   CreateTelegramLinkTokenRequest,
+  TelegramFeatureSettingResponseSchema,
   getCreateTelegramBotConnectionSchema,
   getCreateTelegramLinkTokenSchema,
   getTelegramLinkTokenResponseSchema,
@@ -28,10 +29,15 @@ import {
   telegramBotConnectionsReadbackResponseSchema,
   TelegramBotConnectionReadback,
   TelegramDestinationResponse,
-  TelegramFeatureSettingResponse,
+  TelegramFeatureSettingReadbackSchema,
+  TelegramFeatureSettingUpdateResult,
   TelegramLinkTokenResponse,
   TelegramMarketAnalysisScheduleResponse,
   UpdateTelegramFeatureSettingRequest,
+} from "@/app/lib/telegram/definitions"
+import type {
+  TelegramFeatureKey,
+  TelegramFeatureSettingResponse,
 } from "@/app/lib/telegram/definitions"
 
 async function getTelegramDictionary() {
@@ -140,12 +146,26 @@ export async function getTelegramDestinations(): Promise<
   )
 }
 
-export async function getTelegramFeatureSettings(): Promise<
-  TelegramFeatureSettingResponse[]
-> {
-  return fetchAuthenticated<TelegramFeatureSettingResponse[]>(
-    "/telegram/feature-settings"
+export async function getTelegramFeatureSettings({
+  workspaceId,
+  featureKey,
+}: {
+  workspaceId?: number
+  featureKey?: TelegramFeatureKey
+} = {}): Promise<TelegramFeatureSettingResponse[]> {
+  const filters = [
+    workspaceId === undefined ? null : `workspace.id eq ${workspaceId}`,
+    featureKey === undefined ? null : `featureKey eq '${featureKey}'`,
+  ].filter((filter): filter is string => filter !== null)
+  const query = new URLSearchParams()
+
+  if (filters.length > 0) query.set("$filter", filters.join(" and "))
+  const queryString = query.toString()
+
+  const response = await fetchAuthenticated<unknown>(
+    `/telegram/feature-settings${queryString ? `?${queryString}` : ""}`
   )
+  return z.array(TelegramFeatureSettingResponseSchema).parse(response)
 }
 
 export async function getTelegramMarketAnalysisSchedules(): Promise<
@@ -411,9 +431,10 @@ export async function deleteTelegramDestination(
 
 export async function updateTelegramFeatureSetting(
   request: UpdateTelegramFeatureSettingRequest
-): Promise<ActionResult<TelegramFeatureSettingResponse>> {
+): Promise<ActionResult<TelegramFeatureSettingUpdateResult>> {
   const dictionary = await getTelegramDictionary()
-  const parsed = getUpdateTelegramFeatureSettingSchema().safeParse(request)
+  const parsed =
+    getUpdateTelegramFeatureSettingSchema(dictionary).safeParse(request)
 
   if (!parsed.success) {
     return {
@@ -423,21 +444,60 @@ export async function updateTelegramFeatureSetting(
   }
 
   try {
-    const data = await fetchAuthenticated<TelegramFeatureSettingResponse>(
+    const response = await fetchAuthenticated<unknown>(
       "/telegram/feature-settings",
       {
         method: "PUT",
         body: JSON.stringify(parsed.data),
       }
     )
-
     revalidateTelegramConfiguration()
 
-    return { success: true, data }
+    const responseReadback =
+      TelegramFeatureSettingReadbackSchema.safeParse(response)
+    if (
+      responseReadback.success &&
+      responseReadback.data.featureKey === parsed.data.featureKey &&
+      responseReadback.data.workspaceId === parsed.data.workspaceId
+    ) {
+      return { success: true, data: responseReadback.data }
+    }
+
+    try {
+      const settings = await getTelegramFeatureSettings({
+        workspaceId: parsed.data.workspaceId,
+        featureKey: parsed.data.featureKey,
+      })
+      const savedSetting = settings.find(
+        (setting) =>
+          setting.featureKey === parsed.data.featureKey &&
+          setting.workspaceId === parsed.data.workspaceId
+      )
+      const savedReadback =
+        TelegramFeatureSettingReadbackSchema.safeParse(savedSetting)
+
+      if (savedReadback.success) {
+        return { success: true, data: savedReadback.data }
+      }
+    } catch {
+      // A successful write with unreadable readback must not leave old state authoritative.
+    }
+
+    return { success: true, data: { readbackUnverified: true } }
   } catch (error: unknown) {
+    const apiError =
+      error instanceof Error ? (error as BackendApiError) : undefined
+
     return {
       success: false,
-      error: getActionError(error, dictionary.telegram.routing.updateError),
+      error:
+        error instanceof z.ZodError
+          ? dictionary.telegram.routing.updateError
+          : apiError?.code === "USER_INACTIVE"
+            ? dictionary.telegram.routing.updateError
+            : apiError?.status === 401 || apiError?.status === 403
+              ? dictionary.telegram.routing.updatePermissionDenied
+              : dictionary.telegram.routing.updateError,
     }
   }
 }
