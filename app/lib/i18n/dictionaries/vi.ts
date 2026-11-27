@@ -2587,8 +2587,23 @@ export const vi = {
       enabledColumn: "Bật gửi",
       accessLimited: "Không có quyền xem định tuyến",
       noWorkspaceSelected: "Chưa chọn không gian",
+      noSavedWorkspaceSettings:
+        "Chưa có cấu hình định tuyến đã lưu trong các không gian của bạn.",
+      readbackUnverified:
+        "Chưa thể xác minh cấu hình tuyến tin thị trường đã lưu. Hãy tải lại trước khi thay đổi.",
+      readbackWorkspaceUnknown: "Chưa xác định được không gian làm việc",
+      workspaceIdFallback: "Không gian {id}",
       destinationUpdateError: "Không thể cập nhật điểm nhận cho định tuyến.",
       destinationUpdateSuccess: "Đã cập nhật điểm nhận định tuyến.",
+      destinationSelectorAria: "Điểm nhận cho {route}",
+      destinationClearAria: "Bỏ điểm nhận của {route}",
+      destinationClearSuccess: "Đã bỏ điểm nhận và tắt định tuyến.",
+      enableDestinationRequired:
+        "Hãy chọn một điểm nhận đang hoạt động trước khi bật định tuyến.",
+      destinationReadRequired:
+        "Cần quyền xem điểm nhận để chọn điểm nhận hợp lệ trước khi bật định tuyến.",
+      routeReadOnlyDescription:
+        "Bạn có thể xem cấu hình nhưng không có quyền thay đổi định tuyến này.",
       statusUpdateError: "Không thể cập nhật trạng thái định tuyến.",
       enabledSuccess: "Đã bật định tuyến Telegram.",
       disabledSuccess: "Đã tạm dừng định tuyến Telegram.",
@@ -2609,6 +2624,7 @@ export const vi = {
       updateError: "Không thể cập nhật định tuyến Telegram.",
     },
     schedule: {
+      sectionTitle: "Phân tích theo lịch",
       panelTitle: "Lịch gửi phân tích",
       panelDescription:
         "Gửi bản phân tích AI theo giờ địa phương cho một tài sản trong danh sách theo dõi.",

@@ -27,6 +27,9 @@ const { testDictionary } = vi.hoisted(() => ({
         disableError: "Schedule disable failed",
         deleteError: "Schedule delete failed",
       },
+      routing: {
+        updateError: "Route update failed",
+      },
       bot: {
         deleteError: "Could not remove the Telegram bot.",
         deleteBlockedByDestinations:
@@ -196,6 +199,8 @@ describe("Telegram scheduled asset analysis actions", () => {
       featureKey: "ECONOMIC_CALENDAR_ALERT" as const,
       workspaceId: 7,
       enabled: true,
+      destination: null,
+      outputLanguage: null,
     }
     vi.mocked(fetchAuthenticated).mockResolvedValue(featureResponse)
 
@@ -242,6 +247,68 @@ describe("Telegram scheduled asset analysis actions", () => {
         }),
       }
     )
+  })
+
+  it("sends sparse market-news updates with nullable destination and language", async () => {
+    const savedSetting = {
+      id: 42,
+      featureKey: "MARKET_NEWS_ALERT" as const,
+      workspaceId: 7,
+      enabled: false,
+      destination: null,
+      outputLanguage: null,
+    }
+    vi.mocked(fetchAuthenticated).mockResolvedValue(savedSetting)
+
+    await expect(
+      updateTelegramFeatureSetting({
+        featureKey: "MARKET_NEWS_ALERT",
+        workspaceId: 7,
+        destinationId: null,
+        enabled: false,
+      })
+    ).resolves.toEqual({ success: true, data: savedSetting })
+    expect(fetchAuthenticated).toHaveBeenLastCalledWith(
+      "/telegram/feature-settings",
+      {
+        method: "PUT",
+        body: JSON.stringify({
+          featureKey: "MARKET_NEWS_ALERT",
+          workspaceId: 7,
+          destinationId: null,
+          enabled: false,
+        }),
+      }
+    )
+
+    await updateTelegramFeatureSetting({
+      featureKey: "MARKET_NEWS_ALERT",
+      workspaceId: 7,
+      outputLanguageIsoCode: "  ",
+    })
+    expect(fetchAuthenticated).toHaveBeenLastCalledWith(
+      "/telegram/feature-settings",
+      {
+        method: "PUT",
+        body: JSON.stringify({
+          featureKey: "MARKET_NEWS_ALERT",
+          workspaceId: 7,
+          outputLanguageIsoCode: null,
+        }),
+      }
+    )
+
+    vi.mocked(fetchAuthenticated).mockClear()
+    const invalid = await updateTelegramFeatureSetting({
+      featureKey: "ECONOMIC_CALENDAR_ALERT",
+      workspaceId: 7,
+      destinationId: 0,
+    })
+    expect(invalid).toEqual({
+      success: false,
+      error: expect.any(String),
+    })
+    expect(fetchAuthenticated).not.toHaveBeenCalled()
   })
 
   it("disables and deletes schedules through their mutation endpoints", async () => {
