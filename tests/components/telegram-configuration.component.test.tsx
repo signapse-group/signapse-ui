@@ -1431,6 +1431,12 @@ describe("Telegram bot connections", () => {
       })
     )
 
+    expect(
+      within(dialog).getByRole("status", {
+        name: viDictionary.common.loading,
+      })
+    ).toBeInTheDocument()
+
     await waitFor(() =>
       expect(createTelegramBotConnection).toHaveBeenCalledTimes(1)
     )

@@ -405,7 +405,10 @@ function ConnectBotDialog() {
             </DialogClose>
             <Button type="submit" disabled={isPending}>
               {isPending ? (
-                <Spinner data-icon="inline-start" />
+                <Spinner
+                  aria-label={dictionary.common.loading}
+                  data-icon="inline-start"
+                />
               ) : (
                 <Send data-icon="inline-start" />
               )}
