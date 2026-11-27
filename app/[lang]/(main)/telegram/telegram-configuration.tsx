@@ -653,7 +653,7 @@ function ReadinessSummary({
           },
         ]
       : []),
-    ...(data.sectionAccess.destinations
+    ...(data.sectionAccess.destinations && !data.destinationsLoadError
       ? [
           {
             label: t.readiness.destinations,
@@ -1158,9 +1158,19 @@ function FeatureRouteControls({
   const restoreFocusAfterClear = useRef(false)
   const focusReadbackStatusAfterUpdate = useRef(false)
   const readbackStatusTarget = useRef<HTMLDivElement | null>(null)
-  const previousRoute = useRef(route)
-  const [updateReadbackUnverified, setUpdateReadbackUnverified] =
-    useState(false)
+  const [unverifiedUpdate, setUnverifiedUpdate] = useState<{
+    featureKey: FeatureRouteView["featureKey"]
+    workspaceId: number
+    routeAtUpdate: FeatureRouteView
+  } | null>(null)
+  const updateReadbackUnverified = Boolean(
+    unverifiedUpdate &&
+    (route === unverifiedUpdate.routeAtUpdate ||
+      route.loadError ||
+      route.readbackUnverified ||
+      route.setting?.featureKey !== unverifiedUpdate.featureKey ||
+      route.setting?.workspaceId !== unverifiedUpdate.workspaceId)
+  )
   const controlId = useId()
   const { dictionary, formatMessage } = useLocalization()
   const t = dictionary.telegram
@@ -1173,13 +1183,6 @@ function FeatureRouteControls({
   const [outputLanguageIsoCode, setOutputLanguageIsoCode] = useState(
     persistedLanguageIsoCode
   )
-
-  useEffect(() => {
-    if (previousRoute.current === route) return
-
-    previousRoute.current = route
-    setUpdateReadbackUnverified(false)
-  }, [route])
 
   useEffect(() => {
     if (!focusReadbackStatusAfterUpdate.current) return
@@ -1391,11 +1394,16 @@ function FeatureRouteControls({
       if (result.success) {
         if ("readbackUnverified" in result.data) {
           focusReadbackStatusAfterUpdate.current = true
-          setUpdateReadbackUnverified(true)
+          setUnverifiedUpdate({
+            featureKey: request.data.featureKey,
+            workspaceId: request.data.workspaceId,
+            routeAtUpdate: route,
+          })
           router.refresh()
           return
         }
 
+        setUnverifiedUpdate(null)
         if (isPersistedRoute && overrides.destinationId === null) {
           restoreFocusAfterClear.current = true
           if (

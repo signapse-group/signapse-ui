@@ -73,6 +73,10 @@ vi.mock("next/cache", () => ({
 import { fetchAuthenticated } from "@/app/api/auth/action"
 import { fetchAuthenticatedWithStatus } from "@/app/api/auth/action"
 import { getLanguages } from "@/app/api/languages/action"
+import { getDictionary } from "@/app/lib/i18n/dictionaries"
+import { en as enDictionary } from "@/app/lib/i18n/dictionaries/en"
+import { getRequestLocale } from "@/app/lib/i18n/server"
+import { vi as viDictionary } from "@/app/lib/i18n/dictionaries/vi"
 import {
   createTelegramBotConnection,
   createTelegramLinkToken,
@@ -502,6 +506,49 @@ describe("Telegram scheduled asset analysis actions", () => {
     })
     expect(revalidatePath).not.toHaveBeenCalled()
   })
+
+  it.each([
+    ["vi", viDictionary],
+    ["en", enDictionary],
+  ] as const)(
+    "distinguishes inactive accounts from route permission failures in %s",
+    async (locale, dictionary) => {
+      vi.mocked(getRequestLocale)
+        .mockResolvedValueOnce(locale)
+        .mockResolvedValueOnce(locale)
+      vi.mocked(getDictionary)
+        .mockResolvedValueOnce(dictionary)
+        .mockResolvedValueOnce(dictionary)
+      vi.mocked(fetchAuthenticated).mockRejectedValueOnce(
+        backendError("This account is inactive.", 403, "USER_INACTIVE")
+      )
+
+      await expect(
+        updateTelegramFeatureSetting({
+          featureKey: "ECONOMIC_CALENDAR_ALERT",
+          workspaceId: 7,
+          enabled: false,
+        })
+      ).resolves.toEqual({
+        success: false,
+        error: dictionary.telegram.routing.updateError,
+      })
+
+      vi.mocked(fetchAuthenticated).mockRejectedValueOnce(
+        backendError("Missing route permission", 403)
+      )
+      await expect(
+        updateTelegramFeatureSetting({
+          featureKey: "ECONOMIC_CALENDAR_ALERT",
+          workspaceId: 7,
+          enabled: false,
+        })
+      ).resolves.toEqual({
+        success: false,
+        error: dictionary.telegram.routing.updatePermissionDenied,
+      })
+    }
+  )
 
   it("disables and deletes schedules through their mutation endpoints", async () => {
     vi.mocked(fetchAuthenticated).mockResolvedValue(scheduleResponse)

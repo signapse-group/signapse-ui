@@ -493,9 +493,11 @@ export async function updateTelegramFeatureSetting(
       error:
         error instanceof z.ZodError
           ? dictionary.telegram.routing.updateError
-          : apiError?.status === 401 || apiError?.status === 403
-            ? dictionary.telegram.routing.updatePermissionDenied
-            : dictionary.telegram.routing.updateError,
+          : apiError?.code === "USER_INACTIVE"
+            ? dictionary.telegram.routing.updateError
+            : apiError?.status === 401 || apiError?.status === 403
+              ? dictionary.telegram.routing.updatePermissionDenied
+              : dictionary.telegram.routing.updateError,
     }
   }
 }

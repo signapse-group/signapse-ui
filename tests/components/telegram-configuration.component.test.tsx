@@ -340,6 +340,27 @@ describe("Telegram configuration loading permissions", () => {
     )
     expect(screen.getByTestId("telegram-readiness-summary")).toBeInTheDocument()
   })
+
+  it("does not report an empty destination list after its read failed", () => {
+    renderConfiguration({
+      ...data,
+      destinations: [],
+      destinationsLoadError: true,
+    })
+
+    const summary = screen.getByTestId("telegram-readiness-summary")
+    expect(
+      within(summary).queryByText(
+        viDictionary.telegram.readiness.activeDestinations.replace(
+          "{count}",
+          "0"
+        )
+      )
+    ).not.toBeInTheDocument()
+    expect(
+      within(summary).queryByText(viDictionary.telegram.readiness.needsLink)
+    ).not.toBeInTheDocument()
+  })
 })
 
 describe("Economic calendar route permissions and persistence", () => {
@@ -478,7 +499,7 @@ describe("Economic calendar route permissions and persistence", () => {
     )
   })
 
-  it("hides the saved controls until a partial 200 can be read back", async () => {
+  it("keeps saved controls hidden until a complete matching setting is read back", async () => {
     const user = userEvent.setup()
     const view = renderConfiguration(
       economicCalendarData([economicCalendarSetting], {
@@ -520,6 +541,32 @@ describe("Economic calendar route permissions and persistence", () => {
       })
     )
     expect(routerRefresh).toHaveBeenCalledTimes(2)
+
+    view.rerender(
+      <LocalizationProvider locale="vi" dictionary={viDictionary}>
+        <TelegramConfigurationPage
+          data={economicCalendarData([], {
+            destinations: [destination],
+            sectionAccess: {
+              ...economicCalendarData().sectionAccess,
+              destinations: true,
+            },
+          })}
+        />
+      </LocalizationProvider>
+    )
+    const emptyReadbackCard = screen.getByTestId(
+      "economic-calendar-routing-card"
+    )
+    expect(within(emptyReadbackCard).getByRole("status")).toHaveTextContent(
+      viDictionary.telegram.routing.economicCalendarReadbackUnverified
+    )
+    expect(
+      within(emptyReadbackCard).queryByRole("switch")
+    ).not.toBeInTheDocument()
+    expect(
+      within(emptyReadbackCard).queryByRole("combobox")
+    ).not.toBeInTheDocument()
 
     view.rerender(
       <LocalizationProvider locale="vi" dictionary={viDictionary}>
