@@ -105,6 +105,8 @@ type FeatureRouteView = RouteDefinition & {
 }
 
 const DEFAULT_FEATURE_LANGUAGE_VALUE = "__default__"
+const TELEGRAM_CONFIGURATION_LAYOUT_CLASS =
+  "grid w-full min-w-0 gap-6 min-[1440px]:grid-cols-[minmax(0,1.5fr)_minmax(22rem,1fr)] lg:grid-cols-[minmax(0,1.15fr)_minmax(20rem,1fr)]"
 
 function getRouteDefinitions(dictionary: Dictionary): RouteDefinition[] {
   const routes = dictionary.telegram.routeDefinitions
@@ -276,7 +278,7 @@ export function TelegramConfigurationPage({
   )
 
   return (
-    <div className="grid w-full min-w-0 gap-6 min-[1440px]:grid-cols-[minmax(0,1.5fr)_minmax(22rem,1fr)] lg:grid-cols-[minmax(0,1.15fr)_minmax(20rem,1fr)]">
+    <div className={TELEGRAM_CONFIGURATION_LAYOUT_CLASS}>
       <div className="flex min-w-0 flex-col gap-6">
         <FeatureRoutingSection
           routes={visibleRoutes}
@@ -361,8 +363,14 @@ export function TelegramConfigurationPage({
 
 export function TelegramConfigurationSkeleton({
   sectionAccess,
+  canReadWorkspace = false,
+  canCreateBotConnections = false,
+  canManageDestinations = false,
 }: {
   sectionAccess: TelegramConfigurationData["sectionAccess"]
+  canReadWorkspace?: boolean
+  canCreateBotConnections?: boolean
+  canManageDestinations?: boolean
 }) {
   const economicCalendarOnly =
     sectionAccess.economicCalendarRouting &&
@@ -374,30 +382,93 @@ export function TelegramConfigurationSkeleton({
 
   if (economicCalendarOnly) {
     return (
-      <section className="flex min-w-0 flex-col gap-4">
-        <div className="space-y-2">
-          <Skeleton className="h-5 w-36" />
-          <Skeleton className="h-4 w-full max-w-xl" />
+      <div
+        className={TELEGRAM_CONFIGURATION_LAYOUT_CLASS}
+        data-testid="telegram-configuration-skeleton"
+        aria-busy="true"
+      >
+        <div className="flex min-w-0 flex-col gap-6">
+          <section className="flex min-w-0 flex-col gap-4">
+            <div className="space-y-2" aria-hidden="true">
+              <Skeleton className="h-5 w-36" />
+              <Skeleton className="h-4 w-full max-w-xl" />
+            </div>
+            <AppListTable className="mt-0">
+              <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 p-4 sm:grid-cols-2">
+                <div className="min-w-0 space-y-2" aria-hidden="true">
+                  <Skeleton className="h-5 w-48 max-w-full" />
+                  <Skeleton className="h-4 w-56 max-w-full" />
+                </div>
+                <Skeleton
+                  className="h-8 w-32 justify-self-end"
+                  aria-hidden="true"
+                />
+                <div
+                  className="col-span-2 grid gap-3 md:grid-cols-2"
+                  aria-hidden="true"
+                >
+                  <Skeleton className="h-9 w-full" />
+                  <Skeleton className="h-9 w-full" />
+                </div>
+              </div>
+            </AppListTable>
+          </section>
         </div>
-        <AppListTable className="mt-0">
-          <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 p-4 sm:grid-cols-2">
-            <div className="min-w-0 space-y-2">
-              <Skeleton className="h-5 w-48 max-w-full" />
-              <Skeleton className="h-4 w-56 max-w-full" />
+        <div className="flex min-w-0 flex-col gap-6">
+          <section
+            className="flex min-w-0 flex-col gap-4"
+            data-testid="telegram-infrastructure-skeleton"
+            aria-hidden="true"
+          >
+            <div className="space-y-2">
+              <Skeleton className="h-5 w-36" />
+              <Skeleton className="h-4 w-full" />
             </div>
-            <Skeleton className="h-8 w-32 justify-self-end" />
-            <div className="col-span-2 grid gap-3 md:grid-cols-2">
-              <Skeleton className="h-9 w-full" />
-              <Skeleton className="h-9 w-full" />
+            <div className="grid min-w-0 gap-4">
+              {[canCreateBotConnections, canManageDestinations].map(
+                (hasAction, cardIndex) => (
+                  <Card key={cardIndex} className="min-w-0">
+                    <CardHeader>
+                      <Skeleton className="h-5 w-32" />
+                      <Skeleton className="h-4 w-full" />
+                      {hasAction ? (
+                        <CardAction>
+                          <Skeleton className="h-9 w-28" />
+                        </CardAction>
+                      ) : null}
+                    </CardHeader>
+                    <CardContent className="flex min-w-0 flex-col gap-3">
+                      <Skeleton className="h-12 w-full" />
+                    </CardContent>
+                  </Card>
+                )
+              )}
             </div>
-          </div>
-        </AppListTable>
-      </section>
+          </section>
+          {canReadWorkspace ? (
+            <div
+              className="grid gap-3 min-[1440px]:grid-cols-2"
+              data-testid="telegram-readiness-skeleton"
+              aria-hidden="true"
+            >
+              <Card size="sm" className="min-w-0">
+                <CardHeader>
+                  <Skeleton className="h-5 w-28" />
+                  <Skeleton className="h-4 w-full" />
+                  <CardAction>
+                    <Skeleton className="h-6 w-20" />
+                  </CardAction>
+                </CardHeader>
+              </Card>
+            </div>
+          ) : null}
+        </div>
+      </div>
     )
   }
 
   return (
-    <div className="grid w-full min-w-0 gap-6 min-[1440px]:grid-cols-[minmax(0,1.5fr)_minmax(22rem,1fr)] lg:grid-cols-[minmax(0,1.15fr)_minmax(20rem,1fr)]">
+    <div className={TELEGRAM_CONFIGURATION_LAYOUT_CLASS}>
       <div className="order-2 flex min-w-0 flex-col gap-6">
         <div className="grid min-w-0 gap-4">
           {Array.from({ length: 2 }).map((_, cardIndex) => (

@@ -58,7 +58,14 @@ export default async function TelegramPage() {
 
   return (
     <Suspense
-      fallback={<TelegramConfigurationSkeleton sectionAccess={sectionAccess} />}
+      fallback={
+        <TelegramConfigurationSkeleton
+          sectionAccess={sectionAccess}
+          canReadWorkspace={hasPermission(permissions, "workspace:read")}
+          canCreateBotConnections={canCreateBotConnections}
+          canManageDestinations={manageAccess.destinations}
+        />
+      }
     >
       <TelegramConfigurationContent
         sectionAccess={sectionAccess}

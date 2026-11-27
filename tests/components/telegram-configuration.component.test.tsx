@@ -60,7 +60,10 @@ import type {
   TelegramConfigurationData,
 } from "@/app/lib/telegram/definitions"
 import { BotConnectionsCard } from "@/app/[lang]/(main)/telegram/telegram-bot-connections"
-import { TelegramConfigurationPage } from "@/app/[lang]/(main)/telegram/telegram-configuration"
+import {
+  TelegramConfigurationPage,
+  TelegramConfigurationSkeleton,
+} from "@/app/[lang]/(main)/telegram/telegram-configuration"
 
 const destination = {
   id: 8,
@@ -278,6 +281,66 @@ function economicCalendarData(
 }
 
 const economicCalendarSetting = featureSettings[0]
+
+describe("Telegram configuration loading permissions", () => {
+  afterEach(() => cleanup())
+
+  it("keeps the route-only fallback in the same responsive page shell", () => {
+    const { container } = render(
+      <LocalizationProvider locale="vi" dictionary={viDictionary}>
+        <TelegramConfigurationSkeleton
+          sectionAccess={economicCalendarData().sectionAccess}
+        />
+      </LocalizationProvider>
+    )
+
+    const shell = container.firstElementChild
+    expect(shell).toHaveClass("grid", "w-full", "min-w-0")
+    expect(shell?.children).toHaveLength(2)
+    expect(
+      screen.getByTestId("telegram-infrastructure-skeleton")
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByTestId("telegram-readiness-skeleton")
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByTestId("telegram-readiness-summary")
+    ).not.toBeInTheDocument()
+    expect(screen.queryByText(destination.displayLabel)).not.toBeInTheDocument()
+
+    const fallbackClassName = shell?.className
+    cleanup()
+    const resolved = renderConfiguration(economicCalendarData())
+    expect(resolved.container.firstElementChild?.className).toBe(
+      fallbackClassName
+    )
+  })
+
+  it("reserves a routing readiness slot only with separate workspace read access", () => {
+    render(
+      <LocalizationProvider locale="vi" dictionary={viDictionary}>
+        <TelegramConfigurationSkeleton
+          sectionAccess={economicCalendarData().sectionAccess}
+          canReadWorkspace
+        />
+      </LocalizationProvider>
+    )
+
+    expect(
+      screen.getByTestId("telegram-readiness-skeleton")
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByTestId("telegram-readiness-summary")
+    ).not.toBeInTheDocument()
+    expect(screen.queryByText(destination.displayLabel)).not.toBeInTheDocument()
+
+    cleanup()
+    renderConfiguration(
+      economicCalendarData([], { currentWorkspace: data.currentWorkspace })
+    )
+    expect(screen.getByTestId("telegram-readiness-summary")).toBeInTheDocument()
+  })
+})
 
 describe("Economic calendar route permissions and persistence", () => {
   afterEach(() => cleanup())
