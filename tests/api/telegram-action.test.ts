@@ -36,7 +36,6 @@ const { testDictionary } = vi.hoisted(() => ({
         languageCatalogError: "Language catalog unavailable",
         createError: "Schedule create failed",
         updateError: "Schedule update failed",
-        disableError: "Schedule disable failed",
         deleteError: "Schedule delete failed",
       },
       routing: {
@@ -83,9 +82,9 @@ import {
   createTelegramMarketAnalysisSchedule,
   deleteTelegramBotConnection,
   deleteTelegramMarketAnalysisSchedule,
-  disableTelegramMarketAnalysisSchedule,
   getTelegramBotConnections,
   getTelegramDestinations,
+  getTelegramMarketAnalysisSchedules,
   getTelegramFeatureSettings,
   sendTelegramTestMessage,
   updateTelegramMarketAnalysisSchedule,
@@ -108,8 +107,17 @@ const scheduleResponse = {
   id: 11,
   name: "Morning analysis",
   workspaceId: 7,
+  workspaceName: "Workspace",
+  destination: {
+    id: 8,
+    botConnectionId: 12,
+    chatType: "CHANNEL" as const,
+    status: "ACTIVE" as const,
+  },
   timezone: "Asia/Bangkok",
   localTimes: ["09:00", "18:00"],
+  asset: { assetId: 9, assetSymbol: "BTC", assetName: "Bitcoin" },
+  outputLanguage: { isoCode: "en", name: "English" },
   status: "ACTIVE" as const,
 }
 
@@ -274,6 +282,56 @@ describe("Telegram scheduled asset analysis actions", () => {
     expect(revalidatePath).toHaveBeenCalledWith("/telegram")
   })
 
+  it("reads saved schedule fields after create and keeps the ACTIVE record on edit", async () => {
+    const editedSchedule = {
+      ...scheduleResponse,
+      name: "Afternoon analysis",
+      timezone: "UTC",
+      localTimes: ["12:00"],
+    }
+    vi.mocked(fetchAuthenticated)
+      .mockResolvedValueOnce(scheduleResponse)
+      .mockResolvedValueOnce([scheduleResponse])
+      .mockResolvedValueOnce(editedSchedule)
+      .mockResolvedValueOnce([editedSchedule])
+
+    const created =
+      await createTelegramMarketAnalysisSchedule(scheduleRequest())
+    expect(created).toEqual({ success: true, data: scheduleResponse })
+    await expect(getTelegramMarketAnalysisSchedules()).resolves.toEqual([
+      scheduleResponse,
+    ])
+
+    const updated = await updateTelegramMarketAnalysisSchedule(11, {
+      ...scheduleRequest(),
+      name: "Afternoon analysis",
+      timezone: "UTC",
+      localTimes: ["12:00"],
+    })
+    expect(updated).toEqual({ success: true, data: editedSchedule })
+    const editedReadback = await getTelegramMarketAnalysisSchedules()
+    expect(editedReadback).toEqual([editedSchedule])
+    expect(editedReadback[0]).toMatchObject({
+      id: scheduleResponse.id,
+      status: "ACTIVE",
+    })
+
+    expect(fetchAuthenticated).toHaveBeenNthCalledWith(
+      3,
+      "/telegram/market-analysis-schedules/11",
+      expect.objectContaining({ method: "PUT" })
+    )
+
+    expect(fetchAuthenticated).toHaveBeenNthCalledWith(
+      2,
+      "/telegram/market-analysis-schedules"
+    )
+    expect(fetchAuthenticated).toHaveBeenNthCalledWith(
+      4,
+      "/telegram/market-analysis-schedules"
+    )
+  })
+
   it("preserves and explicitly clears feature output-language overrides", async () => {
     const featureResponse = {
       id: 41,
@@ -398,6 +456,19 @@ describe("Telegram scheduled asset analysis actions", () => {
       error: expect.any(String),
     })
     expect(fetchAuthenticated).not.toHaveBeenCalled()
+  })
+
+  it("deletes schedules through the published DELETE endpoint", async () => {
+    vi.mocked(fetchAuthenticated).mockResolvedValue(undefined)
+    await expect(deleteTelegramMarketAnalysisSchedule(11)).resolves.toEqual({
+      success: true,
+      data: undefined,
+    })
+    expect(fetchAuthenticated).toHaveBeenCalledWith(
+      "/telegram/market-analysis-schedules/11",
+      { method: "DELETE" }
+    )
+    expect(revalidatePath).toHaveBeenCalledTimes(1)
   })
 
   it.each(["ECONOMIC_CALENDAR_ALERT", "MARKET_NEWS_ALERT"] as const)(
@@ -550,30 +621,6 @@ describe("Telegram scheduled asset analysis actions", () => {
     }
   )
 
-  it("disables and deletes schedules through their mutation endpoints", async () => {
-    vi.mocked(fetchAuthenticated).mockResolvedValue(scheduleResponse)
-
-    await expect(disableTelegramMarketAnalysisSchedule(11)).resolves.toEqual({
-      success: true,
-      data: scheduleResponse,
-    })
-    expect(fetchAuthenticated).toHaveBeenCalledWith(
-      "/telegram/market-analysis-schedules/11/disable",
-      { method: "PATCH" }
-    )
-
-    vi.mocked(fetchAuthenticated).mockResolvedValue(undefined)
-    await expect(deleteTelegramMarketAnalysisSchedule(11)).resolves.toEqual({
-      success: true,
-      data: undefined,
-    })
-    expect(fetchAuthenticated).toHaveBeenCalledWith(
-      "/telegram/market-analysis-schedules/11",
-      { method: "DELETE" }
-    )
-    expect(revalidatePath).toHaveBeenCalledTimes(2)
-  })
-
   it("returns localized validation errors and recovers backend failures", async () => {
     const invalid = await createTelegramMarketAnalysisSchedule({
       ...scheduleRequest(),
@@ -593,6 +640,37 @@ describe("Telegram scheduled asset analysis actions", () => {
       scheduleRequest()
     )
     expect(failed).toEqual({ success: false, error: "Backend unavailable" })
+    expect(revalidatePath).not.toHaveBeenCalled()
+  })
+
+  it("rejects malformed runtime payloads before normalization or API requests", async () => {
+    const missingName = await createTelegramMarketAnalysisSchedule({
+      ...scheduleRequest(),
+      name: undefined,
+    } as never)
+    const nonArrayLocalTimes = await updateTelegramMarketAnalysisSchedule(11, {
+      ...scheduleRequest(),
+      localTimes: "09:00",
+    } as never)
+    const nonStringLanguage = await createTelegramMarketAnalysisSchedule({
+      ...scheduleRequest(),
+      outputLanguageIsoCode: 42,
+    } as never)
+
+    expect(missingName).toEqual({
+      success: false,
+      error: testDictionary.telegram.validationInvalid,
+    })
+    expect(nonArrayLocalTimes).toEqual({
+      success: false,
+      error: testDictionary.telegram.validationInvalid,
+    })
+    expect(nonStringLanguage).toEqual({
+      success: false,
+      error: testDictionary.telegram.validationInvalid,
+    })
+    expect(getLanguages).not.toHaveBeenCalled()
+    expect(fetchAuthenticated).not.toHaveBeenCalled()
     expect(revalidatePath).not.toHaveBeenCalled()
   })
 })

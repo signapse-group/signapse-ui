@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 import {
   canAccessTelegramConfiguration,
   getTelegramManageAccess,
+  getTelegramScheduleActionAccess,
   getTelegramSectionAccess,
   TELEGRAM_BOT_CONNECTION_CREATE_PERMISSION,
   TELEGRAM_BOT_CONNECTION_DELETE_PERMISSION,
@@ -13,6 +14,10 @@ import {
   TELEGRAM_FEATURE_SETTING_UPDATE_PERMISSION,
   TELEGRAM_MARKET_NEWS_ROUTING_READ_PERMISSION,
   TELEGRAM_MARKET_NEWS_ROUTING_UPDATE_PERMISSION,
+  TELEGRAM_MARKET_ANALYSIS_SCHEDULE_CREATE_PERMISSION,
+  TELEGRAM_MARKET_ANALYSIS_SCHEDULE_DELETE_PERMISSION,
+  TELEGRAM_MARKET_ANALYSIS_SCHEDULE_READ_PERMISSION,
+  TELEGRAM_MARKET_ANALYSIS_SCHEDULE_UPDATE_PERMISSION,
   TELEGRAM_NAV_PERMISSIONS,
 } from "@/app/lib/telegram/permissions"
 
@@ -74,6 +79,47 @@ describe("Telegram market-news routing permissions", () => {
       getTelegramManageAccess([TELEGRAM_MARKET_NEWS_ROUTING_UPDATE_PERMISSION])
         .marketNewsRouting
     ).toBe(true)
+  })
+})
+
+describe("Scheduled analysis permissions", () => {
+  it("opens for schedule read without granting mutation actions", () => {
+    const permissions = [TELEGRAM_MARKET_ANALYSIS_SCHEDULE_READ_PERMISSION]
+
+    expect(canAccessTelegramConfiguration(permissions)).toBe(true)
+    expect(getTelegramSectionAccess(permissions).schedules).toBe(true)
+    expect(getTelegramScheduleActionAccess(permissions)).toEqual({
+      create: false,
+      update: false,
+      delete: false,
+    })
+  })
+
+  it("keeps create, update, and delete independent", () => {
+    for (const [permission, action] of [
+      [TELEGRAM_MARKET_ANALYSIS_SCHEDULE_CREATE_PERMISSION, "create"],
+      [TELEGRAM_MARKET_ANALYSIS_SCHEDULE_UPDATE_PERMISSION, "update"],
+      [TELEGRAM_MARKET_ANALYSIS_SCHEDULE_DELETE_PERMISSION, "delete"],
+    ] as const) {
+      expect(TELEGRAM_NAV_PERMISSIONS).toContain(permission)
+      expect(canAccessTelegramConfiguration([permission])).toBe(true)
+      expect(getTelegramScheduleActionAccess([permission])).toEqual({
+        create: action === "create",
+        update: action === "update",
+        delete: action === "delete",
+      })
+    }
+  })
+
+  it("does not use the legacy manage grant", () => {
+    const legacy = ["telegram-market-analysis-schedule:manage"]
+
+    expect(canAccessTelegramConfiguration(legacy)).toBe(false)
+    expect(getTelegramScheduleActionAccess(legacy)).toEqual({
+      create: false,
+      update: false,
+      delete: false,
+    })
   })
 })
 

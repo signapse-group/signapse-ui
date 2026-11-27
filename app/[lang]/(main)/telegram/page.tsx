@@ -7,7 +7,7 @@ import {
   getTelegramFeatureSettings,
   getTelegramMarketAnalysisSchedules,
 } from "@/app/api/telegram/action"
-import { getWorkspaceWatchlistAssets } from "@/app/api/watchlists/action"
+import { getAllWorkspaceWatchlistAssets } from "@/app/api/watchlists/action"
 import { getServerDictionary } from "@/app/lib/i18n/server"
 import { hasPermission } from "@/app/lib/permissions"
 import {
@@ -18,6 +18,7 @@ import {
   canAccessTelegramConfiguration,
   TELEGRAM_BOT_CONNECTION_CREATE_PERMISSION,
   getTelegramManageAccess,
+  getTelegramScheduleActionAccess,
   getTelegramSectionAccess,
 } from "@/app/lib/telegram/permissions"
 import { getActiveWorkspaceForCurrentUser } from "@/app/lib/workspaces/current"
@@ -31,10 +32,21 @@ import {
 const WATCHLIST_ASSET_SEARCH = {
   filter: "",
   page: 0,
-  size: 100,
-  sort: [{ field: "assetSymbol", direction: "asc" as const }],
+  size: 2000,
+  sort: [],
 }
-// ponytail: preload up to 100 workspace assets; add pagination/search if this ceiling is exceeded.
+
+function loadSection<T>(
+  load: (() => Promise<T>) | undefined,
+  fallback: T
+): Promise<{ data: T; error: boolean }> {
+  if (!load) return Promise.resolve({ data: fallback, error: false })
+
+  return Promise.resolve()
+    .then(load)
+    .then((data) => ({ data, error: false }))
+    .catch(() => ({ data: fallback, error: true }))
+}
 
 export default async function TelegramPage() {
   const [permissions, dictionary] = await Promise.all([
@@ -43,10 +55,12 @@ export default async function TelegramPage() {
   ])
   const sectionAccess = getTelegramSectionAccess(permissions)
   const manageAccess = getTelegramManageAccess(permissions)
+  const scheduleActions = getTelegramScheduleActionAccess(permissions)
   const canCreateBotConnections = hasPermission(
     permissions,
     TELEGRAM_BOT_CONNECTION_CREATE_PERMISSION
   )
+
   if (!canAccessTelegramConfiguration(permissions)) {
     return (
       <AccessDenied
@@ -70,6 +84,7 @@ export default async function TelegramPage() {
       <TelegramConfigurationContent
         sectionAccess={sectionAccess}
         manageAccess={manageAccess}
+        scheduleActions={scheduleActions}
         canReadWorkspace={hasPermission(permissions, "workspace:read")}
         canCreateBotConnections={canCreateBotConnections}
       />
@@ -80,100 +95,135 @@ export default async function TelegramPage() {
 async function TelegramConfigurationContent({
   sectionAccess,
   manageAccess,
+  scheduleActions,
   canReadWorkspace,
   canCreateBotConnections,
 }: {
   sectionAccess: ReturnType<typeof getTelegramSectionAccess>
   manageAccess: ReturnType<typeof getTelegramManageAccess>
+  scheduleActions: ReturnType<typeof getTelegramScheduleActionAccess>
   canReadWorkspace: boolean
   canCreateBotConnections: boolean
 }) {
-  const currentWorkspace = canReadWorkspace
-    ? await getActiveWorkspaceForCurrentUser()
-    : null
-  const economicCalendarWorkspace = sectionAccess.economicCalendarRouting
-    ? (currentWorkspace ?? (await getCurrentWorkspaceSummary()))
-    : null
-
-  const schedulesPromise = sectionAccess.schedules
-    ? getTelegramMarketAnalysisSchedules()
-        .then((data) => ({ data, error: false }))
-        .catch(() => ({ data: [], error: true }))
-    : Promise.resolve({ data: [], error: false })
-
-  const languagesPromise =
+  const currentWorkspacePromise = loadSection(
+    canReadWorkspace ? () => getActiveWorkspaceForCurrentUser() : undefined,
+    null
+  )
+  const economicCalendarWorkspacePromise = currentWorkspacePromise.then(
+    ({ data: currentWorkspace }) =>
+      loadSection(
+        sectionAccess.economicCalendarRouting
+          ? async () => currentWorkspace ?? (await getCurrentWorkspaceSummary())
+          : undefined,
+        null
+      )
+  )
+  const botConnectionsPromise = loadSection(
+    sectionAccess.botConnections
+      ? () => getTelegramBotConnections()
+      : undefined,
+    []
+  )
+  const destinationsPromise = loadSection(
+    sectionAccess.destinations ? () => getTelegramDestinations() : undefined,
+    []
+  )
+  const featureSettingsPromise = loadSection(
+    sectionAccess.marketNewsRouting
+      ? () => getTelegramFeatureSettings({ featureKey: "MARKET_NEWS_ALERT" })
+      : undefined,
+    []
+  )
+  const economicCalendarSettingsPromise = economicCalendarWorkspacePromise.then(
+    ({ data: economicCalendarWorkspace, error: workspaceError }) =>
+      loadSection(
+        sectionAccess.economicCalendarRouting && economicCalendarWorkspace
+          ? () =>
+              getTelegramFeatureSettings({
+                workspaceId: economicCalendarWorkspace.id,
+                featureKey: "ECONOMIC_CALENDAR_ALERT",
+              })
+          : undefined,
+        []
+      ).then((settings) => ({
+        ...settings,
+        error:
+          settings.error ||
+          (sectionAccess.economicCalendarRouting &&
+            (workspaceError || economicCalendarWorkspace === null)),
+      }))
+  )
+  const schedulesPromise = loadSection(
+    sectionAccess.schedules
+      ? () => getTelegramMarketAnalysisSchedules()
+      : undefined,
+    []
+  )
+  const languagesPromise = loadSection(
     sectionAccess.schedules ||
-    sectionAccess.marketNewsRouting ||
-    sectionAccess.economicCalendarRouting
-      ? getLanguages()
-          .then((catalog) => ({ data: catalog.languages, error: false }))
-          .catch(() => ({ data: [], error: true }))
-      : Promise.resolve({ data: [], error: false })
-
-  const destinationsPromise = sectionAccess.destinations
-    ? getTelegramDestinations()
-        .then((data) => ({ data, error: false }))
-        .catch(() => ({ data: [], error: true }))
-    : Promise.resolve({ data: [], error: false })
-
-  const marketNewsSettingsPromise = sectionAccess.marketNewsRouting
-    ? getTelegramFeatureSettings({ featureKey: "MARKET_NEWS_ALERT" })
-        .then((data) => ({ data, error: false }))
-        .catch(() => ({ data: [], error: true }))
-    : Promise.resolve({ data: [], error: false })
-
-  const economicCalendarSettingsPromise =
-    sectionAccess.economicCalendarRouting && economicCalendarWorkspace
-      ? getTelegramFeatureSettings({
-          workspaceId: economicCalendarWorkspace.id,
-          featureKey: "ECONOMIC_CALENDAR_ALERT",
-        })
-          .then((data) => ({ data, error: false }))
-          .catch(() => ({ data: [], error: true }))
-      : Promise.resolve({
-          data: [],
-          error: sectionAccess.economicCalendarRouting,
-        })
+      sectionAccess.marketNewsRouting ||
+      sectionAccess.economicCalendarRouting ||
+      scheduleActions.create ||
+      scheduleActions.update
+      ? () => getLanguages().then((catalog) => catalog.languages)
+      : undefined,
+    []
+  )
+  const watchlistAssetsPromise = currentWorkspacePromise.then(
+    ({ data: currentWorkspace }) =>
+      loadSection(
+        sectionAccess.watchlistAssets && currentWorkspace
+          ? () => getAllWorkspaceWatchlistAssets(WATCHLIST_ASSET_SEARCH)
+          : undefined,
+        []
+      )
+  )
 
   const [
-    botConnections,
+    currentWorkspaceResult,
+    economicCalendarWorkspaceResult,
+    botConnectionsResult,
     destinationsResult,
-    marketNewsSettingsResult,
+    featureSettingsResult,
     economicCalendarSettingsResult,
     schedulesResult,
-    watchlistAssetsPage,
+    watchlistAssetsResult,
     languagesResult,
   ] = await Promise.all([
-    sectionAccess.botConnections ? getTelegramBotConnections() : [],
+    currentWorkspacePromise,
+    economicCalendarWorkspacePromise,
+    botConnectionsPromise,
     destinationsPromise,
-    marketNewsSettingsPromise,
+    featureSettingsPromise,
     economicCalendarSettingsPromise,
     schedulesPromise,
-    sectionAccess.watchlistAssets && currentWorkspace
-      ? getWorkspaceWatchlistAssets(WATCHLIST_ASSET_SEARCH)
-      : null,
+    watchlistAssetsPromise,
     languagesPromise,
   ])
 
   return (
     <TelegramConfigurationPage
       data={{
-        botConnections,
+        botConnections: botConnectionsResult.data,
         destinations: destinationsResult.data,
         destinationsLoadError: destinationsResult.error,
-        featureSettings: marketNewsSettingsResult.data,
-        featureSettingsLoadError: marketNewsSettingsResult.error,
+        featureSettings: featureSettingsResult.data,
+        featureSettingsLoadError: featureSettingsResult.error,
         economicCalendarSettings: economicCalendarSettingsResult.data,
-        economicCalendarWorkspace,
+        economicCalendarWorkspace: economicCalendarWorkspaceResult.data,
         economicCalendarLoadError: economicCalendarSettingsResult.error,
         schedules: schedulesResult.data,
-        currentWorkspace,
-        watchlistAssets: watchlistAssetsPage?.content ?? [],
+        currentWorkspace: currentWorkspaceResult.data,
+        watchlistAssets: watchlistAssetsResult.data,
         languages: languagesResult.data,
         languageCatalogError: languagesResult.error,
         scheduleLoadError: schedulesResult.error,
+        botConnectionsLoadError: botConnectionsResult.error,
+        currentWorkspaceLoadError: currentWorkspaceResult.error,
+        watchlistAssetsLoadError: watchlistAssetsResult.error,
         sectionAccess,
         manageAccess,
+        scheduleActions,
       }}
       canCreateBotConnections={canCreateBotConnections}
     />

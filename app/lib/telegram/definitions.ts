@@ -85,20 +85,20 @@ export interface TelegramDestinationResponse {
 
 export interface ScheduledAssetResponse {
   assetId: number
-  assetSymbol?: string
-  assetName?: string
+  assetSymbol: string
+  assetName: string
 }
 
 export interface TelegramMarketAnalysisScheduleResponse {
   id: number
   name: string
   workspaceId: number
-  workspaceName?: string
-  destination?: TelegramDestinationResponse
+  workspaceName: string
+  destination: TelegramDestinationResponse | null
   timezone: string
   localTimes: string[]
-  asset?: ScheduledAssetResponse
-  outputLanguage?: LanguageResponse
+  asset: ScheduledAssetResponse
+  outputLanguage: LanguageResponse | null
   status: TelegramScheduleStatus
   createdDate?: string
   lastModifiedDate?: string
@@ -318,11 +318,10 @@ export function getSaveTelegramMarketAnalysisScheduleSchema(
             seen.add(value)
           })
         }),
-      outputLanguageIsoCode: z.preprocess(
-        (value) =>
-          typeof value === "string" && value.trim() ? value.trim() : undefined,
-        outputLanguageSchema.optional()
-      ),
+      outputLanguageIsoCode: z.preprocess((value) => {
+        if (value === null || value === undefined) return undefined
+        return typeof value === "string" ? value.trim() || undefined : value
+      }, outputLanguageSchema.optional()),
     })
     .strict()
 }
@@ -378,7 +377,12 @@ export interface TelegramManageAccess {
   featureSettings: boolean
   economicCalendarRouting: boolean
   marketNewsRouting: boolean
-  schedules: boolean
+}
+
+export interface TelegramScheduleActionAccess {
+  create: boolean
+  update: boolean
+  delete: boolean
 }
 
 export interface TelegramConfigurationData {
@@ -396,6 +400,10 @@ export interface TelegramConfigurationData {
   languages: LanguageResponse[]
   languageCatalogError: boolean
   scheduleLoadError: boolean
+  botConnectionsLoadError: boolean
+  currentWorkspaceLoadError: boolean
+  watchlistAssetsLoadError: boolean
   sectionAccess: TelegramSectionAccess
   manageAccess: TelegramManageAccess
+  scheduleActions: TelegramScheduleActionAccess
 }

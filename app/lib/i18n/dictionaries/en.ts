@@ -2450,6 +2450,7 @@ export const en: Dictionary = {
       noBotPermission: "You do not have permission to view bots.",
       accessLimited: "Access limited",
       ready: "Ready",
+      unavailable: "Unavailable",
       needsConfig: "Needs setup",
       destinations: "Destinations",
       activeDestinations: "{count} active destinations.",
@@ -2483,6 +2484,7 @@ export const en: Dictionary = {
       paused: "Paused",
       currentWorkspace: "Current workspace",
       noData: "No data",
+      readError: "Could not load this section's data.",
       accessLimitedDescription:
         "The current account does not have permission to read this section.",
       currentWorkspaceScope: "Current workspace",
@@ -2701,18 +2703,22 @@ export const en: Dictionary = {
       panelDescription:
         "Send AI analysis at local times for one watchlist asset.",
       scheduleColumn: "Schedule",
+      deliveryColumn: "Delivery",
       workspaceColumn: "Workspace",
       destinationColumn: "Destination",
       localTimesColumn: "Send times",
       assetColumn: "Asset",
       languageColumn: "Output language",
       statusColumn: "Status",
+      inactiveStatus: "Inactive",
       accessLimited: "No permission to view analysis schedules",
       readOnlyDescription: "You can view schedules but cannot change them.",
       loadError: "Could not load analysis schedules.",
       loadErrorDescription:
         "Check your connection and try loading the schedule list again.",
       retry: "Retry",
+      optionsLoadError:
+        "Some schedule options could not be loaded. Saved schedules remain available; retry before creating or editing.",
       currentWorkspaceFallback: "Current workspace",
       noDestination: "No destination yet",
       noAsset: "Asset unavailable",
@@ -2720,17 +2726,13 @@ export const en: Dictionary = {
       emptyTitle: "No analysis schedules yet",
       emptyDescription:
         "Create a local-time send schedule for the current workspace.",
-      disableTitle: "Disable analysis schedule?",
-      disableDescription:
-        "The schedule will stop sending market analysis. This interface does not support reactivating a disabled schedule.",
-      disableTrigger: "Disable analysis schedule",
-      disableSuccess: "Analysis schedule disabled.",
-      deleteTitle: "Delete analysis schedule?",
+      deleteTitle: "Remove analysis schedule?",
       deleteDescription:
-        "This permanently deletes the market-analysis send schedule. The action cannot be undone.",
-      deleteAction: "Delete schedule",
-      deleteTrigger: "Delete analysis schedule",
-      deleteSuccess: "Analysis schedule deleted.",
+        "This marks the schedule as removed, stops future runs, and removes it from your manageable list. Recorded history is preserved.",
+      deleteAction: "Remove schedule",
+      deleteTrigger: "Remove analysis schedule",
+      deleteSuccess:
+        "Analysis schedule removed. Recorded history is preserved.",
       editTrigger: "Edit analysis schedule",
       createSchedule: "Create schedule",
       dialogEditTitle: "Edit analysis schedule",
@@ -2751,6 +2753,12 @@ export const en: Dictionary = {
       assetPlaceholder: "Choose an asset",
       assetDescription:
         "Only assets in the current workspace watchlist are available.",
+      assetPreservedDescription:
+        "This schedule belongs to another workspace, so its saved asset will be kept.",
+      assetPreservedWatchlistDescription:
+        "The current workspace watchlist isn't available, so the saved asset will stay unchanged.",
+      assetPreservedWorkspaceDescription:
+        "A current workspace isn't available, so the saved asset will stay unchanged.",
       assetUnavailable: "This scheduled asset is no longer in the watchlist.",
       scheduleLegend: "Send schedule",
       timezoneLabel: "Timezone",
@@ -2788,12 +2796,12 @@ export const en: Dictionary = {
       createError: "Could not create the Telegram analysis schedule.",
       updateError: "Could not update the Telegram analysis schedule.",
       disableError: "Could not disable the Telegram analysis schedule.",
-      deleteError: "Could not delete the Telegram analysis schedule.",
+      deleteError: "Could not remove the Telegram analysis schedule.",
     },
     statuses: {
       ACTIVE: "Active",
       INVALID: "Invalid",
-      REMOVED: "Deleted",
+      REMOVED: "Removed",
       DISABLED: "Disabled",
     },
     chatTypes: {
