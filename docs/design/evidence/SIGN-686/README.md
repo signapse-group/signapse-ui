@@ -63,3 +63,20 @@ The prior-candidate browser checks above remain useful for shared form/list geom
 
 [SIGN-32]: https://signapse-group.atlassian.net/browse/SIGN-32
 [SIGN-657]: https://signapse-group.atlassian.net/browse/SIGN-657
+
+## Follow-up candidate `6f8d6df4`
+
+This candidate addresses the latest review feedback on PR #164. Readiness Summary now omits only the metric whose source read failed; a failed schedule, bot, destination, or Feature routing request no longer appears as a zero count. Component coverage checks each partial-read failure and confirms unaffected metrics remain visible. The API action test runs POST → fresh list GET and PUT → fresh list GET, confirming saved fields and the same ACTIVE schedule ID after Edit. This is mocked local API evidence; it does not establish live persistence.
+
+The current [dev OpenAPI](https://dev-api.signapse.cloud/v3/api-docs) was fetched at 2026-11-27 10:43:41 UTC: HTTP 200, OpenAPI 3.1.0, version `v0`, and no `x-build-revision` response header. It still publishes separate schedule read/create/update/delete permissions, create/update request requirements, nullable read destination/language, ACTIVE-only update, ACTIVE/DISABLED Remove with preserved history, and caller-owned ACTIVE/DISABLED GET results without REMOVED rows. SIGN-684 comment #11791 records deployed producer revision `b6de21490d5572bdb51624372ef860230af5df86` and its dev deploy.
+
+Focused local checks on the follow-up source candidate:
+
+- `pnpm exec vitest run tests/components/telegram-configuration.component.test.tsx tests/api/telegram-action.test.ts --reporter=dot` — 88 tests passed across 2 files.
+- `pnpm typecheck` — passed.
+- Scoped ESLint and Prettier checks for the changed component and tests — passed.
+- `git diff --check` — passed.
+
+The approved references were rechecked against the live SIGN-657 attachments 10315/10318/10317 and SIGN-32 attachments 10308/10312/10309. The current candidate has no new rendered capture: the current Preview is SSO-protected here, and the repository's FE browser runner is not usable for this candidate (`run-fe-browser` invokes the removed `pnpm test:browser` script; `tests/e2e` is absent). Existing captures from `8e5304a` remain historical and are not presented as current-head evidence. The approved local Pen Desktop MCP is unavailable on this server; no Pen operation was run.
+
+The current shared control tokens yield a static, token-derived contrast calculation: `--input-border: oklch(0.65 0 0)` against white is 3.23:1; against the dark dialog surface with the 4.5% input overlay it is 4.95:1. These are CSS-token calculations, not measurements from the current rendered candidate. QA owns the current rendered check on the delivered Preview: at 767/768 CSS px verify list reflow, row action visibility/focus, and page overflow; in Create/Edit Light and Dark, measure Name and Destination boundaries. Also verify true 360px and browser 200% behavior per the Responsive Contract.
