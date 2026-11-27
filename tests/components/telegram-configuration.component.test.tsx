@@ -1535,77 +1535,55 @@ describe("Telegram bot connections", () => {
     expect(dialog).not.toBeInTheDocument()
   })
 
-  it("guides a create-only caller when a successful create has no saved status", async () => {
-    const user = userEvent.setup()
-    vi.mocked(createTelegramBotConnection).mockResolvedValue({
-      success: true,
-      data: {
-        connection: {
-          id: 13,
-          displayLabel: "Status not returned",
-        },
-        created: true,
-      },
-    })
-    renderBotConnectionsCard({ canCreate: true, canRead: false })
-
-    await user.click(
-      screen.getByRole("button", {
-        name: viDictionary.telegram.bot.connect,
+  it.each([
+    {
+      outcome: "a created connection has no saved status",
+      created: true,
+      expected: viDictionary.telegram.bot.createStatusUnverifiedWithoutRead,
+    },
+    {
+      outcome: "a caller-owned duplicate has no saved status",
+      created: false,
+      expected:
+        viDictionary.telegram.bot.alreadyConnectedStatusUnverifiedWithoutRead,
+    },
+    {
+      outcome: "the create result is unknown",
+      created: null,
+      expected: viDictionary.telegram.bot.createOutcomeUnverifiedWithoutRead,
+    },
+  ])(
+    "guides a create-only caller when $outcome",
+    async ({ created, expected }) => {
+      const user = userEvent.setup()
+      vi.mocked(createTelegramBotConnection).mockResolvedValue({
+        success: true,
+        data: { connection: { id: 13 }, created },
       })
-    )
-    await user.type(
-      screen.getByLabelText(viDictionary.telegram.bot.tokenLabel),
-      "fake-token"
-    )
-    await user.click(
-      screen.getByRole("button", {
-        name: viDictionary.telegram.bot.connectBot,
-      })
-    )
+      renderBotConnectionsCard({ canCreate: true, canRead: false })
 
-    await waitFor(() =>
-      expect(toast.warning).toHaveBeenCalledWith(
-        viDictionary.telegram.bot.createUnverifiedWithoutRead
+      await user.click(
+        screen.getByRole("button", {
+          name: viDictionary.telegram.bot.connect,
+        })
       )
-    )
-    expect(toast.error).not.toHaveBeenCalled()
-    expect(toast.success).not.toHaveBeenCalled()
-    expect(routerRefresh).toHaveBeenCalledTimes(1)
-  })
-
-  it("guides a create-only caller after an unknown outcome without claiming failure", async () => {
-    const user = userEvent.setup()
-    vi.mocked(createTelegramBotConnection).mockResolvedValue({
-      success: true,
-      data: { connection: {}, created: null },
-    })
-    renderBotConnectionsCard({ canCreate: true, canRead: false })
-
-    await user.click(
-      screen.getByRole("button", {
-        name: viDictionary.telegram.bot.connect,
-      })
-    )
-    await user.type(
-      screen.getByLabelText(viDictionary.telegram.bot.tokenLabel),
-      "fake-token"
-    )
-    await user.click(
-      screen.getByRole("button", {
-        name: viDictionary.telegram.bot.connectBot,
-      })
-    )
-
-    await waitFor(() =>
-      expect(toast.warning).toHaveBeenCalledWith(
-        viDictionary.telegram.bot.createUnverifiedWithoutRead
+      await user.type(
+        screen.getByLabelText(viDictionary.telegram.bot.tokenLabel),
+        "fake-token"
       )
-    )
-    expect(toast.error).not.toHaveBeenCalled()
-    expect(toast.success).not.toHaveBeenCalled()
-    expect(routerRefresh).toHaveBeenCalledTimes(1)
-  })
+      await user.click(
+        screen.getByRole("button", {
+          name: viDictionary.telegram.bot.connectBot,
+        })
+      )
+
+      await waitFor(() => expect(toast.warning).toHaveBeenCalledWith(expected))
+      expect(toast.warning).toHaveBeenCalledTimes(1)
+      expect(toast.error).not.toHaveBeenCalled()
+      expect(toast.success).not.toHaveBeenCalled()
+      expect(routerRefresh).toHaveBeenCalledTimes(1)
+    }
+  )
 
   it("marks partial saved data unverified and keeps state-dependent actions safe", async () => {
     renderBotConnectionsCard({

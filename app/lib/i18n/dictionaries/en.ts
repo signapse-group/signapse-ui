@@ -2512,10 +2512,14 @@ export const en: Dictionary = {
         "The bot was added, but its current status could not be verified. Check the connections list before retrying.",
       createOutcomeUnverified:
         "The connection result could not be confirmed. Check the connections list before retrying.",
-      createUnverifiedWithoutRead:
-        "We couldn't confirm whether the bot was connected or its status. This account can't view the connections list; ask an administrator to check before retrying.",
+      createOutcomeUnverifiedWithoutRead:
+        "The connection request's outcome couldn't be confirmed. This account can't view the connections list; ask an administrator to check before retrying.",
+      createStatusUnverifiedWithoutRead:
+        "The bot was created, but its saved status couldn't be verified. This account can't view the connections list; ask an administrator to check before retrying.",
       alreadyConnectedStatusUnverified:
         "This bot is already connected, but its saved status could not be verified. Check the connections list before taking further action.",
+      alreadyConnectedStatusUnverifiedWithoutRead:
+        "This bot is already connected to your account, but its saved status couldn't be verified. This account can't view the connections list; ask an administrator to check before retrying.",
       createNotActive:
         "The bot was added with status {status}; it has not been confirmed as active.",
       emptyTitle: "No Telegram bots yet",

@@ -294,13 +294,20 @@ function ConnectBotDialog({ canRead }: { canRead: boolean }) {
       if (result.success) {
         const { connection, created } = result.data
         const status = connection.status
-        const unverifiedMessage = canRead
-          ? created === null
+        let unverifiedMessage: string
+        if (created === null) {
+          unverifiedMessage = canRead
             ? t.bot.createOutcomeUnverified
-            : created
-              ? t.bot.createStatusUnverified
-              : t.bot.alreadyConnectedStatusUnverified
-          : t.bot.createUnverifiedWithoutRead
+            : t.bot.createOutcomeUnverifiedWithoutRead
+        } else if (created) {
+          unverifiedMessage = canRead
+            ? t.bot.createStatusUnverified
+            : t.bot.createStatusUnverifiedWithoutRead
+        } else {
+          unverifiedMessage = canRead
+            ? t.bot.alreadyConnectedStatusUnverified
+            : t.bot.alreadyConnectedStatusUnverifiedWithoutRead
+        }
 
         if (created === null || status === undefined) {
           toast.warning(unverifiedMessage)

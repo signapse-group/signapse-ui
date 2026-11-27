@@ -2492,10 +2492,14 @@ export const vi = {
         "Bot đã được thêm nhưng chưa xác minh được trạng thái hiện tại. Hãy kiểm tra danh sách kết nối trước khi thử lại.",
       createOutcomeUnverified:
         "Chưa xác nhận được kết quả kết nối. Hãy kiểm tra danh sách trước khi thử lại.",
-      createUnverifiedWithoutRead:
-        "Không thể xác nhận bot đã được kết nối hay trạng thái hiện tại. Tài khoản này không có quyền xem danh sách kết nối; hãy nhờ quản trị viên kiểm tra trước khi thử lại.",
+      createOutcomeUnverifiedWithoutRead:
+        "Chưa xác nhận được kết quả yêu cầu kết nối. Tài khoản này không có quyền xem danh sách kết nối; hãy nhờ quản trị viên kiểm tra trước khi thử lại.",
+      createStatusUnverifiedWithoutRead:
+        "Bot đã được tạo nhưng chưa xác minh được trạng thái đã lưu. Tài khoản này không có quyền xem danh sách kết nối; hãy nhờ quản trị viên kiểm tra trước khi thử lại.",
       alreadyConnectedStatusUnverified:
         "Bot đã được kết nối nhưng chưa xác minh được trạng thái đã lưu. Hãy kiểm tra danh sách trước khi thực hiện thao tác khác.",
+      alreadyConnectedStatusUnverifiedWithoutRead:
+        "Bot này đã được kết nối trong tài khoản này nhưng chưa xác minh được trạng thái đã lưu. Tài khoản này không có quyền xem danh sách kết nối; hãy nhờ quản trị viên kiểm tra trước khi thử lại.",
       createNotActive:
         "Bot đã được thêm với trạng thái {status}; chưa xác nhận bot đang hoạt động.",
       emptyTitle: "Chưa có bot Telegram",
