@@ -325,7 +325,7 @@ export function TelegramConfigurationPage({
             <BotConnectionsCard
               botConnections={data.botConnections}
               canRead={data.sectionAccess.botConnections}
-              canManage={data.manageAccess.botConnections}
+              canUpdate={data.manageAccess.botConnectionsUpdate}
               canCreate={canCreateBotConnections}
               canDelete={data.manageAccess.botConnectionsDelete}
               loadError={data.botConnectionsLoadError}
