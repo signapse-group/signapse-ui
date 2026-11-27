@@ -13,8 +13,16 @@ export const TELEGRAM_FEATURE_KEYS = [
 
 export type TelegramFeatureKey = (typeof TELEGRAM_FEATURE_KEYS)[number]
 
-export type TelegramConnectionStatus =
-  "ACTIVE" | "DISABLED" | "REMOVED" | "INVALID"
+export const telegramConnectionStatusSchema = z.enum([
+  "ACTIVE",
+  "DISABLED",
+  "REMOVED",
+  "INVALID",
+])
+
+export type TelegramConnectionStatus = z.infer<
+  typeof telegramConnectionStatusSchema
+>
 
 export type TelegramDestinationStatus = "ACTIVE" | "DISABLED" | "REMOVED"
 export type TelegramScheduleStatus = "ACTIVE" | "DISABLED" | "REMOVED"
@@ -22,21 +30,39 @@ export type TelegramScheduleStatus = "ACTIVE" | "DISABLED" | "REMOVED"
 export type TelegramChatType =
   "PRIVATE" | "GROUP" | "SUPERGROUP" | "CHANNEL" | "UNKNOWN"
 
-export interface TelegramBotConnectionResponse {
+export const telegramBotConnectionReadbackSchema = z.object({
+  id: z.number().int().optional().catch(undefined),
+  botId: z.number().int().optional().catch(undefined),
+  botUsername: z.string().optional().catch(undefined),
+  botFirstName: z.string().optional().catch(undefined),
+  displayLabel: z.string().optional().catch(undefined),
+  status: telegramConnectionStatusSchema.optional().catch(undefined),
+  webhookUrl: z.string().optional().catch(undefined),
+  failureReason: z.string().optional().catch(undefined),
+  verifiedAt: z.string().optional().catch(undefined),
+  lastValidatedAt: z.string().optional().catch(undefined),
+  lastWebhookRegisteredAt: z.string().optional().catch(undefined),
+  createdDate: z.string().optional().catch(undefined),
+  lastModifiedDate: z.string().optional().catch(undefined),
+})
+
+export type TelegramBotConnectionReadback = z.infer<
+  typeof telegramBotConnectionReadbackSchema
+>
+
+export type TelegramBotConnectionResponse = TelegramBotConnectionReadback & {
   id: number
-  botId?: number
-  botUsername?: string
-  botFirstName?: string
-  displayLabel?: string
   status: TelegramConnectionStatus
-  webhookUrl?: string
-  failureReason?: string
-  verifiedAt?: string
-  lastValidatedAt?: string
-  lastWebhookRegisteredAt?: string
-  createdDate?: string
-  lastModifiedDate?: string
 }
+
+export const telegramBotConnectionsReadbackResponseSchema = z
+  .array(z.unknown())
+  .transform((connections) =>
+    connections.map((connection) => {
+      const parsed = telegramBotConnectionReadbackSchema.safeParse(connection)
+      return parsed.success ? parsed.data : {}
+    })
+  )
 
 export interface TelegramDestinationResponse {
   id: number
@@ -258,7 +284,7 @@ export interface TelegramManageAccess {
 }
 
 export interface TelegramConfigurationData {
-  botConnections: TelegramBotConnectionResponse[]
+  botConnections: TelegramBotConnectionReadback[]
   destinations: TelegramDestinationResponse[]
   featureSettings: TelegramFeatureSettingResponse[]
   schedules: TelegramMarketAnalysisScheduleResponse[]

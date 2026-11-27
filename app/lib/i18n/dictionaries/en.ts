@@ -2491,13 +2491,37 @@ export const en: Dictionary = {
       accessLimited: "No permission to view Telegram bots",
       noUsername: "No username yet",
       noBotName: "No bot name yet",
+      statusUnverified: "Status unverified",
+      connectionDetailsUnverified:
+        "Some connection details were not returned. Refresh to verify the saved record.",
+      unverifiedLabel: "Unverified Telegram bot",
       webhookRegistered: "Registered {time}",
       webhookNotRegistered: "No registration time yet",
       lastValidated: "Last validated {time}",
       readOnlyDescription:
-        "You can view these bots, but your account cannot connect or remove them.",
-      replacementGuidance:
-        "To replace this bot, connect a new token, relink dependent destinations, and review routing and schedules before removing this connection.",
+        "You can view existing bots. Permissions are required to update or remove a connection.",
+      webhookRegistrationFailed: "Webhook registration failed.",
+      setupIncomplete: "The bot setup is incomplete.",
+      reconnectGuidance:
+        "Use Reconnect on this bot's row to finish setting it up.",
+      alreadyConnected:
+        "This bot is already in your connections. Its saved status is {status}.",
+      alreadyConnectedIncomplete:
+        "This bot is already in your connections with status {status}, but its setup is incomplete.",
+      createStatusUnverified:
+        "The bot was added, but its current status could not be verified. Check the connections list before retrying.",
+      createOutcomeUnverified:
+        "The connection result could not be confirmed. Check the connections list before retrying.",
+      createOutcomeUnverifiedWithoutRead:
+        "The connection request's outcome couldn't be confirmed. This account can't view the connections list; ask an administrator to check before retrying.",
+      createStatusUnverifiedWithoutRead:
+        "The bot was created, but its saved status couldn't be verified. This account can't view the connections list; ask an administrator to check before retrying.",
+      alreadyConnectedStatusUnverified:
+        "This bot is already connected, but its saved status could not be verified. Check the connections list before taking further action.",
+      alreadyConnectedStatusUnverifiedWithoutRead:
+        "This bot is already connected to your account, but its saved status couldn't be verified. This account can't view the connections list; ask an administrator to check before retrying.",
+      createNotActive:
+        "The bot was added with status {status}; it has not been confirmed as active.",
       emptyTitle: "No Telegram bots yet",
       emptyDescription:
         "Connect a bot you created in BotFather to start sending notifications.",
@@ -2510,19 +2534,25 @@ export const en: Dictionary = {
       deleteSuccess: "Telegram bot removed.",
       deleteBlockedByDestinations:
         "Remove every Telegram destination linked to this bot first. Nothing was changed.",
-      connect: "Connect bot",
+      connect: "Connect new bot",
       createTitle: "Connect Telegram bot",
       createDescription:
         "Paste the token issued by BotFather so Signapse can verify the bot and register a webhook.",
       tokenLabel: "Bot token",
-      tokenPlaceholder: "123456:ABC...",
-      tokenDescription:
-        "The token is only sent once when creating the connection.",
+      tokenPlaceholder: "Enter BotFather token",
+      tokenDescription: "This token won't be shown again after you connect.",
       connectBot: "Connect bot",
       invalidData: "Bot data is invalid.",
       createSuccess: "Telegram bot connected.",
+      createIncomplete:
+        "The bot was added with status {status}, but webhook registration failed. Setup is incomplete.",
       createError: "Could not connect the Telegram bot.",
-      deleteError: "Could not remove the Telegram bot. Try again.",
+      createTokenVerificationError:
+        "Could not verify the bot token. Check the token and try again.",
+      createPermissionDenied:
+        "Your account needs permission to connect a Telegram bot. Contact an administrator.",
+      createConnectionConflict: "This Telegram bot is already connected.",
+      deleteError: "Could not remove the Telegram bot.",
       fallbackLabel: "Bot #{id}",
     },
     destination: {

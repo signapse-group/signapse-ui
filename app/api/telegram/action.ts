@@ -3,7 +3,11 @@
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
 
-import { fetchAuthenticated, type BackendApiError } from "@/app/api/auth/action"
+import {
+  type BackendApiError,
+  fetchAuthenticated,
+  fetchAuthenticatedWithStatus,
+} from "@/app/api/auth/action"
 import { getLanguages } from "@/app/api/languages/action"
 import { ActionResult } from "@/app/lib/definitions"
 import { getDictionary } from "@/app/lib/i18n/dictionaries"
@@ -20,7 +24,9 @@ import {
   getUpdateTelegramFeatureSettingSchema,
   normalizeSaveTelegramMarketAnalysisScheduleRequest,
   SaveTelegramMarketAnalysisScheduleRequest,
-  TelegramBotConnectionResponse,
+  telegramBotConnectionReadbackSchema,
+  telegramBotConnectionsReadbackResponseSchema,
+  TelegramBotConnectionReadback,
   TelegramDestinationResponse,
   TelegramFeatureSettingResponse,
   TelegramLinkTokenResponse,
@@ -38,6 +44,29 @@ function getValidationError(error: z.ZodError, dictionary: Dictionary): string {
 
 function getActionError(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback
+}
+
+function getCreateBotActionError(
+  error: unknown,
+  dictionary: Dictionary
+): string {
+  const apiError =
+    error instanceof Error ? (error as BackendApiError) : undefined
+
+  if (apiError?.status === 400) {
+    return dictionary.telegram.bot.createTokenVerificationError
+  }
+  if (apiError?.status === 403) {
+    return dictionary.telegram.bot.createPermissionDenied
+  }
+  if (
+    apiError?.status === 409 &&
+    apiError.code === "TELEGRAM_BOT_CONNECTION_ALREADY_EXISTS"
+  ) {
+    return dictionary.telegram.bot.createConnectionConflict
+  }
+
+  return dictionary.telegram.bot.createError
 }
 
 function isTelegramTestMessageOutcomeUnknown(error: unknown): boolean {
@@ -88,11 +117,19 @@ function revalidateTelegramConfiguration() {
 }
 
 export async function getTelegramBotConnections(): Promise<
-  TelegramBotConnectionResponse[]
+  TelegramBotConnectionReadback[]
 > {
-  return fetchAuthenticated<TelegramBotConnectionResponse[]>(
+  const response = await fetchAuthenticated<unknown>(
     "/telegram/bot-connections"
   )
+  const parsed =
+    telegramBotConnectionsReadbackResponseSchema.safeParse(response)
+
+  if (!parsed.success) {
+    throw new Error("Invalid Telegram bot connections response")
+  }
+
+  return parsed.data
 }
 
 export async function getTelegramDestinations(): Promise<
@@ -121,7 +158,12 @@ export async function getTelegramMarketAnalysisSchedules(): Promise<
 
 export async function createTelegramBotConnection(
   request: CreateTelegramBotConnectionRequest
-): Promise<ActionResult<TelegramBotConnectionResponse>> {
+): Promise<
+  ActionResult<{
+    connection: TelegramBotConnectionReadback
+    created: boolean | null
+  }>
+> {
   const dictionary = await getTelegramDictionary()
   const parsed =
     getCreateTelegramBotConnectionSchema(dictionary).safeParse(request)
@@ -134,7 +176,7 @@ export async function createTelegramBotConnection(
   }
 
   try {
-    const data = await fetchAuthenticated<TelegramBotConnectionResponse>(
+    const response = await fetchAuthenticatedWithStatus<unknown>(
       "/telegram/bot-connections",
       {
         method: "POST",
@@ -142,13 +184,56 @@ export async function createTelegramBotConnection(
       }
     )
 
+    if (response.status !== 200 && response.status !== 201) {
+      if (response.status >= 200 && response.status < 300) {
+        revalidateTelegramConfiguration()
+
+        return {
+          success: true,
+          data: {
+            connection: {},
+            created: null,
+          },
+        }
+      }
+
+      return {
+        success: false,
+        error: dictionary.telegram.bot.createError,
+      }
+    }
+
+    const parsedConnection = telegramBotConnectionReadbackSchema.safeParse(
+      response.data
+    )
+    const connection = parsedConnection.success ? parsedConnection.data : {}
+
     revalidateTelegramConfiguration()
 
-    return { success: true, data }
-  } catch (error: unknown) {
     return {
-      success: false,
-      error: getActionError(error, dictionary.telegram.bot.createError),
+      success: true,
+      data: {
+        connection,
+        created: response.status === 201,
+      },
+    }
+  } catch (error: unknown) {
+    const status = (error as BackendApiError)?.status
+    if (typeof status === "number" && status >= 400 && status < 500) {
+      return {
+        success: false,
+        error: getCreateBotActionError(error, dictionary),
+      }
+    }
+
+    revalidateTelegramConfiguration()
+
+    return {
+      success: true,
+      data: {
+        connection: {},
+        created: null,
+      },
     }
   }
 }

@@ -12,7 +12,8 @@ import { getServerDictionary } from "@/app/lib/i18n/server"
 import { hasPermission } from "@/app/lib/permissions"
 import { getCurrentPermissions } from "@/app/lib/permissions-server"
 import {
-  canReadTelegramConfiguration,
+  canAccessTelegramConfiguration,
+  TELEGRAM_BOT_CONNECTION_CREATE_PERMISSION,
   getTelegramManageAccess,
   getTelegramSectionAccess,
 } from "@/app/lib/telegram/permissions"
@@ -39,8 +40,11 @@ export default async function TelegramPage() {
   ])
   const sectionAccess = getTelegramSectionAccess(permissions)
   const manageAccess = getTelegramManageAccess(permissions)
-
-  if (!canReadTelegramConfiguration(permissions)) {
+  const canCreateBotConnections = hasPermission(
+    permissions,
+    TELEGRAM_BOT_CONNECTION_CREATE_PERMISSION
+  )
+  if (!canAccessTelegramConfiguration(permissions)) {
     return (
       <AccessDenied
         description={dictionary.telegram.readDenied}
@@ -55,6 +59,7 @@ export default async function TelegramPage() {
         sectionAccess={sectionAccess}
         manageAccess={manageAccess}
         canReadWorkspace={hasPermission(permissions, "workspace:read")}
+        canCreateBotConnections={canCreateBotConnections}
       />
     </Suspense>
   )
@@ -64,10 +69,12 @@ async function TelegramConfigurationContent({
   sectionAccess,
   manageAccess,
   canReadWorkspace,
+  canCreateBotConnections,
 }: {
   sectionAccess: ReturnType<typeof getTelegramSectionAccess>
   manageAccess: ReturnType<typeof getTelegramManageAccess>
   canReadWorkspace: boolean
+  canCreateBotConnections: boolean
 }) {
   const currentWorkspace = canReadWorkspace
     ? await getActiveWorkspaceForCurrentUser()
@@ -123,6 +130,7 @@ async function TelegramConfigurationContent({
         sectionAccess,
         manageAccess,
       }}
+      canCreateBotConnections={canCreateBotConnections}
     />
   )
 }

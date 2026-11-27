@@ -67,7 +67,7 @@ export const fixtureContracts = [
   { method: "PUT", path: "/me/notes/{id}", mapping: "updatePersonalNote", status: 200 },
   { method: "DELETE", path: "/me/notes/{id}", mapping: "deletePersonalNote", status: 204 },
   { method: "GET", path: "/telegram/bot-connections", mapping: "getTelegramBotConnections", status: 200 },
-  { method: "POST", path: "/telegram/bot-connections", mapping: "createTelegramBotConnection", status: 200 },
+  { method: "POST", path: "/telegram/bot-connections", mapping: "createTelegramBotConnection", status: 201 },
   { method: "DELETE", path: "/telegram/bot-connections/{id}", mapping: "deleteTelegramBotConnection", status: 200 },
   { method: "GET", path: "/telegram/destinations", mapping: "getTelegramDestinations", status: 200 },
   { method: "POST", path: "/telegram/destinations/link-token", mapping: "createTelegramLinkToken", status: 200 },

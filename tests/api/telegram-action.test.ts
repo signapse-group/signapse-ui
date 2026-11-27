@@ -4,6 +4,18 @@ const { testDictionary } = vi.hoisted(() => ({
   testDictionary: {
     telegram: {
       validationInvalid: "Telegram validation failed",
+      botTokenRequired: "Enter the bot token.",
+      bot: {
+        createError: "Không thể kết nối bot Telegram.",
+        createTokenVerificationError:
+          "Không thể xác minh token bot. Hãy kiểm tra token rồi thử lại.",
+        createPermissionDenied:
+          "Tài khoản của bạn cần quyền kết nối bot Telegram. Hãy liên hệ quản trị viên.",
+        createConnectionConflict: "Bot Telegram này đã được kết nối.",
+        deleteError: "Could not remove the Telegram bot.",
+        deleteBlockedByDestinations:
+          "Remove all linked destinations before removing this bot.",
+      },
       scheduleNameRequired: "Schedule name is required",
       localTimeInvalid: "Local time is invalid",
       outputLanguageRequired: "Output language is required",
@@ -30,17 +42,13 @@ const { testDictionary } = vi.hoisted(() => ({
       routing: {
         updateError: "Route update failed",
       },
-      bot: {
-        deleteError: "Could not remove the Telegram bot.",
-        deleteBlockedByDestinations:
-          "Remove all linked destinations before removing this bot.",
-      },
     },
   },
 }))
 
 vi.mock("@/app/api/auth/action", () => ({
   fetchAuthenticated: vi.fn(),
+  fetchAuthenticatedWithStatus: vi.fn(),
 }))
 
 vi.mock("@/app/api/languages/action", () => ({
@@ -60,13 +68,16 @@ vi.mock("next/cache", () => ({
 }))
 
 import { fetchAuthenticated } from "@/app/api/auth/action"
+import { fetchAuthenticatedWithStatus } from "@/app/api/auth/action"
 import { getLanguages } from "@/app/api/languages/action"
 import {
+  createTelegramBotConnection,
   createTelegramLinkToken,
   createTelegramMarketAnalysisSchedule,
   deleteTelegramBotConnection,
   deleteTelegramMarketAnalysisSchedule,
   disableTelegramMarketAnalysisSchedule,
+  getTelegramBotConnections,
   getTelegramDestinations,
   sendTelegramTestMessage,
   updateTelegramMarketAnalysisSchedule,
@@ -94,13 +105,31 @@ const scheduleResponse = {
   status: "ACTIVE" as const,
 }
 
+const botConnectionResponse = {
+  id: 12,
+  botId: 1012,
+  botUsername: "new_fixture_bot",
+  displayLabel: "New fixture bot",
+  status: "ACTIVE" as const,
+}
+
+function backendError(message: string, status: number, code?: string) {
+  const error = new Error(message) as Error & {
+    status: number
+    code?: string
+  }
+  error.status = status
+  error.code = code
+  return error
+}
+
 describe("Telegram bot connection removal action", () => {
   beforeEach(() => {
     vi.mocked(fetchAuthenticated).mockReset()
     vi.mocked(revalidatePath).mockClear()
   })
 
-  it("deletes only the selected connection and revalidates the Telegram page", async () => {
+  it("deletes the selected connection and revalidates the Telegram page", async () => {
     vi.mocked(fetchAuthenticated).mockResolvedValue(undefined)
 
     await expect(deleteTelegramBotConnection(23)).resolves.toEqual({
@@ -115,11 +144,12 @@ describe("Telegram bot connection removal action", () => {
   })
 
   it("maps the linked-destination conflict to localized recovery guidance", async () => {
-    const conflict = Object.assign(new Error("backend metadata"), {
-      status: 409,
-      code: "TELEGRAM_BOT_CONNECTION_HAS_UNREMOVED_DESTINATIONS",
-    })
-    vi.mocked(fetchAuthenticated).mockRejectedValue(conflict)
+    vi.mocked(fetchAuthenticated).mockRejectedValue(
+      Object.assign(new Error("backend metadata"), {
+        status: 409,
+        code: "TELEGRAM_BOT_CONNECTION_HAS_UNREMOVED_DESTINATIONS",
+      })
+    )
 
     await expect(deleteTelegramBotConnection(23)).resolves.toEqual({
       success: false,
@@ -128,9 +158,9 @@ describe("Telegram bot connection removal action", () => {
     expect(revalidatePath).not.toHaveBeenCalled()
   })
 
-  it("returns webhook and request failures as failures without revalidation", async () => {
+  it("keeps webhook and request failures retryable without revalidation", async () => {
     vi.mocked(fetchAuthenticated).mockRejectedValue(
-      Object.assign(new Error("Webhook cleanup failed"), { status: 502 })
+      backendError("Webhook cleanup failed", 502)
     )
 
     await expect(deleteTelegramBotConnection(23)).resolves.toEqual({
@@ -355,6 +385,262 @@ describe("Telegram scheduled asset analysis actions", () => {
     )
     expect(failed).toEqual({ success: false, error: "Backend unavailable" })
     expect(revalidatePath).not.toHaveBeenCalled()
+  })
+})
+
+describe("Telegram bot connection creation", () => {
+  beforeEach(() => {
+    vi.mocked(fetchAuthenticatedWithStatus).mockReset()
+    vi.mocked(revalidatePath).mockClear()
+  })
+
+  it("uses the create endpoint and distinguishes new connections from caller duplicates", async () => {
+    vi.mocked(fetchAuthenticatedWithStatus).mockResolvedValueOnce({
+      data: {
+        ...botConnectionResponse,
+        botToken: "must-not-reach-the-client",
+        ownerId: 987,
+        ownerEmail: "other-owner@example.test",
+      },
+      status: 201,
+    })
+
+    await expect(
+      createTelegramBotConnection({ botToken: "  fake-token  " })
+    ).resolves.toEqual({
+      success: true,
+      data: { connection: botConnectionResponse, created: true },
+    })
+    expect(fetchAuthenticatedWithStatus).toHaveBeenCalledWith(
+      "/telegram/bot-connections",
+      {
+        method: "POST",
+        body: JSON.stringify({ botToken: "fake-token" }),
+      }
+    )
+    expect(revalidatePath).toHaveBeenCalledWith("/telegram")
+
+    vi.mocked(fetchAuthenticatedWithStatus).mockReset()
+    vi.mocked(revalidatePath).mockClear()
+    vi.mocked(fetchAuthenticatedWithStatus).mockResolvedValueOnce({
+      data: {
+        ...botConnectionResponse,
+        status: "INVALID",
+        botToken: "must-not-reach-the-client",
+        ownerId: 987,
+      },
+      status: 200,
+    })
+
+    await expect(
+      createTelegramBotConnection({ botToken: "fake-token" })
+    ).resolves.toEqual({
+      success: true,
+      data: {
+        connection: { ...botConnectionResponse, status: "INVALID" },
+        created: false,
+      },
+    })
+    expect(revalidatePath).toHaveBeenCalledWith("/telegram")
+  })
+
+  it("keeps an unexpected saved status unverified without reporting create failure", async () => {
+    vi.mocked(fetchAuthenticatedWithStatus).mockResolvedValueOnce({
+      data: {
+        ...botConnectionResponse,
+        status: "UNKNOWN",
+        botToken: "must-not-reach-the-client",
+      },
+      status: 201,
+    })
+
+    await expect(
+      createTelegramBotConnection({ botToken: "fake-token" })
+    ).resolves.toEqual({
+      success: true,
+      data: {
+        connection: { ...botConnectionResponse, status: undefined },
+        created: true,
+      },
+    })
+    expect(revalidatePath).toHaveBeenCalledWith("/telegram")
+  })
+
+  it("keeps a successful create when the response omits saved fields", async () => {
+    vi.mocked(fetchAuthenticatedWithStatus).mockResolvedValueOnce({
+      data: {
+        displayLabel: "Partially verified bot",
+        botToken: "must-not-reach-the-client",
+        ownerId: 987,
+      },
+      status: 201,
+    })
+
+    await expect(
+      createTelegramBotConnection({ botToken: "fake-token" })
+    ).resolves.toEqual({
+      success: true,
+      data: {
+        connection: { displayLabel: "Partially verified bot" },
+        created: true,
+      },
+    })
+    expect(revalidatePath).toHaveBeenCalledWith("/telegram")
+  })
+
+  it("keeps a successful response without a body as an unverified outcome", async () => {
+    vi.mocked(fetchAuthenticatedWithStatus).mockResolvedValueOnce({
+      data: null,
+      status: 204,
+    })
+
+    await expect(
+      createTelegramBotConnection({ botToken: "fake-token" })
+    ).resolves.toEqual({
+      success: true,
+      data: { connection: {}, created: null },
+    })
+    expect(revalidatePath).toHaveBeenCalledWith("/telegram")
+  })
+
+  it("maps known API rejections and falls back to Vietnamese copy for other 4xx responses", async () => {
+    const cases = [
+      {
+        error: backendError("The Telegram bot token is invalid.", 400),
+        expected: testDictionary.telegram.bot.createTokenVerificationError,
+      },
+      {
+        error: backendError(
+          "Missing permission telegram-bot-connection:create",
+          403
+        ),
+        expected: testDictionary.telegram.bot.createPermissionDenied,
+      },
+      {
+        error: backendError(
+          "This Telegram bot is already connected.",
+          409,
+          "TELEGRAM_BOT_CONNECTION_ALREADY_EXISTS"
+        ),
+        expected: testDictionary.telegram.bot.createConnectionConflict,
+      },
+      {
+        error: backendError(
+          "The identity provider rejected account provisioning.",
+          409,
+          "USER_PROVISIONING_REJECTED"
+        ),
+        expected: testDictionary.telegram.bot.createError,
+      },
+      {
+        error: backendError("English validation detail", 422),
+        expected: testDictionary.telegram.bot.createError,
+      },
+    ]
+
+    for (const { error, expected } of cases) {
+      vi.mocked(fetchAuthenticatedWithStatus).mockRejectedValueOnce(error)
+
+      await expect(
+        createTelegramBotConnection({ botToken: "fake-token" })
+      ).resolves.toEqual({ success: false, error: expected })
+    }
+
+    expect(revalidatePath).not.toHaveBeenCalled()
+  })
+
+  it("keeps transport failures as an unverified outcome", async () => {
+    vi.mocked(fetchAuthenticatedWithStatus).mockRejectedValueOnce(
+      new Error("fetch failed")
+    )
+
+    await expect(
+      createTelegramBotConnection({ botToken: "fake-token" })
+    ).resolves.toEqual({
+      success: true,
+      data: { connection: {}, created: null },
+    })
+    expect(revalidatePath).toHaveBeenCalledWith("/telegram")
+  })
+
+  it.each([500, 502, 503])(
+    "keeps an HTTP %i response as an unverified outcome",
+    async (status) => {
+      vi.mocked(fetchAuthenticatedWithStatus).mockRejectedValueOnce(
+        backendError("Backend unavailable", status)
+      )
+
+      await expect(
+        createTelegramBotConnection({ botToken: "fake-token" })
+      ).resolves.toEqual({
+        success: true,
+        data: { connection: {}, created: null },
+      })
+      expect(revalidatePath).toHaveBeenCalledWith("/telegram")
+    }
+  )
+
+  it("does not downgrade a known API rejection to an unverified outcome", async () => {
+    vi.mocked(fetchAuthenticatedWithStatus).mockRejectedValueOnce(
+      backendError("Token verification failed.", 400)
+    )
+
+    await expect(
+      createTelegramBotConnection({ botToken: "fake-token" })
+    ).resolves.toEqual({
+      success: false,
+      error: testDictionary.telegram.bot.createTokenVerificationError,
+    })
+    expect(revalidatePath).not.toHaveBeenCalled()
+  })
+
+  it("rejects an empty token before calling the backend", async () => {
+    await expect(
+      createTelegramBotConnection({ botToken: "   " })
+    ).resolves.toEqual({
+      success: false,
+      error: "Enter the bot token.",
+    })
+    expect(fetchAuthenticatedWithStatus).not.toHaveBeenCalled()
+  })
+})
+
+describe("Telegram bot connection read", () => {
+  it("projects the saved response to allowlisted metadata", async () => {
+    vi.mocked(fetchAuthenticated).mockReset()
+    vi.mocked(fetchAuthenticated).mockResolvedValueOnce([
+      {
+        ...botConnectionResponse,
+        botToken: "must-not-reach-the-client",
+        ownerId: 987,
+        ownerEmail: "other-owner@example.test",
+      },
+    ])
+
+    await expect(getTelegramBotConnections()).resolves.toEqual([
+      botConnectionResponse,
+    ])
+    expect(fetchAuthenticated).toHaveBeenCalledWith("/telegram/bot-connections")
+  })
+
+  it("preserves partial readback as unverified safe metadata", async () => {
+    vi.mocked(fetchAuthenticated).mockReset()
+    vi.mocked(fetchAuthenticated).mockResolvedValueOnce([
+      {
+        id: 14,
+        displayLabel: "Partially verified bot",
+        botToken: "must-not-reach-the-client",
+        ownerId: 987,
+      },
+    ])
+
+    const connections = await getTelegramBotConnections()
+
+    expect(connections).toEqual([
+      { id: 14, displayLabel: "Partially verified bot" },
+    ])
+    expect(connections[0]?.status).toBeUndefined()
+    expect(fetchAuthenticated).toHaveBeenCalledWith("/telegram/bot-connections")
   })
 })
 

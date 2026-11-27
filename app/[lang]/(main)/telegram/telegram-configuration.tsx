@@ -23,6 +23,7 @@ import { useLocalization } from "@/app/lib/i18n/provider"
 import { isSelectableLanguage } from "@/app/lib/languages/definitions"
 import type { LanguageResponse } from "@/app/lib/languages/definitions"
 import {
+  TelegramBotConnectionResponse,
   TelegramConfigurationData,
   TelegramDestinationResponse,
   TelegramFeatureKey,
@@ -131,8 +132,10 @@ function isCompleteMarketNewsSetting(setting: TelegramFeatureSettingResponse) {
 
 export function TelegramConfigurationPage({
   data,
+  canCreateBotConnections = false,
 }: {
   data: TelegramConfigurationData
+  canCreateBotConnections?: boolean
 }) {
   const { dictionary } = useLocalization()
   const featureSettings = data.currentWorkspace
@@ -205,7 +208,8 @@ export function TelegramConfigurationPage({
     ...routes.filter((route) => route.featureKey !== "MARKET_NEWS_ALERT"),
   ]
   const activeBotConnections = data.botConnections.filter(
-    (connection) => connection.status === "ACTIVE"
+    (connection): connection is TelegramBotConnectionResponse =>
+      connection.status === "ACTIVE" && connection.id !== undefined
   )
   const activeDestinations = data.destinations.filter(
     (destination) => destination.status === "ACTIVE"
@@ -266,6 +270,7 @@ export function TelegramConfigurationPage({
               botConnections={data.botConnections}
               canRead={data.sectionAccess.botConnections}
               canManage={data.manageAccess.botConnections}
+              canCreate={canCreateBotConnections}
               canDelete={data.manageAccess.botConnectionsDelete}
             />
             <DestinationsCard

@@ -2471,13 +2471,37 @@ export const vi = {
       accessLimited: "Không có quyền xem bot Telegram",
       noUsername: "Chưa có username",
       noBotName: "Chưa có tên bot",
+      statusUnverified: "Chưa xác minh trạng thái",
+      connectionDetailsUnverified:
+        "Một số dữ liệu kết nối chưa được trả về. Hãy tải lại để xác minh bản ghi đã lưu.",
+      unverifiedLabel: "Bot Telegram chưa xác minh",
       webhookRegistered: "Đã đăng ký {time}",
       webhookNotRegistered: "Chưa có thời điểm đăng ký",
       lastValidated: "Xác thực gần nhất {time}",
       readOnlyDescription:
-        "Bạn có thể xem các bot này nhưng tài khoản không có quyền kết nối hoặc gỡ bot.",
-      replacementGuidance:
-        "Để thay bot này, hãy kết nối token mới, liên kết lại các điểm nhận phụ thuộc và rà soát định tuyến cùng lịch gửi trước khi gỡ kết nối này.",
+        "Bạn có thể xem các bot hiện có. Cần quyền quản lý để cập nhật hoặc gỡ một kết nối.",
+      webhookRegistrationFailed: "Đăng ký webhook thất bại.",
+      setupIncomplete: "Thiết lập bot chưa hoàn tất.",
+      reconnectGuidance:
+        "Dùng Reconnect trên hàng của bot này để hoàn tất thiết lập.",
+      alreadyConnected:
+        "Bot này đã có trong danh sách kết nối. Trạng thái đã lưu: {status}.",
+      alreadyConnectedIncomplete:
+        "Bot này đã có trong danh sách kết nối với trạng thái {status}, nhưng thiết lập chưa hoàn tất.",
+      createStatusUnverified:
+        "Bot đã được thêm nhưng chưa xác minh được trạng thái hiện tại. Hãy kiểm tra danh sách kết nối trước khi thử lại.",
+      createOutcomeUnverified:
+        "Chưa xác nhận được kết quả kết nối. Hãy kiểm tra danh sách trước khi thử lại.",
+      createOutcomeUnverifiedWithoutRead:
+        "Chưa xác nhận được kết quả yêu cầu kết nối. Tài khoản này không có quyền xem danh sách kết nối; hãy nhờ quản trị viên kiểm tra trước khi thử lại.",
+      createStatusUnverifiedWithoutRead:
+        "Bot đã được tạo nhưng chưa xác minh được trạng thái đã lưu. Tài khoản này không có quyền xem danh sách kết nối; hãy nhờ quản trị viên kiểm tra trước khi thử lại.",
+      alreadyConnectedStatusUnverified:
+        "Bot đã được kết nối nhưng chưa xác minh được trạng thái đã lưu. Hãy kiểm tra danh sách trước khi thực hiện thao tác khác.",
+      alreadyConnectedStatusUnverifiedWithoutRead:
+        "Bot này đã được kết nối trong tài khoản này nhưng chưa xác minh được trạng thái đã lưu. Tài khoản này không có quyền xem danh sách kết nối; hãy nhờ quản trị viên kiểm tra trước khi thử lại.",
+      createNotActive:
+        "Bot đã được thêm với trạng thái {status}; chưa xác nhận bot đang hoạt động.",
       emptyTitle: "Chưa có bot Telegram",
       emptyDescription:
         "Kết nối bot do bạn tạo trong BotFather để bắt đầu gửi thông báo.",
@@ -2490,18 +2514,25 @@ export const vi = {
       deleteSuccess: "Đã gỡ kết nối bot Telegram.",
       deleteBlockedByDestinations:
         "Trước tiên hãy gỡ tất cả điểm nhận Telegram đang liên kết với bot này. Chưa có dữ liệu nào bị thay đổi.",
-      connect: "Kết nối bot",
+      connect: "Kết nối bot mới",
       createTitle: "Kết nối bot Telegram",
       createDescription:
         "Dán token bot do BotFather cấp để Signapse xác thực và đăng ký webhook.",
       tokenLabel: "Token bot",
-      tokenPlaceholder: "123456:ABC...",
-      tokenDescription: "Token chỉ gửi một lần khi tạo kết nối.",
+      tokenPlaceholder: "Dán token BotFather",
+      tokenDescription: "Token này sẽ không hiển thị lại sau khi kết nối.",
       connectBot: "Kết nối bot",
       invalidData: "Dữ liệu bot không hợp lệ.",
       createSuccess: "Đã kết nối bot Telegram.",
+      createIncomplete:
+        "Bot đã được thêm với trạng thái {status}, nhưng đăng ký webhook thất bại. Thiết lập chưa hoàn tất.",
       createError: "Không thể kết nối bot Telegram.",
-      deleteError: "Không thể gỡ bot Telegram. Hãy thử lại.",
+      createTokenVerificationError:
+        "Không thể xác minh token bot. Hãy kiểm tra token rồi thử lại.",
+      createPermissionDenied:
+        "Tài khoản của bạn cần quyền kết nối bot Telegram. Hãy liên hệ quản trị viên.",
+      createConnectionConflict: "Bot Telegram này đã được kết nối.",
+      deleteError: "Không thể gỡ bot Telegram.",
       fallbackLabel: "Bot #{id}",
     },
     destination: {
