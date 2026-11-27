@@ -231,6 +231,10 @@ export function TelegramConfigurationPage({
             activeDestinations={activeDestinations}
             currentWorkspace={data.currentWorkspace}
             watchlistAssets={data.watchlistAssets}
+            watchlistAssetsAvailable={
+              data.sectionAccess.watchlistAssets &&
+              !data.watchlistAssetsLoadError
+            }
             languages={data.languages}
             languageCatalogError={data.languageCatalogError}
             scheduleLoadError={data.scheduleLoadError}
@@ -686,6 +690,7 @@ function MarketAnalysisSchedulePanel({
   activeDestinations,
   currentWorkspace,
   watchlistAssets,
+  watchlistAssetsAvailable,
   languages,
   languageCatalogError,
   scheduleLoadError,
@@ -697,6 +702,7 @@ function MarketAnalysisSchedulePanel({
   activeDestinations: TelegramDestinationResponse[]
   currentWorkspace: TelegramConfigurationData["currentWorkspace"]
   watchlistAssets: TelegramConfigurationData["watchlistAssets"]
+  watchlistAssetsAvailable: boolean
   languages: TelegramConfigurationData["languages"]
   languageCatalogError: boolean
   scheduleLoadError: boolean
@@ -791,6 +797,7 @@ function MarketAnalysisSchedulePanel({
             activeDestinations={activeDestinations}
             currentWorkspace={currentWorkspace}
             watchlistAssets={watchlistAssets}
+            watchlistAssetsAvailable={watchlistAssetsAvailable}
             languages={languages}
             languageCatalogError={languageCatalogError}
             layout="desktop"
@@ -879,6 +886,7 @@ function MarketAnalysisSchedulePanel({
           activeDestinations={activeDestinations}
           currentWorkspace={currentWorkspace}
           watchlistAssets={watchlistAssets}
+          watchlistAssetsAvailable={watchlistAssetsAvailable}
           languages={languages}
           languageCatalogError={languageCatalogError}
           layout="mobile"
@@ -954,6 +962,7 @@ function ScheduleActionButtons({
   activeDestinations,
   currentWorkspace,
   watchlistAssets,
+  watchlistAssetsAvailable,
   languages,
   languageCatalogError,
   layout,
@@ -963,6 +972,7 @@ function ScheduleActionButtons({
   activeDestinations: TelegramDestinationResponse[]
   currentWorkspace: TelegramConfigurationData["currentWorkspace"]
   watchlistAssets: TelegramConfigurationData["watchlistAssets"]
+  watchlistAssetsAvailable: boolean
   languages: TelegramConfigurationData["languages"]
   languageCatalogError: boolean
   layout: "mobile" | "desktop"
@@ -988,7 +998,10 @@ function ScheduleActionButtons({
           watchlistAssets={watchlistAssets}
           languages={languages}
           languageCatalogError={languageCatalogError}
-          assetEditable={currentWorkspace?.id === schedule.workspaceId}
+          assetEditable={
+            watchlistAssetsAvailable &&
+            currentWorkspace?.id === schedule.workspaceId
+          }
           canUpdate={scheduleActions.update}
         />
       ) : null}

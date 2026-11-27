@@ -47,6 +47,7 @@ import {
   deleteTelegramBotConnection,
   deleteTelegramMarketAnalysisSchedule,
   updateTelegramFeatureSetting,
+  updateTelegramMarketAnalysisSchedule,
 } from "@/app/api/telegram/action"
 import { toast } from "sonner"
 import { en as enDictionary } from "@/app/lib/i18n/dictionaries/en"
@@ -391,6 +392,66 @@ describe("Telegram schedule destructive actions", () => {
     ).toBeVisible()
     expect(screen.queryByText("Morning analysis")).not.toBeInTheDocument()
   })
+
+  it.each([
+    ["watchlist read permission is absent", false, false],
+    ["watchlist read fails", true, true],
+  ] as const)(
+    "preserves the saved asset when %s",
+    async (_state, canReadWatchlist, watchlistAssetsLoadError) => {
+      const user = userEvent.setup()
+      vi.mocked(updateTelegramMarketAnalysisSchedule).mockResolvedValue({
+        success: true,
+        data: schedule,
+      })
+      renderConfiguration({
+        ...data,
+        watchlistAssets: [],
+        watchlistAssetsLoadError,
+        sectionAccess: {
+          ...data.sectionAccess,
+          watchlistAssets: canReadWatchlist,
+        },
+        scheduleActions: { create: false, update: true, delete: false },
+      })
+
+      await user.click(
+        screen.getAllByRole("button", {
+          name: viDictionary.telegram.schedule.editTrigger,
+        })[0]
+      )
+      const dialog = screen.getByRole("dialog")
+      expect(
+        within(dialog).getByRole("combobox", {
+          name: viDictionary.telegram.schedule.assetLabel,
+        })
+      ).toBeDisabled()
+
+      const name = within(dialog).getByLabelText(
+        viDictionary.telegram.schedule.nameLabel
+      )
+      await user.clear(name)
+      await user.type(name, "Updated analysis")
+      await user.click(
+        within(dialog).getByRole("button", {
+          name: viDictionary.telegram.schedule.saveSchedule,
+        })
+      )
+
+      await waitFor(() =>
+        expect(updateTelegramMarketAnalysisSchedule).toHaveBeenCalledWith(11, {
+          name: "Updated analysis",
+          workspaceId: 7,
+          destinationId: 8,
+          assetId: 9,
+          timezone: "Asia/Bangkok",
+          localTimes: ["09:00"],
+          outputLanguageIsoCode: undefined,
+        })
+      )
+      expect(routerRefresh).toHaveBeenCalledTimes(1)
+    }
+  )
 
   it("keeps Create, Edit, and Remove independently permission-gated", () => {
     renderConfiguration({
