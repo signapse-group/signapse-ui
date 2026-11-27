@@ -81,6 +81,27 @@ function getCreateBotActionError(
   return dictionary.telegram.bot.createError
 }
 
+function getTelegramDestinationRemoveError(
+  error: unknown,
+  dictionary: Dictionary
+): string {
+  const messages = dictionary.telegram.destination
+  if (!(error instanceof Error)) return messages.removeError
+
+  const apiError = error as BackendApiError
+  if (
+    apiError.status === 409 &&
+    apiError.code === "TELEGRAM_DESTINATION_IN_USE"
+  ) {
+    return messages.removeInUseError
+  }
+  if (typeof apiError.status === "number") {
+    return error.message || messages.removeError
+  }
+
+  return messages.removeError
+}
+
 function getReconnectBotActionError(
   error: unknown,
   dictionary: Dictionary
@@ -490,33 +511,6 @@ export async function sendTelegramTestMessage(
   }
 }
 
-export async function disableTelegramDestination(
-  id: number
-): Promise<ActionResult<TelegramDestinationResponse>> {
-  const dictionary = await getTelegramDictionary()
-
-  try {
-    const data = await fetchAuthenticated<TelegramDestinationResponse>(
-      `/telegram/destinations/${id}/disable`,
-      {
-        method: "PATCH",
-      }
-    )
-
-    revalidateTelegramConfiguration()
-
-    return { success: true, data }
-  } catch (error: unknown) {
-    return {
-      success: false,
-      error: getActionError(
-        error,
-        dictionary.telegram.destination.disableError
-      ),
-    }
-  }
-}
-
 export async function deleteTelegramDestination(
   id: number
 ): Promise<ActionResult> {
@@ -533,7 +527,7 @@ export async function deleteTelegramDestination(
   } catch (error: unknown) {
     return {
       success: false,
-      error: getActionError(error, dictionary.telegram.destination.deleteError),
+      error: getTelegramDestinationRemoveError(error, dictionary),
     }
   }
 }

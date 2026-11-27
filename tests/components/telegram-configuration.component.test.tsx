@@ -23,7 +23,8 @@ vi.mock("@/app/api/telegram/action", () => ({
   reconnectTelegramBotConnection: vi.fn(),
   deleteTelegramDestination: vi.fn(),
   deleteTelegramMarketAnalysisSchedule: vi.fn(),
-  disableTelegramDestination: vi.fn(),
+  disableTelegramBotConnection: vi.fn(),
+  disableTelegramMarketAnalysisSchedule: vi.fn(),
   sendTelegramTestMessage: vi.fn(),
   updateTelegramFeatureSetting: vi.fn(),
   updateTelegramMarketAnalysisSchedule: vi.fn(),
@@ -46,12 +47,14 @@ import {
   createTelegramBotConnection,
   createTelegramLinkToken,
   deleteTelegramBotConnection,
+  deleteTelegramDestination,
   reconnectTelegramBotConnection,
   deleteTelegramMarketAnalysisSchedule,
   updateTelegramFeatureSetting,
   updateTelegramMarketAnalysisSchedule,
 } from "@/app/api/telegram/action"
 import { toast } from "sonner"
+import { TooltipProvider } from "@/components/ui/tooltip"
 import { en as enDictionary } from "@/app/lib/i18n/dictionaries/en"
 import { vi as viDictionary } from "@/app/lib/i18n/dictionaries/vi"
 import { LocalizationProvider } from "@/app/lib/i18n/provider"
@@ -1556,7 +1559,7 @@ describe("Telegram schedule destructive actions", () => {
     })
     renderConfiguration({
       ...data,
-      featureSettings: [],
+      featureSettings: [featureSettings[0]],
       sectionAccess: {
         ...data.sectionAccess,
         destinations: true,
@@ -3168,5 +3171,311 @@ describe("Telegram destination link dialog", () => {
     expect(toast.success).not.toHaveBeenCalledWith(
       viDictionary.telegram.destination.linkCreated
     )
+  })
+})
+
+describe("Telegram destination removal", () => {
+  afterEach(() => {
+    cleanup()
+  })
+
+  beforeEach(() => {
+    vi.mocked(deleteTelegramDestination).mockReset()
+    routerRefresh.mockReset()
+    vi.mocked(toast.error).mockReset()
+    vi.mocked(toast.success).mockReset()
+  })
+
+  function manageableData(
+    destinations: TelegramConfigurationData["destinations"] = [destination]
+  ): TelegramConfigurationData {
+    return {
+      ...data,
+      destinations,
+      sectionAccess: { ...data.sectionAccess, destinations: true },
+      manageAccess: { ...data.manageAccess, destinations: true },
+    }
+  }
+
+  it("shows direct Remove to managers, including for disabled destinations", () => {
+    const disabledDestination = { ...destination, status: "DISABLED" as const }
+    renderConfiguration(manageableData([disabledDestination]))
+
+    const removeButton = screen.getByRole("button", {
+      name: viDictionary.telegram.destination.removeTrigger.replace(
+        "{destination}",
+        "Operations"
+      ),
+    })
+    expect(removeButton).toBeVisible()
+
+    const row = removeButton.closest('[role="listitem"]')
+    expect(row).not.toBeNull()
+    expect(
+      within(row as HTMLElement).queryByRole("button", {
+        name: /Vô hiệu hóa/,
+      })
+    ).toBeNull()
+  })
+
+  it.each([
+    { locale: "vi" as const, dictionary: viDictionary },
+    { locale: "en" as const, dictionary: enDictionary },
+  ])(
+    "shows the localized Remove tooltip on hover and focus ($locale)",
+    async ({ locale, dictionary }) => {
+      const user = userEvent.setup()
+      const triggerLabel =
+        dictionary.telegram.destination.removeTrigger.replace(
+          "{destination}",
+          "Operations"
+        )
+      render(
+        <TooltipProvider delay={0}>
+          <LocalizationProvider locale={locale} dictionary={dictionary}>
+            <TelegramConfigurationPage data={manageableData()} />
+          </LocalizationProvider>
+        </TooltipProvider>
+      )
+
+      const trigger = screen.getByRole("button", { name: triggerLabel })
+      expect(trigger).toHaveAccessibleName(triggerLabel)
+
+      await user.hover(trigger)
+      expect(
+        await screen.findByText(dictionary.telegram.destination.removeAction, {
+          exact: true,
+        })
+      ).toBeInTheDocument()
+      await user.unhover(trigger)
+      await waitFor(() =>
+        expect(
+          screen.queryByText(dictionary.telegram.destination.removeAction, {
+            exact: true,
+          })
+        ).not.toBeInTheDocument()
+      )
+
+      trigger.focus()
+      expect(
+        await screen.findByText(dictionary.telegram.destination.removeAction, {
+          exact: true,
+        })
+      ).toHaveTextContent(dictionary.telegram.destination.removeAction)
+    }
+  )
+
+  it("does not show Remove to read-only users", () => {
+    renderConfiguration({
+      ...data,
+      sectionAccess: { ...data.sectionAccess, destinations: true },
+      manageAccess: { ...data.manageAccess, destinations: false },
+    })
+
+    expect(
+      screen.queryByRole("button", {
+        name: viDictionary.telegram.destination.removeTrigger.replace(
+          "{destination}",
+          "Operations"
+        ),
+      })
+    ).toBeNull()
+    expect(
+      screen.getByText(viDictionary.telegram.destination.readOnlyDescription)
+    ).toBeVisible()
+  })
+
+  it("shows a localized destination read error with retry instead of empty state", async () => {
+    const user = userEvent.setup()
+    renderConfiguration({
+      ...manageableData([]),
+      destinationsLoadError: true,
+    })
+    const card = screen
+      .getByRole("heading", {
+        name: viDictionary.telegram.destination.sectionTitle,
+      })
+      .closest('[data-slot="card"]') as HTMLElement
+
+    expect(within(card).getByRole("alert")).toHaveTextContent(
+      viDictionary.telegram.destination.loadError
+    )
+    expect(
+      screen.queryByText(viDictionary.telegram.destination.emptyTitle)
+    ).not.toBeInTheDocument()
+
+    await user.click(
+      within(card).getByRole("button", { name: viDictionary.common.retry })
+    )
+    expect(routerRefresh).toHaveBeenCalledOnce()
+  })
+
+  it("cancels without a mutation and restores focus to the row action", async () => {
+    const user = userEvent.setup()
+    const { container } = renderConfiguration(manageableData())
+    const trigger = screen.getByRole("button", {
+      name: viDictionary.telegram.destination.removeTrigger.replace(
+        "{destination}",
+        "Operations"
+      ),
+    })
+
+    await user.click(trigger)
+    const dialog = screen.getByRole("alertdialog")
+    expect(dialog).toHaveTextContent(
+      viDictionary.telegram.destination.removeTitle.replace(
+        "{destination}",
+        "Operations"
+      )
+    )
+    await user.keyboard("{Escape}")
+
+    expect(deleteTelegramDestination).not.toHaveBeenCalled()
+    await waitFor(() => expect(trigger).toHaveFocus())
+    expect(container.querySelector('[role="alertdialog"]')).toBeNull()
+  })
+
+  it("keeps the blocked context for retry and refreshes only after success", async () => {
+    const user = userEvent.setup()
+    vi.mocked(deleteTelegramDestination)
+      .mockResolvedValueOnce({
+        success: false,
+        error: viDictionary.telegram.destination.removeInUseError,
+      })
+      .mockResolvedValueOnce({ success: true, data: undefined })
+    renderConfiguration(manageableData())
+
+    await user.click(
+      screen.getByRole("button", {
+        name: viDictionary.telegram.destination.removeTrigger.replace(
+          "{destination}",
+          "Operations"
+        ),
+      })
+    )
+    const dialog = screen.getByRole("alertdialog")
+    const confirm = within(dialog).getByRole("button", {
+      name: viDictionary.telegram.destination.removeAction,
+    })
+    await user.click(confirm)
+
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent(
+      viDictionary.telegram.destination.removeInUseError
+    )
+    await waitFor(() => expect(confirm).toHaveFocus())
+    expect(dialog).toBeVisible()
+    expect(routerRefresh).not.toHaveBeenCalled()
+    expect(toast.success).not.toHaveBeenCalled()
+
+    await user.click(confirm)
+    await waitFor(() => expect(dialog).not.toBeVisible())
+    expect(deleteTelegramDestination).toHaveBeenCalledTimes(2)
+    expect(routerRefresh).toHaveBeenCalledTimes(1)
+    expect(toast.success).toHaveBeenCalledWith(
+      viDictionary.telegram.destination.removeSuccess
+    )
+    await waitFor(() =>
+      expect(
+        screen.getByRole("heading", {
+          name: viDictionary.telegram.destination.sectionTitle,
+        })
+      ).toHaveFocus()
+    )
+  })
+
+  it("announces pending removal and keeps the dialog busy until the API settles", async () => {
+    const user = userEvent.setup()
+    let resolveRemoval: (result: { success: true; data: undefined }) => void =
+      () => undefined
+    const pendingRemoval = new Promise<{ success: true; data: undefined }>(
+      (resolve) => {
+        resolveRemoval = resolve
+      }
+    )
+    vi.mocked(deleteTelegramDestination).mockReturnValueOnce(pendingRemoval)
+    renderConfiguration(manageableData())
+
+    await user.click(
+      screen.getByRole("button", {
+        name: viDictionary.telegram.destination.removeTrigger.replace(
+          "{destination}",
+          "Operations"
+        ),
+      })
+    )
+    const dialog = screen.getByRole("alertdialog")
+    const confirm = within(dialog).getByRole("button", {
+      name: viDictionary.telegram.destination.removeAction,
+    })
+    await user.click(confirm)
+
+    const pending = within(dialog).getByRole("status")
+    expect(pending).toHaveTextContent(viDictionary.common.pending)
+    expect(pending).toHaveFocus()
+    expect(confirm).toBeDisabled()
+    expect(routerRefresh).not.toHaveBeenCalled()
+    expect(toast.success).not.toHaveBeenCalled()
+
+    resolveRemoval({ success: true, data: undefined })
+    await waitFor(() => expect(dialog).not.toBeVisible())
+    expect(routerRefresh).toHaveBeenCalledTimes(1)
+  })
+
+  it("keeps Removed destinations out of the list and send choices after readback", async () => {
+    const user = userEvent.setup()
+    const currentData: TelegramConfigurationData = {
+      ...manageableData(),
+      schedules: [],
+      featureSettings: [],
+      economicCalendarSettings: [economicCalendarSetting],
+      sectionAccess: {
+        ...data.sectionAccess,
+        destinations: true,
+        featureSettings: true,
+        economicCalendarRouting: true,
+      },
+      manageAccess: {
+        ...data.manageAccess,
+        destinations: true,
+        featureSettings: true,
+        economicCalendarRouting: true,
+      },
+    }
+    const { rerender } = renderConfiguration(currentData)
+    const routeLabel =
+      viDictionary.telegram.routeDefinitions.ECONOMIC_CALENDAR_ALERT.label
+    const routeDestination = screen.getByRole("combobox", {
+      name: destinationSelectorName(routeLabel),
+    })
+
+    await user.click(routeDestination)
+    expect(
+      await screen.findByRole("option", { name: destination.displayLabel })
+    ).toBeVisible()
+    await user.keyboard("{Escape}")
+
+    rerender(
+      <LocalizationProvider locale="vi" dictionary={viDictionary}>
+        <TelegramConfigurationPage
+          data={{
+            ...currentData,
+            destinations: [{ ...destination, status: "REMOVED" }],
+          }}
+        />
+      </LocalizationProvider>
+    )
+
+    expect(
+      screen.queryByRole("button", {
+        name: viDictionary.telegram.destination.removeTrigger.replace(
+          "{destination}",
+          destination.displayLabel
+        ),
+      })
+    ).toBeNull()
+    await user.click(routeDestination)
+    expect(
+      screen.queryByRole("option", { name: destination.displayLabel })
+    ).toBeNull()
   })
 })

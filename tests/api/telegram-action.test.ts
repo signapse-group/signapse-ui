@@ -34,6 +34,8 @@ const { testDictionary } = vi.hoisted(() => ({
       destination: {
         invalidData: "Destination is invalid",
         createLinkError: "Could not create the Telegram link command",
+        removeError: "Could not remove the Telegram destination",
+        removeInUseError: "The destination is still in use",
         testMessageError: "Could not send a test message",
         testMessageUnknownOutcome:
           "Telegram did not confirm the test message. Check the Telegram conversation before trying again.",
@@ -87,6 +89,7 @@ import {
   createTelegramLinkToken,
   createTelegramMarketAnalysisSchedule,
   deleteTelegramBotConnection,
+  deleteTelegramDestination,
   deleteTelegramMarketAnalysisSchedule,
   getTelegramBotConnections,
   getTelegramDestinations,
@@ -1239,5 +1242,72 @@ describe("Telegram destination link actions", () => {
 
     await expect(getTelegramDestinations()).resolves.toEqual(destinations)
     expect(fetchAuthenticated).toHaveBeenCalledWith("/telegram/destinations")
+  })
+})
+
+describe("Telegram destination removal action", () => {
+  beforeEach(() => {
+    vi.mocked(fetchAuthenticated).mockReset()
+    vi.mocked(revalidatePath).mockReset()
+  })
+
+  it("removes by ID and revalidates only after the API confirms success", async () => {
+    vi.mocked(fetchAuthenticated).mockResolvedValue(undefined)
+
+    await expect(deleteTelegramDestination(24)).resolves.toEqual({
+      success: true,
+      data: undefined,
+    })
+    expect(fetchAuthenticated).toHaveBeenCalledWith(
+      "/telegram/destinations/24",
+      { method: "DELETE" }
+    )
+    expect(revalidatePath).toHaveBeenCalledWith("/telegram")
+  })
+
+  it("maps only the documented in-use conflict and preserves failure state", async () => {
+    vi.mocked(fetchAuthenticated).mockRejectedValue(
+      Object.assign(new Error("Generic conflict"), {
+        status: 409,
+        code: "TELEGRAM_DESTINATION_IN_USE",
+      })
+    )
+
+    await expect(deleteTelegramDestination(24)).resolves.toEqual({
+      success: false,
+      error: testDictionary.telegram.destination.removeInUseError,
+    })
+    expect(revalidatePath).not.toHaveBeenCalled()
+  })
+
+  it("does not mislabel other conflicts or transport failures as references", async () => {
+    vi.mocked(fetchAuthenticated)
+      .mockRejectedValueOnce(
+        Object.assign(new Error("Unexpected server response"), {
+          status: 500,
+          code: "TELEGRAM_DESTINATION_IN_USE",
+        })
+      )
+      .mockRejectedValueOnce(
+        Object.assign(new Error("Account provisioning was rejected"), {
+          status: 409,
+          code: "USER_PROVISIONING_REJECTED",
+        })
+      )
+      .mockRejectedValueOnce(new Error("Network failure"))
+
+    await expect(deleteTelegramDestination(24)).resolves.toEqual({
+      success: false,
+      error: "Unexpected server response",
+    })
+    await expect(deleteTelegramDestination(24)).resolves.toEqual({
+      success: false,
+      error: "Account provisioning was rejected",
+    })
+    await expect(deleteTelegramDestination(24)).resolves.toEqual({
+      success: false,
+      error: testDictionary.telegram.destination.removeError,
+    })
+    expect(revalidatePath).not.toHaveBeenCalled()
   })
 })

@@ -2587,7 +2587,6 @@ export const en: Dictionary = {
       emptyTitle: "No destinations yet",
       emptyDescription:
         "Create a link command, then send it in Telegram to verify a chat, group, or channel.",
-      actionMenu: "Destination actions",
       linkedBot: "Linked bot",
       testMessage: "Send test",
       testMessagePending: "Sending test…",
@@ -2602,15 +2601,12 @@ export const en: Dictionary = {
         "Destination management permission is required to send a test message.",
       testMessageInactive:
         "Only active destinations linked to active bots can receive a test message.",
-      disableTitle: "Disable Telegram destination?",
-      disableDescription:
-        "A disabled destination will no longer receive notifications from routes pointing to it. This interface does not provide reactivation.",
-      disableSuccess: "Telegram destination disabled.",
-      deleteTitle: "Delete Telegram destination?",
-      deleteDescription:
-        "This action removes the verified destination and cannot be undone from the interface.",
-      deleteAction: "Delete destination",
-      deleteSuccess: "Telegram destination deleted.",
+      removeTitle: "Remove Telegram destination {destination}?",
+      removeDescription:
+        "It will no longer be available in send choices. Removal is blocked while a route or schedule still references it. Send history is kept, and this cannot be undone from the interface.",
+      removeAction: "Remove destination",
+      removeTrigger: "Remove Telegram destination {destination}",
+      removeSuccess: "Telegram destination removed.",
       link: "Link destination",
       linkTitle: "Link destination",
       linkDescription:
@@ -2647,8 +2643,9 @@ export const en: Dictionary = {
       fallbackLabel: "Destination #{id}",
       invalidData: "Destination data is invalid.",
       createLinkError: "Could not create the Telegram link command.",
-      disableError: "Could not disable the Telegram destination.",
-      deleteError: "Could not delete the Telegram destination.",
+      removeError: "Could not remove the Telegram destination.",
+      removeInUseError:
+        "This destination is still referenced. Change or unassign it from routes, including disabled routes. For active schedules, change the destination or remove the schedule; remove inactive schedules that still reference it. If you lack the required management permission, ask someone who has it. The destination and configuration were not changed.",
     },
     routing: {
       sectionTitle: "Feature routing",

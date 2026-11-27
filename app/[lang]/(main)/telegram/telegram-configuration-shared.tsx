@@ -287,12 +287,21 @@ export function ActionConfirmDialog({
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const feedbackRef = useRef<HTMLParagraphElement>(null)
+  const actionRef = useRef<HTMLButtonElement>(null)
+  const restoreActionFocus = useRef(false)
   const { dictionary } = useLocalization()
   const open = controlledOpen ?? uncontrolledOpen
 
   useEffect(() => {
-    if (isPending || error) feedbackRef.current?.focus()
-  }, [error, isPending])
+    if (isPending) {
+      feedbackRef.current?.focus()
+      return
+    }
+    if (!open || !error || !restoreActionFocus.current) return
+
+    restoreActionFocus.current = false
+    actionRef.current?.focus()
+  }, [error, isPending, open])
 
   function setOpen(
     nextOpen: boolean,
@@ -328,6 +337,7 @@ export function ActionConfirmDialog({
   }
 
   function handleAction() {
+    restoreActionFocus.current = false
     setError(null)
     startTransition(async () => {
       const result = await action()
@@ -337,8 +347,8 @@ export function ActionConfirmDialog({
         setOpen(false, successFocusId ? [successFocusId] : undefined)
         router.refresh()
       } else {
+        restoreActionFocus.current = true
         setError(result.error)
-        toast.error(result.error)
       }
     })
   }
@@ -375,7 +385,10 @@ export function ActionConfirmDialog({
       ) : (
         <AlertDialogTrigger render={triggerElement} />
       )}
-      <AlertDialogContent size="sm">
+      <AlertDialogContent
+        size="sm"
+        className="max-h-[calc(100vh-2rem)] overflow-y-auto"
+      >
         <AlertDialogHeader>
           <AlertDialogMedia
             className={
@@ -407,6 +420,7 @@ export function ActionConfirmDialog({
             {dictionary.common.cancel}
           </AlertDialogCancel>
           <AlertDialogAction
+            ref={actionRef}
             variant={intent === "destructive" ? "destructive" : "default"}
             disabled={isPending}
             onClick={(event) => {

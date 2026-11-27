@@ -2567,7 +2567,6 @@ export const vi = {
       emptyTitle: "Chưa có điểm nhận",
       emptyDescription:
         "Tạo lệnh liên kết rồi gửi lệnh đó trong Telegram để xác minh chat, group hoặc channel.",
-      actionMenu: "Thao tác điểm nhận",
       linkedBot: "Bot liên kết",
       testMessage: "Gửi thử",
       testMessagePending: "Đang gửi thử…",
@@ -2582,15 +2581,12 @@ export const vi = {
         "Cần quyền quản lý điểm nhận để gửi tin nhắn thử.",
       testMessageInactive:
         "Chỉ điểm nhận đang hoạt động và liên kết với bot đang hoạt động mới có thể gửi tin nhắn thử.",
-      disableTitle: "Vô hiệu hóa điểm nhận Telegram?",
-      disableDescription:
-        "Điểm nhận bị vô hiệu hóa sẽ không còn nhận thông báo từ các luồng đang trỏ tới nó. Giao diện này không hỗ trợ bật lại.",
-      disableSuccess: "Đã vô hiệu hóa điểm nhận Telegram.",
-      deleteTitle: "Xóa điểm nhận Telegram?",
-      deleteDescription:
-        "Hành động này hủy điểm nhận đã xác minh và không thể hoàn tác từ giao diện.",
-      deleteAction: "Xóa điểm nhận",
-      deleteSuccess: "Đã xóa điểm nhận Telegram.",
+      removeTitle: "Gỡ điểm nhận Telegram {destination}?",
+      removeDescription:
+        "Điểm nhận sẽ không còn trong các lựa chọn gửi. Thao tác bị chặn khi tuyến hoặc lịch vẫn tham chiếu điểm nhận này. Lịch sử gửi được giữ lại; bạn không thể hoàn tác từ giao diện.",
+      removeAction: "Gỡ điểm nhận",
+      removeTrigger: "Gỡ điểm nhận Telegram {destination}",
+      removeSuccess: "Đã gỡ điểm nhận Telegram.",
       link: "Liên kết điểm nhận",
       linkTitle: "Liên kết điểm nhận",
       linkDescription:
@@ -2625,8 +2621,9 @@ export const vi = {
       fallbackLabel: "Điểm nhận #{id}",
       invalidData: "Dữ liệu điểm nhận không hợp lệ.",
       createLinkError: "Không thể tạo lệnh liên kết Telegram.",
-      disableError: "Không thể vô hiệu hóa điểm nhận Telegram.",
-      deleteError: "Không thể xóa điểm nhận Telegram.",
+      removeError: "Không thể gỡ điểm nhận Telegram.",
+      removeInUseError:
+        "Điểm nhận vẫn được tham chiếu. Hãy đổi hoặc bỏ gán điểm nhận khỏi các tuyến, kể cả tuyến đang tắt. Với lịch đang hoạt động, hãy đổi đích hoặc gỡ lịch; gỡ lịch không hoạt động còn tham chiếu điểm nhận này. Nếu bạn thiếu quyền quản lý mục cần sửa, hãy nhờ người có quyền. Điểm nhận và cấu hình được giữ nguyên.",
     },
     routing: {
       sectionTitle: "Định tuyến tính năng",
