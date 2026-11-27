@@ -108,3 +108,22 @@ The current accessibility smoke was `/opt/apps/symphony/runtime/run-fe-browser "
 Focused local checks on the rebased candidate: `pnpm exec vitest run tests/api/telegram-action.test.ts tests/components/telegram-configuration.component.test.tsx tests/api/permissions-server.test.ts tests/core/telegram-permissions.test.ts --reporter=dot` — **4 files, 65 passed**; `pnpm typecheck`, targeted ESLint, Prettier, `pnpm test:contract` (90 operations) and `git diff --check` passed. The current OpenAPI fetch at **2026-11-26 11:40:29 UTC** returned `x-build-revision` `b6de21490d5572bdb51624372ef860230af5df86`; its required response fields remain only `destination` and `outputLanguage`.
 
 Light theme, native 200% browser zoom and a physical screen-reader session were not captured in this follow-up. No live feature request or Telegram delivery test was made. QA owns live dev behavior; the coordinator owns parent acceptance.
+
+## Partial 200 readback follow-up — 2026-11-27
+
+Code candidate: [`65699a9a556c5b3ecabbcc04e220827573855e43`](https://github.com/signapse-group/signapse-ui/commit/65699a9a556c5b3ecabbcc04e220827573855e43), on the existing SIGN-688 branch and PR #163.
+
+- A successful PUT first invalidates the Telegram route data. FE accepts a complete response only when its route and workspace match the request. Otherwise, FE reads back only that route in that workspace and confirms the save only from a complete matching readback.
+- If that readback is missing or incomplete, the row shows the localized unverified status, hides its saved controls, moves keyboard focus to the status and offers Retry. It does not show a success toast or keep the previous route values as authoritative.
+- The shared Market news action follows the same filtered-readback path. The action regression covers partial 200 responses for both route keys. The component regression covers destination-list failure with a saved destination: the saved value remains visible, the unloaded list does not become a selector choice, and Retry and Clear remain usable.
+
+The current producer contract was fetched from `https://dev-api.signapse.cloud/v3/api-docs` at **2026-11-27 10:32:48 UTC**; the response `Date` header matched and `x-build-revision` was `60bc9ad3a61b889daba27deaf3ac7961cfa68a6b`. [Deploy run 45979542814](https://github.com/dgminhtam/signapse/actions/runs/45979542814) completed successfully for that exact revision. `/health` and `/health/readiness` returned HTTP 200. `TelegramFeatureSettingResponse` requires nullable `destination` and `outputLanguage`; all top-level display fields and all `LanguageResponse` properties, including `isoCode`, remain optional. The route-specific ownership and permission descriptions are present on the GET and PUT operations.
+
+Verification on the code candidate:
+
+- `pnpm exec vitest run tests/api/telegram-action.test.ts tests/components/telegram-configuration.component.test.tsx --reporter=dot` — **2 files, 92 passed**.
+- `pnpm test:quality` — **passed**: lint (23 existing warnings outside changed files), typecheck, **103 files / 925 tests**, contract fixture consistency (**89 operations**) and deployment verifier (**5 passed**).
+- Standalone `pnpm test:contract` — **passed**, fixture consistency for **89 operations**.
+- Prettier check on the five changed TS/TSX files and `git diff --check` — passed.
+
+The approved SIGN-32 v2 PNGs **10308**, **10312** and **10309** were downloaded and inspected in this follow-up. Existing tracked captures above remain from earlier revisions and are historical for the current PR head. No current browser render was captured for the new unverified/readback and destination-list-error states. QA owns browser-dependent observations on the delivered dev revision: compare the loaded row and both error states at **1520×1024** (expanded sidebar), **1024×768** (collapsed sidebar) and **390×844** (navigation closed), in applicable light/dark themes; check keyboard focus, page overflow, responsive breakpoints and native **200%** zoom. No live feature API request or Telegram delivery test was made.
