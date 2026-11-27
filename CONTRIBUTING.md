@@ -61,7 +61,7 @@ Use focused Vitest unit, component and action/schema tests for changed behavior.
 
 After a fix, compare the last verified revision with the current candidate. Include affected callers, fixtures and shared components. Reuse results the diff leaves valid and rerun local checks for the affected outcomes. Widen coverage when a change or failure warrants it.
 
-For UI changes, apply the [UI design gate](docs/design/DESIGN.md#ui-design-gate). Compare the affected UI using the candidate Preview or still-valid render evidence. Record the reference, candidate revision, state and viewport. Carry unresolved browser-dependent observations to QA.
+For UI changes, apply the [UI design gate](docs/design/DESIGN.md#ui-design-gate). Use an accessible candidate Preview or still-valid render evidence to compare the affected UI. Record the reference, candidate revision, state and viewport. If Preview access or render evidence is unavailable, record the missing observation and hand it to the verification owner below. Proceed once the applicable FE checks pass.
 
 QA owns browser automation on the shared runner, native zoom and other browser-dependent acceptance checks, and live UI/API feature testing. For a Task without dedicated QA, hand accepted coverage to the coordinator. In the handoff, give the state, expected result and candidate revision. FE completes its contribution when its local, review and delivery checks pass.
 
