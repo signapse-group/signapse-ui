@@ -1,7 +1,7 @@
 import { resolve } from "node:path"
 import { fileURLToPath } from "node:url"
-import { parsePublicBackendUrl } from "../integration/environment.mjs"
-import { fixtureContracts } from "./fixtures/contract-registry.mjs"
+import { parsePublicBackendUrl } from "./backend-url.mjs"
+import { fixtureContracts } from "./contract-registry.mjs"
 
 const normalizePath = (path) => path.replace(/\{[^}]+\}/g, "{param}")
 

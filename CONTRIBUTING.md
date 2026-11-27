@@ -41,7 +41,7 @@ For API integration, contract-sensitive design/review or producer/consumer hando
 
 Use the repository's pnpm scripts (or equivalent slash commands when available); [README](README.md#local-development) lists local commands.
 
-Use the [change-scope matrix](docs/testing/browser-tests.md#selecting-checks-by-change-scope) and applicable selectors under the ownership rules below. CI owns the full lightweight `pnpm test:quality` gate; local work runs focused checks without repeating all CI checks. Use `pnpm test:full` only for explicitly requested full fixture regression or when affected coverage cannot be narrowed; explain why broader coverage is needed.
+CI runs `pnpm test:quality`. Locally, run the focused checks for the affected behavior.
 
 For documentation-only work, verify rule and exception preservation, links and anchors, formatting and encoding. When moving or deleting documents, check current references and preserve reachable historical evidence. For a `WORKFLOW.md` prompt change, use Symphony's actual parser and template engine offline to verify each phase selects only its skill and grant. Cover unsupported states, invalid routing, missing optional context and resume attempts. If runtime configuration moves, compare the effective profile YAML against its baseline. For skill changes, verify frontmatter, metadata and invocation policies.
 
@@ -57,21 +57,19 @@ The check uses fixture credentials and the actual config, Jira normalization and
 
 These rules apply to direct FE work and all assigned FE phases.
 
-For each changed behavior, identify the state and observable result to verify. Use the smallest check that establishes that result. Start with focused unit, component or action/schema checks at existing Vitest seams. Select local fixture browser cases when evidence depends on the browser, such as keyboard focus, hydration or responsive layout. Record the scope, reason, result and limits of selected cases. Preserve security, trust-boundary validation, accessibility and fail-closed permissions.
+Use focused Vitest unit, component and action/schema tests for changed behavior. Record the expected result, evidence and limits. Preserve security, trust-boundary validation, accessibility and fail-closed permissions.
 
 After a fix, compare the last verified revision with the current candidate. Include affected callers, fixtures and shared components. Reuse results the diff leaves valid and rerun local checks for the affected outcomes. Widen coverage when a change or failure warrants it.
 
-For UI changes, assess the affected local SSR/render against the [UI design gate](docs/design/DESIGN.md#ui-design-gate). Tie screenshots to the candidate, applicable reference and state. Check the accepted constraints, usability, responsive behavior and accessibility. Use representative designs and delegated judgment for unspecified details.
+For UI changes, apply the [UI design gate](docs/design/DESIGN.md#ui-design-gate). Compare the affected UI using the candidate Preview or still-valid render evidence. Record the reference, candidate revision, state and viewport. Carry unresolved browser-dependent observations to QA.
 
-QA owns live UI/API feature testing, including real login, permissions, persistence, integration and regression. For a Task without dedicated QA, the coordinator verifies and accepts the outcome. Hand off the live coverage to that owner. FE completes its contribution when the applicable local, review and delivery checks pass.
+QA owns browser automation on the shared runner, native zoom and other browser-dependent acceptance checks, and live UI/API feature testing. For a Task without dedicated QA, hand accepted coverage to the coordinator. In the handoff, give the state, expected result and candidate revision. FE completes its contribution when its local, review and delivery checks pass.
 
 Keep producer-published OpenAPI lookup and required publication/revision evidence under [API consumer standards](docs/api-consumer.md), lint/typecheck, required CI/build/Preview, independent review and [deployed-revision verification](.agents/skills/code-review/SKILL.md#verify-the-delivered-build). FE owns these contract and delivery checks and resolves defects and missing mandatory local evidence in the assigned phase. Record producer contract gaps as producer dependencies under the [consumer standards](docs/api-consumer.md#dependencies-and-discrepancies) and keep their owners visible in the handoff.
 
-Existing live suites and runners are historical references. FE neither runs nor extends them for contribution verification.
+When resuming an unfinished assignment with legacy browser or live-test wording, reconcile it under [blockers and resume](#blockers-and-resume).
 
-When resuming an unfinished assignment with legacy live-test wording, reconcile it under [blockers and resume](#blockers-and-resume).
-
-On Symphony, run selected browser cases from the assigned workspace through the host guide’s wrapper and lock. Application inputs use the operator-managed ignored `.env.local`; private accounts remain external. Never commit real `.env` files, passwords, Clerk secrets, JWTs, cookies or auth artifacts; keep them out of logs/evidence.
+Use the operator-managed ignored `.env.local` for application inputs. Keep credentials, cookies and auth artifacts out of Git and evidence.
 
 ### Required PR build checks
 

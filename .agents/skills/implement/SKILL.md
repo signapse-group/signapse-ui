@@ -27,9 +27,9 @@ For UI changes, apply the scoped instructions and [UI design gate](../../../docs
 
 Select checks for changed behavior and reruns after fixes under [test ownership and selection](../../../CONTRIBUTING.md#test-ownership-and-selection). Fix failures caused by the change.
 
-Keep required public contract documentation and check results with the PR. Use the [change-scope matrix](../../../docs/testing/browser-tests.md#selecting-checks-by-change-scope) for fixture and command details.
+Keep required public contract documentation and check results with the PR.
 
-For Symphony UI changes, record the [rendered comparison](../../../docs/design/DESIGN.md#ui-design-gate) in the existing PR or handoff before In Review.
+For UI changes, record the [design comparison and QA handoff](../../../docs/design/DESIGN.md#ui-design-gate) in the PR before In Review.
 
 ## Decisions and Resume
 
@@ -66,4 +66,4 @@ Require every mandatory check before handoff. Follow [record ownership/evidence 
 
 ### Failure, blocker and resume
 
-Fix implementation, test and required local render/check failures in Progress. Record future-phase prerequisites in the handoff. If a required Implement output is still blocked, apply the [shared blocker gate](../../../CONTRIBUTING.md#blockers-and-resume). When met, save/read back the consolidated record, resolve/read back Progress → Blocked and end the session. On a fresh assigned turn, reconcile existing output and applicable feedback/resolution before continuing.
+Fix observed implementation and local check failures in Progress. Record QA checks and other future-phase work in the handoff. If a required Implement output is still blocked, apply the [shared blocker gate](../../../CONTRIBUTING.md#blockers-and-resume). When met, save/read back the consolidated record, resolve/read back Progress → Blocked and end the session. On a fresh assigned turn, reconcile existing output and applicable feedback/resolution before continuing.
