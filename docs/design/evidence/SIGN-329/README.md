@@ -202,3 +202,11 @@ No browser render was made for the pending state on this candidate. Earlier rest
 - `pnpm test:quality` — **passed**: lint (0 errors, 23 existing warnings), typecheck, 892 tests across 103 files, contract fixture consistency for 89 operations and 5 deployment-verification tests.
 - `pnpm test:contract` — fixture consistency passed for **89 operations**.
 - Changed-file ESLint, Prettier, and `git diff --check` — passed.
+
+## Revalidation after syncing current dev — 2026-11-27
+
+Before publishing, `origin/dev` advanced to `bc00cd25df4dd8452705afa257b637d3a97fdf2c` (SIGN-392, PR #159). The SIGN-329 branch now merges that accepted dev work and preserves its Telegram routing UI, route-specific permissions and evidence alongside the bot-connect changes. No additional SIGN-329 product scope was introduced.
+
+The delayed-create-rejection regression now waits for the pending mutation to settle before checking that the token input and retry action are enabled. The complete `pnpm test:quality` run passed on the merged tree: lint reported 0 errors and 23 existing warnings; typecheck passed; Vitest passed **908 tests across 103 files**; contract fixture consistency passed for **89 operations**; deployment verification passed **5/5**. The pending-create Telegram component suite passed **43/43**. The full run had one earlier attempt with timeouts in the account-profile component suite under parallel load; that suite passed **9/9** in isolation, and the complete quality run passed on retry.
+
+No browser render was made for the current pending-create state. The recorded resting-state images do not establish pending-state behavior at browser zoom or compact widths. QA should verify the current PR Preview at the sizes and interactions listed above; live authentication, persistence, Telegram delivery, and dev feature acceptance remain with QA/coordinator.

@@ -8,6 +8,9 @@ import {
   TELEGRAM_BOT_CONNECTION_DELETE_PERMISSION,
   TELEGRAM_BOT_CONNECTION_MANAGE_PERMISSION,
   TELEGRAM_BOT_CONNECTION_READ_PERMISSION,
+  TELEGRAM_FEATURE_SETTING_UPDATE_PERMISSION,
+  TELEGRAM_MARKET_NEWS_ROUTING_READ_PERMISSION,
+  TELEGRAM_MARKET_NEWS_ROUTING_UPDATE_PERMISSION,
   TELEGRAM_NAV_PERMISSIONS,
 } from "@/app/lib/telegram/permissions"
 
@@ -23,7 +26,7 @@ describe("Telegram configuration permissions", () => {
     expect(getTelegramManageAccess(permissions).botConnections).toBe(false)
   })
 
-  it("keeps read and manage independent from create", () => {
+  it("keeps read, manage, and delete independent from create", () => {
     const readOnly = [TELEGRAM_BOT_CONNECTION_READ_PERMISSION]
     const manageOnly = [TELEGRAM_BOT_CONNECTION_MANAGE_PERMISSION]
     const deleteOnly = [TELEGRAM_BOT_CONNECTION_DELETE_PERMISSION]
@@ -45,5 +48,29 @@ describe("Telegram configuration permissions", () => {
       botConnections: false,
       botConnectionsDelete: true,
     })
+  })
+})
+
+describe("Telegram market-news routing permissions", () => {
+  it("allows its dedicated reader into Telegram settings without broad route access", () => {
+    const permissions = [TELEGRAM_MARKET_NEWS_ROUTING_READ_PERMISSION]
+
+    expect(canAccessTelegramConfiguration(permissions)).toBe(true)
+    expect(getTelegramSectionAccess(permissions)).toMatchObject({
+      featureSettings: false,
+      marketNewsRouting: true,
+      schedules: false,
+    })
+  })
+
+  it("does not grant market-news updates from another route's permission", () => {
+    expect(
+      getTelegramManageAccess([TELEGRAM_FEATURE_SETTING_UPDATE_PERMISSION])
+        .marketNewsRouting
+    ).toBe(false)
+    expect(
+      getTelegramManageAccess([TELEGRAM_MARKET_NEWS_ROUTING_UPDATE_PERMISSION])
+        .marketNewsRouting
+    ).toBe(true)
   })
 })

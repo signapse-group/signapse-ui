@@ -87,7 +87,9 @@ async function TelegramConfigurationContent({
     : Promise.resolve({ data: [], error: false })
 
   const languagesPromise =
-    sectionAccess.schedules || sectionAccess.featureSettings
+    sectionAccess.schedules ||
+    sectionAccess.featureSettings ||
+    sectionAccess.marketNewsRouting
       ? getLanguages()
           .then((catalog) => ({ data: catalog.languages, error: false }))
           .catch(() => ({ data: [], error: true }))
@@ -103,7 +105,9 @@ async function TelegramConfigurationContent({
   ] = await Promise.all([
     sectionAccess.botConnections ? getTelegramBotConnections() : [],
     sectionAccess.destinations ? getTelegramDestinations() : [],
-    sectionAccess.featureSettings ? getTelegramFeatureSettings() : [],
+    sectionAccess.featureSettings || sectionAccess.marketNewsRouting
+      ? getTelegramFeatureSettings()
+      : [],
     schedulesPromise,
     sectionAccess.watchlistAssets && currentWorkspace
       ? getWorkspaceWatchlistAssets(WATCHLIST_ASSET_SEARCH)
