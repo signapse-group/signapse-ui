@@ -27,7 +27,6 @@ import {
   telegramBotConnectionReadbackSchema,
   telegramBotConnectionsReadbackResponseSchema,
   TelegramBotConnectionReadback,
-  TelegramBotConnectionResponse,
   TelegramDestinationResponse,
   TelegramFeatureSettingResponse,
   TelegramLinkTokenResponse,
@@ -230,30 +229,6 @@ export async function createTelegramBotConnection(
   }
 }
 
-export async function disableTelegramBotConnection(
-  id: number
-): Promise<ActionResult<TelegramBotConnectionResponse>> {
-  const dictionary = await getTelegramDictionary()
-
-  try {
-    const data = await fetchAuthenticated<TelegramBotConnectionResponse>(
-      `/telegram/bot-connections/${id}/disable`,
-      {
-        method: "PATCH",
-      }
-    )
-
-    revalidateTelegramConfiguration()
-
-    return { success: true, data }
-  } catch (error: unknown) {
-    return {
-      success: false,
-      error: getActionError(error, dictionary.telegram.bot.disableError),
-    }
-  }
-}
-
 export async function deleteTelegramBotConnection(
   id: number
 ): Promise<ActionResult> {
@@ -268,9 +243,15 @@ export async function deleteTelegramBotConnection(
 
     return { success: true, data: undefined }
   } catch (error: unknown) {
+    const apiError =
+      error instanceof Error ? (error as BackendApiError) : undefined
+
     return {
       success: false,
-      error: getActionError(error, dictionary.telegram.bot.deleteError),
+      error:
+        apiError?.code === "TELEGRAM_BOT_CONNECTION_HAS_UNREMOVED_DESTINATIONS"
+          ? dictionary.telegram.bot.deleteBlockedByDestinations
+          : dictionary.telegram.bot.deleteError,
     }
   }
 }

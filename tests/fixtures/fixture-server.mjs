@@ -3,7 +3,7 @@ import { dirname } from "node:path"
 import { createServer } from "node:http"
 import { URL } from "node:url"
 
-import { contractPathMatches, fixtureContracts } from "./contract-registry.mjs"
+import { contractPathMatches, fixtureContracts } from "../contract/contract-registry.mjs"
 
 const port = Number(process.env.FIXTURE_PORT ?? 4100)
 const logFile = process.env.FIXTURE_LOG_FILE
@@ -588,20 +588,6 @@ function createState() {
         lastValidatedAt: NOW,
         lastWebhookRegisteredAt: NOW,
         createdDate: "2025-01-02T08:00:00.000Z",
-        lastModifiedDate: NOW,
-      },
-      {
-        id: 12,
-        botId: 10012,
-        botUsername: "signapse_incomplete_fixture_bot",
-        botFirstName: "Incomplete Fixture",
-        displayLabel: "Incomplete fixture bot",
-        status: "INVALID",
-        failureReason: "Webhook registration failed: stored fixture detail.",
-        webhookUrl: "https://fixture.invalid/telegram/webhook/12",
-        verifiedAt: NOW,
-        lastValidatedAt: NOW,
-        createdDate: "2025-01-03T08:00:00.000Z",
         lastModifiedDate: NOW,
       },
     ],
@@ -4151,32 +4137,10 @@ Which asset did you mean? The available data is limited. Add TSLA to your watchl
     return created
   }
 
-  if (method === "GET" && pathname === "/telegram/bot-connections") {
-    if (!hasFixturePermission(state, "telegram-bot-connection:read")) {
-      return {
-        __status: 403,
-        payload: errorPayload(
-          locale.startsWith("vi")
-            ? "Bạn không có quyền xem kết nối bot Telegram."
-            : "Telegram bot connection read permission denied.",
-          "FORBIDDEN"
-        ),
-      }
-    }
-    const connections = state.botConnections.filter(
+  if (method === "GET" && pathname === "/telegram/bot-connections")
+    return state.botConnections.filter(
       (connection) => connection.status !== "REMOVED"
     )
-    if (getScenario(state, method, pathname) === "missing-connection-fields") {
-      return connections.map((connection) => {
-        if (connection.id !== 11) return connection
-        const unverifiedConnection = { ...connection }
-        delete unverifiedConnection.id
-        delete unverifiedConnection.status
-        return unverifiedConnection
-      })
-    }
-    return connections
-  }
   if (method === "GET" && pathname === "/telegram/destinations") {
     if (getScenario(state, method, pathname) === "telegram-verified-readback") {
       return [
@@ -4212,116 +4176,41 @@ Which asset did you mean? The available data is limited. Add TSLA to your watchl
   }
 
   if (method === "POST" && pathname === "/telegram/bot-connections") {
-    if (!hasFixturePermission(state, "telegram-bot-connection:create")) {
-      return {
-        __status: 403,
-        payload: errorPayload(
-          locale.startsWith("vi")
-            ? "Bạn không có quyền kết nối bot Telegram."
-            : "Telegram bot connection create permission denied.",
-          "FORBIDDEN"
-        ),
-      }
-    }
-
-    if (body?.botToken === "fixture-invalid-token") {
-      return {
-        __status: 400,
-        payload: errorPayload(
-          locale.startsWith("vi")
-            ? "Token bot Telegram không hợp lệ."
-            : "The Telegram bot token is invalid.",
-          "INVALID_TELEGRAM_BOT_TOKEN"
-        ),
-      }
-    }
-
-    if (body?.botToken === "fixture-owner-conflict-token") {
-      return {
-        __status: 409,
-        payload: errorPayload(
-          locale.startsWith("vi")
-            ? "Bot Telegram này đã được kết nối."
-            : "This Telegram bot is already connected.",
-          "TELEGRAM_BOT_CONNECTION_ALREADY_EXISTS"
-        ),
-      }
-    }
-
-    if (body?.botToken === "fixture-duplicate-active-token") {
-      const connection = state.botConnections.find((item) => item.id === 11)
-      return { __status: 200, payload: connection }
-    }
-
-    if (body?.botToken === "fixture-duplicate-invalid-token") {
-      const connection = state.botConnections.find((item) => item.id === 12)
-      return { __status: 200, payload: connection }
-    }
-
-    const invalid = body?.botToken === "fixture-webhook-failed-token"
-    const omitCreateStatus = body?.botToken === "fixture-missing-status-token"
-    const unknownOutcome = body?.botToken === "fixture-unknown-outcome-token"
-    const id = Math.max(0, ...state.botConnections.map((item) => item.id)) + 1
-    const item = {
-      id,
-      botId: 10000 + id,
-      botUsername: invalid
-        ? "incomplete_fixture_bot"
-        : unknownOutcome
-          ? "unconfirmed_fixture_bot"
-          : "new_fixture_bot",
-      botFirstName: invalid
-        ? "Incomplete Fixture"
-        : unknownOutcome
-          ? "Unconfirmed Fixture"
-          : "New Fixture",
-      displayLabel: invalid
-        ? "New incomplete fixture bot"
-        : unknownOutcome
-          ? "Unconfirmed response bot"
-          : "New fixture bot",
-      status: invalid ? "INVALID" : "ACTIVE",
-      ...(invalid
-        ? {
-            failureReason:
-              "Webhook registration failed: fixture provider detail.",
-          }
-        : { lastWebhookRegisteredAt: NOW }),
-      verifiedAt: NOW,
-      lastValidatedAt: NOW,
+    return {
+      id: 12,
+      botUsername: "new_fixture_bot",
+      displayLabel: "New fixture bot",
+      status: "ACTIVE",
       createdDate: NOW,
       lastModifiedDate: NOW,
     }
-    state.botConnections.unshift(item)
-    if (omitCreateStatus) {
-      const unverifiedResponse = { ...item }
-      delete unverifiedResponse.status
-      return { __status: 201, payload: unverifiedResponse }
-    }
-    if (unknownOutcome) {
+  }
+
+  const botConnectionMatch = pathname.match(
+    /^\/telegram\/bot-connections\/(\d+)$/
+  )
+  if (method === "DELETE" && botConnectionMatch) {
+    const scenario = getScenario(state, method, pathname)
+    if (scenario === "bot-removal-blocked") {
       return {
-        __status: 503,
-        payload: errorPayload("Fixture backend unavailable", "UNAVAILABLE"),
+        __status: 409,
+        payload: errorPayload(
+          "Remove the Telegram destinations before removing this bot.",
+          "TELEGRAM_BOT_CONNECTION_HAS_UNREMOVED_DESTINATIONS"
+        ),
       }
     }
-    return { __status: 201, payload: item }
-  }
-
-  if (
-    method === "PATCH" &&
-    /^\/telegram\/bot-connections\/\d+\/disable$/.test(pathname)
-  ) {
-    const id = Number(pathname.split("/")[3])
+    const id = Number(botConnectionMatch[1])
     const item = state.botConnections.find((connection) => connection.id === id)
-    if (item) item.status = "DISABLED"
-    return item ?? state.botConnections[0]
-  }
-
-  if (
-    method === "DELETE" &&
-    /^\/telegram\/bot-connections\/\d+$/.test(pathname)
-  ) {
-    return { __status: 204 }
+    if (!item) {
+      return {
+        __status: 404,
+        payload: errorPayload("Telegram bot connection not found", "NOT_FOUND"),
+      }
+    }
+    item.status = "REMOVED"
+    item.lastModifiedDate = NOW
+    return { __status: 200, __empty: true }
   }
 
   if (method === "POST" && pathname === "/telegram/destinations/link-token") {
@@ -4660,35 +4549,6 @@ async function handleControl(request, response, url, body) {
         })
       ),
       marketConversationAttempts: state.marketConversationAttempts,
-      botConnections: state.botConnections.map(
-        ({
-          id,
-          botId,
-          botUsername,
-          botFirstName,
-          displayLabel,
-          status,
-          failureReason,
-          verifiedAt,
-          lastValidatedAt,
-          lastWebhookRegisteredAt,
-          createdDate,
-          lastModifiedDate,
-        }) => ({
-          id,
-          botId,
-          botUsername,
-          botFirstName,
-          displayLabel,
-          status,
-          failureReason,
-          verifiedAt,
-          lastValidatedAt,
-          lastWebhookRegisteredAt,
-          createdDate,
-          lastModifiedDate,
-        })
-      ),
       smtpConfiguration: smtpConfigurationResponse(state.smtpConfiguration),
       streamConnections: state.streamConnections,
       pendingRequests: state.pendingRequests.size,
@@ -4968,6 +4828,10 @@ const server = createServer(async (request, response) => {
   }
   if (status === 204) {
     sendEmpty(response, 204)
+    return
+  }
+  if (result?.__empty) {
+    sendEmpty(response, status)
     return
   }
   if (status >= 400) {

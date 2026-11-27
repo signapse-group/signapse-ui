@@ -22,7 +22,6 @@ vi.mock("@/app/api/telegram/action", () => ({
   deleteTelegramBotConnection: vi.fn(),
   deleteTelegramDestination: vi.fn(),
   deleteTelegramMarketAnalysisSchedule: vi.fn(),
-  disableTelegramBotConnection: vi.fn(),
   disableTelegramDestination: vi.fn(),
   disableTelegramMarketAnalysisSchedule: vi.fn(),
   sendTelegramTestMessage: vi.fn(),
@@ -46,6 +45,7 @@ vi.mock("sonner", () => ({
 import {
   createTelegramBotConnection,
   createTelegramLinkToken,
+  deleteTelegramBotConnection,
   deleteTelegramMarketAnalysisSchedule,
   disableTelegramMarketAnalysisSchedule,
   updateTelegramFeatureSetting,
@@ -145,6 +145,7 @@ const data: TelegramConfigurationData = {
   },
   manageAccess: {
     botConnections: false,
+    botConnectionsDelete: false,
     destinations: false,
     featureSettings: false,
     schedules: true,
@@ -180,11 +181,13 @@ function renderBotConnectionsCard({
   canRead = false,
   canManage = false,
   canCreate = false,
+  canDelete = false,
 }: {
   botConnections?: TelegramBotConnectionReadback[]
   canRead?: boolean
   canManage?: boolean
   canCreate?: boolean
+  canDelete?: boolean
 } = {}) {
   return render(
     <LocalizationProvider locale="vi" dictionary={viDictionary}>
@@ -193,6 +196,7 @@ function renderBotConnectionsCard({
         canRead={canRead}
         canManage={canManage}
         canCreate={canCreate}
+        canDelete={canDelete}
       />
     </LocalizationProvider>
   )
@@ -690,11 +694,7 @@ describe("Telegram bot connections", () => {
       screen.getByText(viDictionary.telegram.bot.accessLimited)
     ).toBeVisible()
     expect(screen.queryByText("Hidden bot")).not.toBeInTheDocument()
-    expect(
-      screen.queryByRole("button", {
-        name: viDictionary.telegram.bot.actionMenu,
-      })
-    ).not.toBeInTheDocument()
+    expect(screen.queryByRole("listitem")).not.toBeInTheDocument()
   })
 
   it("keeps read-only and manage-only permissions from creating a bot", () => {
@@ -709,16 +709,13 @@ describe("Telegram bot connections", () => {
       })
     ).not.toBeInTheDocument()
     expect(screen.getByText(botConnection.displayLabel as string)).toBeVisible()
-    expect(
-      screen.queryByRole("button", {
-        name: viDictionary.telegram.bot.actionMenu,
-      })
-    ).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: /Gỡ bot/ })).not.toBeInTheDocument()
 
     cleanup()
     renderBotConnectionsCard({
       botConnections: [botConnection],
       canManage: true,
+      canCreate: false,
     })
     expect(
       screen.queryByRole("button", {
@@ -852,7 +849,6 @@ describe("Telegram bot connections", () => {
   })
 
   it("marks partial saved data unverified and keeps state-dependent actions safe", async () => {
-    const user = userEvent.setup()
     renderBotConnectionsCard({
       botConnections: [
         {
@@ -861,7 +857,7 @@ describe("Telegram bot connections", () => {
         },
       ],
       canRead: true,
-      canManage: true,
+      canDelete: true,
     })
 
     const row = screen.getByRole("listitem")
@@ -870,22 +866,10 @@ describe("Telegram bot connections", () => {
     expect(row).toHaveTextContent(
       viDictionary.telegram.bot.connectionDetailsUnverified
     )
-    const actionMenu = within(row).getByRole("button", {
-      name: viDictionary.telegram.bot.actionMenu,
-    })
-    expect(actionMenu).toBeVisible()
-    await user.click(actionMenu)
-    const menu = await screen.findByRole("menu")
     expect(
-      within(menu).getByRole("menuitem", {
-        name: viDictionary.telegram.common.disable,
-      })
-    ).toHaveAttribute("aria-disabled", "true")
-    expect(
-      within(menu).getByRole("menuitem", {
-        name: viDictionary.telegram.bot.deleteAction,
-      })
-    ).not.toHaveAttribute("aria-disabled", "true")
+      within(row).getByRole("button", { name: "Gỡ bot Status not returned" })
+    ).toBeVisible()
+    expect(within(row).queryByText(viDictionary.telegram.common.disable)).not.toBeInTheDocument()
   })
 
   it.each([
@@ -1018,6 +1002,167 @@ describe("Telegram bot connections", () => {
     expect(
       screen.queryByText(viDictionary.telegram.bot.reconnectGuidance)
     ).not.toBeInTheDocument()
+  })
+})
+
+describe("Telegram bot connection removal", () => {
+  afterEach(() => cleanup())
+
+  beforeEach(() => {
+    vi.mocked(deleteTelegramBotConnection).mockReset()
+    routerRefresh.mockReset()
+  })
+
+  it("keeps Connect and Remove independently permission-gated and removes Disable", () => {
+    const { rerender } = renderBotConnectionsCard({
+      botConnections: [botConnection],
+      canRead: true,
+      canCreate: true,
+    })
+
+    expect(
+      screen.getByRole("button", {
+        name: viDictionary.telegram.bot.connect,
+      })
+    ).toBeVisible()
+    expect(
+      screen.queryByRole("button", { name: "Gỡ bot New fixture bot" })
+    ).not.toBeInTheDocument()
+
+    rerender(
+      <LocalizationProvider locale="vi" dictionary={viDictionary}>
+        <BotConnectionsCard
+          botConnections={[botConnection]}
+          canRead
+          canManage={false}
+          canCreate={false}
+          canDelete
+        />
+      </LocalizationProvider>
+    )
+
+    expect(
+      screen.queryByRole("button", {
+        name: viDictionary.telegram.bot.connect,
+      })
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: "Gỡ bot New fixture bot" })
+    ).toBeVisible()
+    expect(
+      screen.queryByText(viDictionary.telegram.common.disable)
+    ).not.toBeInTheDocument()
+  })
+
+  it("does not expose Remove without read access, even when delete is granted", () => {
+    renderBotConnectionsCard({ canRead: false, canDelete: true })
+
+    expect(
+      screen.getByText(viDictionary.telegram.bot.accessLimited)
+    ).toBeVisible()
+    expect(
+      screen.queryByRole("button", { name: "Gỡ bot New fixture bot" })
+    ).not.toBeInTheDocument()
+  })
+
+  it("supports keyboard cancel, blocked retry, pending feedback and success focus", async () => {
+    const user = userEvent.setup()
+    const { rerender } = renderBotConnectionsCard({
+      botConnections: [botConnection],
+      canRead: true,
+      canDelete: true,
+    })
+    const removeTrigger = screen.getByRole("button", {
+      name: "Gỡ bot New fixture bot",
+    })
+
+    removeTrigger.focus()
+    await user.keyboard("{Enter}")
+    const dialog = screen.getByRole("alertdialog")
+    expect(dialog).toHaveTextContent("Gỡ kết nối bot “New fixture bot”?")
+    expect(dialog).toHaveTextContent("Hãy gỡ tất cả điểm nhận của bot trước")
+    await user.keyboard("{Escape}")
+    await waitFor(() => expect(dialog).not.toBeInTheDocument())
+    expect(deleteTelegramBotConnection).not.toHaveBeenCalled()
+    await waitFor(() => expect(removeTrigger).toHaveFocus())
+
+    await user.click(removeTrigger)
+    const openDialog = screen.getByRole("alertdialog")
+    const confirm = within(openDialog).getByRole("button", { name: "Gỡ bot" })
+    const cancel = within(openDialog).getByRole("button", {
+      name: viDictionary.telegram.common.cancel,
+    })
+    let settleRequest!: (
+      result: Awaited<ReturnType<typeof deleteTelegramBotConnection>>
+    ) => void
+    vi.mocked(deleteTelegramBotConnection).mockReturnValueOnce(
+      new Promise((resolve) => {
+        settleRequest = resolve
+      })
+    )
+
+    confirm.focus()
+    await user.keyboard("{Enter}")
+    await waitFor(() => {
+      expect(confirm).toBeDisabled()
+      expect(cancel).toBeDisabled()
+      expect(within(openDialog).getByRole("status")).toHaveTextContent(
+        viDictionary.telegram.bot.deletePending
+      )
+      expect(within(openDialog).getByRole("status")).toHaveFocus()
+    })
+    settleRequest({
+      success: false,
+      error: viDictionary.telegram.bot.deleteBlockedByDestinations,
+    })
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        viDictionary.telegram.bot.deleteBlockedByDestinations
+      )
+      expect(screen.getByRole("alert")).toHaveFocus()
+    })
+    expect(screen.getByRole("alertdialog")).toBeInTheDocument()
+    expect(routerRefresh).not.toHaveBeenCalled()
+    await waitFor(() => expect(confirm).toBeEnabled())
+
+    vi.mocked(deleteTelegramBotConnection).mockResolvedValueOnce({
+      success: true,
+      data: undefined,
+    })
+    await user.click(confirm)
+    await waitFor(() =>
+      expect(deleteTelegramBotConnection).toHaveBeenLastCalledWith(12)
+    )
+    await waitFor(() => expect(routerRefresh).toHaveBeenCalledTimes(1))
+    await waitFor(() =>
+      expect(
+        screen.getByRole("heading", {
+          name: viDictionary.telegram.bot.sectionTitle,
+        })
+      ).toHaveFocus()
+    )
+
+    rerender(
+      <LocalizationProvider locale="vi" dictionary={viDictionary}>
+        <BotConnectionsCard
+          botConnections={[]}
+          canRead
+          canManage={false}
+          canCreate={false}
+          canDelete
+        />
+      </LocalizationProvider>
+    )
+    expect(screen.queryByRole("listitem")).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: "Gỡ bot New fixture bot" })
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByRole("heading", {
+        name: viDictionary.telegram.bot.sectionTitle,
+      })
+    ).toHaveFocus()
   })
 })
 

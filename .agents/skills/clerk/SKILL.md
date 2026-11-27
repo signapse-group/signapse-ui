@@ -118,10 +118,7 @@ All skills are written for the current SDK. When something differs in Core 2, it
 - Data syncing
 - Notifications & integrations
 
-**E2E Testing** → Use `clerk-testing`
-- Playwright/Cypress setup
-- Auth flow testing
-- Test utilities
+**Auth verification** → Use the [FE verification rules](../../../CONTRIBUTING.md#test-ownership-and-selection) and hand live auth cases to QA.
 
 **Swift / native iOS auth** → Use `clerk-swift`
 - Native iOS Swift and SwiftUI projects
@@ -157,7 +154,6 @@ If you know your task, you can directly access:
 - `/clerk-orgs` - Organizations
 - `/clerk-billing` - Billing & subscriptions
 - `/clerk-webhooks` - Webhooks
-- `/clerk-testing` - Testing
 - `/clerk-swift` - Swift/native iOS
 - `/clerk-android` - Native Android
 - `/clerk-backend-api` - Backend REST API

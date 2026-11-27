@@ -6,7 +6,7 @@ status: partially superseded
 
 ## Supersession — 2026-10-28
 
-The following decision records the historical test-foundation direction. Current FE gates and ownership follow [test ownership and selection](../../CONTRIBUTING.md#test-ownership-and-selection): focused local tests, selective fixture browser checks and QA/coordinator live feature verification across all FE phases. Mandatory per-PR browser journeys and FE live-canary execution below no longer define FE gates. Existing suites remain references; this update does not provision a canary or migrate scripts into QA.
+This ADR records the original test foundation. Current verification follows [FE test ownership](../../CONTRIBUTING.md#test-ownership-and-selection). Browser automation belongs to QA. The retired FE browser suite remains available in [Git history](https://github.com/signapse-group/signapse-ui/tree/dc7d7d06ab6d4a108b8da38356bff23219e524f1/tests).
 
 ## Original decision
 

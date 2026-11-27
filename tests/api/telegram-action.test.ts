@@ -7,6 +7,9 @@ const { testDictionary } = vi.hoisted(() => ({
       botTokenRequired: "Enter the bot token.",
       bot: {
         createError: "Could not connect the Telegram bot.",
+        deleteError: "Could not remove the Telegram bot.",
+        deleteBlockedByDestinations:
+          "Remove all linked destinations before removing this bot.",
       },
       scheduleNameRequired: "Schedule name is required",
       localTimeInvalid: "Local time is invalid",
@@ -63,6 +66,7 @@ import {
   createTelegramBotConnection,
   createTelegramLinkToken,
   createTelegramMarketAnalysisSchedule,
+  deleteTelegramBotConnection,
   deleteTelegramMarketAnalysisSchedule,
   disableTelegramMarketAnalysisSchedule,
   getTelegramBotConnections,
@@ -106,6 +110,54 @@ function backendError(message: string, status: number) {
   error.status = status
   return error
 }
+
+describe("Telegram bot connection removal action", () => {
+  beforeEach(() => {
+    vi.mocked(fetchAuthenticated).mockReset()
+    vi.mocked(revalidatePath).mockClear()
+  })
+
+  it("deletes the selected connection and revalidates the Telegram page", async () => {
+    vi.mocked(fetchAuthenticated).mockResolvedValue(undefined)
+
+    await expect(deleteTelegramBotConnection(23)).resolves.toEqual({
+      success: true,
+      data: undefined,
+    })
+    expect(fetchAuthenticated).toHaveBeenCalledWith(
+      "/telegram/bot-connections/23",
+      { method: "DELETE" }
+    )
+    expect(revalidatePath).toHaveBeenCalledWith("/telegram")
+  })
+
+  it("maps the linked-destination conflict to localized recovery guidance", async () => {
+    vi.mocked(fetchAuthenticated).mockRejectedValue(
+      Object.assign(new Error("backend metadata"), {
+        status: 409,
+        code: "TELEGRAM_BOT_CONNECTION_HAS_UNREMOVED_DESTINATIONS",
+      })
+    )
+
+    await expect(deleteTelegramBotConnection(23)).resolves.toEqual({
+      success: false,
+      error: testDictionary.telegram.bot.deleteBlockedByDestinations,
+    })
+    expect(revalidatePath).not.toHaveBeenCalled()
+  })
+
+  it("keeps webhook and request failures retryable without revalidation", async () => {
+    vi.mocked(fetchAuthenticated).mockRejectedValue(
+      backendError("Webhook cleanup failed", 502)
+    )
+
+    await expect(deleteTelegramBotConnection(23)).resolves.toEqual({
+      success: false,
+      error: testDictionary.telegram.bot.deleteError,
+    })
+    expect(revalidatePath).not.toHaveBeenCalled()
+  })
+})
 
 describe("Telegram scheduled asset analysis actions", () => {
   beforeEach(() => {

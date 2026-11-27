@@ -13,12 +13,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "test:contract": "node tests/e2e/contract-guard.mjs",
-    "test:browser": "playwright test",
-    "test:browser:update": "playwright test --update-snapshots",
-    "test:integration": "node tests/integration/run.mjs",
+    "test:contract": "node tests/contract/contract-guard.mjs",
     "test:quality": "pnpm lint && pnpm typecheck && pnpm test && pnpm test:contract && node --test scripts/verify-deploy.test.mjs",
-    "test:full": "pnpm test:quality && pnpm build && pnpm test:browser",
     "verify:deploy": "node scripts/verify-deploy.mjs"
   },
   "dependencies": {
@@ -104,10 +100,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@axe-core/playwright": "^4.10.2",
-    "@clerk/testing": "^2.2.40",
     "@eslint/eslintrc": "^3.3.6",
-    "@playwright/test": "^1.55.0",
     "@tailwindcss/postcss": "^4.3.3",
     "@testing-library/jest-dom": "6.9.1",
     "@testing-library/react": "^16.3.0",
@@ -128,5 +121,10 @@
     "tailwindcss": "^4.3.3",
     "typescript": "^5.9.3",
     "vitest": "^3.2.4"
+  },
+  "pnpm": {
+    "overrides": {
+      "next>@playwright/test": "-"
+    }
   }
 }

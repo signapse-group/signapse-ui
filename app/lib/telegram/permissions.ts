@@ -14,8 +14,8 @@ export const TELEGRAM_BOT_CONNECTION_CREATE_PERMISSION =
   "telegram-bot-connection:create"
 export const TELEGRAM_BOT_CONNECTION_MANAGE_PERMISSION =
   "telegram-bot-connection:manage"
-export const TELEGRAM_BOT_CONNECTION_UPDATE_PERMISSION =
-  "telegram-bot-connection:update"
+export const TELEGRAM_BOT_CONNECTION_DELETE_PERMISSION =
+  "telegram-bot-connection:delete"
 export const TELEGRAM_DESTINATION_READ_PERMISSION = "telegram-destination:read"
 export const TELEGRAM_DESTINATION_MANAGE_PERMISSION =
   "telegram-destination:manage"
@@ -77,6 +77,10 @@ export function getTelegramManageAccess(
     botConnections: hasPermission(
       permissions,
       TELEGRAM_BOT_CONNECTION_MANAGE_PERMISSION
+    ),
+    botConnectionsDelete: hasPermission(
+      permissions,
+      TELEGRAM_BOT_CONNECTION_DELETE_PERMISSION
     ),
     destinations: hasPermission(
       permissions,

@@ -2479,7 +2479,7 @@ export const vi = {
       webhookNotRegistered: "Chưa có thời điểm đăng ký",
       lastValidated: "Xác thực gần nhất {time}",
       readOnlyDescription:
-        "Bạn có thể xem các bot này, nhưng cần quyền quản lý bot để thay đổi.",
+        "Bạn có thể xem các bot hiện có. Cần quyền quản lý để cập nhật hoặc gỡ một kết nối.",
       webhookRegistrationFailed: "Đăng ký webhook thất bại.",
       setupIncomplete: "Thiết lập bot chưa hoàn tất.",
       reconnectGuidance:
@@ -2499,16 +2499,15 @@ export const vi = {
       emptyTitle: "Chưa có bot Telegram",
       emptyDescription:
         "Kết nối bot do bạn tạo trong BotFather để bắt đầu gửi thông báo.",
-      actionMenu: "Thao tác bot Telegram",
-      disableTitle: "Vô hiệu hóa bot Telegram?",
-      disableDescription:
-        "Bot bị vô hiệu hóa sẽ không gửi thông báo qua các điểm nhận đang dùng bot này. Giao diện này không hỗ trợ bật lại.",
-      disableSuccess: "Đã vô hiệu hóa bot Telegram.",
-      deleteTitle: "Xóa bot Telegram?",
+      deleteTitle: "Gỡ kết nối bot “{botName}”?",
       deleteDescription:
-        "Hành động này hủy liên kết bot khỏi Signapse và có thể ảnh hưởng các điểm nhận liên quan.",
-      deleteAction: "Xóa bot",
-      deleteSuccess: "Đã xóa bot Telegram.",
+        "Thao tác này kết thúc việc sử dụng bot trong Signapse. Hãy gỡ tất cả điểm nhận của bot trước; chúng sẽ không bị gỡ tự động. Lịch sử gửi được giữ lại. Muốn dùng lại bot, bạn cần tạo kết nối mới.",
+      deleteTrigger: "Gỡ bot {botName}",
+      deleteAction: "Gỡ bot",
+      deletePending: "Đang gỡ bot…",
+      deleteSuccess: "Đã gỡ kết nối bot Telegram.",
+      deleteBlockedByDestinations:
+        "Trước tiên hãy gỡ tất cả điểm nhận Telegram đang liên kết với bot này. Chưa có dữ liệu nào bị thay đổi.",
       connect: "Kết nối bot mới",
       createTitle: "Kết nối bot Telegram",
       createDescription:
@@ -2522,8 +2521,7 @@ export const vi = {
       createIncomplete:
         "Bot đã được thêm với trạng thái {status}, nhưng đăng ký webhook thất bại. Thiết lập chưa hoàn tất.",
       createError: "Không thể kết nối bot Telegram.",
-      disableError: "Không thể vô hiệu hóa bot Telegram.",
-      deleteError: "Không thể xóa bot Telegram.",
+      deleteError: "Không thể gỡ bot Telegram.",
       fallbackLabel: "Bot #{id}",
     },
     destination: {

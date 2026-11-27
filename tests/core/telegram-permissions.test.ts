@@ -5,6 +5,7 @@ import {
   getTelegramManageAccess,
   getTelegramSectionAccess,
   TELEGRAM_BOT_CONNECTION_CREATE_PERMISSION,
+  TELEGRAM_BOT_CONNECTION_DELETE_PERMISSION,
   TELEGRAM_BOT_CONNECTION_MANAGE_PERMISSION,
   TELEGRAM_BOT_CONNECTION_READ_PERMISSION,
   TELEGRAM_NAV_PERMISSIONS,
@@ -25,6 +26,7 @@ describe("Telegram configuration permissions", () => {
   it("keeps read and manage independent from create", () => {
     const readOnly = [TELEGRAM_BOT_CONNECTION_READ_PERMISSION]
     const manageOnly = [TELEGRAM_BOT_CONNECTION_MANAGE_PERMISSION]
+    const deleteOnly = [TELEGRAM_BOT_CONNECTION_DELETE_PERMISSION]
 
     expect(canAccessTelegramConfiguration(readOnly)).toBe(true)
     expect(getTelegramSectionAccess(readOnly).botConnections).toBe(true)
@@ -32,6 +34,16 @@ describe("Telegram configuration permissions", () => {
 
     expect(canAccessTelegramConfiguration(manageOnly)).toBe(false)
     expect(getTelegramSectionAccess(manageOnly).botConnections).toBe(false)
-    expect(getTelegramManageAccess(manageOnly).botConnections).toBe(true)
+    expect(getTelegramManageAccess(manageOnly)).toMatchObject({
+      botConnections: true,
+      botConnectionsDelete: false,
+    })
+
+    expect(canAccessTelegramConfiguration(deleteOnly)).toBe(false)
+    expect(getTelegramSectionAccess(deleteOnly).botConnections).toBe(false)
+    expect(getTelegramManageAccess(deleteOnly)).toMatchObject({
+      botConnections: false,
+      botConnectionsDelete: true,
+    })
   })
 })

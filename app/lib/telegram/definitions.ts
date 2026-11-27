@@ -257,6 +257,7 @@ export interface TelegramSectionAccess {
 
 export interface TelegramManageAccess {
   botConnections: boolean
+  botConnectionsDelete: boolean
   destinations: boolean
   featureSettings: boolean
   schedules: boolean
