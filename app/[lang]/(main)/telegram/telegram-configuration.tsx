@@ -245,6 +245,7 @@ export function TelegramConfigurationPage({
     ? marketNewsSettings.map((setting) => ({
         ...marketNewsRoute,
         setting,
+        loadError: data.featureSettingsLoadError,
         readbackUnverified: !isCompleteMarketNewsSetting(setting),
       }))
     : []
@@ -253,10 +254,14 @@ export function TelegramConfigurationPage({
     marketNewsRoutes.push({
       ...marketNewsRoute,
       setting: undefined,
+      loadError: data.featureSettingsLoadError,
       readbackUnverified: true,
     })
   } else if (marketNewsRoute && marketNewsRoutes.length === 0) {
-    marketNewsRoutes.push(marketNewsRoute)
+    marketNewsRoutes.push({
+      ...marketNewsRoute,
+      loadError: data.featureSettingsLoadError,
+    })
   }
   const visibleRoutes: FeatureRouteView[] = [
     ...(economicCalendarRouteView ? [economicCalendarRouteView] : []),

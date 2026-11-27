@@ -782,6 +782,40 @@ describe("Telegram schedule destructive actions", () => {
     ).toBeEnabled()
   })
 
+  it("shows a retry state and hides market routing controls when settings fail to load", async () => {
+    const user = userEvent.setup()
+    renderConfiguration({
+      ...data,
+      featureSettings: [],
+      featureSettingsLoadError: true,
+      manageAccess: { ...data.manageAccess, marketNewsRouting: true },
+    })
+
+    const marketRow = getFeatureRouteContainer(
+      viDictionary.telegram.routeDefinitions.MARKET_NEWS_ALERT.label
+    )
+    expect(
+      within(marketRow).getByText(
+        viDictionary.telegram.routing.settingsLoadError
+      )
+    ).toBeVisible()
+    expect(within(marketRow).queryByRole("switch")).not.toBeInTheDocument()
+    expect(within(marketRow).queryByRole("combobox")).not.toBeInTheDocument()
+    expect(marketRow).not.toHaveTextContent(viDictionary.telegram.common.paused)
+    expect(marketRow).not.toHaveTextContent(
+      viDictionary.telegram.routing.noDestination
+    )
+
+    await user.click(
+      within(marketRow).getByRole("button", {
+        name: viDictionary.telegram.routing.retry,
+      })
+    )
+
+    expect(routerRefresh).toHaveBeenCalledOnce()
+    expect(updateTelegramFeatureSetting).not.toHaveBeenCalled()
+  })
+
   it("keeps Scheduled analysis visible with schedule read and no route read", () => {
     renderConfiguration({
       ...data,
