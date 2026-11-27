@@ -379,6 +379,28 @@ describe("Economic calendar route permissions and persistence", () => {
     routerRefresh.mockReset()
   })
 
+  it("keeps Market News before Economic Calendar when both routes are readable", () => {
+    const bothRouteAccess = economicCalendarData([], {
+      sectionAccess: {
+        ...economicCalendarData().sectionAccess,
+        marketNewsRouting: true,
+      },
+    })
+    renderConfiguration(bothRouteAccess)
+
+    const marketNewsRoute = getFeatureRouteContainer(
+      viDictionary.telegram.routeDefinitions.MARKET_NEWS_ALERT.label
+    )
+    const economicCalendarRoute = getFeatureRouteContainer(
+      viDictionary.telegram.routeDefinitions.ECONOMIC_CALENDAR_ALERT.label
+    )
+
+    expect(
+      marketNewsRoute.compareDocumentPosition(economicCalendarRoute) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy()
+  })
+
   it("shows its saved route without granting destination, workspace, or schedule reads", () => {
     renderConfiguration(
       economicCalendarData([economicCalendarSetting], {

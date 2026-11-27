@@ -266,8 +266,8 @@ export function TelegramConfigurationPage({
     })
   }
   const visibleRoutes: FeatureRouteView[] = [
-    ...(economicCalendarRouteView ? [economicCalendarRouteView] : []),
     ...marketNewsRoutes,
+    ...(economicCalendarRouteView ? [economicCalendarRouteView] : []),
   ]
   const activeBotConnections = data.botConnections.filter(
     (connection): connection is TelegramBotConnectionResponse =>
