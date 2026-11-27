@@ -2282,9 +2282,7 @@ describe("Telegram bot connections", () => {
         ),
       })
     ).not.toBeInTheDocument()
-    expect(screen.getAllByRole("button", { name: /Kết nối lại/ })).toHaveLength(
-      2
-    )
+    expect(screen.getAllByRole("button", { name: /Kết nối lại/ })).toHaveLength(2)
   })
 
   it.each([
@@ -2366,49 +2364,46 @@ describe("Telegram bot connections", () => {
       toastKind: "warning",
       expected: viDictionary.telegram.bot.reconnectOutcomeUnverified,
     },
-  ])(
-    "reports only readback status $status",
-    async ({ status, toastKind, expected }) => {
-      const user = userEvent.setup()
-      vi.mocked(reconnectTelegramBotConnection).mockResolvedValue({
-        success: true,
-        data: status ? { status } : {},
-      })
-      renderBotConnectionsCard({
-        botConnections: [botConnection],
-        canRead: true,
-        canUpdate: true,
-      })
+  ])("reports only readback status $status", async ({ status, toastKind, expected }) => {
+    const user = userEvent.setup()
+    vi.mocked(reconnectTelegramBotConnection).mockResolvedValue({
+      success: true,
+      data: status ? { status } : {},
+    })
+    renderBotConnectionsCard({
+      botConnections: [botConnection],
+      canRead: true,
+      canUpdate: true,
+    })
 
-      await user.click(
-        screen.getByRole("button", {
-          name: viDictionary.telegram.bot.reconnectTrigger.replace(
-            "{botName}",
-            "New fixture bot"
-          ),
-        })
-      )
-      await user.type(
-        screen.getByLabelText(viDictionary.telegram.bot.tokenLabel),
-        "fake-token"
-      )
-      await user.click(
-        screen.getByRole("button", {
-          name: viDictionary.telegram.bot.reconnectAction,
-        })
-      )
-
-      await waitFor(() => {
-        if (toastKind === "success") {
-          expect(toast.success).toHaveBeenCalledWith(expected)
-        } else {
-          expect(toast.warning).toHaveBeenCalledWith(expected)
-        }
+    await user.click(
+      screen.getByRole("button", {
+        name: viDictionary.telegram.bot.reconnectTrigger.replace(
+          "{botName}",
+          "New fixture bot"
+        ),
       })
-      if (toastKind !== "success") expect(toast.success).not.toHaveBeenCalled()
-      await waitFor(() => expect(routerRefresh).toHaveBeenCalledTimes(1))
-    }
-  )
+    )
+    await user.type(
+      screen.getByLabelText(viDictionary.telegram.bot.tokenLabel),
+      "fake-token"
+    )
+    await user.click(
+      screen.getByRole("button", {
+        name: viDictionary.telegram.bot.reconnectAction,
+      })
+    )
+
+    await waitFor(() => {
+      if (toastKind === "success") {
+        expect(toast.success).toHaveBeenCalledWith(expected)
+      } else {
+        expect(toast.warning).toHaveBeenCalledWith(expected)
+      }
+    })
+    if (toastKind !== "success") expect(toast.success).not.toHaveBeenCalled()
+    await waitFor(() => expect(routerRefresh).toHaveBeenCalledTimes(1))
+  })
 
   it("keeps a pending create open with its token after a delayed rejection", async () => {
     const user = userEvent.setup()
@@ -3390,10 +3385,8 @@ describe("Telegram destination removal", () => {
 
   it("announces pending removal and keeps the dialog busy until the API settles", async () => {
     const user = userEvent.setup()
-    let resolveRemoval: (result: {
-      success: true
-      data: undefined
-    }) => void = () => undefined
+    let resolveRemoval: (result: { success: true; data: undefined }) => void =
+      () => undefined
     const pendingRemoval = new Promise<{ success: true; data: undefined }>(
       (resolve) => {
         resolveRemoval = resolve
