@@ -608,7 +608,11 @@ function ScheduleFormFields({
             >
               <SelectTrigger
                 id={getScheduleFieldId(idPrefix, "assetId")}
-                className="w-full"
+                className={
+                  assetEditable
+                    ? "w-full"
+                    : "w-full disabled:text-muted-foreground disabled:opacity-100"
+                }
                 aria-invalid={Boolean(errors.assetId)}
                 aria-describedby={describedBy("assetId")}
               >
