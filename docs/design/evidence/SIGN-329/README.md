@@ -145,3 +145,25 @@ The change preserves existing management behavior for a known-ID row while faili
 - The expanded P0 browser run is still required for the new partial-row/mobile assertion; the shared host browser lock is owned by another active Symphony session and returned `resource_busy`. No bypass or competing browser process was used.
 
 These local checks use fixtures and do not verify live authentication, persistence, or Telegram delivery. QA/coordinator retain feature acceptance on dev and Story acceptance.
+
+## Revalidation after PR #167 and current dev — 2026-11-27
+
+This section supersedes earlier browser-runner gates and the earlier description of the bot row's Disable action. The current FE base is `origin/dev` revision `866630a0a004cc8a5b4ed4ce0c7b9c8daf971146`. That revision retires the shared Playwright/browser suite and the bot Disable UI. SIGN-329 keeps the create and safe readback behavior, while the branch now includes the current dev bot Delete permission/action. Connect visibility is controlled only by create permission; row deletion is controlled only by delete permission. Reconnect remains outside this output.
+
+The [dev OpenAPI](https://dev-api.signapse.cloud/v3/api-docs) was fetched at `2026-11-27T02:54:49Z`, `info.version` `v0`, build revision `b6de21490d5572bdb51624372ef860230af5df86`. GET requires `telegram-bot-connection:read` and returns caller-owned safe metadata without tokens. POST requires `telegram-bot-connection:create`; 201 creates, 200 returns the caller's existing connection and saved status, 400 reports an unverifiable token, and 409 is a generic cross-owner conflict. The published `TelegramBotConnectionResponse` schema still omits a `required` list for `id` and `status`, despite operation descriptions promising the saved status. Coordinator decision [comment 11804](https://signapse-group.atlassian.net/browse/SIGN-329?focusedCommentId=11804) allows continued FE work with missing values left unverified. The consumer never infers ACTIVE, never reports an unknown save outcome as a failed create, and refreshes saved state after a successful but unverifiable response or an unknown transport/5xx result. It allowlists safe fields and omits raw provider failure detail, tokens, and owner data.
+
+No new browser render was made on this candidate. Jira [comment 11871](https://signapse-group.atlassian.net/browse/SIGN-329?focusedCommentId=11871) assigns browser verification to QA after PR #167 retired the FE browser suite. The image captures earlier in this file were made on earlier revisions; they are comparison evidence against SIGN-31 attachments 10310/10311 and SIGN-32 attachments 10308/10312/10309, not proof of the current merged candidate. QA should use the current dev Preview and real browser to verify:
+
+- Create-only users can open and submit the keyboard-operable token dialog without making a list request. Read-only users get safe readback without a create action. Manage/delete-only users do not get a create action.
+- New ACTIVE, new INVALID, caller duplicate, token verification rejection, permission rejection, and cross-owner conflict show the appropriate localized result. INVALID explains incomplete setup and suppresses raw failure detail. Caller duplicates retain their stored state.
+- Missing `id`/`status` in a saved row stays visibly unverified and readable at 390×844 without horizontal overflow. A successful POST with missing status and a saved connection followed by an unknown 503 both prompt a saved-state refresh and are not announced as create failures.
+- The dialog's keyboard operation, focus placement/restoration, validation feedback, and layout at 1520×1024, 1024×768, 390×844, 360×780, and 760×512 effective CSS width (200% zoom) match the approved responsive contract. The 760×512 size should be checked using actual browser zoom.
+
+Verification from the issue workspace on the merged working tree:
+
+- `pnpm test:quality` — passed: lint reported 0 errors and 23 warnings; typecheck passed; Vitest passed **103 files / 891 tests**; fixture guard passed for **89 operations**; deploy-verification passed **5/5**.
+- Focused action/component/permission suites — **66 tests passed**.
+- `pnpm test:contract` — fixture consistency passed for **89 operations**.
+- `git diff --check` — passed after this evidence update.
+
+These checks use fixtures and do not establish live authentication, persistence, Telegram delivery, browser behavior on the current candidate, or feature acceptance on dev. QA owns those browser and live feature checks; the coordinator owns Story acceptance. The response schema's optional `id`/`status` fields remain a producer contract discrepancy under comment 11804.
