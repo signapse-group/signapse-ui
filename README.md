@@ -59,11 +59,7 @@ host. Retired landing environment variables are no longer read by this app.
 
 Set `SIGNAPSE_AUTH_MODE=disabled` to open the dashboard without Clerk login while developing against a local backend with auth disabled. This mode is ignored in production and sends backend API requests without Clerk bearer tokens.
 
-CI uses `pnpm test:quality`; local FE work selects focused Vitest checks and browser
-coverage only when needed under [test ownership and selection](CONTRIBUTING.md#test-ownership-and-selection)
-and the [change-scope matrix](docs/testing/browser-tests.md#selecting-checks-by-change-scope).
-Live feature testing belongs to QA/coordinator; `test:integration` remains a legacy
-reference, outside FE Survey/Implement/Review gates.
+CI runs `pnpm test:quality`. Use [test ownership and selection](CONTRIBUTING.md#test-ownership-and-selection) for focused FE checks, Preview comparison and QA handoff.
 
 ## Using the Logo Component
 
