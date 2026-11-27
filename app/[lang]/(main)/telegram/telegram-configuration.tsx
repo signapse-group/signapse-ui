@@ -1080,6 +1080,11 @@ function FeatureRouteControls({
   const languageFocusTarget = useRef<HTMLButtonElement | null>(null)
   const switchFocusTarget = useRef<HTMLButtonElement | null>(null)
   const restoreFocusAfterClear = useRef(false)
+  const focusReadbackStatusAfterUpdate = useRef(false)
+  const readbackStatusTarget = useRef<HTMLDivElement | null>(null)
+  const previousRoute = useRef(route)
+  const [updateReadbackUnverified, setUpdateReadbackUnverified] =
+    useState(false)
   const controlId = useId()
   const { dictionary, formatMessage } = useLocalization()
   const t = dictionary.telegram
@@ -1092,6 +1097,20 @@ function FeatureRouteControls({
   const [outputLanguageIsoCode, setOutputLanguageIsoCode] = useState(
     persistedLanguageIsoCode
   )
+
+  useEffect(() => {
+    if (previousRoute.current === route) return
+
+    previousRoute.current = route
+    setUpdateReadbackUnverified(false)
+  }, [route])
+
+  useEffect(() => {
+    if (!focusReadbackStatusAfterUpdate.current) return
+
+    focusReadbackStatusAfterUpdate.current = false
+    readbackStatusTarget.current?.focus()
+  }, [updateReadbackUnverified])
 
   useEffect(() => {
     if (!restoreFocusAfterClear.current) return
@@ -1139,15 +1158,31 @@ function FeatureRouteControls({
     )
   }
 
-  if (isPersistedRoute && route.readbackUnverified) {
+  if (
+    isPersistedRoute &&
+    (route.readbackUnverified || updateReadbackUnverified)
+  ) {
     return (
-      <div
-        className="col-span-2 min-w-0 text-sm text-muted-foreground"
-        role="status"
-      >
-        {isEconomicCalendarRoute
-          ? t.routing.economicCalendarReadbackUnverified
-          : t.routing.readbackUnverified}
+      <div className="col-span-2 flex min-w-0 flex-col items-start gap-2">
+        <div
+          ref={readbackStatusTarget}
+          className="min-w-0 text-sm text-muted-foreground"
+          role="status"
+          tabIndex={-1}
+        >
+          {isEconomicCalendarRoute
+            ? t.routing.economicCalendarReadbackUnverified
+            : t.routing.readbackUnverified}
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="w-fit"
+          onClick={() => router.refresh()}
+        >
+          {t.routing.retry}
+        </Button>
       </div>
     )
   }
@@ -1278,6 +1313,13 @@ function FeatureRouteControls({
       const result = await updateTelegramFeatureSetting(request.data)
 
       if (result.success) {
+        if ("readbackUnverified" in result.data) {
+          focusReadbackStatusAfterUpdate.current = true
+          setUpdateReadbackUnverified(true)
+          router.refresh()
+          return
+        }
+
         if (isPersistedRoute && overrides.destinationId === null) {
           restoreFocusAfterClear.current = true
           if (

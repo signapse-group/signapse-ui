@@ -29,8 +29,8 @@ import {
   telegramBotConnectionsReadbackResponseSchema,
   TelegramBotConnectionReadback,
   TelegramDestinationResponse,
-  TelegramFeatureSettingReadback,
   TelegramFeatureSettingReadbackSchema,
+  TelegramFeatureSettingUpdateResult,
   TelegramLinkTokenResponse,
   TelegramMarketAnalysisScheduleResponse,
   UpdateTelegramFeatureSettingRequest,
@@ -431,7 +431,7 @@ export async function deleteTelegramDestination(
 
 export async function updateTelegramFeatureSetting(
   request: UpdateTelegramFeatureSettingRequest
-): Promise<ActionResult<TelegramFeatureSettingReadback>> {
+): Promise<ActionResult<TelegramFeatureSettingUpdateResult>> {
   const dictionary = await getTelegramDictionary()
   const parsed =
     getUpdateTelegramFeatureSettingSchema(dictionary).safeParse(request)
@@ -451,11 +451,39 @@ export async function updateTelegramFeatureSetting(
         body: JSON.stringify(parsed.data),
       }
     )
-    const data = TelegramFeatureSettingReadbackSchema.parse(response)
-
     revalidateTelegramConfiguration()
 
-    return { success: true, data }
+    const responseReadback =
+      TelegramFeatureSettingReadbackSchema.safeParse(response)
+    if (
+      responseReadback.success &&
+      responseReadback.data.featureKey === parsed.data.featureKey &&
+      responseReadback.data.workspaceId === parsed.data.workspaceId
+    ) {
+      return { success: true, data: responseReadback.data }
+    }
+
+    try {
+      const settings = await getTelegramFeatureSettings({
+        workspaceId: parsed.data.workspaceId,
+        featureKey: parsed.data.featureKey,
+      })
+      const savedSetting = settings.find(
+        (setting) =>
+          setting.featureKey === parsed.data.featureKey &&
+          setting.workspaceId === parsed.data.workspaceId
+      )
+      const savedReadback =
+        TelegramFeatureSettingReadbackSchema.safeParse(savedSetting)
+
+      if (savedReadback.success) {
+        return { success: true, data: savedReadback.data }
+      }
+    } catch {
+      // A successful write with unreadable readback must not leave old state authoritative.
+    }
+
+    return { success: true, data: { readbackUnverified: true } }
   } catch (error: unknown) {
     const apiError =
       error instanceof Error ? (error as BackendApiError) : undefined

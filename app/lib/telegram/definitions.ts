@@ -166,6 +166,9 @@ export type TelegramFeatureSettingReadback = z.infer<
   typeof TelegramFeatureSettingReadbackSchema
 >
 
+export type TelegramFeatureSettingUpdateResult =
+  TelegramFeatureSettingReadback | { readbackUnverified: true }
+
 export function getTelegramLinkTokenResponseSchema() {
   return z.object({
     botConnectionId: z.number().int().positive(),

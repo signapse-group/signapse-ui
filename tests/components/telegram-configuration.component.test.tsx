@@ -321,6 +321,69 @@ describe("Economic calendar route permissions and persistence", () => {
     expect(screen.queryByTestId("telegram-readiness-summary")).toBeNull()
   })
 
+  it("keeps the saved destination visible and allows retry and clear when the destination list fails", async () => {
+    const user = userEvent.setup()
+    renderConfiguration(
+      economicCalendarData([economicCalendarSetting], {
+        destinations: [],
+        destinationsLoadError: true,
+        sectionAccess: {
+          ...economicCalendarData().sectionAccess,
+          destinations: true,
+        },
+      })
+    )
+
+    const card = screen.getByTestId("economic-calendar-routing-card")
+    expect(card).toHaveTextContent(destination.displayLabel)
+    expect(card).toHaveTextContent(viDictionary.telegram.destination.loadError)
+    expect(
+      within(card).queryByRole("combobox", {
+        name: destinationSelectorName(
+          viDictionary.telegram.routeDefinitions.ECONOMIC_CALENDAR_ALERT.label
+        ),
+      })
+    ).not.toBeInTheDocument()
+    expect(within(card).queryByRole("option")).not.toBeInTheDocument()
+
+    await user.click(
+      within(card).getByRole("button", {
+        name: viDictionary.telegram.routing.retry,
+      })
+    )
+    expect(routerRefresh).toHaveBeenCalledTimes(1)
+
+    vi.mocked(updateTelegramFeatureSetting).mockResolvedValueOnce({
+      success: true,
+      data: {
+        ...economicCalendarSetting,
+        enabled: false,
+        destination: null,
+      },
+    })
+    await user.click(
+      within(card).getByRole("button", {
+        name: viDictionary.telegram.routing.destinationClearAria.replace(
+          "{route}",
+          viDictionary.telegram.routeDefinitions.ECONOMIC_CALENDAR_ALERT.label
+        ),
+      })
+    )
+
+    await waitFor(() =>
+      expect(updateTelegramFeatureSetting).toHaveBeenCalledWith({
+        featureKey: "ECONOMIC_CALENDAR_ALERT",
+        workspaceId: 7,
+        destinationId: null,
+        enabled: false,
+      })
+    )
+    expect(toast.success).toHaveBeenCalledWith(
+      viDictionary.telegram.routing.destinationClearSuccess
+    )
+    expect(routerRefresh).toHaveBeenCalledTimes(2)
+  })
+
   it("can pause an inactive route and confirms before refreshing", async () => {
     const user = userEvent.setup()
     const inactiveSetting = {
@@ -350,6 +413,78 @@ describe("Economic calendar route permissions and persistence", () => {
     expect(toast.success).toHaveBeenCalledWith(
       viDictionary.telegram.routing.disabledSuccess
     )
+  })
+
+  it("hides the saved controls until a partial 200 can be read back", async () => {
+    const user = userEvent.setup()
+    const view = renderConfiguration(
+      economicCalendarData([economicCalendarSetting], {
+        destinations: [destination],
+        sectionAccess: {
+          ...economicCalendarData().sectionAccess,
+          destinations: true,
+        },
+      })
+    )
+    vi.mocked(updateTelegramFeatureSetting).mockResolvedValueOnce({
+      success: true,
+      data: { readbackUnverified: true },
+    })
+
+    const card = screen.getByTestId("economic-calendar-routing-card")
+    const clear = within(card).getByRole("button", {
+      name: viDictionary.telegram.routing.destinationClearAria.replace(
+        "{route}",
+        viDictionary.telegram.routeDefinitions.ECONOMIC_CALENDAR_ALERT.label
+      ),
+    })
+    clear.focus()
+    await user.keyboard("{Enter}")
+
+    const unverifiedStatus = await within(card).findByRole("status")
+    expect(unverifiedStatus).toHaveTextContent(
+      viDictionary.telegram.routing.economicCalendarReadbackUnverified
+    )
+    expect(unverifiedStatus).toHaveFocus()
+    expect(within(card).queryByRole("switch")).not.toBeInTheDocument()
+    expect(within(card).queryByRole("combobox")).not.toBeInTheDocument()
+    expect(toast.success).not.toHaveBeenCalled()
+    expect(routerRefresh).toHaveBeenCalledTimes(1)
+
+    await user.click(
+      within(card).getByRole("button", {
+        name: viDictionary.telegram.routing.retry,
+      })
+    )
+    expect(routerRefresh).toHaveBeenCalledTimes(2)
+
+    view.rerender(
+      <LocalizationProvider locale="vi" dictionary={viDictionary}>
+        <TelegramConfigurationPage
+          data={economicCalendarData([
+            {
+              ...economicCalendarSetting,
+              enabled: false,
+              destination: null,
+            },
+          ])}
+        />
+      </LocalizationProvider>
+    )
+    await waitFor(() =>
+      expect(
+        within(
+          screen.getByTestId("economic-calendar-routing-card")
+        ).queryByText(
+          viDictionary.telegram.routing.economicCalendarReadbackUnverified
+        )
+      ).not.toBeInTheDocument()
+    )
+    expect(
+      within(screen.getByTestId("economic-calendar-routing-card")).getByRole(
+        "switch"
+      )
+    ).not.toBeChecked()
   })
 
   it("clears atomically and restores focus to the switch when language is unavailable and destinations are unreadable", async () => {

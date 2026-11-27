@@ -396,6 +396,48 @@ describe("Telegram scheduled asset analysis actions", () => {
     expect(fetchAuthenticated).not.toHaveBeenCalled()
   })
 
+  it.each(["ECONOMIC_CALENDAR_ALERT", "MARKET_NEWS_ALERT"] as const)(
+    "reads back a partial 200 response for %s before confirming the saved setting",
+    async (featureKey) => {
+      const savedSetting = {
+        id: 41,
+        featureKey,
+        workspaceId: 7,
+        enabled: false,
+        destination: null,
+        outputLanguage: null,
+      }
+      vi.mocked(fetchAuthenticated)
+        .mockResolvedValueOnce({
+          destination: null,
+          outputLanguage: { name: "English" },
+        })
+        .mockResolvedValueOnce([savedSetting])
+
+      await expect(
+        updateTelegramFeatureSetting({
+          featureKey,
+          workspaceId: 7,
+          enabled: false,
+        })
+      ).resolves.toEqual({ success: true, data: savedSetting })
+
+      expect(fetchAuthenticated).toHaveBeenNthCalledWith(
+        1,
+        "/telegram/feature-settings",
+        {
+          method: "PUT",
+          body: JSON.stringify({ featureKey, workspaceId: 7, enabled: false }),
+        }
+      )
+      expect(fetchAuthenticated).toHaveBeenNthCalledWith(
+        2,
+        expect.stringContaining("featureKey")
+      )
+      expect(revalidatePath).toHaveBeenCalledWith("/telegram")
+    }
+  )
+
   it("sends Economic calendar clear as an atomic pause and fails closed on invalid success readback", async () => {
     const savedSetting = {
       id: 41,
@@ -428,20 +470,19 @@ describe("Telegram scheduled asset analysis actions", () => {
       }
     )
 
-    vi.mocked(fetchAuthenticated).mockResolvedValueOnce({
-      ...savedSetting,
-      enabled: true,
-    })
-    const invalidReadback = await updateTelegramFeatureSetting({
+    vi.mocked(fetchAuthenticated)
+      .mockResolvedValueOnce({ ...savedSetting, enabled: true })
+      .mockResolvedValueOnce([])
+    const unverifiedReadback = await updateTelegramFeatureSetting({
       featureKey: "ECONOMIC_CALENDAR_ALERT",
       workspaceId: 7,
       enabled: true,
     })
-    expect(invalidReadback).toEqual({
-      success: false,
-      error: testDictionary.telegram.routing.updateError,
+    expect(unverifiedReadback).toEqual({
+      success: true,
+      data: { readbackUnverified: true },
     })
-    expect(revalidatePath).toHaveBeenCalledTimes(1)
+    expect(revalidatePath).toHaveBeenCalledTimes(2)
   })
 
   it("localizes update permission failures instead of exposing backend details", async () => {
