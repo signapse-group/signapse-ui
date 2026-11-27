@@ -664,7 +664,7 @@ describe("Telegram schedule destructive actions", () => {
     })
     renderConfiguration({
       ...data,
-      featureSettings: [],
+      featureSettings: [featureSettings[0]],
       sectionAccess: {
         ...data.sectionAccess,
         destinations: true,
@@ -2350,7 +2350,7 @@ describe("Telegram destination removal", () => {
     const currentData: TelegramConfigurationData = {
       ...manageableData(),
       schedules: [],
-      featureSettings: [],
+      featureSettings: [featureSettings[0]],
       sectionAccess: {
         ...data.sectionAccess,
         destinations: true,
@@ -2363,8 +2363,10 @@ describe("Telegram destination removal", () => {
       },
     }
     const { rerender } = renderConfiguration(currentData)
+    const routeLabel =
+      viDictionary.telegram.routeDefinitions.ECONOMIC_CALENDAR_ALERT.label
     const routeDestination = screen.getByRole("combobox", {
-      name: "Cảnh báo lịch kinh tế",
+      name: destinationSelectorName(routeLabel),
     })
 
     await user.click(routeDestination)
