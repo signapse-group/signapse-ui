@@ -2669,6 +2669,7 @@ export const vi = {
       assetColumn: "Tài sản",
       languageColumn: "Ngôn ngữ đầu ra",
       statusColumn: "Trạng thái",
+      inactiveStatus: "Không hoạt động",
       accessLimited: "Không có quyền xem lịch phân tích",
       readOnlyDescription: "Bạn có thể xem lịch nhưng không có quyền thay đổi.",
       loadError: "Không thể tải các lịch phân tích.",

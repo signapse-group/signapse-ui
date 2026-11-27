@@ -126,6 +126,22 @@ async function fillValidSchedule(
   )
 }
 
+async function selectActiveDestination(
+  dialog: HTMLElement,
+  user: ReturnType<typeof userEvent.setup>
+) {
+  await user.click(
+    within(dialog).getByRole("combobox", {
+      name: viDictionary.telegram.schedule.destinationLabel,
+    })
+  )
+  await user.click(
+    await screen.findByRole("option", {
+      name: props.activeDestinations[0].displayLabel,
+    })
+  )
+}
+
 async function selectUtcTimezone(
   dialog: HTMLElement,
   user: ReturnType<typeof userEvent.setup>
@@ -237,6 +253,28 @@ describe("Telegram schedule form behavior", () => {
     ).toBeVisible()
   })
 
+  it("requires an explicit destination selection when creating a schedule", async () => {
+    const { dialog, user } = await openCreateDialog()
+    const destination = within(dialog).getByRole("combobox", {
+      name: viDictionary.telegram.schedule.destinationLabel,
+    })
+
+    expect(destination).toHaveTextContent(
+      viDictionary.telegram.destination.placeholder
+    )
+
+    await user.click(
+      within(dialog).getByRole("button", {
+        name: viDictionary.telegram.schedule.createSchedule,
+      })
+    )
+
+    expect(
+      screen.getByText(viDictionary.telegram.destinationRequired)
+    ).toBeVisible()
+    expect(createTelegramMarketAnalysisSchedule).not.toHaveBeenCalled()
+  })
+
   it("shows accessible validation errors and submits normalized values", async () => {
     const consoleError = vi
       .spyOn(console, "error")
@@ -257,6 +295,7 @@ describe("Telegram schedule form behavior", () => {
       ).toBeVisible()
 
       await fillValidSchedule(dialog, user)
+      await selectActiveDestination(dialog, user)
       await selectUtcTimezone(dialog, user)
       vi.mocked(createTelegramMarketAnalysisSchedule).mockResolvedValue({
         success: true,
@@ -291,6 +330,7 @@ describe("Telegram schedule form behavior", () => {
       })
     ).toHaveAttribute("aria-required", "true")
     await fillValidSchedule(dialog, user)
+    await selectActiveDestination(dialog, user)
     vi.mocked(createTelegramMarketAnalysisSchedule).mockResolvedValue({
       success: false,
       error: "Backend refused the schedule",

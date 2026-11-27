@@ -152,15 +152,11 @@ function getScheduleFieldId(idPrefix: string, field: keyof ScheduleFormValues) {
 }
 
 function getInitialScheduleValues(
-  schedule: TelegramMarketAnalysisScheduleResponse | undefined,
-  activeDestinations: TelegramDestinationResponse[]
+  schedule: TelegramMarketAnalysisScheduleResponse | undefined
 ): ScheduleFormValues {
   return {
     name: schedule?.name ?? "",
-    destinationId:
-      schedule?.destination?.id.toString() ??
-      activeDestinations[0]?.id.toString() ??
-      "",
+    destinationId: schedule?.destination?.id.toString() ?? "",
     assetId: schedule?.asset?.assetId.toString() ?? "",
     timezone: schedule?.timezone ?? "Asia/Bangkok",
     localTimes: schedule?.localTimes.length ? [...schedule.localTimes] : [""],
@@ -912,10 +908,7 @@ export function CreateTelegramScheduleDialog({
   const [isPending, startTransition] = useTransition()
   const [backendError, setBackendError] = useState<string | null>(null)
   const [errors, setErrors] = useState<ScheduleFormErrors>({})
-  const initialValues = useMemo(
-    () => getInitialScheduleValues(undefined, activeDestinations),
-    [activeDestinations]
-  )
+  const initialValues = useMemo(() => getInitialScheduleValues(undefined), [])
   const [values, setValues] = useState(initialValues)
   const disabledReason = getCreateDisabledReason(
     currentWorkspace,
@@ -1153,8 +1146,8 @@ export function UpdateTelegramScheduleDialog({
   const { dictionary } = useLocalization()
   const idPrefix = `telegram-schedule-update-${schedule.id}`
   const initialValues = useMemo(
-    () => getInitialScheduleValues(schedule, activeDestinations),
-    [activeDestinations, schedule]
+    () => getInitialScheduleValues(schedule),
+    [schedule]
   )
   const [open, setOpen] = useState(false)
   const [discardOpen, setDiscardOpen] = useState(false)

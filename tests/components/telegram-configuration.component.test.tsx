@@ -356,6 +356,9 @@ describe("Telegram schedule destructive actions", () => {
     expect(inactiveRows.length).toBeGreaterThan(0)
     inactiveRows.forEach((row) => {
       expect(
+        within(row).getByText(viDictionary.telegram.schedule.inactiveStatus)
+      ).toBeVisible()
+      expect(
         within(row).queryByRole("button", {
           name: viDictionary.telegram.schedule.editTrigger,
         })

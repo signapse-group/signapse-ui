@@ -129,8 +129,10 @@ export function ReadinessBadge({
 
 export function StatusBadge({
   status,
+  label: labelOverride,
 }: {
   status: TelegramConnectionStatus | TelegramDestinationStatus | undefined
+  label?: string
 }) {
   const { dictionary } = useLocalization()
   if (status === undefined) {
@@ -141,7 +143,7 @@ export function StatusBadge({
     )
   }
 
-  const label = dictionary.telegram.statuses[status]
+  const label = labelOverride ?? dictionary.telegram.statuses[status]
 
   if (status === "ACTIVE") {
     return <Badge variant="secondary">{label}</Badge>

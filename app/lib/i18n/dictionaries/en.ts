@@ -2691,6 +2691,7 @@ export const en: Dictionary = {
       assetColumn: "Asset",
       languageColumn: "Output language",
       statusColumn: "Status",
+      inactiveStatus: "Inactive",
       accessLimited: "No permission to view analysis schedules",
       readOnlyDescription: "You can view schedules but cannot change them.",
       loadError: "Could not load analysis schedules.",

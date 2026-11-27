@@ -766,7 +766,10 @@ function MarketAnalysisSchedulePanel({
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <span className="font-medium text-foreground">{schedule.name}</span>
             {schedule.status === "DISABLED" ? (
-              <StatusBadge status={schedule.status} />
+              <StatusBadge
+                status={schedule.status}
+                label={t.schedule.inactiveStatus}
+              />
             ) : null}
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -858,7 +861,10 @@ function MarketAnalysisSchedulePanel({
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <span className="font-medium text-foreground">{schedule.name}</span>
             {schedule.status === "DISABLED" ? (
-              <StatusBadge status={schedule.status} />
+              <StatusBadge
+                status={schedule.status}
+                label={t.schedule.inactiveStatus}
+              />
             ) : null}
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
