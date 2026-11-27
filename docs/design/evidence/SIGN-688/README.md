@@ -127,3 +127,23 @@ Verification on the code candidate:
 - Prettier check on the five changed TS/TSX files and `git diff --check` — passed.
 
 The approved SIGN-32 v2 PNGs **10308**, **10312** and **10309** were downloaded and inspected in this follow-up. Existing tracked captures above remain from earlier revisions and are historical for the current PR head. No current browser render was captured for the new unverified/readback and destination-list-error states. QA owns browser-dependent observations on the delivered dev revision: compare the loaded row and both error states at **1520×1024** (expanded sidebar), **1024×768** (collapsed sidebar) and **390×844** (navigation closed), in applicable light/dark themes; check keyboard focus, page overflow, responsive breakpoints and native **200%** zoom. No live feature API request or Telegram delivery test was made.
+
+## Settings-read error regression follow-up — 2026-11-27
+
+Implementation candidate: [`c765ed68f602b60efa3416b25bf23bda7e2da1db`](https://github.com/signapse-group/signapse-ui/commit/c765ed68f602b60efa3416b25bf23bda7e2da1db), on PR [#163](https://github.com/signapse-group/signapse-ui/pull/163), targeting `dev` from base `c01c3dc24baebba11b070d2bfd569ff4c4d5ab27`.
+
+- A failed Market news settings GET was converted to an empty list by the page loader, while `featureSettingsLoadError` was not applied to the route row. That made the unavailable state look Off and left destination controls available. The row now uses its existing localized load-error/retry state and exposes no switch, destination selector or language control until a successful refresh. Healthy Market news behavior and Economic calendar settings are unchanged.
+- The new component regression reproduced the fake Off row before the fix. On the fixed candidate, the error and Retry render, the row exposes no write controls or empty/Off configuration, Retry calls `router.refresh()`, and no update action is called.
+
+Verification on the candidate:
+
+- `pnpm test:quality` — passed: lint (23 existing warnings in unrelated files), typecheck, **103 test files / 926 tests**, fixture consistency (**89 operations**) and deployment verifier (**5 passed**).
+- `pnpm exec vitest run tests/components/telegram-configuration.component.test.tsx --reporter=dot` — **1 file / 52 tests passed** after the final assertions.
+- Prettier check for the changed TSX files and `git diff --check` — passed.
+- The targeted regression failed before the route error was propagated, as expected.
+
+The live OpenAPI at `https://dev-api.signapse.cloud/v3/api-docs` was fetched **2026-11-27 11:17:04 UTC**; `x-build-revision` was `60bc9ad3a61b889daba27deaf3ac7961cfa68a6b`, matching [Deploy run 45979542814](https://github.com/dgminhtam/signapse/actions/runs/45979542814). `GET /telegram/feature-settings` documents route-specific read permissions and owner-workspace filtering. `PUT /telegram/feature-settings` documents route-specific update permissions, optional-field preservation, atomic clear, inactive-route disable, destination eligibility and failures. `TelegramFeatureSettingResponse` requires only nullable `destination` and `outputLanguage`; display fields and `LanguageResponse` fields remain optional.
+
+For visual comparison, the approved [SIGN-32 v2](https://signapse-group.atlassian.net/browse/SIGN-32) references were confirmed: **10308** wide, **10312** compact and **10309** mobile. The matching `signapse-ui` Preview for `c765ed68` reached Ready ([deployment](https://vercel.com/signapse/signapse-ui/87uJnwaGR4CTz4qo6mYCCfvUDipt), [preview URL](https://signapse-ui-git-codex-sign-688-telegram-economi-54f3b4-signapse.vercel.app)). A request to `/en/telegram` returned **HTTP 302** to Vercel SSO, so no current-candidate render could be captured. The tracked screenshots above are historical and are not claimed for this candidate. After dev delivery, QA should compare the Economic calendar row with the approved references at **1520×1024** (expanded sidebar), **1024×768** (collapsed sidebar) and **390×844** (navigation closed), and check loading, Off with/without destination, error/readback, keyboard focus, overflow and native **200%** zoom. Light-theme and current-candidate render evidence remain unverified. No live feature API or Telegram delivery test was made. The authorized local Pen Desktop MCP is unavailable on this server; no Pen operation was attempted.
+
+GitHub `Verify / check` [run 45989891296](https://github.com/signapse-group/signapse-ui/actions/runs/45989891296/job/140474746661) and the `Vercel – signapse-ui` Preview passed for candidate `c765ed68f602b60efa3416b25bf23bda7e2da1db`.
