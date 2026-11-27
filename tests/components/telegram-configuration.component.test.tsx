@@ -54,6 +54,7 @@ import {
   updateTelegramMarketAnalysisSchedule,
 } from "@/app/api/telegram/action"
 import { toast } from "sonner"
+import { TooltipProvider } from "@/components/ui/tooltip"
 import { en as enDictionary } from "@/app/lib/i18n/dictionaries/en"
 import { vi as viDictionary } from "@/app/lib/i18n/dictionaries/vi"
 import { LocalizationProvider } from "@/app/lib/i18n/provider"
@@ -2281,7 +2282,9 @@ describe("Telegram bot connections", () => {
         ),
       })
     ).not.toBeInTheDocument()
-    expect(screen.getAllByRole("button", { name: /Kết nối lại/ })).toHaveLength(2)
+    expect(screen.getAllByRole("button", { name: /Kết nối lại/ })).toHaveLength(
+      2
+    )
   })
 
   it.each([
@@ -2363,46 +2366,49 @@ describe("Telegram bot connections", () => {
       toastKind: "warning",
       expected: viDictionary.telegram.bot.reconnectOutcomeUnverified,
     },
-  ])("reports only readback status $status", async ({ status, toastKind, expected }) => {
-    const user = userEvent.setup()
-    vi.mocked(reconnectTelegramBotConnection).mockResolvedValue({
-      success: true,
-      data: status ? { status } : {},
-    })
-    renderBotConnectionsCard({
-      botConnections: [botConnection],
-      canRead: true,
-      canUpdate: true,
-    })
-
-    await user.click(
-      screen.getByRole("button", {
-        name: viDictionary.telegram.bot.reconnectTrigger.replace(
-          "{botName}",
-          "New fixture bot"
-        ),
+  ])(
+    "reports only readback status $status",
+    async ({ status, toastKind, expected }) => {
+      const user = userEvent.setup()
+      vi.mocked(reconnectTelegramBotConnection).mockResolvedValue({
+        success: true,
+        data: status ? { status } : {},
       })
-    )
-    await user.type(
-      screen.getByLabelText(viDictionary.telegram.bot.tokenLabel),
-      "fake-token"
-    )
-    await user.click(
-      screen.getByRole("button", {
-        name: viDictionary.telegram.bot.reconnectAction,
+      renderBotConnectionsCard({
+        botConnections: [botConnection],
+        canRead: true,
+        canUpdate: true,
       })
-    )
 
-    await waitFor(() => {
-      if (toastKind === "success") {
-        expect(toast.success).toHaveBeenCalledWith(expected)
-      } else {
-        expect(toast.warning).toHaveBeenCalledWith(expected)
-      }
-    })
-    if (toastKind !== "success") expect(toast.success).not.toHaveBeenCalled()
-    await waitFor(() => expect(routerRefresh).toHaveBeenCalledTimes(1))
-  })
+      await user.click(
+        screen.getByRole("button", {
+          name: viDictionary.telegram.bot.reconnectTrigger.replace(
+            "{botName}",
+            "New fixture bot"
+          ),
+        })
+      )
+      await user.type(
+        screen.getByLabelText(viDictionary.telegram.bot.tokenLabel),
+        "fake-token"
+      )
+      await user.click(
+        screen.getByRole("button", {
+          name: viDictionary.telegram.bot.reconnectAction,
+        })
+      )
+
+      await waitFor(() => {
+        if (toastKind === "success") {
+          expect(toast.success).toHaveBeenCalledWith(expected)
+        } else {
+          expect(toast.warning).toHaveBeenCalledWith(expected)
+        }
+      })
+      if (toastKind !== "success") expect(toast.success).not.toHaveBeenCalled()
+      await waitFor(() => expect(routerRefresh).toHaveBeenCalledTimes(1))
+    }
+  )
 
   it("keeps a pending create open with its token after a delayed rejection", async () => {
     const user = userEvent.setup()
@@ -3217,6 +3223,53 @@ describe("Telegram destination removal", () => {
     ).toBeNull()
   })
 
+  it.each([
+    { locale: "vi" as const, dictionary: viDictionary },
+    { locale: "en" as const, dictionary: enDictionary },
+  ])(
+    "shows the localized Remove tooltip on hover and focus ($locale)",
+    async ({ locale, dictionary }) => {
+      const user = userEvent.setup()
+      const triggerLabel =
+        dictionary.telegram.destination.removeTrigger.replace(
+          "{destination}",
+          "Operations"
+        )
+      render(
+        <TooltipProvider delay={0}>
+          <LocalizationProvider locale={locale} dictionary={dictionary}>
+            <TelegramConfigurationPage data={manageableData()} />
+          </LocalizationProvider>
+        </TooltipProvider>
+      )
+
+      const trigger = screen.getByRole("button", { name: triggerLabel })
+      expect(trigger).toHaveAccessibleName(triggerLabel)
+
+      await user.hover(trigger)
+      expect(
+        await screen.findByText(dictionary.telegram.destination.removeAction, {
+          exact: true,
+        })
+      ).toBeInTheDocument()
+      await user.unhover(trigger)
+      await waitFor(() =>
+        expect(
+          screen.queryByText(dictionary.telegram.destination.removeAction, {
+            exact: true,
+          })
+        ).not.toBeInTheDocument()
+      )
+
+      trigger.focus()
+      expect(
+        await screen.findByText(dictionary.telegram.destination.removeAction, {
+          exact: true,
+        })
+      ).toHaveTextContent(dictionary.telegram.destination.removeAction)
+    }
+  )
+
   it("does not show Remove to read-only users", () => {
     renderConfiguration({
       ...data,
@@ -3337,8 +3390,10 @@ describe("Telegram destination removal", () => {
 
   it("announces pending removal and keeps the dialog busy until the API settles", async () => {
     const user = userEvent.setup()
-    let resolveRemoval: (result: { success: true; data: undefined }) => void =
-      () => undefined
+    let resolveRemoval: (result: {
+      success: true
+      data: undefined
+    }) => void = () => undefined
     const pendingRemoval = new Promise<{ success: true; data: undefined }>(
       (resolve) => {
         resolveRemoval = resolve
