@@ -7,7 +7,7 @@ import {
   getTelegramFeatureSettings,
   getTelegramMarketAnalysisSchedules,
 } from "@/app/api/telegram/action"
-import { getWorkspaceWatchlistAssets } from "@/app/api/watchlists/action"
+import { getAllWorkspaceWatchlistAssets } from "@/app/api/watchlists/action"
 import { getServerDictionary } from "@/app/lib/i18n/server"
 import { hasPermission } from "@/app/lib/permissions"
 import { getCurrentPermissions } from "@/app/lib/permissions-server"
@@ -29,10 +29,9 @@ import {
 const WATCHLIST_ASSET_SEARCH = {
   filter: "",
   page: 0,
-  size: 100,
-  sort: [{ field: "assetSymbol", direction: "asc" as const }],
+  size: 2000,
+  sort: [],
 }
-// ponytail: preload up to 100 workspace assets; add pagination/search if this ceiling is exceeded.
 
 function loadSection<T>(
   load: (() => Promise<T>) | undefined,
@@ -134,10 +133,7 @@ async function TelegramConfigurationContent({
     ({ data: currentWorkspace }) =>
       loadSection(
         sectionAccess.watchlistAssets && currentWorkspace
-          ? () =>
-              getWorkspaceWatchlistAssets(WATCHLIST_ASSET_SEARCH).then(
-                (page) => page.content
-              )
+          ? () => getAllWorkspaceWatchlistAssets(WATCHLIST_ASSET_SEARCH)
           : undefined,
         []
       )
