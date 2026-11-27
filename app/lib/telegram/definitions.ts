@@ -318,11 +318,10 @@ export function getSaveTelegramMarketAnalysisScheduleSchema(
             seen.add(value)
           })
         }),
-      outputLanguageIsoCode: z.preprocess(
-        (value) =>
-          typeof value === "string" && value.trim() ? value.trim() : undefined,
-        outputLanguageSchema.optional()
-      ),
+      outputLanguageIsoCode: z.preprocess((value) => {
+        if (value === null || value === undefined) return undefined
+        return typeof value === "string" ? value.trim() || undefined : value
+      }, outputLanguageSchema.optional()),
     })
     .strict()
 }

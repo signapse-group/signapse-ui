@@ -45,7 +45,13 @@ async function getTelegramDictionary() {
 }
 
 function getValidationError(error: z.ZodError, dictionary: Dictionary): string {
-  return error.issues[0]?.message ?? dictionary.telegram.validationInvalid
+  const issue = error.issues[0]
+
+  if (issue?.code === "invalid_type" || issue?.code === "unrecognized_keys") {
+    return dictionary.telegram.validationInvalid
+  }
+
+  return issue?.message ?? dictionary.telegram.validationInvalid
 }
 
 function getActionError(error: unknown, fallback: string): string {
@@ -86,7 +92,19 @@ async function validateScheduleRequest(
   request: SaveTelegramMarketAnalysisScheduleRequest,
   dictionary: Dictionary
 ) {
-  const normalized = normalizeSaveTelegramMarketAnalysisScheduleRequest(request)
+  const raw =
+    getSaveTelegramMarketAnalysisScheduleSchema(dictionary).safeParse(request)
+
+  if (!raw.success) {
+    return {
+      success: false as const,
+      error: getValidationError(raw.error, dictionary),
+    }
+  }
+
+  const normalized = normalizeSaveTelegramMarketAnalysisScheduleRequest(
+    raw.data
+  )
   let supportedLanguageIsoCodes: string[] | undefined
 
   if (normalized.outputLanguageIsoCode) {

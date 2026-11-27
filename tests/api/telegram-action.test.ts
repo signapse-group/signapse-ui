@@ -642,6 +642,37 @@ describe("Telegram scheduled asset analysis actions", () => {
     expect(failed).toEqual({ success: false, error: "Backend unavailable" })
     expect(revalidatePath).not.toHaveBeenCalled()
   })
+
+  it("rejects malformed runtime payloads before normalization or API requests", async () => {
+    const missingName = await createTelegramMarketAnalysisSchedule({
+      ...scheduleRequest(),
+      name: undefined,
+    } as never)
+    const nonArrayLocalTimes = await updateTelegramMarketAnalysisSchedule(11, {
+      ...scheduleRequest(),
+      localTimes: "09:00",
+    } as never)
+    const nonStringLanguage = await createTelegramMarketAnalysisSchedule({
+      ...scheduleRequest(),
+      outputLanguageIsoCode: 42,
+    } as never)
+
+    expect(missingName).toEqual({
+      success: false,
+      error: testDictionary.telegram.validationInvalid,
+    })
+    expect(nonArrayLocalTimes).toEqual({
+      success: false,
+      error: testDictionary.telegram.validationInvalid,
+    })
+    expect(nonStringLanguage).toEqual({
+      success: false,
+      error: testDictionary.telegram.validationInvalid,
+    })
+    expect(getLanguages).not.toHaveBeenCalled()
+    expect(fetchAuthenticated).not.toHaveBeenCalled()
+    expect(revalidatePath).not.toHaveBeenCalled()
+  })
 })
 
 describe("Telegram bot connection creation", () => {
