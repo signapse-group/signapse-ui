@@ -2,14 +2,7 @@
 
 import { type FormEvent, useRef, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import {
-  Bot,
-  CalendarClock,
-  RefreshCw,
-  Send,
-  Trash2,
-  X,
-} from "lucide-react"
+import { Bot, CalendarClock, RefreshCw, Send, Trash2, X } from "lucide-react"
 import { toast } from "sonner"
 
 import {
@@ -246,7 +239,7 @@ function BotConnectionItem({
                   id={removeTriggerId}
                   variant="destructive"
                   size="icon-sm"
-                  className="min-h-[44px] min-w-[44px] md:min-h-8 md:min-w-8 focus-visible:ring-destructive dark:focus-visible:ring-destructive"
+                  className="min-h-[44px] min-w-[44px] focus-visible:ring-destructive md:min-h-8 md:min-w-8 dark:focus-visible:ring-destructive"
                   aria-label={removeTriggerLabel}
                   title={removeTriggerLabel}
                 >
@@ -350,7 +343,17 @@ function ConnectBotDialog() {
   }
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog
+      open={open}
+      disablePointerDismissal={isPending}
+      onOpenChange={(nextOpen, eventDetails) => {
+        if (!nextOpen && isPending) {
+          eventDetails.cancel()
+          return
+        }
+        handleOpenChange(nextOpen)
+      }}
+    >
       <DialogTrigger render={<Button />}>
         <Bot data-icon="inline-start" />
         {t.bot.connect}
@@ -417,6 +420,7 @@ function ConnectBotDialog() {
               variant="ghost"
               className="absolute top-2 right-2"
               size="icon-sm"
+              disabled={isPending}
             />
           }
         >

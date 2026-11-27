@@ -729,6 +729,81 @@ describe("Telegram bot connections", () => {
     ).not.toBeInTheDocument()
   })
 
+  it("keeps a pending create open with its token after a delayed rejection", async () => {
+    const user = userEvent.setup()
+    let resolveCreate!: (result: { success: false; error: string }) => void
+    vi.mocked(createTelegramBotConnection)
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveCreate = resolve
+          })
+      )
+      .mockResolvedValueOnce({
+        success: false,
+        error: viDictionary.telegram.bot.createTokenVerificationError,
+      })
+    renderBotConnectionsCard({ canCreate: true })
+
+    await user.click(
+      screen.getByRole("button", { name: viDictionary.telegram.bot.connect })
+    )
+    const dialog = await screen.findByRole("dialog")
+    const token = screen.getByLabelText(viDictionary.telegram.bot.tokenLabel)
+    await user.type(token, "fake-token")
+    await user.click(
+      screen.getByRole("button", {
+        name: viDictionary.telegram.bot.connectBot,
+      })
+    )
+
+    await waitFor(() =>
+      expect(createTelegramBotConnection).toHaveBeenCalledTimes(1)
+    )
+    const closeButtons = within(dialog).getAllByRole("button", {
+      name: viDictionary.common.close,
+    })
+    expect(closeButtons).toHaveLength(2)
+    expect(closeButtons[0]).toBeDisabled()
+    expect(closeButtons[1]).toBeDisabled()
+    expect(token).toBeDisabled()
+
+    await user.click(closeButtons[0]!)
+    await user.click(closeButtons[1]!)
+    expect(dialog).toBeInTheDocument()
+    await user.keyboard("{Escape}")
+    expect(dialog).toBeInTheDocument()
+    fireEvent.pointerDown(document.body, { pointerType: "mouse" })
+    expect(dialog).toBeInTheDocument()
+
+    resolveCreate({
+      success: false,
+      error: viDictionary.telegram.bot.createTokenVerificationError,
+    })
+    await waitFor(() =>
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        viDictionary.telegram.bot.createTokenVerificationError
+      )
+    )
+    expect(token).toHaveValue("fake-token")
+    expect(token).toBeEnabled()
+    expect(
+      screen.getByRole("button", {
+        name: viDictionary.telegram.bot.connectBot,
+      })
+    ).toBeEnabled()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: viDictionary.telegram.bot.connectBot,
+      })
+    )
+    await waitFor(() =>
+      expect(createTelegramBotConnection).toHaveBeenCalledTimes(2)
+    )
+    expect(token).toHaveValue("fake-token")
+  })
+
   it("announces a create error, preserves the token, and restores dialog focus", async () => {
     const user = userEvent.setup()
     vi.mocked(createTelegramBotConnection).mockResolvedValue({

@@ -185,3 +185,20 @@ Design references were confirmed against the current Jira attachment list and do
 - Two full `pnpm test:quality` attempts reached lint (0 errors / 23 warnings) and typecheck successfully, but the Vitest run reported intermittent failures outside the changed behavior: an account-profile picker timeout on the first run and two destination-link dialog option lookups on the second. The account-profile file passed 9/9 on isolated rerun, and the focused Telegram action/component suites passed after the second run. The current PR's GitHub `Verify / check` is still required.
 
 These local fixtures do not verify live authentication, persistence, Telegram delivery, or browser behavior on the current candidate. QA owns responsive/browser and live feature verification on dev; the coordinator owns Story acceptance.
+
+## Follow-up for pending create dismissal — 2026-11-27
+
+The live [dev OpenAPI](https://dev-api.signapse.cloud/v3/api-docs) was fetched at `2026-11-27T04:49:47Z`, build revision `b6de21490d5572bdb51624372ef860230af5df86`, OpenAPI SHA-256 `13e879a87e1f03f07927d1ededd99d1ee238b2a1b855baae2ca56ed0c1e60b03`. The GET/POST permission split and create outcomes match the FE integration. `TelegramBotConnectionResponse` still has no `required` list for `id` and `status`; the consumer keeps incomplete data unverified under coordinator decision [comment 11804](https://signapse-group.atlassian.net/browse/SIGN-329?focusedCommentId=11804).
+
+I re-read the live SIGN-31 attachment list and downloaded the active approved dialog references: attachment 10310 (`telegram-connect-bot-desktop-20261123-v2.png`) and 10311 (`telegram-connect-bot-mobile-20261123-v2.png`). The desktop reference keeps Close and Connect side by side; Mobile stacks them in the footer. The existing dark-theme resting-state captures at 1520×1024 and 360×780 retain that geometry. This fix changes no layout or copy: while a create request is pending, both close buttons are disabled, pointer dismissal is disabled, and Escape/other close requests are canceled. A successful response still closes the dialog programmatically.
+
+The delayed-rejection component test attempts both close buttons, Escape, and outside pointer dismissal while pending. It confirms the dialog stays open, then checks the localized error, retained token and retry. On failure, the dialog remains available; on success, existing component coverage confirms normal close and refresh behavior.
+
+No browser render was made for the pending state on this candidate. Earlier resting-state captures remain useful for the unchanged layout but do not prove pending-state rendering or responsive behavior. QA should check the current PR Preview at Wide 1520×1024, Compact 1024×768, Mobile 390×844 and 360px, plus actual 200% zoom, with a pending request and delayed rejection. Verify the disabled close controls remain visible, Escape and outside dismissal do not lose the draft, the localized rejection is announced with focus on the token field, retry remains available, and the open dialog has no horizontal overflow. Browser verification remains assigned to QA by comment 11871.
+
+### Follow-up checks
+
+- `pnpm exec vitest run tests/api/telegram-action.test.ts tests/components/telegram-configuration.component.test.tsx` — **65 passed** after formatting.
+- `pnpm test:quality` — **passed**: lint (0 errors, 23 existing warnings), typecheck, 892 tests across 103 files, contract fixture consistency for 89 operations and 5 deployment-verification tests.
+- `pnpm test:contract` — fixture consistency passed for **89 operations**.
+- Changed-file ESLint, Prettier, and `git diff --check` — passed.
