@@ -102,7 +102,7 @@ export function BotConnectionsCard({
         <CardDescription>{t.bot.sectionDescription}</CardDescription>
         {canCreate ? (
           <CardAction>
-            <ConnectBotDialog />
+            <ConnectBotDialog canRead={canRead} />
           </CardAction>
         ) : null}
       </CardHeader>
@@ -256,7 +256,7 @@ function BotConnectionItem({
   )
 }
 
-function ConnectBotDialog() {
+function ConnectBotDialog({ canRead }: { canRead: boolean }) {
   const router = useRouter()
   const tokenRef = useRef<HTMLInputElement>(null)
   const [open, setOpen] = useState(false)
@@ -294,15 +294,16 @@ function ConnectBotDialog() {
       if (result.success) {
         const { connection, created } = result.data
         const status = connection.status
-
-        if (created === null) {
-          toast.warning(t.bot.createOutcomeUnverified)
-        } else if (status === undefined) {
-          toast.warning(
-            created
+        const unverifiedMessage = canRead
+          ? created === null
+            ? t.bot.createOutcomeUnverified
+            : created
               ? t.bot.createStatusUnverified
               : t.bot.alreadyConnectedStatusUnverified
-          )
+          : t.bot.createUnverifiedWithoutRead
+
+        if (created === null || status === undefined) {
+          toast.warning(unverifiedMessage)
         } else {
           const statusLabel = dictionary.telegram.statuses[status]
 

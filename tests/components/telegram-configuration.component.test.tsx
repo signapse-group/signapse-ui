@@ -1535,7 +1535,7 @@ describe("Telegram bot connections", () => {
     expect(dialog).not.toBeInTheDocument()
   })
 
-  it("reports a successful create with no saved status as unverified", async () => {
+  it("guides a create-only caller when a successful create has no saved status", async () => {
     const user = userEvent.setup()
     vi.mocked(createTelegramBotConnection).mockResolvedValue({
       success: true,
@@ -1547,7 +1547,7 @@ describe("Telegram bot connections", () => {
         created: true,
       },
     })
-    renderBotConnectionsCard({ canCreate: true })
+    renderBotConnectionsCard({ canCreate: true, canRead: false })
 
     await user.click(
       screen.getByRole("button", {
@@ -1566,7 +1566,7 @@ describe("Telegram bot connections", () => {
 
     await waitFor(() =>
       expect(toast.warning).toHaveBeenCalledWith(
-        viDictionary.telegram.bot.createStatusUnverified
+        viDictionary.telegram.bot.createUnverifiedWithoutRead
       )
     )
     expect(toast.error).not.toHaveBeenCalled()
@@ -1574,13 +1574,13 @@ describe("Telegram bot connections", () => {
     expect(routerRefresh).toHaveBeenCalledTimes(1)
   })
 
-  it("reports an unknown create outcome without claiming failure", async () => {
+  it("guides a create-only caller after an unknown outcome without claiming failure", async () => {
     const user = userEvent.setup()
     vi.mocked(createTelegramBotConnection).mockResolvedValue({
       success: true,
       data: { connection: {}, created: null },
     })
-    renderBotConnectionsCard({ canCreate: true })
+    renderBotConnectionsCard({ canCreate: true, canRead: false })
 
     await user.click(
       screen.getByRole("button", {
@@ -1599,7 +1599,7 @@ describe("Telegram bot connections", () => {
 
     await waitFor(() =>
       expect(toast.warning).toHaveBeenCalledWith(
-        viDictionary.telegram.bot.createOutcomeUnverified
+        viDictionary.telegram.bot.createUnverifiedWithoutRead
       )
     )
     expect(toast.error).not.toHaveBeenCalled()
