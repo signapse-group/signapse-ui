@@ -22,15 +22,19 @@ export default async function RoleDetailRoute({
     getServerDictionary(),
   ])
 
-  if (!hasPermission(permissions, ROLE_READ_PERMISSION)) {
-    return (
+  const accessDenied = (
+    <div className="mx-auto w-full max-w-2xl">
       <AccessDenied
         heading={dictionary.roles.pageTitle}
         title={dictionary.errors.accessDeniedTitle}
         description={dictionary.roles.accessDeniedDescription}
         permission={ROLE_READ_PERMISSION}
       />
-    )
+    </div>
+  )
+
+  if (!hasPermission(permissions, ROLE_READ_PERMISSION)) {
+    return accessDenied
   }
 
   const { roleKey } = await params
@@ -54,14 +58,7 @@ export default async function RoleDetailRoute({
     }
 
     if (status === 403) {
-      return (
-        <AccessDenied
-          heading={dictionary.roles.pageTitle}
-          title={dictionary.errors.accessDeniedTitle}
-          description={dictionary.roles.accessDeniedDescription}
-          permission={ROLE_READ_PERMISSION}
-        />
-      )
+      return accessDenied
     }
 
     throw error

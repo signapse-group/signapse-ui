@@ -58,7 +58,9 @@ describe("role page permission gates", () => {
       expect(mocks.getRoleByKey).not.toHaveBeenCalled()
       expect(rolesPage.type).toBe(AccessDenied)
       expect(rolesPage.props.action).toBeUndefined()
-      expect(detailPage.type).toBe(AccessDenied)
+      expect(detailPage.type).toBe("div")
+      expect(detailPage.props.className).toContain("max-w-2xl")
+      expect(detailPage.props.children.type).toBe(AccessDenied)
     }
   )
 

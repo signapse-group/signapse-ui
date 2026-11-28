@@ -1281,6 +1281,7 @@ export const vi = {
   },
   roles: {
     pageTitle: "Vai trò",
+    detailPageTitle: "Chi tiết vai trò",
     accessDeniedDescription:
       "Bạn cần quyền role:read để xem vai trò và các quyền đã gán.",
     roleColumn: "Vai trò",
