@@ -34,6 +34,7 @@ export const TELEGRAM_MARKET_NEWS_ROUTING_READ_PERMISSION =
   "telegram-market-news-routing:read"
 export const TELEGRAM_MARKET_NEWS_ROUTING_UPDATE_PERMISSION =
   "telegram-market-news-routing:update"
+export const TELEGRAM_SIGNAL_ENGINE_ROUTING_PERMISSION = "signal-engine:use"
 export const TELEGRAM_MARKET_ANALYSIS_SCHEDULE_READ_PERMISSION =
   "telegram-market-analysis-schedule:read"
 export const TELEGRAM_MARKET_ANALYSIS_SCHEDULE_CREATE_PERMISSION =
@@ -49,6 +50,7 @@ export const TELEGRAM_READ_PERMISSIONS = [
   TELEGRAM_FEATURE_SETTING_READ_PERMISSION,
   TELEGRAM_ECONOMIC_CALENDAR_ROUTING_READ_PERMISSION,
   TELEGRAM_MARKET_NEWS_ROUTING_READ_PERMISSION,
+  TELEGRAM_SIGNAL_ENGINE_ROUTING_PERMISSION,
   TELEGRAM_MARKET_ANALYSIS_SCHEDULE_READ_PERMISSION,
 ] as const
 
@@ -90,6 +92,10 @@ export function getTelegramSectionAccess(
       permissions,
       TELEGRAM_MARKET_NEWS_ROUTING_READ_PERMISSION
     ),
+    signalEngineRouting: hasPermission(
+      permissions,
+      TELEGRAM_SIGNAL_ENGINE_ROUTING_PERMISSION
+    ),
     schedules: hasPermission(
       permissions,
       TELEGRAM_MARKET_ANALYSIS_SCHEDULE_READ_PERMISSION
@@ -129,6 +135,10 @@ export function getTelegramManageAccess(
     marketNewsRouting: hasPermission(
       permissions,
       TELEGRAM_MARKET_NEWS_ROUTING_UPDATE_PERMISSION
+    ),
+    signalEngineRouting: hasPermission(
+      permissions,
+      TELEGRAM_SIGNAL_ENGINE_ROUTING_PERMISSION
     ),
   }
 }

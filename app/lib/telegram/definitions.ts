@@ -13,6 +13,7 @@ export const TELEGRAM_FEATURE_KEYS = [
   "ECONOMIC_CALENDAR_ALERT",
   "MARKET_NEWS_ALERT",
   "SCHEDULED_MARKET_ANALYSIS",
+  "SIGNAL_ENGINE",
 ] as const
 
 export type TelegramFeatureKey = (typeof TELEGRAM_FEATURE_KEYS)[number]
@@ -221,6 +222,16 @@ export function getUpdateTelegramFeatureSettingSchema(dictionary?: Dictionary) {
         ),
       }),
       z.object({
+        featureKey: z.literal("SIGNAL_ENGINE"),
+        workspaceId,
+        destinationId: z.union([destinationId, z.null()]).optional(),
+        enabled: z.boolean().optional(),
+        outputLanguageIsoCode: z.preprocess(
+          (value) => (typeof value === "string" ? value.trim() || null : value),
+          z.string().trim().nullable().optional()
+        ),
+      }),
+      z.object({
         featureKey: z.literal("SCHEDULED_MARKET_ANALYSIS"),
         workspaceId,
         destinationId,
@@ -366,6 +377,7 @@ export interface TelegramSectionAccess {
   featureSettings: boolean
   economicCalendarRouting: boolean
   marketNewsRouting: boolean
+  signalEngineRouting: boolean
   schedules: boolean
   watchlistAssets: boolean
 }
@@ -378,6 +390,7 @@ export interface TelegramManageAccess {
   featureSettings: boolean
   economicCalendarRouting: boolean
   marketNewsRouting: boolean
+  signalEngineRouting: boolean
 }
 
 export interface TelegramScheduleActionAccess {
@@ -392,6 +405,9 @@ export interface TelegramConfigurationData {
   destinationsLoadError: boolean
   featureSettings: TelegramFeatureSettingResponse[]
   featureSettingsLoadError: boolean
+  signalEngineSettings: TelegramFeatureSettingResponse[]
+  signalEngineWorkspace: BackendWorkspaceSummary | null
+  signalEngineLoadError: boolean
   economicCalendarSettings: TelegramFeatureSettingResponse[]
   economicCalendarWorkspace: BackendWorkspaceSummary | null
   economicCalendarLoadError: boolean
@@ -399,6 +415,7 @@ export interface TelegramConfigurationData {
   currentWorkspace: WorkspaceResponse | null
   watchlistAssets: WorkspaceWatchlistAssetListItemResponse[]
   languages: LanguageResponse[]
+  defaultOutputLanguageIsoCode: string
   languageCatalogError: boolean
   scheduleLoadError: boolean
   botConnectionsLoadError: boolean

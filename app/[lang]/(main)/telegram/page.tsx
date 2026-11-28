@@ -109,6 +109,22 @@ async function TelegramConfigurationContent({
     canReadWorkspace ? () => getActiveWorkspaceForCurrentUser() : undefined,
     null
   )
+  const currentWorkspaceSummaryPromise = loadSection(
+    sectionAccess.signalEngineRouting
+      ? () => getCurrentWorkspaceSummary()
+      : undefined,
+    null
+  )
+  const signalEngineWorkspacePromise = Promise.all([
+    currentWorkspacePromise,
+    currentWorkspaceSummaryPromise,
+  ]).then(([workspace, summary]) => ({
+    data: workspace.data ?? summary.data,
+    error:
+      sectionAccess.signalEngineRouting &&
+      workspace.data === null &&
+      (workspace.error || summary.error),
+  }))
   const economicCalendarWorkspacePromise = currentWorkspacePromise.then(
     ({ data: currentWorkspace }) =>
       loadSection(
@@ -133,6 +149,24 @@ async function TelegramConfigurationContent({
       ? () => getTelegramFeatureSettings({ featureKey: "MARKET_NEWS_ALERT" })
       : undefined,
     []
+  )
+  const signalEngineSettingsPromise = signalEngineWorkspacePromise.then(
+    ({ data: signalEngineWorkspace, error: workspaceError }) =>
+      loadSection(
+        sectionAccess.signalEngineRouting && signalEngineWorkspace
+          ? () =>
+              getTelegramFeatureSettings({
+                workspaceId: signalEngineWorkspace.id,
+                featureKey: "SIGNAL_ENGINE",
+              })
+          : undefined,
+        []
+      ).then((settings) => ({
+        ...settings,
+        error:
+          settings.error ||
+          (sectionAccess.signalEngineRouting && workspaceError),
+      }))
   )
   const economicCalendarSettingsPromise = economicCalendarWorkspacePromise.then(
     ({ data: economicCalendarWorkspace, error: workspaceError }) =>
@@ -163,11 +197,12 @@ async function TelegramConfigurationContent({
     sectionAccess.schedules ||
       sectionAccess.marketNewsRouting ||
       sectionAccess.economicCalendarRouting ||
+      sectionAccess.signalEngineRouting ||
       scheduleActions.create ||
       scheduleActions.update
-      ? () => getLanguages().then((catalog) => catalog.languages)
+      ? () => getLanguages()
       : undefined,
-    []
+    { currentLanguage: "vi", preferredLanguage: null, languages: [] }
   )
   const watchlistAssetsPromise = currentWorkspacePromise.then(
     ({ data: currentWorkspace }) =>
@@ -185,6 +220,8 @@ async function TelegramConfigurationContent({
     botConnectionsResult,
     destinationsResult,
     featureSettingsResult,
+    signalEngineWorkspaceResult,
+    signalEngineSettingsResult,
     economicCalendarSettingsResult,
     schedulesResult,
     watchlistAssetsResult,
@@ -195,6 +232,8 @@ async function TelegramConfigurationContent({
     botConnectionsPromise,
     destinationsPromise,
     featureSettingsPromise,
+    signalEngineWorkspacePromise,
+    signalEngineSettingsPromise,
     economicCalendarSettingsPromise,
     schedulesPromise,
     watchlistAssetsPromise,
@@ -209,13 +248,20 @@ async function TelegramConfigurationContent({
         destinationsLoadError: destinationsResult.error,
         featureSettings: featureSettingsResult.data,
         featureSettingsLoadError: featureSettingsResult.error,
+        signalEngineSettings: signalEngineSettingsResult.data,
+        signalEngineWorkspace: signalEngineWorkspaceResult.data,
+        signalEngineLoadError:
+          signalEngineWorkspaceResult.error || signalEngineSettingsResult.error,
         economicCalendarSettings: economicCalendarSettingsResult.data,
         economicCalendarWorkspace: economicCalendarWorkspaceResult.data,
         economicCalendarLoadError: economicCalendarSettingsResult.error,
         schedules: schedulesResult.data,
         currentWorkspace: currentWorkspaceResult.data,
         watchlistAssets: watchlistAssetsResult.data,
-        languages: languagesResult.data,
+        languages: languagesResult.data.languages,
+        defaultOutputLanguageIsoCode:
+          languagesResult.data.preferredLanguage ??
+          languagesResult.data.currentLanguage,
         languageCatalogError: languagesResult.error,
         scheduleLoadError: schedulesResult.error,
         botConnectionsLoadError: botConnectionsResult.error,

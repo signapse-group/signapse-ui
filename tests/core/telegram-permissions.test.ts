@@ -20,6 +20,7 @@ import {
   TELEGRAM_MARKET_ANALYSIS_SCHEDULE_READ_PERMISSION,
   TELEGRAM_MARKET_ANALYSIS_SCHEDULE_UPDATE_PERMISSION,
   TELEGRAM_NAV_PERMISSIONS,
+  TELEGRAM_SIGNAL_ENGINE_ROUTING_PERMISSION,
 } from "@/app/lib/telegram/permissions"
 
 describe("Telegram configuration permissions", () => {
@@ -196,6 +197,36 @@ describe("Telegram Economic calendar routing permissions", () => {
     expect(
       getTelegramSectionAccess([TELEGRAM_FEATURE_SETTING_UPDATE_PERMISSION])
         .economicCalendarRouting
+    ).toBe(false)
+  })
+})
+
+describe("Telegram Signal Engine routing permissions", () => {
+  it("opens routing for the dedicated permission and uses it for updates", () => {
+    const permissions = [TELEGRAM_SIGNAL_ENGINE_ROUTING_PERMISSION]
+
+    expect(canAccessTelegramConfiguration(permissions)).toBe(true)
+    expect(TELEGRAM_NAV_PERMISSIONS).toContain(
+      TELEGRAM_SIGNAL_ENGINE_ROUTING_PERMISSION
+    )
+    expect(getTelegramSectionAccess(permissions)).toMatchObject({
+      signalEngineRouting: true,
+      featureSettings: false,
+      marketNewsRouting: false,
+      economicCalendarRouting: false,
+      destinations: false,
+    })
+    expect(getTelegramManageAccess(permissions).signalEngineRouting).toBe(true)
+  })
+
+  it("does not grant Signal Engine routing from another route's permission", () => {
+    expect(
+      getTelegramSectionAccess([TELEGRAM_MARKET_NEWS_ROUTING_READ_PERMISSION])
+        .signalEngineRouting
+    ).toBe(false)
+    expect(
+      getTelegramManageAccess([TELEGRAM_MARKET_NEWS_ROUTING_UPDATE_PERMISSION])
+        .signalEngineRouting
     ).toBe(false)
   })
 })
