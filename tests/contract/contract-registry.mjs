@@ -1,5 +1,7 @@
 export const fixtureContracts = [
   { method: "GET", path: "/me", mapping: "getMe", status: 200 },
+  { method: "GET", path: "/roles", mapping: "getRoles", status: 200 },
+  { method: "GET", path: "/roles/{roleKey}", mapping: "getRoleByKey", status: 200 },
   { method: "PATCH", path: "/me", mapping: "updateProfile", status: 200 },
   { method: "PATCH", path: "/me/preferred-language", mapping: "updateMyPreferredLanguage", status: 200 },
   { method: "GET", path: "/contact-requests", mapping: "getContactRequests", status: 200 },

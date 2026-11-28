@@ -28,23 +28,27 @@ export interface PermissionGroup {
 const LEGACY_PERMISSION_GROUP_KEY = "legacy"
 
 function getPermissionGroupKey(permissionKey: string): string {
-  const [prefix] = permissionKey.split(":")
-  return prefix?.trim() || LEGACY_PERMISSION_GROUP_KEY
+  const separatorIndex = permissionKey.indexOf(":")
+  if (separatorIndex <= 0) return LEGACY_PERMISSION_GROUP_KEY
+
+  return (
+    permissionKey.slice(0, separatorIndex).trim() || LEGACY_PERMISSION_GROUP_KEY
+  )
 }
 
 function formatPermissionGroupTitle(
   groupKey: string,
   dictionary: Dictionary
 ): string {
-  if (groupKey === LEGACY_PERMISSION_GROUP_KEY) {
-    return dictionary.roles.legacyGroup
-  }
+  const labels = dictionary.roles.permissionGroups as Record<string, string>
+  const label = Object.prototype.hasOwnProperty.call(labels, groupKey)
+    ? labels[groupKey]
+    : undefined
 
-  return groupKey
-    .split(/[-_]/)
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ")
+  return (
+    label ??
+    dictionary.roles.unknownPermissionGroup.replace("{group}", groupKey)
+  )
 }
 
 export function groupPermissionsByResource(

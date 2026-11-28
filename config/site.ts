@@ -24,6 +24,7 @@ import { SMTP_CONFIGURATION_NAV_PERMISSIONS } from "@/app/lib/smtp-configuration
 import { TELEGRAM_NAV_PERMISSIONS } from "@/app/lib/telegram/permissions"
 import { FEEDBACK_READ_PERMISSION } from "@/app/lib/feedback/permissions"
 import { CONTACT_REQUEST_READ_PERMISSION } from "@/app/lib/contact-requests/permissions"
+import { ROLE_NAV_PERMISSIONS } from "@/app/lib/roles/permissions"
 import type { Dictionary } from "@/app/lib/i18n/dictionary-types"
 
 export interface NavSubItem {
@@ -217,7 +218,7 @@ export function createSiteConfig(dictionary: Dictionary) {
                 id: "roles",
                 title: dictionary.navigation.roles,
                 url: "/roles",
-                permission: "role:update",
+                permission: ROLE_NAV_PERMISSIONS,
               },
             ],
           },
