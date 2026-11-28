@@ -1,3 +1,5 @@
+import { z } from "zod"
+
 import type { Dictionary } from "@/app/lib/i18n/dictionary-types"
 
 export interface PermissionResponse {
@@ -15,9 +17,17 @@ export interface RoleResponse {
   permissions: PermissionResponse[]
 }
 
-export interface UpdateRolePermissionsRequest {
-  permissionKeys: string[]
-}
+export const updateRolePermissionsRequestSchema = z.object({
+  permissionKeys: z
+    .array(z.string())
+    .refine(
+      (permissionKeys) => new Set(permissionKeys).size === permissionKeys.length
+    ),
+})
+
+export type UpdateRolePermissionsRequest = z.infer<
+  typeof updateRolePermissionsRequestSchema
+>
 
 export interface PermissionGroup {
   key: string
@@ -77,25 +87,4 @@ export function groupPermissionsByResource(
         left.key.localeCompare(right.key)
       ),
     }))
-}
-
-export function mergePermissionsWithLegacy(
-  availablePermissions: PermissionResponse[],
-  selectedPermissions: PermissionResponse[]
-): PermissionResponse[] {
-  const availableByKey = new Map(
-    availablePermissions.map((permission) => [permission.key, permission])
-  )
-  const mergedPermissions = [...availablePermissions]
-
-  for (const permission of selectedPermissions) {
-    if (!availableByKey.has(permission.key)) {
-      mergedPermissions.push({
-        ...permission,
-        name: permission.name || permission.key,
-      })
-    }
-  }
-
-  return mergedPermissions
 }
