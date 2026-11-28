@@ -56,7 +56,7 @@ describe("read-only roles views", () => {
   afterEach(() => cleanup())
 
   it("lists each role with a localized count, including zero, and a key-specific link", () => {
-    renderLocalized(<RoleListPage roles={roles} canCreate={false} />)
+    renderLocalized(<RoleListPage roles={roles} />)
 
     expect(
       screen.getByRole("heading", { level: 1, name: "Roles" })
@@ -70,7 +70,7 @@ describe("read-only roles views", () => {
       screen.getByRole("link", { name: "Content Reviewer" })
     ).toHaveAttribute("href", "/en/roles/CONTENT_REVIEWER")
     expect(
-      screen.queryByRole("link", { name: en.roles.createAction })
+      screen.queryByRole("link", { name: "Create role" })
     ).not.toBeInTheDocument()
 
     const emptyRoleRow = screen.getByRole("row", { name: /Empty reader/ })
@@ -78,17 +78,17 @@ describe("read-only roles views", () => {
     expect(screen.queryAllByRole("button")).toHaveLength(0)
   })
 
-  it("shows the localized create entry only when the caller can create roles", () => {
-    renderLocalized(<RoleListPage roles={roles} canCreate />)
+  it("does not expose a create action before the create-flow handoff", () => {
+    renderLocalized(<RoleListPage roles={roles} />)
 
     expect(
-      screen.getByRole("link", { name: en.roles.createAction })
-    ).toHaveAttribute("href", "/en/roles/create")
+      screen.queryByRole("link", { name: "Create role" })
+    ).not.toBeInTheDocument()
 
     cleanup()
-    renderLocalized(<RoleListPage roles={roles} canCreate={false} />, "vi")
+    renderLocalized(<RoleListPage roles={roles} />, "vi")
     expect(
-      screen.queryByRole("link", { name: viDictionary.roles.createAction })
+      screen.queryByRole("link", { name: "Tạo vai trò" })
     ).not.toBeInTheDocument()
   })
 

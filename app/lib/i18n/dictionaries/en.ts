@@ -1258,7 +1258,6 @@ export const en: Dictionary = {
   },
   roles: {
     pageTitle: "Roles",
-    createAction: "Create role",
     accessDeniedDescription:
       "You need role:read to view roles and their assigned permissions.",
     roleColumn: "Role",

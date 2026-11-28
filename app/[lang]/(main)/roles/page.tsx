@@ -2,14 +2,10 @@ import { getRoles } from "@/app/api/roles/action"
 import { getServerDictionary } from "@/app/lib/i18n/server"
 import { hasPermission } from "@/app/lib/permissions"
 import { getCurrentPermissions } from "@/app/lib/permissions-server"
-import {
-  ROLE_CREATE_PERMISSION,
-  ROLE_READ_PERMISSION,
-} from "@/app/lib/roles/permissions"
+import { ROLE_READ_PERMISSION } from "@/app/lib/roles/permissions"
 import type { RoleResponse } from "@/app/lib/roles/definitions"
 import { AccessDenied } from "@/components/access-denied"
 
-import { RoleCreateLink } from "./role-create-link"
 import { RoleListPage } from "./role-list"
 
 export default async function RolesPage() {
@@ -19,10 +15,6 @@ export default async function RolesPage() {
   ])
 
   const canReadRoles = hasPermission(currentPermissions, ROLE_READ_PERMISSION)
-  const canCreateRole = hasPermission(
-    currentPermissions,
-    ROLE_CREATE_PERMISSION
-  )
 
   if (!canReadRoles) {
     return (
@@ -31,11 +23,6 @@ export default async function RolesPage() {
         title={dictionary.errors.accessDeniedTitle}
         description={dictionary.roles.accessDeniedDescription}
         permission={ROLE_READ_PERMISSION}
-        action={
-          canCreateRole ? (
-            <RoleCreateLink label={dictionary.roles.createAction} />
-          ) : undefined
-        }
       />
     )
   }
@@ -58,11 +45,6 @@ export default async function RolesPage() {
           title={dictionary.errors.accessDeniedTitle}
           description={dictionary.roles.accessDeniedDescription}
           permission={ROLE_READ_PERMISSION}
-          action={
-            canCreateRole ? (
-              <RoleCreateLink label={dictionary.roles.createAction} />
-            ) : undefined
-          }
         />
       )
     }
@@ -70,5 +52,5 @@ export default async function RolesPage() {
     throw error
   }
 
-  return <RoleListPage roles={roles} canCreate={canCreateRole} />
+  return <RoleListPage roles={roles} />
 }
