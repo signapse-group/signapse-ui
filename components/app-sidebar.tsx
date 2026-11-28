@@ -218,10 +218,13 @@ function NavMainItem({
     )
   }
 
+  const activeSubItem = item.items.find((subItem) => matchesPath(subItem.url))
+
   return isCollapsedDesktop ? (
     <CollapsedNavGroup item={item} matchesPath={matchesPath} />
   ) : (
     <ExpandedNavGroup
+      key={`${item.id}:${activeSubItem?.id ?? "inactive"}`}
       item={item}
       isActive={isActive}
       matchesPath={matchesPath}
@@ -239,10 +242,13 @@ function ExpandedNavGroup({
   matchesPath: (url: string) => boolean
 }) {
   const collapsibleContentId = getNavCollapsibleContentId(item.id)
+  const [openOverride, setOpenOverride] = React.useState<boolean | null>(null)
+  const isOpen = openOverride ?? isActive
 
   return (
     <Collapsible
-      defaultOpen={isActive}
+      open={isOpen}
+      onOpenChange={(nextOpen) => setOpenOverride(nextOpen)}
       className="group/collapsible"
       render={<SidebarMenuItem />}
     >

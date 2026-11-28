@@ -30,6 +30,8 @@ import {
 } from "@/components/ui/sidebar"
 import { WorkspaceSwitcher } from "@/components/workspace-switcher"
 import { Separator } from "@/components/ui/separator"
+import { LocalizedLink } from "@/components/localized-link"
+import { RouteFocusManager } from "./route-focus-manager"
 
 export default async function Layout({
   children,
@@ -88,6 +90,12 @@ export default async function Layout({
   return (
     <SidebarProvider defaultOpen={defaultOpen}>
       <PermissionProvider permissions={permissions}>
+        <LocalizedLink
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:rounded-md focus:bg-background focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-foreground focus:shadow-md focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none"
+        >
+          {dictionary.navigation.skipToMainContent}
+        </LocalizedLink>
         <AppSidebar
           user={simpleUser}
           isAuthenticated={isAuthenticated}
@@ -95,6 +103,7 @@ export default async function Layout({
           isP0FixtureMode={p0FixtureMode}
         />
         <SidebarInset className="min-w-0">
+          <RouteFocusManager />
           <header className="flex min-h-12 shrink-0 items-center border-b px-2 py-2 transition-[width,height] ease-linear">
             <div className="flex w-full flex-col gap-2 md:flex-row md:items-center md:justify-between">
               <div className="flex min-w-0 items-center gap-2">
@@ -147,7 +156,11 @@ export default async function Layout({
               </div>
             </div>
           </header>
-          <div className="flex min-h-0 flex-1 flex-col gap-4 p-5">
+          <div
+            id="main-content"
+            tabIndex={-1}
+            className="flex min-h-0 flex-1 flex-col gap-4 p-5 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring"
+          >
             <SystemPromptDraftProvider>
               <AiProviderConfigDraftProvider>
                 {children}

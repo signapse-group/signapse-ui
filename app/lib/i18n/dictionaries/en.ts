@@ -75,6 +75,7 @@ export const en: Dictionary = {
     breadcrumb: "Breadcrumb navigation",
     feedbackReview: "Feedback review",
     contactRequests: "Contact requests",
+    skipToMainContent: "Skip to main content",
   },
   feedback: {
     composeAction: "Send feedback",
@@ -1289,6 +1290,7 @@ export const en: Dictionary = {
   roles: {
     accessDeniedDescription:
       "You do not have permission to view or update role management.",
+    loading: "Loading roles",
     roleColumn: "Role",
     keyColumn: "Key",
     descriptionColumn: "Description",

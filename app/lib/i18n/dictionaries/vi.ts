@@ -73,6 +73,7 @@ export const vi = {
     breadcrumb: "Đường dẫn điều hướng",
     feedbackReview: "Duyệt phản hồi",
     contactRequests: "Yêu cầu liên hệ",
+    skipToMainContent: "Bỏ qua điều hướng, đến nội dung chính",
   },
   feedback: {
     composeAction: "Gửi phản hồi",
@@ -1282,6 +1283,7 @@ export const vi = {
   roles: {
     accessDeniedDescription:
       "Bạn không có quyền xem hoặc cập nhật danh mục vai trò.",
+    loading: "Đang tải danh sách vai trò",
     roleColumn: "Vai trò",
     keyColumn: "Key",
     descriptionColumn: "Mô tả",
