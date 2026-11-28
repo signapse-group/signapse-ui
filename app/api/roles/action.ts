@@ -55,7 +55,11 @@ export async function updateRolePermissions(
     return {
       success: false,
       error:
-        error instanceof Error ? error.message : dictionary.roles.updateError,
+        error instanceof Error &&
+        "status" in error &&
+        typeof error.status === "number"
+          ? error.message
+          : dictionary.roles.updateError,
     }
   }
 }

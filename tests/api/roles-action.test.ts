@@ -88,4 +88,28 @@ describe("role read actions", () => {
     })
     expect(mocks.fetchAuthenticated).not.toHaveBeenCalled()
   })
+
+  it("uses the localized fallback for transport errors", async () => {
+    mocks.fetchAuthenticated.mockRejectedValue(new TypeError("fetch failed"))
+
+    await expect(
+      updateRolePermissions("ROLE", { permissionKeys: ["asset:read"] })
+    ).resolves.toEqual({
+      success: false,
+      error: "Could not update role permissions.",
+    })
+  })
+
+  it("preserves localized producer errors", async () => {
+    mocks.fetchAuthenticated.mockRejectedValue(
+      Object.assign(new Error("Role update is not allowed."), { status: 403 })
+    )
+
+    await expect(
+      updateRolePermissions("ROLE", { permissionKeys: ["asset:read"] })
+    ).resolves.toEqual({
+      success: false,
+      error: "Role update is not allowed.",
+    })
+  })
 })

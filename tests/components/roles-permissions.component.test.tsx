@@ -130,6 +130,15 @@ describe("role permissions section", () => {
       screen.queryByText("Can read asset information.")
     ).not.toBeInTheDocument()
 
+    const toolbar = screen
+      .getByRole("heading", { name: en.roles.permissionsColumn })
+      .parentElement
+    expect(toolbar).toHaveClass("flex-col", "sm:flex-row")
+    expect(
+      screen.getByRole("button", { name: en.roles.savePermissions })
+        .parentElement
+    ).toHaveClass("justify-end")
+
     const header = screen
       .getByRole("heading", { name: "Permissions" })
       .closest('[data-slot="card-header"]')
