@@ -168,7 +168,7 @@ interface ConversationTurnProgressState {
   userMessage: MarketChatMessageResponse
   expiresAt: string
   steps: CompleteMarketConversationTurnProgressStep[]
-  lastSequence: number
+  lastSequence?: number
   status: "streaming" | "interrupted" | "completed" | "failed"
   expired: boolean
   error?: string
@@ -505,7 +505,7 @@ export function MarketConversationAssistant({
 
   async function followAcceptedTurn(
     turn: ConversationTurnProgressState,
-    afterSequence = 0
+    afterSequence?: number
   ) {
     const requestId = messagesRequestIdRef.current
     const attemptId = ++turnStreamAttemptRef.current
@@ -548,10 +548,10 @@ export function MarketConversationAssistant({
                 [turn.userMessage.id]: {
                   ...latest,
                   steps,
-                  lastSequence: Math.max(
-                    latest.lastSequence,
-                    step.sequenceNumber
-                  ),
+                  lastSequence:
+                    latest.lastSequence === undefined
+                      ? step.sequenceNumber
+                      : Math.max(latest.lastSequence, step.sequenceNumber),
                 },
               }
             })
@@ -714,7 +714,6 @@ export function MarketConversationAssistant({
         userMessage: acceptedTurn.userMessage,
         expiresAt: acceptedTurn.expiresAt,
         steps: [],
-        lastSequence: 0,
         status: "streaming",
         expired: false,
       }

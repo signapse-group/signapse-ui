@@ -94,6 +94,40 @@ describe("market conversation turn event stream", () => {
     vi.useRealTimers()
   })
 
+  it("replays progress without a cursor and delivers sequence zero", async () => {
+    const progress = {
+      stepId: "tool-zero",
+      sequenceNumber: 0,
+      stepType: "TOOL",
+      status: "IN_PROGRESS",
+    }
+    const fetcher = vi.fn().mockResolvedValue(
+      new Response(
+        createStream([
+          `event: progress\ndata: ${JSON.stringify(progress)}\n\n`,
+          `event: result\ndata: ${JSON.stringify(savedResult)}\n\n`,
+        ])
+      )
+    )
+    const onProgress = vi.fn()
+
+    await expect(
+      streamMarketConversationTurn(
+        { conversationId: 42, submissionId: 108, onProgress, fetcher },
+        "Could not read the stream"
+      )
+    ).resolves.toEqual(savedResult)
+
+    expect(fetcher).toHaveBeenCalledWith(
+      "/api/market-conversations/42/turns/108/events",
+      expect.objectContaining({
+        cache: "no-store",
+        headers: { Accept: "text/event-stream" },
+      })
+    )
+    expect(onProgress).toHaveBeenCalledWith(progress)
+  })
+
   it("sends progress payloads and rejects a stream without a saved result", async () => {
     const fetcher = vi
       .fn()

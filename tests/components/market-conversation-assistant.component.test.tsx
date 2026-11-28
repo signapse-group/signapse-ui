@@ -281,6 +281,7 @@ describe("MarketConversationAssistant submission contract", () => {
     expect((await screen.findAllByText("Đã nhận câu hỏi"))[0]).toBeVisible()
 
     const streamOptions = streamMarketConversationTurn.mock.calls[0]?.[0]
+    expect(streamOptions.afterSequence).toBeUndefined()
     streamOptions.onProgress({
       stepId: "understanding",
       sequenceNumber: 1,
@@ -341,6 +342,42 @@ describe("MarketConversationAssistant submission contract", () => {
         name: viDictionary.demoConversation.persistedComposerLabel,
       })
     ).toBeEnabled()
+  })
+
+  it("updates a failed tool step in place with a localized status", async () => {
+    submitMarketConversationMessage.mockResolvedValue({
+      success: true,
+      data: acceptedTurn,
+    })
+    streamMarketConversationTurn.mockImplementation((options) => {
+      options.onProgress({
+        stepId: "tool-1",
+        sequenceNumber: 1,
+        stepType: "TOOL",
+        status: "IN_PROGRESS",
+        publicMessage: "Checking market events",
+      })
+      options.onProgress({
+        stepId: "tool-1",
+        sequenceNumber: 2,
+        stepType: "TOOL",
+        status: "FAILED",
+        publicMessage: "Market events lookup failed",
+      })
+      return new Promise(() => {})
+    })
+
+    renderAssistant()
+    await openAndSubmit("What moved gold today?")
+
+    const failedStep = await screen.findByRole("status", {
+      name: "Market events lookup failed: Thất bại",
+    })
+    expect(failedStep).toBeVisible()
+    expect(
+      screen.getAllByRole("status", { name: /Market events lookup failed/ })
+    ).toHaveLength(1)
+    expect(screen.queryByText("Checking market events")).not.toBeInTheDocument()
   })
 
   it("keeps one new idempotency key across an uncertain expired-turn retry", async () => {
@@ -407,7 +444,7 @@ describe("MarketConversationAssistant submission contract", () => {
     )
   })
 
-  it("keeps the composer locked after a stream error and reconnects from the last sequence", async () => {
+  it("keeps the composer locked after a stream error and reconnects without a cursor before progress", async () => {
     submitMarketConversationMessage.mockResolvedValue({
       success: true,
       data: acceptedTurn,
@@ -425,6 +462,41 @@ describe("MarketConversationAssistant submission contract", () => {
       name: viDictionary.demoConversation.persistedComposerLabel,
     })
     expect(composer).toBeDisabled()
+    await user.click(reconnect)
+
+    await waitFor(() => {
+      expect(streamMarketConversationTurn).toHaveBeenCalledTimes(2)
+    })
+    expect(streamMarketConversationTurn.mock.calls[1]?.[0]).toMatchObject({
+      conversationId: 42,
+      submissionId: 108,
+    })
+    expect(streamMarketConversationTurn.mock.calls[1]?.[0].afterSequence).toBeUndefined()
+  })
+
+  it("retains sequence zero as the reconnect cursor after receiving that update", async () => {
+    submitMarketConversationMessage.mockResolvedValue({
+      success: true,
+      data: acceptedTurn,
+    })
+    streamMarketConversationTurn
+      .mockImplementationOnce((options) => {
+        options.onProgress({
+          stepId: "tool-zero",
+          sequenceNumber: 0,
+          stepType: "TOOL",
+          status: "IN_PROGRESS",
+          publicMessage: "Checking market events",
+        })
+        return Promise.reject(new Error("Connection dropped"))
+      })
+      .mockReturnValueOnce(new Promise(() => {}))
+
+    renderAssistant()
+    const { user } = await openAndSubmit("What moved gold today?")
+    const reconnect = await screen.findByRole("button", {
+      name: "Kết nối lại",
+    })
     await user.click(reconnect)
 
     await waitFor(() => {
