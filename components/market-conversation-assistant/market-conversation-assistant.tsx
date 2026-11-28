@@ -622,7 +622,7 @@ export function MarketConversationAssistant({
     }
   }
 
-  async function submitMessage(question?: string, forceNewIdentity = false) {
+  async function submitMessage(question?: string) {
     const message = (question ?? draft).trim()
 
     if (
@@ -637,7 +637,6 @@ export function MarketConversationAssistant({
 
     submissionLockRef.current = true
     const draftAtSubmit = draft
-    if (forceNewIdentity) submissionIdentityRef.current = null
     const requestId = messagesRequestIdRef.current
     const submissionIdentity = getMarketConversationSubmissionIdentity(
       submissionIdentityRef.current,
@@ -1200,7 +1199,7 @@ export function MarketConversationAssistant({
                               onRetryTurn={() => {
                                 const turn = turnProgressByMessageId[message.id]
                                 if (turn?.status === "failed") {
-                                  void submitMessage(turn.question, true)
+                                  void submitMessage(turn.question)
                                 }
                               }}
                               spacingClassName={

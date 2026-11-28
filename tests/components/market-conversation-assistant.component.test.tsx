@@ -343,7 +343,7 @@ describe("MarketConversationAssistant submission contract", () => {
     ).toBeEnabled()
   })
 
-  it("retries an expired turn with a new idempotency key and ignores a double click", async () => {
+  it("keeps one new idempotency key across an uncertain expired-turn retry", async () => {
     const expiredTurn = {
       ...acceptedTurn,
       expiresAt: new Date(Date.now() - 1_000).toISOString(),
@@ -357,9 +357,25 @@ describe("MarketConversationAssistant submission contract", () => {
         failureReason: "Turn expired",
       },
     }
+    const retryAcceptedTurn = {
+      ...acceptedTurn,
+      submissionId: 109,
+      userMessage: { ...acceptedTurn.userMessage, id: 503 },
+      eventsUrl: "/market-conversations/42/turns/109/events",
+    }
+    let resolveUncertainRetry: (result: {
+      success: false
+      error: string
+    }) => void = () => {}
+    const uncertainRetry = new Promise<{ success: false; error: string }>(
+      (resolve) => {
+        resolveUncertainRetry = resolve
+      }
+    )
     submitMarketConversationMessage
       .mockResolvedValueOnce({ success: true, data: expiredTurn })
-      .mockResolvedValueOnce({ success: true, data: acceptedTurn })
+      .mockReturnValueOnce(uncertainRetry)
+      .mockResolvedValueOnce({ success: true, data: retryAcceptedTurn })
     streamMarketConversationTurn
       .mockResolvedValueOnce(failedTurn)
       .mockReturnValueOnce(new Promise(() => {}))
@@ -374,10 +390,21 @@ describe("MarketConversationAssistant submission contract", () => {
     await waitFor(() => {
       expect(submitMarketConversationMessage).toHaveBeenCalledTimes(2)
     })
-    expect(submitMarketConversationMessage.mock.calls[1]?.[2]).not.toBe(
-      firstKey
+
+    const uncertainRetryCall = submitMarketConversationMessage.mock.calls[1]
+    expect(uncertainRetryCall?.[2]).not.toBe(firstKey)
+    expect(streamMarketConversationTurn).toHaveBeenCalledTimes(1)
+
+    resolveUncertainRetry({ success: false, error: "Network error" })
+    expect(await screen.findByText("Network error")).toBeVisible()
+    await user.click(retry)
+
+    await waitFor(() => {
+      expect(submitMarketConversationMessage).toHaveBeenCalledTimes(3)
+    })
+    expect(submitMarketConversationMessage.mock.calls[2]).toEqual(
+      uncertainRetryCall
     )
-    expect(streamMarketConversationTurn).toHaveBeenCalledTimes(2)
   })
 
   it("keeps the composer locked after a stream error and reconnects from the last sequence", async () => {
