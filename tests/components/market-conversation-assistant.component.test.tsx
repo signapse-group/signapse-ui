@@ -1,6 +1,12 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen, waitFor } from "@testing-library/react"
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import {
   afterEach,
@@ -17,11 +23,13 @@ const {
   getMarketConversationMessages,
   getMarketConversations,
   submitMarketConversationMessage,
+  streamMarketConversationTurn,
 } = vi.hoisted(() => ({
   createMarketConversation: vi.fn(),
   getMarketConversationMessages: vi.fn(),
   getMarketConversations: vi.fn(),
   submitMarketConversationMessage: vi.fn(),
+  streamMarketConversationTurn: vi.fn(),
 }))
 
 vi.mock("@/app/api/market-conversations/action", () => ({
@@ -31,11 +39,16 @@ vi.mock("@/app/api/market-conversations/action", () => ({
   submitMarketConversationMessage,
 }))
 
+vi.mock("@/components/market-conversation-assistant/turn-stream", () => ({
+  streamMarketConversationTurn,
+}))
+
 vi.mock("sonner", () => ({
   toast: { error: vi.fn(), success: vi.fn() },
 }))
 
 import { vi as viDictionary } from "@/app/lib/i18n/dictionaries/vi"
+import { en as enDictionary } from "@/app/lib/i18n/dictionaries/en"
 import { LocalizationProvider } from "@/app/lib/i18n/provider"
 import { SidebarProvider } from "@/components/ui/sidebar"
 import { MarketConversationAssistant } from "@/components/market-conversation-assistant/market-conversation-assistant"
@@ -48,9 +61,36 @@ const conversation = {
   lastModifiedDate: "2026-09-24T00:00:00Z",
 }
 
-function renderAssistant() {
+const acceptedTurn = {
+  submissionId: 108,
+  userMessage: {
+    id: 501,
+    role: "USER" as const,
+    status: "COMPLETED" as const,
+    content: "What moved gold today?",
+    failureReason: null,
+  },
+  expiresAt: new Date(Date.now() + 180_000).toISOString(),
+  eventsUrl: "/market-conversations/42/turns/108/events",
+}
+
+const successfulTurn = {
+  userMessage: acceptedTurn.userMessage,
+  assistantMessage: {
+    id: 502,
+    role: "ASSISTANT" as const,
+    status: "COMPLETED" as const,
+    content: "Gold moved **higher** after the report.",
+    failureReason: null,
+  },
+}
+
+function renderAssistant(locale: "en" | "vi" = "vi") {
   return render(
-    <LocalizationProvider locale="vi" dictionary={viDictionary}>
+    <LocalizationProvider
+      locale={locale}
+      dictionary={locale === "vi" ? viDictionary : enDictionary}
+    >
       <SidebarProvider defaultOpen>
         <MarketConversationAssistant displayName="Tam" workspaceId={7} />
       </SidebarProvider>
@@ -95,6 +135,10 @@ describe("MarketConversationAssistant submission contract", () => {
           }) as MediaQueryList
       ),
     })
+    Object.defineProperty(Element.prototype, "scrollIntoView", {
+      configurable: true,
+      value: vi.fn(),
+    })
   })
 
   beforeEach(() => {
@@ -102,6 +146,7 @@ describe("MarketConversationAssistant submission contract", () => {
     getMarketConversationMessages.mockReset()
     getMarketConversations.mockReset()
     submitMarketConversationMessage.mockReset()
+    streamMarketConversationTurn.mockReset()
     createMarketConversation.mockResolvedValue({
       success: true,
       data: conversation,
@@ -125,6 +170,34 @@ describe("MarketConversationAssistant submission contract", () => {
         { exact: true }
       )
     ).toBeVisible()
+  })
+
+  it("preserves Shift+Enter and ignores Enter while an IME composition is active", async () => {
+    submitMarketConversationMessage.mockResolvedValue({
+      success: false,
+      error: "Network error",
+    })
+    renderAssistant()
+    const user = userEvent.setup()
+    await user.click(
+      screen.getByRole("button", { name: viDictionary.aiAssistant.launcher })
+    )
+    const composer = screen.getByRole("textbox", {
+      name: viDictionary.demoConversation.persistedComposerLabel,
+    })
+    await user.type(composer, "Line one{Shift>}{Enter}{/Shift}Line two")
+    expect(composer).toHaveValue("Line one\nLine two")
+
+    fireEvent.keyDown(composer, {
+      key: "Enter",
+      isComposing: true,
+    })
+    expect(submitMarketConversationMessage).not.toHaveBeenCalled()
+
+    await user.keyboard("{Enter}")
+    await waitFor(() => {
+      expect(submitMarketConversationMessage).toHaveBeenCalledTimes(1)
+    })
   })
 
   it("retries a connection failure with the same request identity", async () => {
@@ -170,5 +243,298 @@ describe("MarketConversationAssistant submission contract", () => {
       screen.queryByText("Try one more question", { selector: "p" })
     ).not.toBeInTheDocument()
     expect(getMarketConversationMessages).not.toHaveBeenCalled()
+  })
+
+  it("renders an understanding message before ordered task steps and the saved Markdown answer", async () => {
+    let resolveAcceptance!: (result: {
+      success: true
+      data: typeof acceptedTurn
+    }) => void
+    let resolveStream!: (result: typeof successfulTurn) => void
+    submitMarketConversationMessage.mockReturnValue(
+      new Promise((resolve) => {
+        resolveAcceptance = resolve
+      })
+    )
+    streamMarketConversationTurn.mockReturnValue(
+      new Promise((resolve) => {
+        resolveStream = resolve
+      })
+    )
+
+    renderAssistant()
+    const { user } = await openAndSubmit("What moved gold today?")
+
+    const question = await screen.findByText("What moved gold today?", {
+      selector: "p",
+    })
+    expect(question).toBeVisible()
+    expect(question.closest('[data-slot="bubble"]')).toHaveAttribute(
+      "data-variant",
+      "muted"
+    )
+    expect((await screen.findAllByText("Đang gửi"))[0]).toBeVisible()
+    resolveAcceptance({ success: true, data: acceptedTurn })
+    await waitFor(() => {
+      expect(streamMarketConversationTurn).toHaveBeenCalledTimes(1)
+    })
+    expect((await screen.findAllByText("Đã nhận câu hỏi"))[0]).toBeVisible()
+
+    const streamOptions = streamMarketConversationTurn.mock.calls[0]?.[0]
+    expect(streamOptions.afterSequence).toBeUndefined()
+    streamOptions.onProgress({
+      stepId: "understanding",
+      sequenceNumber: 1,
+      stepType: "UNDERSTANDING",
+      status: "COMPLETED",
+      publicMessage: "I will check the market context first.",
+    })
+    streamOptions.onProgress({
+      stepId: "tool-1",
+      sequenceNumber: 2,
+      stepType: "TOOL",
+      status: "IN_PROGRESS",
+      publicMessage: "Checking market events",
+    })
+
+    expect(
+      await screen.findByText("I will check the market context first.")
+    ).toBeVisible()
+    expect(await screen.findByText("Checking market events")).toBeVisible()
+    expect(
+      screen.getByRole("button", { name: "Tiến độ: Đang xử lý" })
+    ).toHaveAttribute("aria-expanded", "true")
+    expect(screen.queryByText("Gold moved", { exact: false })).toBeNull()
+
+    streamOptions.onProgress({
+      stepId: "tool-1",
+      sequenceNumber: 3,
+      stepType: "TOOL",
+      status: "COMPLETED",
+      publicMessage: "Market events checked",
+    })
+    await waitFor(() => {
+      expect(screen.getByText("Market events checked")).toBeVisible()
+    })
+    expect(screen.queryByText("Checking market events")).toBeNull()
+
+    await user.click(screen.getByRole("button", { name: "Tiến độ: Hoàn tất" }))
+    expect(
+      screen.getByRole("button", { name: "Tiến độ: Hoàn tất" })
+    ).toHaveAttribute("aria-expanded", "false")
+    streamOptions.onProgress({
+      stepId: "tool-2",
+      sequenceNumber: 4,
+      stepType: "TOOL",
+      status: "IN_PROGRESS",
+      publicMessage: "Checking source details",
+    })
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: "Tiến độ: Đang xử lý" })
+      ).toHaveAttribute("aria-expanded", "false")
+    })
+
+    resolveStream(successfulTurn)
+    expect(await screen.findByText("higher")).toBeVisible()
+    expect(
+      screen.getByRole("textbox", {
+        name: viDictionary.demoConversation.persistedComposerLabel,
+      })
+    ).toBeEnabled()
+  })
+
+  it("updates a failed tool step in place with a localized status", async () => {
+    submitMarketConversationMessage.mockResolvedValue({
+      success: true,
+      data: acceptedTurn,
+    })
+    streamMarketConversationTurn.mockImplementation((options) => {
+      options.onProgress({
+        stepId: "tool-1",
+        sequenceNumber: 1,
+        stepType: "TOOL",
+        status: "IN_PROGRESS",
+        publicMessage: "Checking market events",
+      })
+      options.onProgress({
+        stepId: "tool-1",
+        sequenceNumber: 2,
+        stepType: "TOOL",
+        status: "FAILED",
+        publicMessage: "Market events lookup failed",
+      })
+      return new Promise(() => {})
+    })
+
+    renderAssistant()
+    await openAndSubmit("What moved gold today?")
+
+    const failedStep = await screen.findByRole("status", {
+      name: "Market events lookup failed: Thất bại",
+    })
+    expect(failedStep).toBeVisible()
+    expect(
+      screen.getAllByRole("status", { name: /Market events lookup failed/ })
+    ).toHaveLength(1)
+    expect(screen.queryByText("Checking market events")).not.toBeInTheDocument()
+  })
+
+  it("keeps one new idempotency key across an uncertain expired-turn retry", async () => {
+    const expiredTurn = {
+      ...acceptedTurn,
+      expiresAt: new Date(Date.now() - 1_000).toISOString(),
+    }
+    const failedTurn = {
+      ...successfulTurn,
+      assistantMessage: {
+        ...successfulTurn.assistantMessage,
+        status: "FAILED" as const,
+        content: null,
+        failureReason: "Turn expired",
+      },
+    }
+    const retryAcceptedTurn = {
+      ...acceptedTurn,
+      submissionId: 109,
+      userMessage: { ...acceptedTurn.userMessage, id: 503 },
+      eventsUrl: "/market-conversations/42/turns/109/events",
+    }
+    let resolveUncertainRetry: (result: {
+      success: false
+      error: string
+    }) => void = () => {}
+    const uncertainRetry = new Promise<{ success: false; error: string }>(
+      (resolve) => {
+        resolveUncertainRetry = resolve
+      }
+    )
+    submitMarketConversationMessage
+      .mockResolvedValueOnce({ success: true, data: expiredTurn })
+      .mockReturnValueOnce(uncertainRetry)
+      .mockResolvedValueOnce({ success: true, data: retryAcceptedTurn })
+    streamMarketConversationTurn
+      .mockResolvedValueOnce(failedTurn)
+      .mockReturnValueOnce(new Promise(() => {}))
+
+    renderAssistant()
+    const { user } = await openAndSubmit("What moved gold today?")
+    await screen.findByRole("button", { name: "Thử lại" })
+    const firstKey = submitMarketConversationMessage.mock.calls[0]?.[2]
+    const retry = screen.getByRole("button", { name: "Thử lại" })
+    await user.dblClick(retry)
+
+    await waitFor(() => {
+      expect(submitMarketConversationMessage).toHaveBeenCalledTimes(2)
+    })
+
+    const uncertainRetryCall = submitMarketConversationMessage.mock.calls[1]
+    expect(uncertainRetryCall?.[2]).not.toBe(firstKey)
+    expect(streamMarketConversationTurn).toHaveBeenCalledTimes(1)
+
+    resolveUncertainRetry({ success: false, error: "Network error" })
+    expect(await screen.findByText("Network error")).toBeVisible()
+    await user.click(retry)
+
+    await waitFor(() => {
+      expect(submitMarketConversationMessage).toHaveBeenCalledTimes(3)
+    })
+    expect(submitMarketConversationMessage.mock.calls[2]).toEqual(
+      uncertainRetryCall
+    )
+  })
+
+  it("keeps the composer locked after a stream error and reconnects without a cursor before progress", async () => {
+    submitMarketConversationMessage.mockResolvedValue({
+      success: true,
+      data: acceptedTurn,
+    })
+    streamMarketConversationTurn
+      .mockRejectedValueOnce(new Error("Connection dropped"))
+      .mockReturnValueOnce(new Promise(() => {}))
+
+    renderAssistant()
+    const { user } = await openAndSubmit("What moved gold today?")
+    const reconnect = await screen.findByRole("button", {
+      name: "Kết nối lại",
+    })
+    const composer = screen.getByRole("textbox", {
+      name: viDictionary.demoConversation.persistedComposerLabel,
+    })
+    expect(composer).toBeDisabled()
+    await user.click(reconnect)
+
+    await waitFor(() => {
+      expect(streamMarketConversationTurn).toHaveBeenCalledTimes(2)
+    })
+    expect(streamMarketConversationTurn.mock.calls[1]?.[0]).toMatchObject({
+      conversationId: 42,
+      submissionId: 108,
+    })
+    expect(streamMarketConversationTurn.mock.calls[1]?.[0].afterSequence).toBeUndefined()
+  })
+
+  it("retains sequence zero as the reconnect cursor after receiving that update", async () => {
+    submitMarketConversationMessage.mockResolvedValue({
+      success: true,
+      data: acceptedTurn,
+    })
+    streamMarketConversationTurn
+      .mockImplementationOnce((options) => {
+        options.onProgress({
+          stepId: "tool-zero",
+          sequenceNumber: 0,
+          stepType: "TOOL",
+          status: "IN_PROGRESS",
+          publicMessage: "Checking market events",
+        })
+        return Promise.reject(new Error("Connection dropped"))
+      })
+      .mockReturnValueOnce(new Promise(() => {}))
+
+    renderAssistant()
+    const { user } = await openAndSubmit("What moved gold today?")
+    const reconnect = await screen.findByRole("button", {
+      name: "Kết nối lại",
+    })
+    await user.click(reconnect)
+
+    await waitFor(() => {
+      expect(streamMarketConversationTurn).toHaveBeenCalledTimes(2)
+    })
+    expect(streamMarketConversationTurn.mock.calls[1]?.[0]).toMatchObject({
+      conversationId: 42,
+      submissionId: 108,
+      afterSequence: 0,
+    })
+  })
+
+  it("uses the English progress labels for the same turn pattern", async () => {
+    submitMarketConversationMessage.mockResolvedValue({
+      success: true,
+      data: acceptedTurn,
+    })
+    streamMarketConversationTurn.mockImplementation((options) => {
+      options.onProgress({
+        stepId: "tool-1",
+        sequenceNumber: 1,
+        stepType: "TOOL",
+        status: "IN_PROGRESS",
+        publicMessage: "Checking market context",
+      })
+      return new Promise(() => {})
+    })
+
+    renderAssistant("en")
+    const user = userEvent.setup()
+    await user.click(screen.getByRole("button", { name: "Ask Signapse" }))
+    const composer = screen.getByRole("textbox", { name: "Message" })
+    await user.type(composer, "What moved gold today?")
+    await user.click(screen.getByRole("button", { name: "Send" }))
+
+    expect((await screen.findAllByText("Question received"))[0]).toBeVisible()
+    expect(
+      await screen.findByRole("button", { name: "Progress: In progress" })
+    ).toBeVisible()
   })
 })

@@ -10,8 +10,8 @@ import {
   MarketConversationDetailResponse,
   MarketConversationMessagePageResponse,
   MarketConversationSummaryResponse,
+  MarketConversationTurnAcceptedResponse,
   SubmitMarketConversationMessageRequest,
-  SubmitMarketConversationMessageResponse,
   getCreateMarketConversationSchema,
   getSubmitMarketConversationIdempotencyKeySchema,
   getSubmitMarketConversationMessageSchema,
@@ -19,7 +19,7 @@ import {
   marketConversationMessagePageResponseSchema,
   marketConversationSummaryResponseSchema,
   pageMarketConversationSummaryResponseSchema,
-  submitMarketConversationMessageResponseSchema,
+  marketConversationTurnAcceptedResponseSchema,
 } from "@/app/lib/market-query/definitions"
 import { queryParamsToString } from "@/app/lib/utils"
 
@@ -148,7 +148,7 @@ export async function submitMarketConversationMessage(
   conversationId: number,
   request: SubmitMarketConversationMessageRequest,
   idempotencyKey: string
-): Promise<ActionResult<SubmitMarketConversationMessageResponse>> {
+): Promise<ActionResult<MarketConversationTurnAcceptedResponse>> {
   const dictionary = await getMarketConversationDictionary()
   const parsedRequest =
     getSubmitMarketConversationMessageSchema(dictionary).safeParse(request)
@@ -167,13 +167,11 @@ export async function submitMarketConversationMessage(
     }
   }
 
-  const payload: SubmitMarketConversationMessageRequest = {
-    message: parsedRequest.data.message,
-  }
+  const payload: SubmitMarketConversationMessageRequest = parsedRequest.data
 
   try {
     const response = await fetchAuthenticated<unknown>(
-      `/market-conversations/${conversationId}/messages`,
+      `/market-conversations/${conversationId}/messages/async`,
       {
         method: "POST",
         body: JSON.stringify(payload),
@@ -182,13 +180,13 @@ export async function submitMarketConversationMessage(
         },
       }
     )
-    const messageResult = parseOrThrow(
-      submitMarketConversationMessageResponseSchema,
+    const acceptedTurn = parseOrThrow(
+      marketConversationTurnAcceptedResponseSchema,
       response,
       dictionary.marketConversations.responseInvalid
     )
 
-    return { success: true, data: messageResult }
+    return { success: true, data: acceptedTurn }
   } catch (error: unknown) {
     return {
       success: false,

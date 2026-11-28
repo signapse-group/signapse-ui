@@ -6,6 +6,7 @@ import remarkGfm from "remark-gfm"
 import { useDebouncedCallback } from "use-debounce"
 import {
   ArrowUpIcon,
+  CheckIcon,
   ChevronDownIcon,
   CopyIcon,
   ClockIcon,
@@ -32,11 +33,21 @@ import {
   reconcileMarketConversationMessages,
   type MarketChatMessageResponse,
 } from "@/app/lib/market-query/definitions"
+import {
+  parseMarketConversationTurnProgressStep,
+  upsertMarketConversationTurnProgressStep,
+  type CompleteMarketConversationTurnProgressStep,
+} from "@/app/lib/market-query/turn-progress"
 import { buildFilterQuery } from "@/app/lib/utils"
 import { Logo } from "@/components/logo"
 import { AppTimeMetadata } from "@/components/app-time-metadata"
 import { Bubble, BubbleContent } from "@/components/ui/bubble"
 import { Button } from "@/components/ui/button"
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
 import {
   Command,
   CommandGroup,
@@ -117,6 +128,7 @@ import {
   getMarketConversationSubmissionIdentity,
   type MarketConversationSubmissionIdentity,
 } from "./submission-identity"
+import { streamMarketConversationTurn } from "./turn-stream"
 
 const USER_PREVIEW_LIMIT = 72
 const ASSISTANT_PREVIEW_LIMIT = 160
@@ -147,6 +159,19 @@ interface ResponseRevealState {
   segments: string[]
   fullText: string
   visibleCount: number
+}
+
+interface ConversationTurnProgressState {
+  conversationId: number
+  submissionId: number
+  question: string
+  userMessage: MarketChatMessageResponse
+  expiresAt: string
+  steps: CompleteMarketConversationTurnProgressStep[]
+  lastSequence?: number
+  status: "streaming" | "interrupted" | "completed" | "failed"
+  expired: boolean
+  error?: string
 }
 
 export function MarketConversationAssistant({
@@ -188,12 +213,20 @@ export function MarketConversationAssistant({
   >(null)
   const [isCreating, setIsCreating] = React.useState(false)
   const [isSubmitting, setIsSubmitting] = React.useState(false)
+  const [activeTurnMessageId, setActiveTurnMessageId] = React.useState<
+    number | null
+  >(null)
+  const [turnProgressByMessageId, setTurnProgressByMessageId] = React.useState<
+    Record<number, ConversationTurnProgressState>
+  >({})
   const [createError, setCreateError] = React.useState<string | null>(null)
   const [submissionError, setSubmissionError] = React.useState<string | null>(
     null
   )
   const submissionIdentityRef =
     React.useRef<MarketConversationSubmissionIdentity | null>(null)
+  const submissionLockRef = React.useRef(false)
+  const turnStreamAttemptRef = React.useRef(0)
   const [responseReveal, setResponseReveal] =
     React.useState<ResponseRevealState | null>(null)
   const [hasMoreMessages, setHasMoreMessages] = React.useState(false)
@@ -220,16 +253,19 @@ export function MarketConversationAssistant({
   const isRequestPending = isCreating || isSubmitting
   const isFullMode = isExpanded && !isMobile
   const isRevealing = responseReveal !== null
-  const isBusy = isRequestPending || isRevealing
+  const isTurnActive = activeTurnMessageId !== null
+  const isBusy = isRequestPending || isRevealing || isTurnActive
   const composerDisabled = workspaceId == null || isMessagesLoading || isBusy
   const composerError = createError ?? submissionError
   const pendingLabel = isCreating
     ? labels.creatingConversation
     : isSubmitting
       ? labels.sending
-      : isRevealing
-        ? labels.revealingResponse
-        : null
+      : isTurnActive
+        ? labels.questionReceived
+        : isRevealing
+          ? labels.revealingResponse
+          : null
   const revealMessageId = responseReveal?.messageId
   const revealSegments = responseReveal?.segments
 
@@ -340,6 +376,9 @@ export function MarketConversationAssistant({
       setMessages([])
       setDraft("")
       setPendingUserMessage(null)
+      setActiveTurnMessageId(null)
+      setTurnProgressByMessageId({})
+      turnStreamAttemptRef.current += 1
       setInitialMessagesError(null)
       setOlderMessagesError(null)
       setCreateError(null)
@@ -440,6 +479,9 @@ export function MarketConversationAssistant({
     setMessages([])
     setDraft("")
     setPendingUserMessage(null)
+    setActiveTurnMessageId(null)
+    setTurnProgressByMessageId({})
+    turnStreamAttemptRef.current += 1
     setHistoryOpen(false)
     setHistoryQuery("")
     setHistoryConversations([])
@@ -461,13 +503,140 @@ export function MarketConversationAssistant({
     setNextBeforeMessageId(null)
   }
 
-  async function submitMessage() {
-    const message = draft.trim()
+  async function followAcceptedTurn(
+    turn: ConversationTurnProgressState,
+    afterSequence?: number
+  ) {
+    const requestId = messagesRequestIdRef.current
+    const attemptId = ++turnStreamAttemptRef.current
+    setTurnProgressByMessageId((current) => ({
+      ...current,
+      [turn.userMessage.id]: {
+        ...current[turn.userMessage.id],
+        status: "streaming",
+        error: undefined,
+      },
+    }))
 
-    if (workspaceId == null || !message || isBusy || isMessagesLoading) {
+    try {
+      const result = await streamMarketConversationTurn(
+        {
+          conversationId: turn.conversationId,
+          submissionId: turn.submissionId,
+          afterSequence,
+          onProgress: (payload) => {
+            if (
+              requestId !== messagesRequestIdRef.current ||
+              attemptId !== turnStreamAttemptRef.current
+            ) {
+              return
+            }
+
+            const step = parseMarketConversationTurnProgressStep(payload)
+            if (!step) return
+
+            setTurnProgressByMessageId((current) => {
+              const latest = current[turn.userMessage.id]
+              if (!latest) return current
+
+              const steps = upsertMarketConversationTurnProgressStep(
+                latest.steps,
+                step
+              )
+              return {
+                ...current,
+                [turn.userMessage.id]: {
+                  ...latest,
+                  steps,
+                  lastSequence:
+                    latest.lastSequence === undefined
+                      ? step.sequenceNumber
+                      : Math.max(latest.lastSequence, step.sequenceNumber),
+                },
+              }
+            })
+          },
+        },
+        dictionary.marketConversations.streamError
+      )
+
+      if (
+        requestId !== messagesRequestIdRef.current ||
+        attemptId !== turnStreamAttemptRef.current
+      ) {
+        return null
+      }
+
+      if (result.userMessage.id !== turn.userMessage.id) {
+        throw new Error(dictionary.marketConversations.streamError)
+      }
+
+      setMessages((current) =>
+        reconcileMarketConversationMessages(current, [
+          result.userMessage,
+          result.assistantMessage,
+        ])
+      )
+      const failed = result.assistantMessage.status === "FAILED"
+      setTurnProgressByMessageId((current) => {
+        const latest = current[turn.userMessage.id]
+        if (!latest) return current
+
+        return {
+          ...current,
+          [turn.userMessage.id]: {
+            ...latest,
+            status: failed ? "failed" : "completed",
+            expired:
+              failed && Date.now() >= new Date(latest.expiresAt).getTime(),
+            error: undefined,
+          },
+        }
+      })
+      setActiveTurnMessageId((current) =>
+        current === turn.userMessage.id ? null : current
+      )
+      return result
+    } catch {
+      if (
+        requestId !== messagesRequestIdRef.current ||
+        attemptId !== turnStreamAttemptRef.current
+      ) {
+        return null
+      }
+
+      setTurnProgressByMessageId((current) => {
+        const latest = current[turn.userMessage.id]
+        if (!latest) return current
+
+        return {
+          ...current,
+          [turn.userMessage.id]: {
+            ...latest,
+            status: "interrupted",
+            error: labels.streamInterrupted,
+          },
+        }
+      })
+      return null
+    }
+  }
+
+  async function submitMessage(question?: string) {
+    const message = (question ?? draft).trim()
+
+    if (
+      workspaceId == null ||
+      !message ||
+      isBusy ||
+      isMessagesLoading ||
+      submissionLockRef.current
+    ) {
       return
     }
 
+    submissionLockRef.current = true
+    const draftAtSubmit = draft
     const requestId = messagesRequestIdRef.current
     const submissionIdentity = getMarketConversationSubmissionIdentity(
       submissionIdentityRef.current,
@@ -479,11 +648,11 @@ export function MarketConversationAssistant({
       conversation ? "existing" : "new"
     )
     let operation: "create" | "submit" = conversation ? "submit" : "create"
-    let submissionSucceeded = false
+    let submissionAccepted = false
     setCreateError(null)
     setSubmissionError(null)
     setPendingUserMessage(message)
-    setDraft("")
+    if (question === undefined) setDraft("")
 
     try {
       if (!conversation) {
@@ -537,11 +706,43 @@ export function MarketConversationAssistant({
         return
       }
 
-      const assistantMessage = submitResult.data.assistantMessage
+      const acceptedTurn = submitResult.data
+      const turn: ConversationTurnProgressState = {
+        conversationId: activeConversation.id,
+        submissionId: acceptedTurn.submissionId,
+        question: message,
+        userMessage: acceptedTurn.userMessage,
+        expiresAt: acceptedTurn.expiresAt,
+        steps: [],
+        status: "streaming",
+        expired: false,
+      }
+      submissionAccepted = true
+      submissionIdentityRef.current = null
+      setPendingUserMessage(null)
+      setIsSubmitting(false)
+      setMessages((current) =>
+        reconcileMarketConversationMessages(current, [acceptedTurn.userMessage])
+      )
+      setTurnProgressByMessageId((current) => ({
+        ...current,
+        [acceptedTurn.userMessage.id]: turn,
+      }))
+      setActiveTurnMessageId(acceptedTurn.userMessage.id)
+      setHistoryConversations((current) => [
+        activeConversation,
+        ...current.filter((item) => item.id !== activeConversation.id),
+      ])
+
+      const result = await followAcceptedTurn(turn)
+      if (!result) {
+        performanceMeasurement.finish("error")
+        return
+      }
+
+      const assistantMessage = result.assistantMessage
       const assistantText = getMessageText(assistantMessage)
-      performanceMeasurement.finish("success")
       const shouldReveal =
-        assistantMessage.role === "ASSISTANT" &&
         assistantMessage.status === "COMPLETED" &&
         assistantText.trim().length > 0 &&
         !window.matchMedia("(prefers-reduced-motion: reduce)").matches
@@ -556,18 +757,9 @@ export function MarketConversationAssistant({
             }
           : null
       )
-      setMessages((current) =>
-        reconcileMarketConversationMessages(current, [
-          submitResult.data.userMessage,
-          submitResult.data.assistantMessage,
-        ])
+      performanceMeasurement.finish(
+        assistantMessage.status === "FAILED" ? "error" : "success"
       )
-      setHistoryConversations((current) => [
-        activeConversation,
-        ...current.filter((item) => item.id !== activeConversation.id),
-      ])
-      submissionSucceeded = true
-      submissionIdentityRef.current = null
     } catch (error) {
       if (requestId === messagesRequestIdRef.current) {
         performanceMeasurement.finish("error")
@@ -575,21 +767,22 @@ export function MarketConversationAssistant({
           operation === "create"
             ? labels.createConversationError
             : labels.submissionError
-        const message = getErrorMessage(error, fallback)
+        const errorMessage = getErrorMessage(error, fallback)
 
         if (operation === "create") {
-          setCreateError(message)
+          setCreateError(errorMessage)
         } else {
-          setSubmissionError(message)
+          setSubmissionError(errorMessage)
         }
       } else {
         performanceMeasurement.finish("stale")
       }
     } finally {
+      submissionLockRef.current = false
       if (requestId === messagesRequestIdRef.current) {
         setPendingUserMessage(null)
-        if (!submissionSucceeded) {
-          setDraft(message)
+        if (!submissionAccepted) {
+          setDraft(question === undefined ? message : draftAtSubmit)
         }
         setIsCreating(false)
         setIsSubmitting(false)
@@ -953,7 +1146,9 @@ export function MarketConversationAssistant({
                         className="!no-scrollbar"
                       >
                         <MessageScrollerContent
-                          aria-busy={isBusy || isOlderMessagesLoading}
+                          aria-busy={
+                            isMessagesLoading || isOlderMessagesLoading
+                          }
                           className="gap-0 p-3 sm:pr-10"
                         >
                           {olderMessagesError ? (
@@ -990,6 +1185,22 @@ export function MarketConversationAssistant({
                               }
                               labels={labels}
                               message={message}
+                              turnProgress={turnProgressByMessageId[message.id]}
+                              onReconnectTurn={() => {
+                                const turn = turnProgressByMessageId[message.id]
+                                if (turn?.status === "interrupted") {
+                                  void followAcceptedTurn(
+                                    turn,
+                                    turn.lastSequence
+                                  )
+                                }
+                              }}
+                              onRetryTurn={() => {
+                                const turn = turnProgressByMessageId[message.id]
+                                if (turn?.status === "failed") {
+                                  void submitMessage(turn.question)
+                                }
+                              }}
                               spacingClassName={
                                 index === 0
                                   ? "mt-0"
@@ -1001,7 +1212,9 @@ export function MarketConversationAssistant({
                             />
                           ))}
                           {pendingUserMessage ? (
-                            <div
+                            <MessageScrollerItem
+                              messageId="pending-user-message"
+                              scrollAnchor
                               className={cn(
                                 "animate-in fade-in slide-in-from-bottom-2 motion-reduce:animate-none",
                                 renderableMessages.length === 0
@@ -1016,16 +1229,21 @@ export function MarketConversationAssistant({
                                   <MessageHeader className="sr-only">
                                     {labels.userRole}
                                   </MessageHeader>
-                                  <Bubble variant="default" align="end">
+                                  <Bubble variant="muted" align="end">
                                     <BubbleContent>
                                       <p className="whitespace-pre-wrap">
                                         {pendingUserMessage}
                                       </p>
                                     </BubbleContent>
                                   </Bubble>
+                                  <Marker role="status" className="justify-end">
+                                    <MarkerContent>
+                                      {labels.sending}
+                                    </MarkerContent>
+                                  </Marker>
                                 </MessageContent>
                               </Message>
-                            </div>
+                            </MessageScrollerItem>
                           ) : null}
                           {isRequestPending ? (
                             <PendingAssistantMessage
@@ -1108,7 +1326,7 @@ export function MarketConversationAssistant({
                           disabled={
                             composerDisabled || draft.trim().length === 0
                           }
-                          className="ml-auto"
+                          className="ml-auto rounded-full"
                           aria-label={pendingLabel ?? labels.send}
                         >
                           {isBusy ? <Spinner /> : <ArrowUpIcon />}
@@ -1332,11 +1550,17 @@ function DemoMessage({
   accessibleText,
   labels,
   message,
+  turnProgress,
+  onReconnectTurn,
+  onRetryTurn,
   spacingClassName,
 }: {
   accessibleText?: string
   labels: DemoConversationLabels
   message: MarketChatMessageResponse
+  turnProgress?: ConversationTurnProgressState
+  onReconnectTurn?: () => void
+  onRetryTurn?: () => void
   spacingClassName: "mt-0" | "mt-1" | "mt-4"
 }) {
   const isUser = message.role === "USER"
@@ -1438,7 +1662,7 @@ function DemoMessage({
           </MessageHeader>
           {text.trim() ? (
             <Bubble
-              variant={isUser ? "default" : "ghost"}
+              variant={isUser ? "muted" : "ghost"}
               align={isUser ? "end" : "start"}
             >
               <BubbleContent
@@ -1487,8 +1711,218 @@ function DemoMessage({
           </MessageFooter>
         </MessageContent>
       </Message>
+      {isUser && turnProgress ? (
+        <TurnProgressView
+          labels={labels}
+          turn={turnProgress}
+          onReconnect={onReconnectTurn}
+          onRetry={onRetryTurn}
+        />
+      ) : null}
     </MessageScrollerItem>
   )
+}
+
+function TurnProgressView({
+  labels,
+  turn,
+  onReconnect,
+  onRetry,
+}: {
+  labels: DemoConversationLabels
+  turn: ConversationTurnProgressState
+  onReconnect?: () => void
+  onRetry?: () => void
+}) {
+  const understandingSteps = turn.steps.filter(
+    (step) => step.stepType === "UNDERSTANDING" && step.publicMessage?.trim()
+  )
+  const toolSteps = turn.steps.filter((step) => step.stepType === "TOOL")
+  const showThinking =
+    turn.status === "streaming" &&
+    understandingSteps.length === 0 &&
+    toolSteps.length === 0
+
+  return (
+    <div className="mt-3 flex flex-col gap-3">
+      <Marker role="status" aria-live="polite">
+        <MarkerIcon>
+          {turn.status === "streaming" ? (
+            <Spinner className="motion-reduce:animate-none" />
+          ) : turn.status === "interrupted" || turn.status === "failed" ? (
+            <TriangleAlertIcon />
+          ) : (
+            <CheckIcon />
+          )}
+        </MarkerIcon>
+        <MarkerContent>{labels.questionReceived}</MarkerContent>
+      </Marker>
+      {showThinking ? (
+        <Marker role="status">
+          <MarkerIcon>
+            <Spinner className="motion-reduce:animate-none" />
+          </MarkerIcon>
+          <MarkerContent className={styles.shimmer}>
+            {labels.thinking}
+          </MarkerContent>
+        </Marker>
+      ) : null}
+      {understandingSteps.map((step) => (
+        <Message
+          key={step.stepId}
+          align="start"
+          aria-live="polite"
+          className="animate-in fade-in motion-reduce:animate-none"
+        >
+          <MessageContent className="gap-1">
+            <MessageHeader className="sr-only">
+              {labels.assistantRole}
+            </MessageHeader>
+            <Bubble variant="ghost" align="start">
+              <BubbleContent>
+                <p className="whitespace-pre-wrap">{step.publicMessage}</p>
+              </BubbleContent>
+            </Bubble>
+          </MessageContent>
+        </Message>
+      ))}
+      {toolSteps.length > 0 ? (
+        <TaskProgressGroup labels={labels} steps={toolSteps} turn={turn} />
+      ) : null}
+      {turn.status === "interrupted" ? (
+        <Marker role="alert" className="flex-wrap">
+          <MarkerIcon>
+            <TriangleAlertIcon />
+          </MarkerIcon>
+          <MarkerContent>
+            {turn.error || labels.streamInterrupted}
+          </MarkerContent>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={onReconnect}
+          >
+            {labels.streamRetry}
+          </Button>
+        </Marker>
+      ) : null}
+      {turn.status === "failed" ? (
+        <Marker role="alert" className="flex-wrap">
+          <MarkerIcon>
+            <TriangleAlertIcon />
+          </MarkerIcon>
+          <MarkerContent>
+            {turn.expired ? labels.turnExpired : labels.messageFailed}
+          </MarkerContent>
+          <Button type="button" size="sm" variant="outline" onClick={onRetry}>
+            {labels.retryTurn}
+          </Button>
+        </Marker>
+      ) : null}
+    </div>
+  )
+}
+
+function TaskProgressGroup({
+  labels,
+  steps,
+  turn,
+}: {
+  labels: DemoConversationLabels
+  steps: CompleteMarketConversationTurnProgressStep[]
+  turn: ConversationTurnProgressState
+}) {
+  const [open, setOpen] = React.useState(turn.status === "streaming")
+  const hasFailed =
+    turn.status === "failed" || steps.some((step) => step.status === "FAILED")
+  const isRunning =
+    turn.status === "streaming" ||
+    turn.status === "interrupted" ||
+    steps.some((step) => step.status === "IN_PROGRESS")
+  const statusLabel = hasFailed
+    ? labels.taskFailed
+    : turn.status === "completed" ||
+        steps.every((step) => step.status === "COMPLETED")
+      ? labels.taskCompleted
+      : labels.taskInProgress
+
+  return (
+    <Collapsible
+      open={open}
+      onOpenChange={setOpen}
+      className="rounded-lg border bg-card/50"
+    >
+      <CollapsibleTrigger
+        aria-label={`${labels.taskProgress}: ${statusLabel}`}
+        render={
+          <Button
+            type="button"
+            variant="ghost"
+            className="h-auto w-full justify-start gap-2 rounded-lg px-3 py-2 text-left"
+          >
+            {hasFailed ? (
+              <TriangleAlertIcon className="size-4 shrink-0 text-destructive" />
+            ) : isRunning ? (
+              <Spinner className="size-4 shrink-0 motion-reduce:animate-none" />
+            ) : (
+              <CheckIcon className="size-4 shrink-0 text-muted-foreground" />
+            )}
+            <span className="min-w-0 flex-1 truncate font-medium">
+              {labels.taskProgress}
+            </span>
+            <span className="text-xs text-muted-foreground">{statusLabel}</span>
+            <ChevronDownIcon
+              className={cn(
+                "size-4 shrink-0 transition-transform motion-reduce:transition-none",
+                open && "rotate-180"
+              )}
+            />
+          </Button>
+        }
+      />
+      <CollapsibleContent>
+        <ol className="ml-5 flex flex-col gap-2 border-l py-1 pr-3 pb-3 pl-4">
+          {steps.map((step) => (
+            <li
+              key={step.stepId}
+              role="status"
+              className="flex min-w-0 items-start gap-2 text-sm text-muted-foreground"
+              aria-label={`${step.publicMessage?.trim() || labels.toolStep}: ${getTurnStepStatusLabel(step.status, labels)}`}
+            >
+              {step.status === "IN_PROGRESS" ? (
+                <Spinner className="mt-0.5 size-4 shrink-0 motion-reduce:animate-none" />
+              ) : step.status === "FAILED" ? (
+                <TriangleAlertIcon className="mt-0.5 size-4 shrink-0 text-destructive" />
+              ) : (
+                <CheckIcon className="mt-0.5 size-4 shrink-0" />
+              )}
+              <span className="min-w-0 flex-1 wrap-break-word">
+                {step.publicMessage?.trim() || labels.toolStep}
+              </span>
+              <span className="shrink-0 text-xs">
+                {getTurnStepStatusLabel(step.status, labels)}
+              </span>
+            </li>
+          ))}
+        </ol>
+      </CollapsibleContent>
+    </Collapsible>
+  )
+}
+
+function getTurnStepStatusLabel(
+  status: "IN_PROGRESS" | "COMPLETED" | "FAILED",
+  labels: DemoConversationLabels
+) {
+  switch (status) {
+    case "IN_PROGRESS":
+      return labels.stepInProgress
+    case "COMPLETED":
+      return labels.stepCompleted
+    case "FAILED":
+      return labels.stepFailed
+  }
 }
 
 function PendingAssistantMessage({
