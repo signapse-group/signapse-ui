@@ -15,7 +15,9 @@ The approved PNGs could not be opened in this session. The Jira attachment conte
 
 No current-candidate render was captured. This checkout has no browser executable or Playwright/Puppeteer/render script, and no Preview candidate existed during the local implementation pass. Existing SIGN-392 Telegram routing captures are prior-candidate evidence for shared route controls only; they do not show Signal Engine or its preview modal and are not claimed as current evidence.
 
-The missing observation is the Signal Engine row and stacked Buy/Sell preview compared with the two approved PNGs, including layout at 390×844, 1024×768 and 1520×1024 CSS px, light and dark themes, sidebar mode, and dialog focus/close behavior. The local Responsive Contract defines the expected reflow and no-overflow behavior. The coordinator must restore access to the approved PNGs; after that, the assigned verification owner should capture and compare the current candidate. QA retains live feature acceptance.
+The active language set also remains unverified. An unauthenticated `GET /languages` returned 401; this session has no authenticated workspace context. The app dictionaries currently provide preview content for `vi` and `en`, with an app-locale fallback for other ISO codes. The coordinator should confirm the enabled codes or provide a supported authenticated context before AC3 is claimed for every selectable language.
+
+The missing observation is the Signal Engine row and stacked Buy/Sell preview compared with the two approved PNGs, including 390×844, 1024×768, 1520×1024, 767/768 and 1439/1440 CSS px, light and dark themes, sidebar mode, mobile 360px, browser zoom 200%, and dialog focus/close behavior. The local Responsive Contract defines the expected reflow and no-overflow behavior. The coordinator must restore access to the approved PNGs and confirm the active language set; after that, FE can capture and compare the current candidate. QA retains live feature acceptance.
 
 ## Local behavior checks
 
@@ -26,4 +28,4 @@ The missing observation is the Signal Engine row and stacked Buy/Sell preview co
 - `pnpm test:contract` — passed; fixture consistency for 88 OpenAPI operations.
 - `git diff --check` — passed.
 
-These checks cover permission gating, workspace scoping, sparse save/readback, disabled state preservation on rejection, eligible group filtering, localized static samples, modal focus restoration and initial disabled/unassigned state. They do not establish rendered visual comparison, live authorization, live persistence, CI or Preview build status.
+These checks cover permission gating, workspace scoping, sparse save/readback, disabled state preservation on rejection, eligible group filtering for group destinations, `vi`/`en` static samples, modal focus restoration and initial disabled/unassigned state. They do not establish rendered visual comparison, other enabled language codes, live authorization, live persistence, CI or Preview build status.
