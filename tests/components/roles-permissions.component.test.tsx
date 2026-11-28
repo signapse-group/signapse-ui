@@ -248,6 +248,36 @@ describe("role permissions section", () => {
     ).toBeEnabled()
   })
 
+  it("shows a localized save error and keeps the permission draft when the action rejects", async () => {
+    const user = userEvent.setup()
+    mocks.updateRolePermissions.mockRejectedValue(new Error("Network failure"))
+    const emptyRole = { ...role, permissions: [] }
+    renderEditableRole(emptyRole, "vi")
+
+    const permissionSwitch = screen.getByRole("switch", {
+      name: "Bật hoặc tắt quyền Create blogs",
+    })
+    await user.click(permissionSwitch)
+    await user.click(
+      screen.getByRole("button", {
+        name: viDictionary.roles.savePermissions,
+      })
+    )
+
+    await waitFor(() =>
+      expect(mocks.toastError).toHaveBeenCalledWith(
+        viDictionary.roles.updateError
+      )
+    )
+    expect(permissionSwitch).toHaveAttribute("aria-checked", "true")
+    expect(
+      screen.getByRole("button", {
+        name: viDictionary.roles.savePermissions,
+      })
+    ).toBeEnabled()
+    expect(mocks.toastSuccess).not.toHaveBeenCalled()
+  })
+
   it("keeps an out-of-catalog assignment read-only instead of dropping it", () => {
     const mismatchedRole = {
       ...role,

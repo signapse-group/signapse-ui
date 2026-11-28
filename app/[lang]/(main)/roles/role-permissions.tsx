@@ -117,7 +117,14 @@ export function RolePermissions({
 
     const permissionKeys = Array.from(new Set(draftPermissionKeys)).sort()
     startTransition(async () => {
-      const result = await updateRolePermissions(role.key, { permissionKeys })
+      const result = await updateRolePermissions(role.key, { permissionKeys }).catch(
+        () => undefined
+      )
+      if (!result) {
+        toast.error(t.updateError)
+        return
+      }
+
       if (!result.success) {
         toast.error(result.error)
         return
