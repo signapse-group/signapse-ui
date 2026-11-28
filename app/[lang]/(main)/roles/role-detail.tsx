@@ -1,33 +1,34 @@
 "use client"
 
-import { ArrowLeft, Shield } from "lucide-react"
+import { ArrowLeft } from "lucide-react"
 
 import { useLocalization } from "@/app/lib/i18n/provider"
-import type { RoleResponse } from "@/app/lib/roles/definitions"
-import { groupPermissionsByResource } from "@/app/lib/roles/definitions"
+import type {
+  PermissionResponse,
+  RoleResponse,
+} from "@/app/lib/roles/definitions"
 import { LocalizedLink } from "@/components/localized-link"
 import { buttonVariants } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/ui/empty"
 import { Badge } from "@/components/ui/badge"
+
+import { RolePermissions } from "./role-permissions"
 
 interface RoleDetailPageProps {
   role: RoleResponse
+  permissionCatalog?: PermissionResponse[]
+  canEditPermissions?: boolean
+  permissionCatalogLoadFailed?: boolean
 }
 
-export function RoleDetailPage({ role }: RoleDetailPageProps) {
+export function RoleDetailPage({
+  role,
+  permissionCatalog,
+  canEditPermissions,
+  permissionCatalogLoadFailed,
+}: RoleDetailPageProps) {
   const { dictionary } = useLocalization()
   const t = dictionary.roles
-  const permissionGroups = groupPermissionsByResource(
-    role.permissions,
-    dictionary
-  )
 
   return (
     <div className="mx-auto flex w-full max-w-2xl min-w-0 flex-col gap-5">
@@ -76,62 +77,13 @@ export function RoleDetailPage({ role }: RoleDetailPageProps) {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <h2 className="text-base leading-snug font-medium">
-            {t.permissionsColumn}
-          </h2>
-        </CardHeader>
-        <CardContent className="min-w-0">
-          {permissionGroups.length > 0 ? (
-            <div className="flex min-w-0 flex-col gap-5">
-              {permissionGroups.map((group, groupIndex) => (
-                <section
-                  key={group.key}
-                  aria-labelledby={`role-permission-group-${groupIndex}`}
-                  className="min-w-0"
-                >
-                  <h3
-                    id={`role-permission-group-${groupIndex}`}
-                    className="mb-2 text-sm font-medium text-muted-foreground"
-                  >
-                    {group.title}
-                  </h3>
-                  <ul className="divide-y divide-border overflow-hidden rounded-md border border-border">
-                    {group.permissions.map((permission) => (
-                      <li
-                        key={permission.key}
-                        className="flex min-w-0 flex-col gap-1 px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
-                      >
-                        <span className="min-w-0 break-words">
-                          {permission.name}
-                        </span>
-                        <code className="min-w-0 font-mono text-xs break-all text-muted-foreground sm:text-right">
-                          {permission.key}
-                        </code>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
-              ))}
-            </div>
-          ) : (
-            <Empty className="min-h-[160px] rounded-lg border border-dashed px-6 py-10">
-              <EmptyHeader>
-                <EmptyMedia variant="icon">
-                  <Shield />
-                </EmptyMedia>
-                <EmptyTitle role="heading" aria-level={3}>
-                  {t.emptyAssignedPermissionsTitle}
-                </EmptyTitle>
-                <EmptyDescription>
-                  {t.emptyAssignedPermissionsDescription}
-                </EmptyDescription>
-              </EmptyHeader>
-            </Empty>
-          )}
-        </CardContent>
-      </Card>
+      <RolePermissions
+        key={role.key}
+        role={role}
+        permissionCatalog={permissionCatalog}
+        canEditPermissions={canEditPermissions}
+        permissionCatalogLoadFailed={permissionCatalogLoadFailed}
+      />
     </div>
   )
 }

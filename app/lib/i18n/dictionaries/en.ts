@@ -1302,7 +1302,6 @@ export const en: Dictionary = {
     descriptionLabel: "Description",
     noDescription: "No description yet",
     permissionCount: "{count} permissions",
-    updatePermissions: "Update permissions",
     emptyTitle: "No roles yet",
     emptyDescription:
       "The system has not returned any roles for access management.",
@@ -1314,20 +1313,18 @@ export const en: Dictionary = {
     loadErrorTitle: "Could not load role data",
     loadErrorDescription: "Try again to reload this page.",
     retry: "Retry",
-    defaultRoleKey: "role",
-    selectedPermissions: "{count} selected",
-    legacyPermissions: "{count} legacy permissions",
-    dialogTitle: "Update role permissions",
-    dialogDescription:
-      "Review, search, and update the access permissions assigned to this role.",
     searchLabel: "Search permissions",
     searchPlaceholder: "Search by permission name, key, or description...",
-    catalogCount: "{count} catalog permissions",
-    visibleGroupCount: "{count} visible groups",
     selectedInGroup: "{selected}/{total} selected",
     selectAll: "Select all",
     deselectAll: "Deselect all",
-    permissionNoDescription: "No description for this permission yet.",
+    savePermissions: "Save permissions",
+    permissionImpactDescription:
+      "Changes apply to everyone assigned this role.",
+    permissionCatalogLoadError:
+      "Could not load the permission catalog. Assigned permissions are shown as read-only.",
+    permissionCatalogMismatch:
+      "This role has permissions outside the current catalog. Editing is disabled to avoid replacing an unsupported permission set.",
     togglePermission: "Toggle permission {permission}",
     noMatchesTitle: "No matching permissions",
     emptyPermissionsTitle: "No permissions to show",
@@ -1335,14 +1332,6 @@ export const en: Dictionary = {
       "Try another keyword to find permissions by name, key, or description.",
     emptyPermissionsDescription:
       "The permission catalog has no data available for editing.",
-    legacyGroup: "Unknown / legacy",
-    legacyTitle: "Legacy permissions",
-    legacyDescription:
-      "These permissions no longer appear in the current catalog, but they will be preserved when you save changes.",
-    legacySearchOpen: "Open because search has matches",
-    viewDetails: "View details",
-    legacyPreserved:
-      "Legacy permissions will be preserved when updates are sent.",
     readOnly: "Read only",
     unknownPermissionGroup: "Other permissions ({group})",
     permissionGroups: {
@@ -1376,11 +1365,7 @@ export const en: Dictionary = {
       watchlist: "Watchlists",
       workspace: "Workspaces",
     },
-    tip: "Search by keyword or work group by group to update permissions faster.",
-    unsavedChanges: "You have unsaved changes in this dialog.",
-    noChanges: "There are no changes to save.",
     reset: "Reset",
-    saveChanges: "Save changes",
     updateSuccess: 'Updated permissions for role "{role}".',
     updateError: "Could not update role permissions.",
   },

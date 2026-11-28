@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 const mocks = vi.hoisted(() => ({
   getRoleByKey: vi.fn(),
+  getPermissions: vi.fn(),
   getCurrentPermissions: vi.fn(),
   getRoles: vi.fn(),
   getServerDictionary: vi.fn(),
@@ -9,6 +10,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("@/app/api/roles/action", () => ({
   getRoleByKey: mocks.getRoleByKey,
+  getPermissions: mocks.getPermissions,
   getRoles: mocks.getRoles,
 }))
 vi.mock("@/app/lib/permissions-server", () => ({
@@ -56,6 +58,7 @@ describe("role page permission gates", () => {
 
       expect(mocks.getRoles).not.toHaveBeenCalled()
       expect(mocks.getRoleByKey).not.toHaveBeenCalled()
+      expect(mocks.getPermissions).not.toHaveBeenCalled()
       expect(rolesPage.type).toBe(AccessDenied)
       expect(rolesPage.props.action).toBeUndefined()
       expect(detailPage.type).toBe("div")
@@ -76,7 +79,63 @@ describe("role page permission gates", () => {
 
     expect(mocks.getRoles).toHaveBeenCalledOnce()
     expect(mocks.getRoleByKey).toHaveBeenCalledWith(role.key)
+    expect(mocks.getPermissions).not.toHaveBeenCalled()
     expect(rolesPage.type).toBe(RoleListPage)
     expect(detailPage.type).toBe(RoleDetailPage)
+  })
+
+  it("loads the catalog only for a role:read and role:update caller", async () => {
+    const catalog = [
+      {
+        id: 1,
+        key: "asset:read",
+        name: "Read assets",
+        description: null,
+      },
+    ]
+    mocks.getCurrentPermissions.mockResolvedValue(["role:read", "role:update"])
+    mocks.getRoleByKey.mockResolvedValue(role)
+    mocks.getPermissions.mockResolvedValue(catalog)
+
+    const detailPage = await RoleDetailRoute({
+      params: Promise.resolve({ roleKey: role.key }),
+    })
+
+    expect(mocks.getRoleByKey).toHaveBeenCalledWith(role.key)
+    expect(mocks.getPermissions).toHaveBeenCalledOnce()
+    expect(detailPage.type).toBe(RoleDetailPage)
+    expect(detailPage.props).toMatchObject({
+      role,
+      permissionCatalog: catalog,
+      canEditPermissions: true,
+    })
+  })
+
+  it("keeps ADMIN read-only and does not request the permission catalog", async () => {
+    const adminRole = { ...role, key: "ADMIN", name: "Admin" }
+    mocks.getCurrentPermissions.mockResolvedValue(["role:read", "role:update"])
+    mocks.getRoleByKey.mockResolvedValue(adminRole)
+
+    const detailPage = await RoleDetailRoute({
+      params: Promise.resolve({ roleKey: adminRole.key }),
+    })
+
+    expect(mocks.getPermissions).not.toHaveBeenCalled()
+    expect(detailPage.type).toBe(RoleDetailPage)
+    expect(detailPage.props.canEditPermissions).toBe(false)
+  })
+
+  it("does not request the catalog when an inactive user's role read is rejected", async () => {
+    const forbidden = Object.assign(new Error("inactive"), { status: 403 })
+    mocks.getCurrentPermissions.mockResolvedValue(["role:read", "role:update"])
+    mocks.getRoleByKey.mockRejectedValue(forbidden)
+
+    const detailPage = await RoleDetailRoute({
+      params: Promise.resolve({ roleKey: role.key }),
+    })
+
+    expect(mocks.getPermissions).not.toHaveBeenCalled()
+    expect(detailPage.type).toBe("div")
+    expect(detailPage.props.children.type).toBe(AccessDenied)
   })
 })

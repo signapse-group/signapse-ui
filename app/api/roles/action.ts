@@ -10,6 +10,7 @@ import {
   PermissionResponse,
   RoleResponse,
   UpdateRolePermissionsRequest,
+  updateRolePermissionsRequestSchema,
 } from "@/app/lib/roles/definitions"
 
 export async function getRoles(): Promise<RoleResponse[]> {
@@ -30,12 +31,18 @@ export async function updateRolePermissions(
   roleKey: string,
   request: UpdateRolePermissionsRequest
 ): Promise<ActionResult<RoleResponse>> {
+  const parsedRequest = updateRolePermissionsRequestSchema.safeParse(request)
+  if (!parsedRequest.success) {
+    const dictionary = await getDictionary(await getRequestLocale())
+    return { success: false, error: dictionary.roles.updateError }
+  }
+
   try {
     const data = await fetchAuthenticated<RoleResponse>(
       `/roles/${encodeURIComponent(roleKey)}/permissions`,
       {
         method: "PUT",
-        body: JSON.stringify(request),
+        body: JSON.stringify(parsedRequest.data),
       }
     )
 
@@ -48,7 +55,11 @@ export async function updateRolePermissions(
     return {
       success: false,
       error:
-        error instanceof Error ? error.message : dictionary.roles.updateError,
+        error instanceof Error &&
+        "status" in error &&
+        typeof error.status === "number"
+          ? error.message
+          : dictionary.roles.updateError,
     }
   }
 }

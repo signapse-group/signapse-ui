@@ -1295,7 +1295,6 @@ export const vi = {
     descriptionLabel: "Mô tả",
     noDescription: "Chưa có mô tả",
     permissionCount: "{count} quyền",
-    updatePermissions: "Cập nhật quyền",
     emptyTitle: "Chưa có vai trò nào",
     emptyDescription:
       "Hệ thống chưa trả về vai trò nào để bạn quản trị quyền truy cập.",
@@ -1306,20 +1305,18 @@ export const vi = {
     loadErrorTitle: "Không thể tải dữ liệu vai trò",
     loadErrorDescription: "Vui lòng thử lại để tải lại trang này.",
     retry: "Thử lại",
-    defaultRoleKey: "role",
-    selectedPermissions: "{count} quyền đang chọn",
-    legacyPermissions: "{count} quyền kế thừa",
-    dialogTitle: "Cập nhật quyền vai trò",
-    dialogDescription:
-      "Rà soát, tìm kiếm và cập nhật quyền truy cập được gán cho vai trò này.",
     searchLabel: "Tìm quyền",
     searchPlaceholder: "Tìm theo tên quyền, key hoặc mô tả...",
-    catalogCount: "{count} quyền trong catalog",
-    visibleGroupCount: "{count} nhóm hiển thị",
     selectedInGroup: "{selected}/{total} quyền đang được chọn",
     selectAll: "Chọn tất cả",
     deselectAll: "Bỏ chọn tất cả",
-    permissionNoDescription: "Chưa có mô tả cho quyền này.",
+    savePermissions: "Lưu quyền",
+    permissionImpactDescription:
+      "Thay đổi sẽ áp dụng cho mọi tài khoản được gán vai trò này.",
+    permissionCatalogLoadError:
+      "Không thể tải danh mục quyền. Các quyền đã gán đang được hiển thị ở chế độ chỉ đọc.",
+    permissionCatalogMismatch:
+      "Vai trò này có quyền không thuộc danh mục hiện tại. Đã tắt chỉnh sửa để tránh thay thế một tập quyền không được hỗ trợ.",
     togglePermission: "Bật hoặc tắt quyền {permission}",
     noMatchesTitle: "Không tìm thấy quyền phù hợp",
     emptyPermissionsTitle: "Chưa có quyền nào để hiển thị",
@@ -1327,13 +1324,6 @@ export const vi = {
       "Hãy thử từ khóa khác để tìm quyền theo tên, key hoặc mô tả.",
     emptyPermissionsDescription:
       "Catalog quyền hiện chưa có dữ liệu để bạn chỉnh sửa.",
-    legacyGroup: "Không xác định / kế thừa",
-    legacyTitle: "Quyền kế thừa",
-    legacyDescription:
-      "Những quyền này không còn xuất hiện trong catalog hiện tại nhưng vẫn sẽ được giữ nguyên khi bạn lưu thay đổi.",
-    legacySearchOpen: "Đang mở vì có kết quả tìm kiếm",
-    viewDetails: "Xem chi tiết",
-    legacyPreserved: "Quyền kế thừa sẽ được bảo toàn khi gửi cập nhật.",
     readOnly: "Chỉ đọc",
     unknownPermissionGroup: "Nhóm quyền khác ({group})",
     permissionGroups: {
@@ -1367,11 +1357,7 @@ export const vi = {
       watchlist: "Danh sách theo dõi",
       workspace: "Không gian làm việc",
     },
-    tip: "Bạn có thể tìm kiếm theo từ khóa, hoặc thao tác theo từng nhóm để cập nhật quyền nhanh hơn.",
-    unsavedChanges: "Bạn có thay đổi chưa lưu trong hộp thoại này.",
-    noChanges: "Chưa có thay đổi nào cần lưu.",
     reset: "Đặt lại",
-    saveChanges: "Lưu thay đổi",
     updateSuccess: 'Đã cập nhật quyền cho vai trò "{role}".',
     updateError: "Không thể cập nhật quyền cho vai trò.",
   },

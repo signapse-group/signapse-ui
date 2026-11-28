@@ -1,11 +1,17 @@
 import { notFound } from "next/navigation"
 
-import { getRoleByKey } from "@/app/api/roles/action"
+import { getPermissions, getRoleByKey } from "@/app/api/roles/action"
 import { getServerDictionary } from "@/app/lib/i18n/server"
 import { hasPermission } from "@/app/lib/permissions"
 import { getCurrentPermissions } from "@/app/lib/permissions-server"
-import { ROLE_READ_PERMISSION } from "@/app/lib/roles/permissions"
-import type { RoleResponse } from "@/app/lib/roles/definitions"
+import {
+  ROLE_READ_PERMISSION,
+  ROLE_UPDATE_PERMISSION,
+} from "@/app/lib/roles/permissions"
+import type {
+  PermissionResponse,
+  RoleResponse,
+} from "@/app/lib/roles/definitions"
 import { AccessDenied } from "@/components/access-denied"
 
 import { RoleDetailPage } from "../role-detail"
@@ -64,5 +70,25 @@ export default async function RoleDetailRoute({
     throw error
   }
 
-  return <RoleDetailPage role={role} />
+  let permissionCatalog: PermissionResponse[] | undefined
+  let permissionCatalogLoadFailed = false
+  const canRequestPermissionCatalog =
+    role.key !== "ADMIN" && hasPermission(permissions, ROLE_UPDATE_PERMISSION)
+
+  if (canRequestPermissionCatalog) {
+    try {
+      permissionCatalog = await getPermissions()
+    } catch {
+      permissionCatalogLoadFailed = true
+    }
+  }
+
+  return (
+    <RoleDetailPage
+      role={role}
+      permissionCatalog={permissionCatalog}
+      canEditPermissions={permissionCatalog !== undefined}
+      permissionCatalogLoadFailed={permissionCatalogLoadFailed}
+    />
+  )
 }
