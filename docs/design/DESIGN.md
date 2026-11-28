@@ -83,8 +83,13 @@ Light mode và dark mode phải là hai biến thể của cùng một direction
 
 ## Theme And Component Chrome
 
-- Dùng component trong `@/components/ui/` theo preset ở [components.json](../../components.json). Feature chọn variant và size sẵn có, dùng `className` cho bố cục.
-- Thay đổi giao diện mặc định của wrapper dùng chung cần có quyết định design system ghi rõ phạm vi áp dụng tại đây trước khi triển khai.
+- Feature/shared code dùng default chrome của preset khai báo tại `style` trong [components.json](../../components.json) qua wrappers trong `@/components/ui/`.
+- `className` trên shadcn primitives chỉ dùng cho layout như width, max-width, flex/grid, gap, alignment, max-height, overflow, truncate hoặc responsive constraints.
+- Không thêm `h-*`, `min-h-*`, `rounded-*`, padding, foreground/background, border, ring, shadow hoặc typography classes chỉ để đổi height, radius, color, border hay density mặc định của primitive.
+- Khi cần control compact, ưu tiên variant/size sẵn có; chỉ hard-code height/radius khi không có option phù hợp và có product reason rõ.
+- Wrapper trong `components/ui` có thể được bảo trì theo shadcn workflow, nhưng không nhận feature-specific visual customization.
+- Wrapper shadcn mặc định phải giữ contract variant, size và chrome từ registry item của preset hiện tại.
+- Không thêm variant, size hoặc chrome vào wrapper chỉ để phục vụ một feature, prototype hoặc trạng thái cục bộ. Ngoại lệ phải là quyết định design-system có nhu cầu dùng chung rõ ràng và được ghi nhận trong tài liệu này trước khi triển khai.
 - Dùng Button variant positive cho affirmative action khi hướng thiết kế đã duyệt yêu cầu treatment xanh; variant dùng token shared positive-action và positive-action-foreground. Không đổi màu Button qua className. Start trên Cronjobs là reference đã duyệt tại SIGN-28, được áp dụng cho Start trong SIGN-579.
 
 ### Semantic Tokens
@@ -168,6 +173,7 @@ Translation:
 
 - Layout responsive dùng `flex-col sm:flex-row sm:justify-between`.
 - Leading area chứa primary action và search; trailing area chứa filter và sort.
+- Primary controls giữ default shadcn size/chrome; không thêm custom height/radius/padding hoặc `size="sm"` chỉ để đổi density.
 - Mỗi surface chỉ có một primary action. Secondary actions giảm emphasis; destructive actions tách khỏi primary flow hoặc nằm trong overflow menu khi toolbar dày.
 
 ### Forms
@@ -397,7 +403,7 @@ This is the complete FE execution contract for dashboard layout and verification
 
 ## Accessibility And Responsive Behavior
 
-- Mục tiêu là WCAG 2.2 AA trong cả light và dark mode. Chữ thường đạt tối thiểu `4.5:1`, chữ lớn đạt `3:1`. Dấu hiệu thị giác cần để nhận biết control đang hoạt động hoặc trạng thái của nó, kể cả focus, đạt `3:1` so với màu liền kề.
+- Mục tiêu là WCAG 2.2 AA. Normal text đạt contrast tối thiểu `4.5:1`; large text, component boundary, state indicator và focus indicator đạt tối thiểu `3:1` trong cả light và dark mode.
 - Ưu tiên native semantic elements. Mỗi page có một `<h1>`, heading hierarchy tuần tự và skip link đến main content khi có repeated navigation.
 - Mọi interaction dùng được bằng keyboard với tab order hợp lý; focus luôn nhìn thấy, không bị sticky surface che và được quản lý đúng sau route change.
 - Dialog/overlay restore focus an toàn; icon-only control có accessible name. Meaningful image có `alt`, decorative image dùng `alt=""`.
@@ -414,7 +420,7 @@ This is the complete FE execution contract for dashboard layout and verification
 
 Khi implement hoặc review UI, kiểm tra các state và breakpoint liên quan:
 
-- Khi thay đổi màu, nền hoặc cách hiển thị trạng thái, kiểm contrast ở light và dark mode tại các nơi dùng bị ảnh hưởng. Nếu vấn đề thuộc preset gốc, ghi nhận ở phạm vi design system theo [Theme And Component Chrome](#theme-and-component-chrome).
+- Khi thay đổi wrapper, token hoặc badge semantic, đối chiếu component thực tế, màu đã resolve và contrast ở theme áp dụng. Kiểm các nơi dùng bị ảnh hưởng theo [Theme And Component Chrome](#theme-and-component-chrome) và [Badge Semantics](#badge-semantics).
 - Light mode và dark mode.
 - Sidebar mở rộng và collapsed.
 - Content-width mode khớp primary task của route: `bounded` chỉ cho overview/decision surface, `fluid` cho list/table/data surface và `canvas` cho interactive workbench.
@@ -437,7 +443,7 @@ Khi implement hoặc review UI, kiểm tra các state và breakpoint liên quan:
 - Khi đổi cách hiển thị dữ liệu chart, đối chiếu axis, legend hoặc tooltip bị ảnh hưởng với fixture đại diện theo [Data Visualization And Financial Data](#data-visualization-and-financial-data).
 - Realtime current value, last-updated, stale state, pause/freeze và reduced motion.
 - Semantic heading, skip link, route-change focus, focus ring và keyboard navigation.
-- Non-color status cues, target size và zoom `200%`.
+- Contrast light/dark, non-color status cues, target size và zoom `200%`.
 - Form labels, placeholder khi field rỗng theo phần Forms (create và edit sau khi xóa giá trị), announced errors, recovery action, unsaved-change protection và data retention sau lỗi.
 - Bounded content giữ cap và căn giữa; fluid/canvas không bị page-level cap; loading, empty, error và permission-denied state mirror mode của content thật.
 - Horizontal overflow chỉ xuất hiện bên trong surface chủ đích.
