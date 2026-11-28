@@ -30,8 +30,8 @@ import {
 } from "@/components/ui/table"
 
 import { NewsArticleList } from "./news-article-list"
-import { NewsArticleTimeZoneSync } from "./news-article-time-zone-sync"
 import { NewsArticleListError } from "./news-article-list-error"
+import { AppTimeZoneSync } from "@/components/app-time-zone-sync"
 
 interface PageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>
@@ -56,7 +56,7 @@ export default async function NewsArticlesPage({ searchParams }: PageProps) {
 
   return (
     <Suspense fallback={<NewsArticleListSkeleton dictionary={dictionary} />}>
-      <NewsArticleTimeZoneSync
+      <AppTimeZoneSync
         timeZone={timeZone}
         timeZoneKnown={timeZoneKnown}
         fallback={<NewsArticleListSkeleton dictionary={dictionary} />}
@@ -68,7 +68,7 @@ export default async function NewsArticlesPage({ searchParams }: PageProps) {
           timeZone={timeZone}
           dictionary={dictionary}
         />
-      </NewsArticleTimeZoneSync>
+      </AppTimeZoneSync>
     </Suspense>
   )
 }

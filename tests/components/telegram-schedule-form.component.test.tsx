@@ -62,13 +62,14 @@ const props = {
   ],
   languages: [{ id: 1, isoCode: "en", name: "English" }],
   languageCatalogError: false,
-  canManage: true,
+  canCreate: true,
 }
 
 const response: TelegramMarketAnalysisScheduleResponse = {
   id: 11,
   name: "Morning analysis",
   workspaceId: 7,
+  workspaceName: "Workspace",
   timezone: "Asia/Bangkok",
   localTimes: ["09:00"],
   status: "ACTIVE",
@@ -78,6 +79,7 @@ const response: TelegramMarketAnalysisScheduleResponse = {
     assetName: "Gold",
     assetSymbol: "GOLD",
   },
+  outputLanguage: null,
 }
 
 const selectControlledWarning =
@@ -124,6 +126,22 @@ async function fillValidSchedule(
   )
 }
 
+async function selectActiveDestination(
+  dialog: HTMLElement,
+  user: ReturnType<typeof userEvent.setup>
+) {
+  await user.click(
+    within(dialog).getByRole("combobox", {
+      name: viDictionary.telegram.schedule.destinationLabel,
+    })
+  )
+  await user.click(
+    await screen.findByRole("option", {
+      name: props.activeDestinations[0].displayLabel,
+    })
+  )
+}
+
 async function selectUtcTimezone(
   dialog: HTMLElement,
   user: ReturnType<typeof userEvent.setup>
@@ -159,6 +177,105 @@ describe("Telegram schedule form behavior", () => {
     routerRefresh.mockReset()
   })
 
+  it("keeps an API-valid timezone alias selected and unchanged in Edit", async () => {
+    const user = userEvent.setup()
+    const savedSchedule = { ...response, timezone: "Asia/Ho_Chi_Minh" }
+
+    renderWithLocalization(
+      <UpdateTelegramScheduleDialog
+        schedule={savedSchedule}
+        activeDestinations={props.activeDestinations}
+        watchlistAssets={props.watchlistAssets}
+        languages={props.languages}
+        languageCatalogError={false}
+        assetEditable
+        assetPreservedReason="otherWorkspace"
+        canUpdate
+      />
+    )
+
+    await user.click(
+      screen.getByRole("button", {
+        name: viDictionary.telegram.schedule.editTrigger,
+      })
+    )
+    const dialog = screen.getByRole("dialog")
+    const timezone = within(dialog).getByRole("combobox", {
+      name: viDictionary.telegram.schedule.timezoneLabel,
+    })
+    expect((timezone as HTMLInputElement).value).toContain("Asia/Ho_Chi_Minh")
+
+    await user.clear(
+      within(dialog).getByLabelText(viDictionary.telegram.schedule.nameLabel)
+    )
+    await user.type(
+      within(dialog).getByLabelText(viDictionary.telegram.schedule.nameLabel),
+      "Updated morning analysis"
+    )
+    vi.mocked(updateTelegramMarketAnalysisSchedule).mockResolvedValueOnce({
+      success: false,
+      error: "Update rejected",
+    })
+    await user.click(
+      within(dialog).getByRole("button", {
+        name: viDictionary.telegram.schedule.saveSchedule,
+      })
+    )
+
+    await waitFor(() =>
+      expect(updateTelegramMarketAnalysisSchedule).toHaveBeenCalledWith(
+        savedSchedule.id,
+        expect.objectContaining({
+          name: "Updated morning analysis",
+          timezone: "Asia/Ho_Chi_Minh",
+        })
+      )
+    )
+  })
+
+  it("prevents create when no active destination can be selected", () => {
+    renderWithLocalization(
+      <CreateTelegramScheduleDialog
+        {...props}
+        activeDestinations={[]}
+        canCreate
+      />
+    )
+
+    expect(
+      screen.getByRole("button", {
+        name: viDictionary.telegram.schedule.createSchedule,
+      })
+    ).toBeDisabled()
+    expect(
+      screen.getByText(
+        viDictionary.telegram.schedule.createDisabledNoDestination
+      )
+    ).toBeVisible()
+  })
+
+  it("requires an explicit destination selection when creating a schedule", async () => {
+    const { dialog, user } = await openCreateDialog()
+    const destination = within(dialog).getByRole("combobox", {
+      name: viDictionary.telegram.schedule.destinationLabel,
+    })
+
+    expect(destination).toHaveTextContent(
+      viDictionary.telegram.destination.placeholder
+    )
+
+    await user.click(
+      within(dialog).getByRole("button", {
+        name: viDictionary.telegram.schedule.createSchedule,
+      })
+    )
+
+    expect(
+      screen.getByText(viDictionary.telegram.destinationRequired)
+    ).toBeVisible()
+    expect(createTelegramMarketAnalysisSchedule).not.toHaveBeenCalled()
+  })
+
   it("shows accessible validation errors and submits normalized values", async () => {
     const consoleError = vi
       .spyOn(console, "error")
@@ -179,6 +296,7 @@ describe("Telegram schedule form behavior", () => {
       ).toBeVisible()
 
       await fillValidSchedule(dialog, user)
+      await selectActiveDestination(dialog, user)
       await selectUtcTimezone(dialog, user)
       vi.mocked(createTelegramMarketAnalysisSchedule).mockResolvedValue({
         success: true,
@@ -207,7 +325,13 @@ describe("Telegram schedule form behavior", () => {
 
   it("keeps input and exposes retryable backend errors", async () => {
     const { dialog, user } = await openCreateDialog()
+    expect(
+      within(dialog).getByRole("combobox", {
+        name: viDictionary.telegram.schedule.destinationLabel,
+      })
+    ).toHaveAttribute("aria-required", "true")
     await fillValidSchedule(dialog, user)
+    await selectActiveDestination(dialog, user)
     vi.mocked(createTelegramMarketAnalysisSchedule).mockResolvedValue({
       success: false,
       error: "Backend refused the schedule",
@@ -230,17 +354,41 @@ describe("Telegram schedule form behavior", () => {
     expect(routerRefresh).not.toHaveBeenCalled()
   })
 
+  it("asks before closing a dirty schedule draft from the dialog close button", async () => {
+    const { dialog, user } = await openCreateDialog()
+    await user.type(
+      within(dialog).getByLabelText(viDictionary.telegram.schedule.nameLabel),
+      "Draft schedule"
+    )
+    await user.click(
+      within(dialog).getAllByRole("button", {
+        name: viDictionary.common.close,
+      })[0]
+    )
+
+    const discardDialog = screen.getByRole("alertdialog")
+    expect(dialog).toBeVisible()
+    await user.click(
+      within(discardDialog).getByRole("button", {
+        name: viDictionary.telegram.schedule.discardAction,
+      })
+    )
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+    expect(routerRefresh).not.toHaveBeenCalled()
+  })
+
   it("renders an accessible edit trigger and saves the active schedule", async () => {
     const user = userEvent.setup()
     renderWithLocalization(
       <UpdateTelegramScheduleDialog
         schedule={response}
         activeDestinations={props.activeDestinations}
-        currentWorkspace={props.currentWorkspace}
         watchlistAssets={props.watchlistAssets}
         languages={props.languages}
         languageCatalogError={false}
-        canManage
+        canUpdate
+        assetEditable
+        assetPreservedReason="otherWorkspace"
       />
     )
 
@@ -277,5 +425,64 @@ describe("Telegram schedule form behavior", () => {
       })
     )
     await waitFor(() => expect(routerRefresh).toHaveBeenCalledTimes(1))
+  })
+
+  it("keeps an edit draft and does not report success when update is rejected", async () => {
+    const user = userEvent.setup()
+    renderWithLocalization(
+      <UpdateTelegramScheduleDialog
+        schedule={{ ...response, workspaceId: 12, workspaceName: "Research" }}
+        activeDestinations={props.activeDestinations}
+        watchlistAssets={props.watchlistAssets}
+        languages={props.languages}
+        languageCatalogError={false}
+        canUpdate
+        assetEditable={false}
+        assetPreservedReason="otherWorkspace"
+      />
+    )
+
+    await user.click(
+      screen.getByRole("button", {
+        name: viDictionary.telegram.schedule.editTrigger,
+      })
+    )
+    const dialog = screen.getByRole("dialog")
+    const nameField = within(dialog).getByLabelText(
+      viDictionary.telegram.schedule.nameLabel
+    )
+    await user.clear(nameField)
+    await user.type(nameField, "Revised research schedule")
+    vi.mocked(updateTelegramMarketAnalysisSchedule).mockResolvedValue({
+      success: false,
+      error: "Update rejected",
+    })
+
+    await user.click(
+      within(dialog).getByRole("button", {
+        name: viDictionary.telegram.schedule.saveSchedule,
+      })
+    )
+
+    await waitFor(() =>
+      expect(updateTelegramMarketAnalysisSchedule).toHaveBeenCalledWith(11, {
+        name: "Revised research schedule",
+        workspaceId: 12,
+        destinationId: 8,
+        assetId: 9,
+        timezone: "Asia/Bangkok",
+        localTimes: ["09:00"],
+        outputLanguageIsoCode: undefined,
+      })
+    )
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Update rejected"
+    )
+    expect(
+      within(screen.getByRole("dialog")).getByDisplayValue(
+        "Revised research schedule"
+      )
+    ).toBeInTheDocument()
+    expect(routerRefresh).not.toHaveBeenCalled()
   })
 })

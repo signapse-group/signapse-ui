@@ -18,6 +18,23 @@ export async function getWorkspaceWatchlistAssets(
   )
 }
 
+export async function getAllWorkspaceWatchlistAssets(
+  searchParams: SearchParams
+): Promise<WorkspaceWatchlistAssetListItemResponse[]> {
+  const firstPage = await getWorkspaceWatchlistAssets(searchParams)
+  const assets = [...firstPage.content]
+
+  for (let page = firstPage.number + 1; page < firstPage.totalPages; page++) {
+    const nextPage = await getWorkspaceWatchlistAssets({
+      ...searchParams,
+      page,
+    })
+    assets.push(...nextPage.content)
+  }
+
+  return assets
+}
+
 export async function addAssetsToWorkspaceWatchlist(
   request: BulkCreateWorkspaceWatchlistAssetsRequest
 ): Promise<ActionResult<BulkCreateWorkspaceWatchlistAssetsResponse>> {

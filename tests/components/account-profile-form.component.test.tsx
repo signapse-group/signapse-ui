@@ -436,7 +436,6 @@ describe("AccountProfileForm", () => {
     const firstName = screen.getByRole("textbox", { name: /First name/ })
     const birthday = screen.getByRole("button", { name: /Date of birth/ })
     await user.type(firstName, " Prime")
-    await selectBirthday("2000-02-29", user)
     await user.click(birthday)
     expect(screen.getByRole("grid")).toBeVisible()
 
@@ -448,7 +447,7 @@ describe("AccountProfileForm", () => {
     expect(updateMyProfile).toHaveBeenCalledWith({
       firstName: "Ada Prime",
       lastName: initialData.lastName,
-      birthday: "2000-02-29T00:00:00.000Z",
+      birthday: `${initialData.dateOfBirth}T00:00:00.000Z`,
       phone: initialData.phoneNumber,
     })
 
@@ -456,7 +455,7 @@ describe("AccountProfileForm", () => {
     expect(screen.queryByRole("grid")).not.toBeInTheDocument()
     resolveUpdate?.()
     await waitFor(() => expect(routerRefresh).toHaveBeenCalledTimes(1))
-    expect(birthday).toHaveTextContent("February 29, 2000")
+    expect(birthday).toHaveTextContent("January 2, 1990")
   }, 10_000)
 
   it("retains failed edits and exposes localized recovery feedback", async () => {

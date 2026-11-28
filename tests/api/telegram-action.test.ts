@@ -4,6 +4,24 @@ const { testDictionary } = vi.hoisted(() => ({
   testDictionary: {
     telegram: {
       validationInvalid: "Telegram validation failed",
+      botTokenRequired: "Enter the bot token.",
+      bot: {
+        invalidData: "Bot data is invalid.",
+        createError: "Không thể kết nối bot Telegram.",
+        createTokenVerificationError:
+          "Không thể xác minh token bot. Hãy kiểm tra token rồi thử lại.",
+        createPermissionDenied:
+          "Tài khoản của bạn cần quyền kết nối bot Telegram. Hãy liên hệ quản trị viên.",
+        createConnectionConflict: "Bot Telegram này đã được kết nối.",
+        reconnectTokenMismatch:
+          "Token này thuộc một bot Telegram khác với kết nối đã chọn.",
+        reconnectPermissionDenied:
+          "Tài khoản của bạn cần quyền kết nối lại bot này. Hãy liên hệ quản trị viên.",
+        reconnectError: "Không thể kết nối lại bot này.",
+        deleteError: "Could not remove the Telegram bot.",
+        deleteBlockedByDestinations:
+          "Remove all linked destinations before removing this bot.",
+      },
       scheduleNameRequired: "Schedule name is required",
       localTimeInvalid: "Local time is invalid",
       outputLanguageRequired: "Output language is required",
@@ -13,12 +31,26 @@ const { testDictionary } = vi.hoisted(() => ({
       localTimeRequired: "At least one local time is required",
       localTimeLimit: "Too many local times",
       localTimeDuplicate: "Local times must be unique",
+      destination: {
+        invalidData: "Destination is invalid",
+        createLinkError: "Could not create the Telegram link command",
+        removeError: "Could not remove the Telegram destination",
+        removeInUseError: "The destination is still in use",
+        testMessageError: "Could not send a test message",
+        testMessageUnknownOutcome:
+          "Telegram did not confirm the test message. Check the Telegram conversation before trying again.",
+      },
       schedule: {
         languageCatalogError: "Language catalog unavailable",
         createError: "Schedule create failed",
         updateError: "Schedule update failed",
-        disableError: "Schedule disable failed",
         deleteError: "Schedule delete failed",
+      },
+      routing: {
+        updateError: "Route update failed",
+        updatePermissionDenied: "Route permission denied",
+        enableDestinationRequired: "Choose an active destination",
+        destinationClearRequiresDisabled: "Pause before clearing",
       },
     },
   },
@@ -26,6 +58,7 @@ const { testDictionary } = vi.hoisted(() => ({
 
 vi.mock("@/app/api/auth/action", () => ({
   fetchAuthenticated: vi.fn(),
+  fetchAuthenticatedWithStatus: vi.fn(),
 }))
 
 vi.mock("@/app/api/languages/action", () => ({
@@ -45,11 +78,25 @@ vi.mock("next/cache", () => ({
 }))
 
 import { fetchAuthenticated } from "@/app/api/auth/action"
+import { fetchAuthenticatedWithStatus } from "@/app/api/auth/action"
 import { getLanguages } from "@/app/api/languages/action"
+import { getDictionary } from "@/app/lib/i18n/dictionaries"
+import { en as enDictionary } from "@/app/lib/i18n/dictionaries/en"
+import { getRequestLocale } from "@/app/lib/i18n/server"
+import { vi as viDictionary } from "@/app/lib/i18n/dictionaries/vi"
 import {
+  createTelegramBotConnection,
+  createTelegramLinkToken,
   createTelegramMarketAnalysisSchedule,
+  deleteTelegramBotConnection,
+  deleteTelegramDestination,
   deleteTelegramMarketAnalysisSchedule,
-  disableTelegramMarketAnalysisSchedule,
+  getTelegramBotConnections,
+  getTelegramDestinations,
+  getTelegramMarketAnalysisSchedules,
+  getTelegramFeatureSettings,
+  sendTelegramTestMessage,
+  reconnectTelegramBotConnection,
   updateTelegramMarketAnalysisSchedule,
   updateTelegramFeatureSetting,
 } from "@/app/api/telegram/action"
@@ -70,10 +117,85 @@ const scheduleResponse = {
   id: 11,
   name: "Morning analysis",
   workspaceId: 7,
+  workspaceName: "Workspace",
+  destination: {
+    id: 8,
+    botConnectionId: 12,
+    chatType: "CHANNEL" as const,
+    status: "ACTIVE" as const,
+  },
   timezone: "Asia/Bangkok",
   localTimes: ["09:00", "18:00"],
+  asset: { assetId: 9, assetSymbol: "BTC", assetName: "Bitcoin" },
+  outputLanguage: { isoCode: "en", name: "English" },
   status: "ACTIVE" as const,
 }
+
+const botConnectionResponse = {
+  id: 12,
+  botId: 1012,
+  botUsername: "new_fixture_bot",
+  displayLabel: "New fixture bot",
+  status: "ACTIVE" as const,
+}
+
+function backendError(message: string, status: number, code?: string) {
+  const error = new Error(message) as Error & {
+    status: number
+    code?: string
+  }
+  error.status = status
+  error.code = code
+  return error
+}
+
+describe("Telegram bot connection removal action", () => {
+  beforeEach(() => {
+    vi.mocked(fetchAuthenticated).mockReset()
+    vi.mocked(revalidatePath).mockClear()
+  })
+
+  it("deletes the selected connection and revalidates the Telegram page", async () => {
+    vi.mocked(fetchAuthenticated).mockResolvedValue(undefined)
+
+    await expect(deleteTelegramBotConnection(23)).resolves.toEqual({
+      success: true,
+      data: undefined,
+    })
+    expect(fetchAuthenticated).toHaveBeenCalledWith(
+      "/telegram/bot-connections/23",
+      { method: "DELETE" }
+    )
+    expect(revalidatePath).toHaveBeenCalledWith("/telegram")
+  })
+
+  it("maps the linked-destination conflict to localized recovery guidance", async () => {
+    vi.mocked(fetchAuthenticated).mockRejectedValue(
+      Object.assign(new Error("backend metadata"), {
+        status: 409,
+        code: "TELEGRAM_BOT_CONNECTION_HAS_UNREMOVED_DESTINATIONS",
+      })
+    )
+
+    await expect(deleteTelegramBotConnection(23)).resolves.toEqual({
+      success: false,
+      error: testDictionary.telegram.bot.deleteBlockedByDestinations,
+    })
+    expect(revalidatePath).not.toHaveBeenCalled()
+  })
+
+  it("keeps webhook and request failures retryable without revalidation", async () => {
+    vi.mocked(fetchAuthenticated).mockRejectedValue(
+      backendError("Webhook cleanup failed", 502)
+    )
+
+    await expect(deleteTelegramBotConnection(23)).resolves.toEqual({
+      success: false,
+      error: testDictionary.telegram.bot.deleteError,
+    })
+    expect(revalidatePath).not.toHaveBeenCalled()
+  })
+})
 
 describe("Telegram scheduled asset analysis actions", () => {
   beforeEach(() => {
@@ -88,6 +210,49 @@ describe("Telegram scheduled asset analysis actions", () => {
         { id: 2, isoCode: "en", name: "English" },
       ],
     })
+  })
+
+  it("filters route reads and validates the published nullable fields", async () => {
+    vi.mocked(fetchAuthenticated).mockResolvedValue([])
+
+    await expect(
+      getTelegramFeatureSettings({
+        workspaceId: 7,
+        featureKey: "ECONOMIC_CALENDAR_ALERT",
+      })
+    ).resolves.toEqual([])
+    const requestPath = vi.mocked(fetchAuthenticated).mock.calls[0]?.[0]
+    expect(typeof requestPath).toBe("string")
+    expect(new URLSearchParams(requestPath!.split("?")[1]).get("$filter")).toBe(
+      "workspace.id eq 7 and featureKey eq 'ECONOMIC_CALENDAR_ALERT'"
+    )
+
+    vi.mocked(fetchAuthenticated).mockResolvedValueOnce([
+      {
+        id: 41,
+        featureKey: "ECONOMIC_CALENDAR_ALERT",
+        workspaceId: 7,
+        enabled: false,
+        destination: null,
+        outputLanguage: null,
+      },
+    ])
+    await expect(
+      getTelegramFeatureSettings({ featureKey: "ECONOMIC_CALENDAR_ALERT" })
+    ).resolves.toMatchObject([{ enabled: false, destination: null }])
+
+    vi.mocked(fetchAuthenticated).mockResolvedValueOnce([
+      {
+        id: 41,
+        featureKey: "ECONOMIC_CALENDAR_ALERT",
+        workspaceId: 7,
+        enabled: false,
+        outputLanguage: null,
+      },
+    ])
+    await expect(
+      getTelegramFeatureSettings({ featureKey: "ECONOMIC_CALENDAR_ALERT" })
+    ).rejects.toThrow()
   })
 
   it("creates and updates schedules with normalized request bodies", async () => {
@@ -127,12 +292,71 @@ describe("Telegram scheduled asset analysis actions", () => {
     expect(revalidatePath).toHaveBeenCalledWith("/telegram")
   })
 
+  it("reads saved schedule fields after create and keeps the ACTIVE record on edit", async () => {
+    const editedSchedule = {
+      ...scheduleResponse,
+      name: "Afternoon analysis",
+      timezone: "UTC",
+      localTimes: ["12:00"],
+    }
+    vi.mocked(fetchAuthenticated)
+      .mockResolvedValueOnce(scheduleResponse)
+      .mockResolvedValueOnce([scheduleResponse])
+      .mockResolvedValueOnce(editedSchedule)
+      .mockResolvedValueOnce([editedSchedule])
+
+    const created =
+      await createTelegramMarketAnalysisSchedule(scheduleRequest())
+    expect(created).toEqual({ success: true, data: scheduleResponse })
+    await expect(getTelegramMarketAnalysisSchedules()).resolves.toEqual([
+      scheduleResponse,
+    ])
+
+    const updated = await updateTelegramMarketAnalysisSchedule(11, {
+      ...scheduleRequest(),
+      name: "Afternoon analysis",
+      timezone: "UTC",
+      localTimes: ["12:00"],
+    })
+    expect(updated).toEqual({ success: true, data: editedSchedule })
+    const editedReadback = await getTelegramMarketAnalysisSchedules()
+    expect(editedReadback).toEqual([editedSchedule])
+    expect(editedReadback[0]).toMatchObject({
+      id: scheduleResponse.id,
+      status: "ACTIVE",
+    })
+
+    expect(fetchAuthenticated).toHaveBeenNthCalledWith(
+      3,
+      "/telegram/market-analysis-schedules/11",
+      expect.objectContaining({ method: "PUT" })
+    )
+
+    expect(fetchAuthenticated).toHaveBeenNthCalledWith(
+      2,
+      "/telegram/market-analysis-schedules"
+    )
+    expect(fetchAuthenticated).toHaveBeenNthCalledWith(
+      4,
+      "/telegram/market-analysis-schedules"
+    )
+  })
+
   it("preserves and explicitly clears feature output-language overrides", async () => {
     const featureResponse = {
       id: 41,
       featureKey: "ECONOMIC_CALENDAR_ALERT" as const,
       workspaceId: 7,
       enabled: true,
+      destination: {
+        id: 8,
+        botConnectionId: 1,
+        chatId: "chat-8",
+        chatType: "PRIVATE" as const,
+        displayLabel: "Operations",
+        status: "ACTIVE" as const,
+      },
+      outputLanguage: { id: 2, isoCode: "en", name: "English" },
     }
     vi.mocked(fetchAuthenticated).mockResolvedValue(featureResponse)
 
@@ -176,23 +400,75 @@ describe("Telegram scheduled asset analysis actions", () => {
           workspaceId: 7,
           destinationId: 8,
           enabled: true,
+          outputLanguageIsoCode: null,
         }),
       }
     )
   })
 
-  it("disables and deletes schedules through their mutation endpoints", async () => {
-    vi.mocked(fetchAuthenticated).mockResolvedValue(scheduleResponse)
+  it("sends sparse market-news updates with nullable destination and language", async () => {
+    const savedSetting = {
+      id: 42,
+      featureKey: "MARKET_NEWS_ALERT" as const,
+      workspaceId: 7,
+      enabled: false,
+      destination: null,
+      outputLanguage: null,
+    }
+    vi.mocked(fetchAuthenticated).mockResolvedValue(savedSetting)
 
-    await expect(disableTelegramMarketAnalysisSchedule(11)).resolves.toEqual({
-      success: true,
-      data: scheduleResponse,
-    })
-    expect(fetchAuthenticated).toHaveBeenCalledWith(
-      "/telegram/market-analysis-schedules/11/disable",
-      { method: "PATCH" }
+    await expect(
+      updateTelegramFeatureSetting({
+        featureKey: "MARKET_NEWS_ALERT",
+        workspaceId: 7,
+        destinationId: null,
+        enabled: false,
+      })
+    ).resolves.toEqual({ success: true, data: savedSetting })
+    expect(fetchAuthenticated).toHaveBeenLastCalledWith(
+      "/telegram/feature-settings",
+      {
+        method: "PUT",
+        body: JSON.stringify({
+          featureKey: "MARKET_NEWS_ALERT",
+          workspaceId: 7,
+          destinationId: null,
+          enabled: false,
+        }),
+      }
     )
 
+    await updateTelegramFeatureSetting({
+      featureKey: "MARKET_NEWS_ALERT",
+      workspaceId: 7,
+      outputLanguageIsoCode: "  ",
+    })
+    expect(fetchAuthenticated).toHaveBeenLastCalledWith(
+      "/telegram/feature-settings",
+      {
+        method: "PUT",
+        body: JSON.stringify({
+          featureKey: "MARKET_NEWS_ALERT",
+          workspaceId: 7,
+          outputLanguageIsoCode: null,
+        }),
+      }
+    )
+
+    vi.mocked(fetchAuthenticated).mockClear()
+    const invalid = await updateTelegramFeatureSetting({
+      featureKey: "ECONOMIC_CALENDAR_ALERT",
+      workspaceId: 7,
+      destinationId: 0,
+    })
+    expect(invalid).toEqual({
+      success: false,
+      error: expect.any(String),
+    })
+    expect(fetchAuthenticated).not.toHaveBeenCalled()
+  })
+
+  it("deletes schedules through the published DELETE endpoint", async () => {
     vi.mocked(fetchAuthenticated).mockResolvedValue(undefined)
     await expect(deleteTelegramMarketAnalysisSchedule(11)).resolves.toEqual({
       success: true,
@@ -202,8 +478,158 @@ describe("Telegram scheduled asset analysis actions", () => {
       "/telegram/market-analysis-schedules/11",
       { method: "DELETE" }
     )
+    expect(revalidatePath).toHaveBeenCalledTimes(1)
+  })
+
+  it.each(["ECONOMIC_CALENDAR_ALERT", "MARKET_NEWS_ALERT"] as const)(
+    "reads back a partial 200 response for %s before confirming the saved setting",
+    async (featureKey) => {
+      const savedSetting = {
+        id: 41,
+        featureKey,
+        workspaceId: 7,
+        enabled: false,
+        destination: null,
+        outputLanguage: null,
+      }
+      vi.mocked(fetchAuthenticated)
+        .mockResolvedValueOnce({
+          destination: null,
+          outputLanguage: { name: "English" },
+        })
+        .mockResolvedValueOnce([savedSetting])
+
+      await expect(
+        updateTelegramFeatureSetting({
+          featureKey,
+          workspaceId: 7,
+          enabled: false,
+        })
+      ).resolves.toEqual({ success: true, data: savedSetting })
+
+      expect(fetchAuthenticated).toHaveBeenNthCalledWith(
+        1,
+        "/telegram/feature-settings",
+        {
+          method: "PUT",
+          body: JSON.stringify({ featureKey, workspaceId: 7, enabled: false }),
+        }
+      )
+      expect(fetchAuthenticated).toHaveBeenNthCalledWith(
+        2,
+        expect.stringContaining("featureKey")
+      )
+      expect(revalidatePath).toHaveBeenCalledWith("/telegram")
+    }
+  )
+
+  it("sends Economic calendar clear as an atomic pause and fails closed on invalid success readback", async () => {
+    const savedSetting = {
+      id: 41,
+      featureKey: "ECONOMIC_CALENDAR_ALERT" as const,
+      workspaceId: 7,
+      enabled: false,
+      destination: null,
+      outputLanguage: { id: 1, isoCode: "vi", name: "Tiếng Việt" },
+    }
+    vi.mocked(fetchAuthenticated).mockResolvedValueOnce(savedSetting)
+
+    await expect(
+      updateTelegramFeatureSetting({
+        featureKey: "ECONOMIC_CALENDAR_ALERT",
+        workspaceId: 7,
+        destinationId: null,
+        enabled: false,
+      })
+    ).resolves.toEqual({ success: true, data: savedSetting })
+    expect(fetchAuthenticated).toHaveBeenLastCalledWith(
+      "/telegram/feature-settings",
+      {
+        method: "PUT",
+        body: JSON.stringify({
+          featureKey: "ECONOMIC_CALENDAR_ALERT",
+          workspaceId: 7,
+          destinationId: null,
+          enabled: false,
+        }),
+      }
+    )
+
+    vi.mocked(fetchAuthenticated)
+      .mockResolvedValueOnce({ ...savedSetting, enabled: true })
+      .mockResolvedValueOnce([])
+    const unverifiedReadback = await updateTelegramFeatureSetting({
+      featureKey: "ECONOMIC_CALENDAR_ALERT",
+      workspaceId: 7,
+      enabled: true,
+    })
+    expect(unverifiedReadback).toEqual({
+      success: true,
+      data: { readbackUnverified: true },
+    })
     expect(revalidatePath).toHaveBeenCalledTimes(2)
   })
+
+  it("localizes update permission failures instead of exposing backend details", async () => {
+    vi.mocked(fetchAuthenticated).mockRejectedValueOnce(
+      backendError("Missing telegram-economic-calendar-routing:update", 403)
+    )
+
+    await expect(
+      updateTelegramFeatureSetting({
+        featureKey: "ECONOMIC_CALENDAR_ALERT",
+        workspaceId: 7,
+        enabled: false,
+      })
+    ).resolves.toEqual({
+      success: false,
+      error: testDictionary.telegram.routing.updatePermissionDenied,
+    })
+    expect(revalidatePath).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ["vi", viDictionary],
+    ["en", enDictionary],
+  ] as const)(
+    "distinguishes inactive accounts from route permission failures in %s",
+    async (locale, dictionary) => {
+      vi.mocked(getRequestLocale)
+        .mockResolvedValueOnce(locale)
+        .mockResolvedValueOnce(locale)
+      vi.mocked(getDictionary)
+        .mockResolvedValueOnce(dictionary)
+        .mockResolvedValueOnce(dictionary)
+      vi.mocked(fetchAuthenticated).mockRejectedValueOnce(
+        backendError("This account is inactive.", 403, "USER_INACTIVE")
+      )
+
+      await expect(
+        updateTelegramFeatureSetting({
+          featureKey: "ECONOMIC_CALENDAR_ALERT",
+          workspaceId: 7,
+          enabled: false,
+        })
+      ).resolves.toEqual({
+        success: false,
+        error: dictionary.telegram.routing.updateError,
+      })
+
+      vi.mocked(fetchAuthenticated).mockRejectedValueOnce(
+        backendError("Missing route permission", 403)
+      )
+      await expect(
+        updateTelegramFeatureSetting({
+          featureKey: "ECONOMIC_CALENDAR_ALERT",
+          workspaceId: 7,
+          enabled: false,
+        })
+      ).resolves.toEqual({
+        success: false,
+        error: dictionary.telegram.routing.updatePermissionDenied,
+      })
+    }
+  )
 
   it("returns localized validation errors and recovers backend failures", async () => {
     const invalid = await createTelegramMarketAnalysisSchedule({
@@ -224,6 +650,664 @@ describe("Telegram scheduled asset analysis actions", () => {
       scheduleRequest()
     )
     expect(failed).toEqual({ success: false, error: "Backend unavailable" })
+    expect(revalidatePath).not.toHaveBeenCalled()
+  })
+
+  it("rejects malformed runtime payloads before normalization or API requests", async () => {
+    const missingName = await createTelegramMarketAnalysisSchedule({
+      ...scheduleRequest(),
+      name: undefined,
+    } as never)
+    const nonArrayLocalTimes = await updateTelegramMarketAnalysisSchedule(11, {
+      ...scheduleRequest(),
+      localTimes: "09:00",
+    } as never)
+    const nonStringLanguage = await createTelegramMarketAnalysisSchedule({
+      ...scheduleRequest(),
+      outputLanguageIsoCode: 42,
+    } as never)
+
+    expect(missingName).toEqual({
+      success: false,
+      error: testDictionary.telegram.validationInvalid,
+    })
+    expect(nonArrayLocalTimes).toEqual({
+      success: false,
+      error: testDictionary.telegram.validationInvalid,
+    })
+    expect(nonStringLanguage).toEqual({
+      success: false,
+      error: testDictionary.telegram.validationInvalid,
+    })
+    expect(getLanguages).not.toHaveBeenCalled()
+    expect(fetchAuthenticated).not.toHaveBeenCalled()
+    expect(revalidatePath).not.toHaveBeenCalled()
+  })
+})
+
+describe("Telegram bot connection creation", () => {
+  beforeEach(() => {
+    vi.mocked(fetchAuthenticatedWithStatus).mockReset()
+    vi.mocked(revalidatePath).mockClear()
+  })
+
+  it("uses the create endpoint and distinguishes new connections from caller duplicates", async () => {
+    vi.mocked(fetchAuthenticatedWithStatus).mockResolvedValueOnce({
+      data: {
+        ...botConnectionResponse,
+        botToken: "must-not-reach-the-client",
+        ownerId: 987,
+        ownerEmail: "other-owner@example.test",
+      },
+      status: 201,
+    })
+
+    await expect(
+      createTelegramBotConnection({ botToken: "  fake-token  " })
+    ).resolves.toEqual({
+      success: true,
+      data: { connection: botConnectionResponse, created: true },
+    })
+    expect(fetchAuthenticatedWithStatus).toHaveBeenCalledWith(
+      "/telegram/bot-connections",
+      {
+        method: "POST",
+        body: JSON.stringify({ botToken: "fake-token" }),
+      }
+    )
+    expect(revalidatePath).toHaveBeenCalledWith("/telegram")
+
+    vi.mocked(fetchAuthenticatedWithStatus).mockReset()
+    vi.mocked(revalidatePath).mockClear()
+    vi.mocked(fetchAuthenticatedWithStatus).mockResolvedValueOnce({
+      data: {
+        ...botConnectionResponse,
+        status: "INVALID",
+        botToken: "must-not-reach-the-client",
+        ownerId: 987,
+      },
+      status: 200,
+    })
+
+    await expect(
+      createTelegramBotConnection({ botToken: "fake-token" })
+    ).resolves.toEqual({
+      success: true,
+      data: {
+        connection: { ...botConnectionResponse, status: "INVALID" },
+        created: false,
+      },
+    })
+    expect(revalidatePath).toHaveBeenCalledWith("/telegram")
+  })
+
+  it("keeps an unexpected saved status unverified without reporting create failure", async () => {
+    vi.mocked(fetchAuthenticatedWithStatus).mockResolvedValueOnce({
+      data: {
+        ...botConnectionResponse,
+        status: "UNKNOWN",
+        botToken: "must-not-reach-the-client",
+      },
+      status: 201,
+    })
+
+    await expect(
+      createTelegramBotConnection({ botToken: "fake-token" })
+    ).resolves.toEqual({
+      success: true,
+      data: {
+        connection: { ...botConnectionResponse, status: undefined },
+        created: true,
+      },
+    })
+    expect(revalidatePath).toHaveBeenCalledWith("/telegram")
+  })
+
+  it("keeps a successful create when the response omits saved fields", async () => {
+    vi.mocked(fetchAuthenticatedWithStatus).mockResolvedValueOnce({
+      data: {
+        displayLabel: "Partially verified bot",
+        botToken: "must-not-reach-the-client",
+        ownerId: 987,
+      },
+      status: 201,
+    })
+
+    await expect(
+      createTelegramBotConnection({ botToken: "fake-token" })
+    ).resolves.toEqual({
+      success: true,
+      data: {
+        connection: { displayLabel: "Partially verified bot" },
+        created: true,
+      },
+    })
+    expect(revalidatePath).toHaveBeenCalledWith("/telegram")
+  })
+
+  it("keeps a successful response without a body as an unverified outcome", async () => {
+    vi.mocked(fetchAuthenticatedWithStatus).mockResolvedValueOnce({
+      data: null,
+      status: 204,
+    })
+
+    await expect(
+      createTelegramBotConnection({ botToken: "fake-token" })
+    ).resolves.toEqual({
+      success: true,
+      data: { connection: {}, created: null },
+    })
+    expect(revalidatePath).toHaveBeenCalledWith("/telegram")
+  })
+
+  it("maps known API rejections and falls back to Vietnamese copy for other 4xx responses", async () => {
+    const cases = [
+      {
+        error: backendError("The Telegram bot token is invalid.", 400),
+        expected: testDictionary.telegram.bot.createTokenVerificationError,
+      },
+      {
+        error: backendError(
+          "Missing permission telegram-bot-connection:create",
+          403
+        ),
+        expected: testDictionary.telegram.bot.createPermissionDenied,
+      },
+      {
+        error: backendError(
+          "This Telegram bot is already connected.",
+          409,
+          "TELEGRAM_BOT_CONNECTION_ALREADY_EXISTS"
+        ),
+        expected: testDictionary.telegram.bot.createConnectionConflict,
+      },
+      {
+        error: backendError(
+          "The identity provider rejected account provisioning.",
+          409,
+          "USER_PROVISIONING_REJECTED"
+        ),
+        expected: testDictionary.telegram.bot.createError,
+      },
+      {
+        error: backendError("English validation detail", 422),
+        expected: testDictionary.telegram.bot.createError,
+      },
+    ]
+
+    for (const { error, expected } of cases) {
+      vi.mocked(fetchAuthenticatedWithStatus).mockRejectedValueOnce(error)
+
+      await expect(
+        createTelegramBotConnection({ botToken: "fake-token" })
+      ).resolves.toEqual({ success: false, error: expected })
+    }
+
+    expect(revalidatePath).not.toHaveBeenCalled()
+  })
+
+  it("keeps transport failures as an unverified outcome", async () => {
+    vi.mocked(fetchAuthenticatedWithStatus).mockRejectedValueOnce(
+      new Error("fetch failed")
+    )
+
+    await expect(
+      createTelegramBotConnection({ botToken: "fake-token" })
+    ).resolves.toEqual({
+      success: true,
+      data: { connection: {}, created: null },
+    })
+    expect(revalidatePath).toHaveBeenCalledWith("/telegram")
+  })
+
+  it.each([500, 502, 503])(
+    "keeps an HTTP %i response as an unverified outcome",
+    async (status) => {
+      vi.mocked(fetchAuthenticatedWithStatus).mockRejectedValueOnce(
+        backendError("Backend unavailable", status)
+      )
+
+      await expect(
+        createTelegramBotConnection({ botToken: "fake-token" })
+      ).resolves.toEqual({
+        success: true,
+        data: { connection: {}, created: null },
+      })
+      expect(revalidatePath).toHaveBeenCalledWith("/telegram")
+    }
+  )
+
+  it("does not downgrade a known API rejection to an unverified outcome", async () => {
+    vi.mocked(fetchAuthenticatedWithStatus).mockRejectedValueOnce(
+      backendError("Token verification failed.", 400)
+    )
+
+    await expect(
+      createTelegramBotConnection({ botToken: "fake-token" })
+    ).resolves.toEqual({
+      success: false,
+      error: testDictionary.telegram.bot.createTokenVerificationError,
+    })
+    expect(revalidatePath).not.toHaveBeenCalled()
+  })
+
+  it("rejects an empty token before calling the backend", async () => {
+    await expect(
+      createTelegramBotConnection({ botToken: "   " })
+    ).resolves.toEqual({
+      success: false,
+      error: "Enter the bot token.",
+    })
+    expect(fetchAuthenticatedWithStatus).not.toHaveBeenCalled()
+  })
+})
+
+describe("Telegram bot reconnection", () => {
+  beforeEach(() => {
+    vi.mocked(fetchAuthenticated).mockReset()
+    vi.mocked(fetchAuthenticatedWithStatus).mockReset()
+    vi.mocked(revalidatePath).mockClear()
+  })
+
+  it("posts only the selected row token and trusts its same-ID readback", async () => {
+    vi.mocked(fetchAuthenticatedWithStatus).mockResolvedValueOnce({
+      data: {
+        id: 999,
+        status: "INVALID",
+        botToken: "must-not-reach-the-client",
+      },
+      status: 200,
+    })
+    vi.mocked(fetchAuthenticated).mockResolvedValueOnce([
+      { id: 13, status: "INVALID" },
+      {
+        id: 12,
+        status: "ACTIVE",
+        botToken: "must-not-reach-the-client",
+        ownerEmail: "other-owner@example.test",
+      },
+    ])
+
+    const result = await reconnectTelegramBotConnection(12, {
+      botToken: "  fake-token  ",
+    })
+
+    expect(result).toEqual({ success: true, data: { status: "ACTIVE" } })
+    expect(JSON.stringify(result)).not.toContain("fake-token")
+    expect(fetchAuthenticatedWithStatus).toHaveBeenCalledWith(
+      "/telegram/bot-connections/12/reconnect",
+      { method: "POST", body: JSON.stringify({ botToken: "fake-token" }) }
+    )
+    expect(fetchAuthenticated).toHaveBeenCalledWith(
+      "/telegram/bot-connections"
+    )
+    expect(revalidatePath).toHaveBeenCalledWith("/telegram")
+  })
+
+  it("reports INVALID only from the selected row readback", async () => {
+    vi.mocked(fetchAuthenticatedWithStatus).mockResolvedValueOnce({
+      data: { id: 12, status: "ACTIVE" },
+      status: 200,
+    })
+    vi.mocked(fetchAuthenticated).mockResolvedValueOnce([
+      {
+        id: 12,
+        status: "INVALID",
+        failureReason: "Safe webhook failure reason",
+      },
+    ])
+
+    await expect(
+      reconnectTelegramBotConnection(12, { botToken: "fake-token" })
+    ).resolves.toEqual({ success: true, data: { status: "INVALID" } })
+  })
+
+  it("leaves success unverified when the selected row or its status is missing", async () => {
+    vi.mocked(fetchAuthenticatedWithStatus).mockResolvedValueOnce({
+      data: { id: 12, status: "ACTIVE" },
+      status: 200,
+    })
+    vi.mocked(fetchAuthenticated).mockResolvedValueOnce([
+      { id: 13, status: "ACTIVE" },
+      { id: 12, displayLabel: "Status missing" },
+    ])
+
+    await expect(
+      reconnectTelegramBotConnection(12, { botToken: "fake-token" })
+    ).resolves.toEqual({ success: true, data: {} })
+  })
+
+  it("does not infer Reconnect success from an uncontracted 2xx response", async () => {
+    vi.mocked(fetchAuthenticatedWithStatus).mockResolvedValueOnce({
+      data: { id: 12, status: "ACTIVE" },
+      status: 204,
+    })
+
+    await expect(
+      reconnectTelegramBotConnection(12, { botToken: "fake-token" })
+    ).resolves.toEqual({ success: true, data: {} })
+    expect(fetchAuthenticated).not.toHaveBeenCalled()
+    expect(revalidatePath).toHaveBeenCalledWith("/telegram")
+  })
+
+  it.each([
+    {
+      status: 400,
+      code: undefined,
+      expected: testDictionary.telegram.bot.createTokenVerificationError,
+    },
+    {
+      status: 403,
+      code: undefined,
+      expected: testDictionary.telegram.bot.reconnectPermissionDenied,
+    },
+    {
+      status: 409,
+      code: "TELEGRAM_BOT_ID_MISMATCH",
+      expected: testDictionary.telegram.bot.reconnectTokenMismatch,
+    },
+    {
+      status: 409,
+      code: "USER_PROVISIONING_REJECTED",
+      expected: testDictionary.telegram.bot.reconnectError,
+    },
+    {
+      status: 404,
+      code: "NOT_FOUND",
+      expected: testDictionary.telegram.bot.reconnectError,
+    },
+  ])("maps HTTP $status ($code) to localized copy", async (testCase) => {
+    vi.mocked(fetchAuthenticatedWithStatus).mockRejectedValueOnce(
+      backendError("Do not expose backend details", testCase.status, testCase.code)
+    )
+
+    await expect(
+      reconnectTelegramBotConnection(12, { botToken: "private-token" })
+    ).resolves.toEqual({ success: false, error: testCase.expected })
+    expect(fetchAuthenticated).not.toHaveBeenCalled()
+    expect(revalidatePath).not.toHaveBeenCalled()
+  })
+
+  it.each([new Error("fetch failed"), backendError("unavailable", 503)])(
+    "keeps an uncertain POST outcome unverified and refreshes the list",
+    async (error) => {
+      vi.mocked(fetchAuthenticatedWithStatus).mockRejectedValueOnce(error)
+
+      await expect(
+        reconnectTelegramBotConnection(12, { botToken: "private-token" })
+      ).resolves.toEqual({ success: true, data: {} })
+      expect(revalidatePath).toHaveBeenCalledWith("/telegram")
+      expect(JSON.stringify(error)).not.toContain("private-token")
+    }
+  )
+
+  it("rejects an invalid ID or empty token before calling the API", async () => {
+    await expect(
+      reconnectTelegramBotConnection(0, { botToken: "fake-token" })
+    ).resolves.toEqual({
+      success: false,
+      error: testDictionary.telegram.bot.invalidData,
+    })
+    await expect(
+      reconnectTelegramBotConnection(12, { botToken: "   " })
+    ).resolves.toEqual({ success: false, error: "Enter the bot token." })
+    expect(fetchAuthenticatedWithStatus).not.toHaveBeenCalled()
+  })
+})
+
+describe("Telegram bot connection read", () => {
+  it("projects the saved response to allowlisted metadata", async () => {
+    vi.mocked(fetchAuthenticated).mockReset()
+    vi.mocked(fetchAuthenticated).mockResolvedValueOnce([
+      {
+        ...botConnectionResponse,
+        botToken: "must-not-reach-the-client",
+        ownerId: 987,
+        ownerEmail: "other-owner@example.test",
+      },
+    ])
+
+    await expect(getTelegramBotConnections()).resolves.toEqual([
+      botConnectionResponse,
+    ])
+    expect(fetchAuthenticated).toHaveBeenCalledWith("/telegram/bot-connections")
+  })
+
+  it("preserves partial readback as unverified safe metadata", async () => {
+    vi.mocked(fetchAuthenticated).mockReset()
+    vi.mocked(fetchAuthenticated).mockResolvedValueOnce([
+      {
+        id: 14,
+        displayLabel: "Partially verified bot",
+        botToken: "must-not-reach-the-client",
+        ownerId: 987,
+      },
+    ])
+
+    const connections = await getTelegramBotConnections()
+
+    expect(connections).toEqual([
+      { id: 14, displayLabel: "Partially verified bot" },
+    ])
+    expect(connections[0]?.status).toBeUndefined()
+    expect(fetchAuthenticated).toHaveBeenCalledWith("/telegram/bot-connections")
+  })
+})
+
+describe("Telegram test message action", () => {
+  beforeEach(() => {
+    vi.mocked(fetchAuthenticated).mockReset()
+    vi.mocked(revalidatePath).mockClear()
+  })
+
+  it("posts only to the selected destination and succeeds after the producer response", async () => {
+    vi.mocked(fetchAuthenticated).mockResolvedValue(null)
+
+    await expect(sendTelegramTestMessage(24)).resolves.toEqual({
+      success: true,
+      data: undefined,
+    })
+    expect(fetchAuthenticated).toHaveBeenCalledWith(
+      "/telegram/destinations/24/test-message",
+      { method: "POST" }
+    )
+    expect(revalidatePath).not.toHaveBeenCalled()
+  })
+
+  it.each([400, 401, 403, 404, 409, 500, 502, 503])(
+    "keeps HTTP %i as a known rejection",
+    async (status) => {
+      vi.mocked(fetchAuthenticated).mockRejectedValue(
+        Object.assign(new Error(`HTTP ${status} rejection`), { status })
+      )
+
+      await expect(sendTelegramTestMessage(24)).resolves.toEqual({
+        success: false,
+        error: `HTTP ${status} rejection`,
+        outcome: "known-error",
+      })
+    }
+  )
+
+  it("maps producer 504 and the app transport AbortError to an unknown outcome", async () => {
+    vi.mocked(fetchAuthenticated).mockRejectedValue(
+      Object.assign(new Error("Gateway timeout"), { status: 504 })
+    )
+    await expect(sendTelegramTestMessage(24)).resolves.toEqual({
+      success: false,
+      error: testDictionary.telegram.destination.testMessageUnknownOutcome,
+      outcome: "unknown",
+    })
+
+    vi.mocked(fetchAuthenticated).mockRejectedValue(
+      Object.assign(new Error("Request aborted"), { name: "AbortError" })
+    )
+    await expect(sendTelegramTestMessage(24)).resolves.toEqual({
+      success: false,
+      error: testDictionary.telegram.destination.testMessageUnknownOutcome,
+      outcome: "unknown",
+    })
+    expect(revalidatePath).not.toHaveBeenCalled()
+  })
+
+  it("rejects invalid IDs before making a request", async () => {
+    await expect(sendTelegramTestMessage(0)).resolves.toEqual({
+      success: false,
+      error: testDictionary.telegram.destination.invalidData,
+      outcome: "known-error",
+    })
+    expect(fetchAuthenticated).not.toHaveBeenCalled()
+  })
+})
+
+describe("Telegram destination link actions", () => {
+  beforeEach(() => {
+    vi.mocked(fetchAuthenticated).mockReset()
+    vi.mocked(revalidatePath).mockClear()
+  })
+
+  it("creates a token for the selected bot and accepts the published response", async () => {
+    const response = {
+      botConnectionId: 12,
+      token: "ExampleLinkToken0123456789ABCDEF",
+      startCommand: "/start ExampleLinkToken0123456789ABCDEF",
+      expiresAt: "2030-01-15T08:15:00.000Z",
+    }
+    vi.mocked(fetchAuthenticated).mockResolvedValue(response)
+
+    await expect(
+      createTelegramLinkToken({ botConnectionId: 12 })
+    ).resolves.toEqual({ success: true, data: response })
+    expect(fetchAuthenticated).toHaveBeenCalledWith(
+      "/telegram/destinations/link-token",
+      {
+        method: "POST",
+        body: JSON.stringify({ botConnectionId: 12 }),
+      }
+    )
+    expect(revalidatePath).not.toHaveBeenCalled()
+  })
+
+  it("rejects missing response fields and a response for a different bot", async () => {
+    vi.mocked(fetchAuthenticated).mockResolvedValueOnce({
+      botConnectionId: 12,
+      startCommand: "/start missing-token",
+      expiresAt: "2030-01-15T08:15:00.000Z",
+    })
+
+    await expect(
+      createTelegramLinkToken({ botConnectionId: 12 })
+    ).resolves.toEqual({
+      success: false,
+      error: testDictionary.telegram.destination.invalidData,
+    })
+
+    vi.mocked(fetchAuthenticated).mockResolvedValueOnce({
+      botConnectionId: 13,
+      token: "ExampleLinkToken0123456789ABCDEF",
+      startCommand: "/start ExampleLinkToken0123456789ABCDEF",
+      expiresAt: "2030-01-15T08:15:00.000Z",
+    })
+
+    await expect(
+      createTelegramLinkToken({ botConnectionId: 12 })
+    ).resolves.toEqual({
+      success: false,
+      error: testDictionary.telegram.destination.invalidData,
+    })
+  })
+
+  it("keeps API permission failures as errors", async () => {
+    vi.mocked(fetchAuthenticated).mockRejectedValue(
+      Object.assign(new Error("Permission denied"), { status: 403 })
+    )
+
+    await expect(
+      createTelegramLinkToken({ botConnectionId: 12 })
+    ).resolves.toEqual({ success: false, error: "Permission denied" })
+  })
+
+  it("reads back bot and destination status from the API response", async () => {
+    const destinations = [
+      {
+        id: 31,
+        botConnectionId: 12,
+        chatId: "-100123",
+        chatType: "CHANNEL" as const,
+        displayLabel: "Read back channel",
+        status: "DISABLED" as const,
+      },
+    ]
+    vi.mocked(fetchAuthenticated).mockResolvedValue(destinations)
+
+    await expect(getTelegramDestinations()).resolves.toEqual(destinations)
+    expect(fetchAuthenticated).toHaveBeenCalledWith("/telegram/destinations")
+  })
+})
+
+describe("Telegram destination removal action", () => {
+  beforeEach(() => {
+    vi.mocked(fetchAuthenticated).mockReset()
+    vi.mocked(revalidatePath).mockReset()
+  })
+
+  it("removes by ID and revalidates only after the API confirms success", async () => {
+    vi.mocked(fetchAuthenticated).mockResolvedValue(undefined)
+
+    await expect(deleteTelegramDestination(24)).resolves.toEqual({
+      success: true,
+      data: undefined,
+    })
+    expect(fetchAuthenticated).toHaveBeenCalledWith(
+      "/telegram/destinations/24",
+      { method: "DELETE" }
+    )
+    expect(revalidatePath).toHaveBeenCalledWith("/telegram")
+  })
+
+  it("maps only the documented in-use conflict and preserves failure state", async () => {
+    vi.mocked(fetchAuthenticated).mockRejectedValue(
+      Object.assign(new Error("Generic conflict"), {
+        status: 409,
+        code: "TELEGRAM_DESTINATION_IN_USE",
+      })
+    )
+
+    await expect(deleteTelegramDestination(24)).resolves.toEqual({
+      success: false,
+      error: testDictionary.telegram.destination.removeInUseError,
+    })
+    expect(revalidatePath).not.toHaveBeenCalled()
+  })
+
+  it("does not mislabel other conflicts or transport failures as references", async () => {
+    vi.mocked(fetchAuthenticated)
+      .mockRejectedValueOnce(
+        Object.assign(new Error("Unexpected server response"), {
+          status: 500,
+          code: "TELEGRAM_DESTINATION_IN_USE",
+        })
+      )
+      .mockRejectedValueOnce(
+        Object.assign(new Error("Account provisioning was rejected"), {
+          status: 409,
+          code: "USER_PROVISIONING_REJECTED",
+        })
+      )
+      .mockRejectedValueOnce(new Error("Network failure"))
+
+    await expect(deleteTelegramDestination(24)).resolves.toEqual({
+      success: false,
+      error: "Unexpected server response",
+    })
+    await expect(deleteTelegramDestination(24)).resolves.toEqual({
+      success: false,
+      error: "Account provisioning was rejected",
+    })
+    await expect(deleteTelegramDestination(24)).resolves.toEqual({
+      success: false,
+      error: testDictionary.telegram.destination.removeError,
+    })
     expect(revalidatePath).not.toHaveBeenCalled()
   })
 })

@@ -27,24 +27,26 @@ export default function Error({
   }, [error])
 
   return (
-    <Empty className="min-h-[420px] rounded-[28px] border border-dashed border-destructive/20 bg-destructive/5">
-      <EmptyHeader>
-        <EmptyMedia
-          variant="icon"
-          className="bg-destructive/10 text-destructive"
-        >
-          <ChartCandlestick />
-        </EmptyMedia>
-        <EmptyTitle>{dictionary.marketCharts.errorTitle}</EmptyTitle>
-        <EmptyDescription>
-          {error.message || dictionary.marketCharts.errorDescription}
-        </EmptyDescription>
-      </EmptyHeader>
+    <div className="-m-5 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-card">
+      <Empty className="min-h-0 flex-1 rounded-none border-0 bg-transparent">
+        <EmptyHeader>
+          <EmptyMedia
+            variant="icon"
+            className="bg-destructive/10 text-destructive"
+          >
+            <ChartCandlestick />
+          </EmptyMedia>
+          <EmptyTitle>{dictionary.marketCharts.errorTitle}</EmptyTitle>
+          <EmptyDescription>
+            {error.message || dictionary.marketCharts.errorDescription}
+          </EmptyDescription>
+        </EmptyHeader>
 
-      <Button onClick={() => reset()} variant="outline">
-        <RotateCcw data-icon="inline-start" />
-        {dictionary.common.retry}
-      </Button>
-    </Empty>
+        <Button onClick={() => reset()} variant="outline">
+          <RotateCcw data-icon="inline-start" />
+          {dictionary.common.retry}
+        </Button>
+      </Empty>
+    </div>
   )
 }

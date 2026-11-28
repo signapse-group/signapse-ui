@@ -23,6 +23,7 @@ import { AccessDenied } from "@/components/access-denied"
 import { Skeleton } from "@/components/ui/skeleton"
 
 import { GraphViewStateActions } from "./graph-view-state-actions"
+import { GraphViewPanel } from "./graph-view-panel"
 import { SigmaGraphViewEntry } from "./sigma-graph-view-entry"
 
 type DemoPageProps = {
@@ -104,31 +105,10 @@ async function WorkspaceGraph({
   }
 
   let graphView: GraphViewResponse | null = null
-  let watchlist: Awaited<
-    ReturnType<typeof getWorkspaceWatchlistAssets>
-  > | null = null
-  let failedOperation: "graph" | "watchlist" = "graph"
-  let loadFailed = false
   let loadError: unknown
   try {
-    graphView = await getGraphView()
-    if (graphView.nodes.length === 0 && canReadWatchlist) {
-      failedOperation = "watchlist"
-      watchlist = await getWorkspaceWatchlistAssets({
-        filter: "",
-        page: 0,
-        size: 1,
-        sort: [],
-      })
-      if (
-        !Number.isInteger(watchlist.totalElements) ||
-        watchlist.totalElements < 0
-      ) {
-        throw new Error(copy.watchlistResponseInvalid)
-      }
-    }
+    graphView = await getGraphView(7)
   } catch (error) {
-    loadFailed = true
     loadError = error
   }
 
@@ -143,19 +123,13 @@ async function WorkspaceGraph({
     )
   }
   ensureWorkspaceUnchanged(me, latest, copy.workspaceChanged)
-  if (loadFailed) {
+  if (loadError) {
     if (getErrorStatus(loadError) === 403) {
-      return failedOperation === "graph" ? (
+      return (
         <GraphAccessDenied
           title={dictionary.graphView.title}
           description={dictionary.graphView.readDenied}
           permission="graph-view:read"
-        />
-      ) : (
-        <GraphAccessDenied
-          title={dictionary.graphView.title}
-          description={copy.watchlistReadDenied}
-          permission="watchlist:read"
         />
       )
     }
@@ -165,37 +139,48 @@ async function WorkspaceGraph({
   if (!graphView) {
     throw new Error(dictionary.graphView.responseInvalid)
   }
-  if (graphView.nodes.length === 0) {
-    if (!canReadWatchlist) {
+  let initialWatchlistIsEmpty: boolean | null =
+    graphView.nodes.length > 0 ? false : null
+  if (graphView.nodes.length === 0 && canReadWatchlist) {
+    try {
+      const watchlist = await getWorkspaceWatchlistAssets({
+        filter: "",
+        page: 0,
+        size: 1,
+        sort: [],
+      })
+      if (
+        Number.isInteger(watchlist.totalElements) &&
+        watchlist.totalElements >= 0
+      ) {
+        initialWatchlistIsEmpty = watchlist.totalElements === 0
+      }
+    } catch {
+      // A watchlist failure does not invalidate a successful empty Graph response.
+    }
+
+    const afterWatchlist = await getMe()
+    if (!afterWatchlist.currentWorkspace) {
       return (
-        <GraphAccessDenied
+        <WorkspaceSelectionRequired
+          canReadWorkspace={canReadWorkspace}
           title={dictionary.graphView.title}
-          description={copy.watchlistReadDenied}
-          permission="watchlist:read"
+          copy={copy}
         />
       )
     }
-    const watchlistIsEmpty = watchlist?.totalElements === 0
-    return (
-      <GraphState
-        title={watchlistIsEmpty ? copy.emptyWatchlist : copy.noGraph}
-        description={
-          watchlistIsEmpty
-            ? copy.emptyWatchlistDescription
-            : copy.noGraphDescription
-        }
-        action={
-          canManageWatchlist && latest.currentWorkspace ? (
-            <GraphViewStateActions workspace={latest.currentWorkspace} />
-          ) : undefined
-        }
-      />
-    )
+    ensureWorkspaceUnchanged(me, afterWatchlist, copy.workspaceChanged)
   }
+
   return (
-    <SigmaGraphViewEntry
+    <GraphViewPanel
       key={`${me.id}:${me.currentWorkspace.id}`}
+      userId={me.id}
+      workspace={me.currentWorkspace}
       graphView={graphView}
+      initialWatchlistIsEmpty={initialWatchlistIsEmpty}
+      canReadWorkspace={canReadWorkspace}
+      canManageWatchlist={canManageWatchlist}
     />
   )
 }

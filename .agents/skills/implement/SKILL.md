@@ -15,35 +15,33 @@ For Symphony, at start, resume and before mutations or handoff, read the live Su
 
 Inspect checkout, branch/target, existing output and dirty-file ownership. Reuse existing work on resume; isolate it when needed. Resolve the intended review base to a commit and preserve unrelated changes.
 
-In Progress, reconcile Survey, review feedback, branch/PR and previous evidence. Reinvestigate the affected changes and continue in Progress. An absent Survey comment is allowed. For a Bug fix, reconcile accepted expected behavior and basis with the latest relevant QA report, case/version, actual result, tested build/environment and assigned regression. Fix the assigned deviation. The coordinator owns Bug and QA lifecycle.
+On entry or resume in Progress, check the live Subtask for the Survey handoff and read it before editing. Reconcile it with the accepted contract, latest review feedback, existing branch/PR and prior evidence. For a Bug fix, reconcile accepted expected behavior and basis with the latest relevant QA report, case/version, actual result, tested build/environment and assigned regression. Fix the assigned deviation. The coordinator owns Bug and QA lifecycle.
 
 Trace affected callers, tests, fixtures, configuration and exports. State the smallest complete change, verification seams and material risks; no mandatory plan file, snapshot or report is needed.
 
 For API integration, apply [API consumer standards](../../../docs/api-consumer.md), inspecting current affected producer operations and consumer callers/types. Fixtures do not prove publication or live integration.
 
-For UI changes, apply the scoped instructions and [UI design gate](../../../docs/design/DESIGN.md#ui-design-gate). Reconcile changes since Survey or review when applicable. Before editing, identify observable behavior and any fixed constraints on reused components. Continue independent work while resolving producer or input gaps.
+For UI changes, apply the scoped instructions and [UI design gate](../../../docs/design/DESIGN.md#ui-design-gate). When Survey selects a pattern, open the source cited in `Hướng làm` before editing and use the selected FE wrapper and composition for the behavior it covers. If a task already in Progress needs a pattern and its handoff is missing or stale, [select a UI pattern](../survey-frontend/SKILL.md#select-a-ui-pattern) in Progress. Tasks that need no pattern choice can proceed from the accepted contract. Record any substitute and its reason in the PR. Refer changes to the accepted user experience to the coordinator. Continue independent work while resolving input gaps.
 
 ## Implement and Verify
 
-Choose the highest stable public seam reaching the changed behavior; use testing or diagnosis techniques when needed. Keep slices small, run focused checks and fix failures caused by the change.
+Select checks for changed behavior and reruns after fixes under [test ownership and selection](../../../CONTRIBUTING.md#test-ownership-and-selection). Fix failures caused by the change.
 
-Apply [verification standards](../../../CONTRIBUTING.md#verification), including [test ownership and selection](../../../CONTRIBUTING.md#test-ownership-and-selection), and the [change-scope matrix](../../../docs/testing/browser-tests.md#selecting-checks-by-change-scope). Preserve required public contract documentation and actual check evidence. Missing mandatory evidence remains a gap.
+Keep required public contract documentation and check results with the PR.
 
-For Symphony UI changes, record the [rendered comparison](../../../docs/design/DESIGN.md#ui-design-gate) in the existing PR or handoff before In Review.
+For UI changes, record the [design comparison and QA handoff](../../../docs/design/DESIGN.md#ui-design-gate) in the PR before In Review.
 
 ## Decisions and Resume
 
-Apply [decision/evidence standards](../../../CONTRIBUTING.md#decisions-and-evidence). Resolve human identities from configuration/user context rather than guessing. Reconcile changed requirements and existing feedback/output on resume; reverify affected behavior while retaining valid unrelated evidence.
+Apply [decision/evidence standards](../../../CONTRIBUTING.md#decisions-and-evidence). Resolve human identities from configuration/user context rather than guessing. Reconcile changed requirements and existing feedback/output on resume.
 
-Keep the existing contract/output when an accepted change is within the contribution and invalidate affected evidence. A different deliverable requires the owner's replacement or cancellation decision. Report missing behavior or required evidence as a gap.
+Keep the existing contract and output for changes within the accepted contribution. A different deliverable requires the owner's replacement or cancellation decision.
 
 ## Reviewable output
 
 Keep the problem, final change, candidate and actual checks/limits clear in the requested PR/artifact/session. When the assignment requires independent review, provide the contract, resolved base/HEAD, ownership and raw check evidence without a predetermined verdict; the assignment supplies that role. Resolve blocking findings and reverify affected parts. Preserve candidate history and finish the requested scope.
 
 ## Symphony PR and handoff
-
-Continue here only with the Progress grant. Apply test ownership and selection to the QA/coordinator handoff.
 
 ### Prepare output and PR evidence
 
@@ -68,4 +66,4 @@ Require every mandatory check before handoff. Follow [record ownership/evidence 
 
 ### Failure, blocker and resume
 
-Fix implementation, test and required local render/check failures in Progress. Record future-phase prerequisites in the handoff. If a required Implement output is still blocked, apply the [shared blocker gate](../../../CONTRIBUTING.md#blockers-and-resume). When met, save/read back the consolidated record, resolve/read back Progress → Blocked and end the session. On a fresh assigned turn, reconcile existing output and applicable feedback/resolution before continuing.
+Fix observed implementation and local check failures in Progress. Record QA checks and other future-phase work in the handoff. If a required Implement output is still blocked, apply the [shared blocker gate](../../../CONTRIBUTING.md#blockers-and-resume). When met, save/read back the consolidated record, resolve/read back Progress → Blocked and end the session. On a fresh assigned turn, reconcile existing output and applicable feedback/resolution before continuing.

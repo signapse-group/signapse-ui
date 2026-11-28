@@ -3,7 +3,11 @@
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
 
-import { fetchAuthenticated } from "@/app/api/auth/action"
+import {
+  type BackendApiError,
+  fetchAuthenticated,
+  fetchAuthenticatedWithStatus,
+} from "@/app/api/auth/action"
 import { getLanguages } from "@/app/api/languages/action"
 import { ActionResult } from "@/app/lib/definitions"
 import { getDictionary } from "@/app/lib/i18n/dictionaries"
@@ -13,18 +17,27 @@ import { isSelectableLanguage } from "@/app/lib/languages/definitions"
 import {
   CreateTelegramBotConnectionRequest,
   CreateTelegramLinkTokenRequest,
+  TelegramFeatureSettingResponseSchema,
   getCreateTelegramBotConnectionSchema,
   getCreateTelegramLinkTokenSchema,
+  getTelegramLinkTokenResponseSchema,
   getSaveTelegramMarketAnalysisScheduleSchema,
   getUpdateTelegramFeatureSettingSchema,
   normalizeSaveTelegramMarketAnalysisScheduleRequest,
   SaveTelegramMarketAnalysisScheduleRequest,
-  TelegramBotConnectionResponse,
+  telegramBotConnectionReadbackSchema,
+  telegramBotConnectionsReadbackResponseSchema,
+  TelegramBotConnectionReadback,
   TelegramDestinationResponse,
-  TelegramFeatureSettingResponse,
+  TelegramFeatureSettingReadbackSchema,
+  TelegramFeatureSettingUpdateResult,
   TelegramLinkTokenResponse,
   TelegramMarketAnalysisScheduleResponse,
   UpdateTelegramFeatureSettingRequest,
+} from "@/app/lib/telegram/definitions"
+import type {
+  TelegramFeatureKey,
+  TelegramFeatureSettingResponse,
 } from "@/app/lib/telegram/definitions"
 
 async function getTelegramDictionary() {
@@ -32,18 +45,110 @@ async function getTelegramDictionary() {
 }
 
 function getValidationError(error: z.ZodError, dictionary: Dictionary): string {
-  return error.issues[0]?.message ?? dictionary.telegram.validationInvalid
+  const issue = error.issues[0]
+
+  if (issue?.code === "invalid_type" || issue?.code === "unrecognized_keys") {
+    return dictionary.telegram.validationInvalid
+  }
+
+  return issue?.message ?? dictionary.telegram.validationInvalid
 }
 
 function getActionError(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback
 }
 
+function getCreateBotActionError(
+  error: unknown,
+  dictionary: Dictionary
+): string {
+  const apiError =
+    error instanceof Error ? (error as BackendApiError) : undefined
+
+  if (apiError?.status === 400) {
+    return dictionary.telegram.bot.createTokenVerificationError
+  }
+  if (apiError?.status === 403) {
+    return dictionary.telegram.bot.createPermissionDenied
+  }
+  if (
+    apiError?.status === 409 &&
+    apiError.code === "TELEGRAM_BOT_CONNECTION_ALREADY_EXISTS"
+  ) {
+    return dictionary.telegram.bot.createConnectionConflict
+  }
+
+  return dictionary.telegram.bot.createError
+}
+
+function getTelegramDestinationRemoveError(
+  error: unknown,
+  dictionary: Dictionary
+): string {
+  const messages = dictionary.telegram.destination
+  if (!(error instanceof Error)) return messages.removeError
+
+  const apiError = error as BackendApiError
+  if (
+    apiError.status === 409 &&
+    apiError.code === "TELEGRAM_DESTINATION_IN_USE"
+  ) {
+    return messages.removeInUseError
+  }
+  if (typeof apiError.status === "number") {
+    return error.message || messages.removeError
+  }
+
+  return messages.removeError
+}
+
+function getReconnectBotActionError(
+  error: unknown,
+  dictionary: Dictionary
+): string {
+  const apiError =
+    error instanceof Error ? (error as BackendApiError) : undefined
+
+  if (apiError?.status === 400) {
+    return dictionary.telegram.bot.createTokenVerificationError
+  }
+  if (apiError?.status === 403) {
+    return dictionary.telegram.bot.reconnectPermissionDenied
+  }
+  if (
+    apiError?.status === 409 &&
+    apiError.code === "TELEGRAM_BOT_ID_MISMATCH"
+  ) {
+    return dictionary.telegram.bot.reconnectTokenMismatch
+  }
+
+  return dictionary.telegram.bot.reconnectError
+}
+
+function isTelegramTestMessageOutcomeUnknown(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    (error.name === "AbortError" || ("status" in error && error.status === 504))
+  )
+}
+
 async function validateScheduleRequest(
   request: SaveTelegramMarketAnalysisScheduleRequest,
   dictionary: Dictionary
 ) {
-  const normalized = normalizeSaveTelegramMarketAnalysisScheduleRequest(request)
+  const raw =
+    getSaveTelegramMarketAnalysisScheduleSchema(dictionary).safeParse(request)
+
+  if (!raw.success) {
+    return {
+      success: false as const,
+      error: getValidationError(raw.error, dictionary),
+    }
+  }
+
+  const normalized = normalizeSaveTelegramMarketAnalysisScheduleRequest(
+    raw.data
+  )
   let supportedLanguageIsoCodes: string[] | undefined
 
   if (normalized.outputLanguageIsoCode) {
@@ -80,11 +185,19 @@ function revalidateTelegramConfiguration() {
 }
 
 export async function getTelegramBotConnections(): Promise<
-  TelegramBotConnectionResponse[]
+  TelegramBotConnectionReadback[]
 > {
-  return fetchAuthenticated<TelegramBotConnectionResponse[]>(
+  const response = await fetchAuthenticated<unknown>(
     "/telegram/bot-connections"
   )
+  const parsed =
+    telegramBotConnectionsReadbackResponseSchema.safeParse(response)
+
+  if (!parsed.success) {
+    throw new Error("Invalid Telegram bot connections response")
+  }
+
+  return parsed.data
 }
 
 export async function getTelegramDestinations(): Promise<
@@ -95,12 +208,26 @@ export async function getTelegramDestinations(): Promise<
   )
 }
 
-export async function getTelegramFeatureSettings(): Promise<
-  TelegramFeatureSettingResponse[]
-> {
-  return fetchAuthenticated<TelegramFeatureSettingResponse[]>(
-    "/telegram/feature-settings"
+export async function getTelegramFeatureSettings({
+  workspaceId,
+  featureKey,
+}: {
+  workspaceId?: number
+  featureKey?: TelegramFeatureKey
+} = {}): Promise<TelegramFeatureSettingResponse[]> {
+  const filters = [
+    workspaceId === undefined ? null : `workspace.id eq ${workspaceId}`,
+    featureKey === undefined ? null : `featureKey eq '${featureKey}'`,
+  ].filter((filter): filter is string => filter !== null)
+  const query = new URLSearchParams()
+
+  if (filters.length > 0) query.set("$filter", filters.join(" and "))
+  const queryString = query.toString()
+
+  const response = await fetchAuthenticated<unknown>(
+    `/telegram/feature-settings${queryString ? `?${queryString}` : ""}`
   )
+  return z.array(TelegramFeatureSettingResponseSchema).parse(response)
 }
 
 export async function getTelegramMarketAnalysisSchedules(): Promise<
@@ -113,7 +240,12 @@ export async function getTelegramMarketAnalysisSchedules(): Promise<
 
 export async function createTelegramBotConnection(
   request: CreateTelegramBotConnectionRequest
-): Promise<ActionResult<TelegramBotConnectionResponse>> {
+): Promise<
+  ActionResult<{
+    connection: TelegramBotConnectionReadback
+    created: boolean | null
+  }>
+> {
   const dictionary = await getTelegramDictionary()
   const parsed =
     getCreateTelegramBotConnectionSchema(dictionary).safeParse(request)
@@ -126,7 +258,7 @@ export async function createTelegramBotConnection(
   }
 
   try {
-    const data = await fetchAuthenticated<TelegramBotConnectionResponse>(
+    const response = await fetchAuthenticatedWithStatus<unknown>(
       "/telegram/bot-connections",
       {
         method: "POST",
@@ -134,38 +266,125 @@ export async function createTelegramBotConnection(
       }
     )
 
+    if (response.status !== 200 && response.status !== 201) {
+      if (response.status >= 200 && response.status < 300) {
+        revalidateTelegramConfiguration()
+
+        return {
+          success: true,
+          data: {
+            connection: {},
+            created: null,
+          },
+        }
+      }
+
+      return {
+        success: false,
+        error: dictionary.telegram.bot.createError,
+      }
+    }
+
+    const parsedConnection = telegramBotConnectionReadbackSchema.safeParse(
+      response.data
+    )
+    const connection = parsedConnection.success ? parsedConnection.data : {}
+
     revalidateTelegramConfiguration()
 
-    return { success: true, data }
-  } catch (error: unknown) {
     return {
-      success: false,
-      error: getActionError(error, dictionary.telegram.bot.createError),
+      success: true,
+      data: {
+        connection,
+        created: response.status === 201,
+      },
+    }
+  } catch (error: unknown) {
+    const status = (error as BackendApiError)?.status
+    if (typeof status === "number" && status >= 400 && status < 500) {
+      return {
+        success: false,
+        error: getCreateBotActionError(error, dictionary),
+      }
+    }
+
+    revalidateTelegramConfiguration()
+
+    return {
+      success: true,
+      data: {
+        connection: {},
+        created: null,
+      },
     }
   }
 }
 
-export async function disableTelegramBotConnection(
-  id: number
-): Promise<ActionResult<TelegramBotConnectionResponse>> {
+export async function reconnectTelegramBotConnection(
+  connectionId: number,
+  request: { botToken: string }
+): Promise<ActionResult<{ status?: "ACTIVE" | "INVALID" }>> {
   const dictionary = await getTelegramDictionary()
+  const parsedId = z.number().int().positive().safeParse(connectionId)
+
+  if (!parsedId.success) {
+    return { success: false, error: dictionary.telegram.bot.invalidData }
+  }
+
+  const parsed =
+    getCreateTelegramBotConnectionSchema(dictionary).safeParse(request)
+
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: getValidationError(parsed.error, dictionary),
+    }
+  }
 
   try {
-    const data = await fetchAuthenticated<TelegramBotConnectionResponse>(
-      `/telegram/bot-connections/${id}/disable`,
+    const response = await fetchAuthenticatedWithStatus<unknown>(
+      `/telegram/bot-connections/${parsedId.data}/reconnect`,
       {
-        method: "PATCH",
+        method: "POST",
+        body: JSON.stringify(parsed.data),
       }
     )
 
-    revalidateTelegramConfiguration()
-
-    return { success: true, data }
-  } catch (error: unknown) {
-    return {
-      success: false,
-      error: getActionError(error, dictionary.telegram.bot.disableError),
+    if (response.status !== 200) {
+      revalidateTelegramConfiguration()
+      return { success: true, data: {} }
     }
+  } catch (error: unknown) {
+    const status =
+      error instanceof Error ? (error as BackendApiError).status : undefined
+
+    if (typeof status === "number" && status >= 400 && status < 500) {
+      return {
+        success: false,
+        error: getReconnectBotActionError(error, dictionary),
+      }
+    }
+
+    revalidateTelegramConfiguration()
+    return { success: true, data: {} }
+  }
+
+  let status: "ACTIVE" | "INVALID" | undefined
+  try {
+    const connection = (await getTelegramBotConnections()).find(
+      (item) => item.id === parsedId.data
+    )
+    if (connection?.status === "ACTIVE" || connection?.status === "INVALID") {
+      status = connection.status
+    }
+  } catch {
+    // The page refresh below lets the list recover even if this readback fails.
+  }
+
+  revalidateTelegramConfiguration()
+  return {
+    success: true,
+    data: status ? { status } : {},
   }
 }
 
@@ -183,9 +402,15 @@ export async function deleteTelegramBotConnection(
 
     return { success: true, data: undefined }
   } catch (error: unknown) {
+    const apiError =
+      error instanceof Error ? (error as BackendApiError) : undefined
+
     return {
       success: false,
-      error: getActionError(error, dictionary.telegram.bot.deleteError),
+      error:
+        apiError?.code === "TELEGRAM_BOT_CONNECTION_HAS_UNREMOVED_DESTINATIONS"
+          ? dictionary.telegram.bot.deleteBlockedByDestinations
+          : dictionary.telegram.bot.deleteError,
     }
   }
 }
@@ -204,7 +429,7 @@ export async function createTelegramLinkToken(
   }
 
   try {
-    const data = await fetchAuthenticated<TelegramLinkTokenResponse>(
+    const data = await fetchAuthenticated<unknown>(
       "/telegram/destinations/link-token",
       {
         method: "POST",
@@ -212,7 +437,19 @@ export async function createTelegramLinkToken(
       }
     )
 
-    return { success: true, data }
+    const parsedResponse = getTelegramLinkTokenResponseSchema().safeParse(data)
+
+    if (
+      !parsedResponse.success ||
+      parsedResponse.data.botConnectionId !== parsed.data.botConnectionId
+    ) {
+      return {
+        success: false,
+        error: dictionary.telegram.destination.invalidData,
+      }
+    }
+
+    return { success: true, data: parsedResponse.data }
   } catch (error: unknown) {
     return {
       success: false,
@@ -224,15 +461,24 @@ export async function createTelegramLinkToken(
   }
 }
 
+type TelegramTestMessageResult =
+  | { success: true; data: undefined }
+  | {
+      success: false
+      error: string
+      outcome: "known-error" | "unknown"
+    }
+
 export async function sendTelegramTestMessage(
   id: number
-): Promise<ActionResult> {
+): Promise<TelegramTestMessageResult> {
   const dictionary = await getTelegramDictionary()
 
   if (!Number.isInteger(id) || id <= 0) {
     return {
       success: false,
       error: dictionary.telegram.destination.invalidData,
+      outcome: "known-error",
     }
   }
 
@@ -246,39 +492,21 @@ export async function sendTelegramTestMessage(
 
     return { success: true, data: undefined }
   } catch (error: unknown) {
+    if (isTelegramTestMessageOutcomeUnknown(error)) {
+      return {
+        success: false,
+        error: dictionary.telegram.destination.testMessageUnknownOutcome,
+        outcome: "unknown",
+      }
+    }
+
     return {
       success: false,
       error: getActionError(
         error,
         dictionary.telegram.destination.testMessageError
       ),
-    }
-  }
-}
-
-export async function disableTelegramDestination(
-  id: number
-): Promise<ActionResult<TelegramDestinationResponse>> {
-  const dictionary = await getTelegramDictionary()
-
-  try {
-    const data = await fetchAuthenticated<TelegramDestinationResponse>(
-      `/telegram/destinations/${id}/disable`,
-      {
-        method: "PATCH",
-      }
-    )
-
-    revalidateTelegramConfiguration()
-
-    return { success: true, data }
-  } catch (error: unknown) {
-    return {
-      success: false,
-      error: getActionError(
-        error,
-        dictionary.telegram.destination.disableError
-      ),
+      outcome: "known-error",
     }
   }
 }
@@ -299,16 +527,17 @@ export async function deleteTelegramDestination(
   } catch (error: unknown) {
     return {
       success: false,
-      error: getActionError(error, dictionary.telegram.destination.deleteError),
+      error: getTelegramDestinationRemoveError(error, dictionary),
     }
   }
 }
 
 export async function updateTelegramFeatureSetting(
   request: UpdateTelegramFeatureSettingRequest
-): Promise<ActionResult<TelegramFeatureSettingResponse>> {
+): Promise<ActionResult<TelegramFeatureSettingUpdateResult>> {
   const dictionary = await getTelegramDictionary()
-  const parsed = getUpdateTelegramFeatureSettingSchema().safeParse(request)
+  const parsed =
+    getUpdateTelegramFeatureSettingSchema(dictionary).safeParse(request)
 
   if (!parsed.success) {
     return {
@@ -318,21 +547,60 @@ export async function updateTelegramFeatureSetting(
   }
 
   try {
-    const data = await fetchAuthenticated<TelegramFeatureSettingResponse>(
+    const response = await fetchAuthenticated<unknown>(
       "/telegram/feature-settings",
       {
         method: "PUT",
         body: JSON.stringify(parsed.data),
       }
     )
-
     revalidateTelegramConfiguration()
 
-    return { success: true, data }
+    const responseReadback =
+      TelegramFeatureSettingReadbackSchema.safeParse(response)
+    if (
+      responseReadback.success &&
+      responseReadback.data.featureKey === parsed.data.featureKey &&
+      responseReadback.data.workspaceId === parsed.data.workspaceId
+    ) {
+      return { success: true, data: responseReadback.data }
+    }
+
+    try {
+      const settings = await getTelegramFeatureSettings({
+        workspaceId: parsed.data.workspaceId,
+        featureKey: parsed.data.featureKey,
+      })
+      const savedSetting = settings.find(
+        (setting) =>
+          setting.featureKey === parsed.data.featureKey &&
+          setting.workspaceId === parsed.data.workspaceId
+      )
+      const savedReadback =
+        TelegramFeatureSettingReadbackSchema.safeParse(savedSetting)
+
+      if (savedReadback.success) {
+        return { success: true, data: savedReadback.data }
+      }
+    } catch {
+      // A successful write with unreadable readback must not leave old state authoritative.
+    }
+
+    return { success: true, data: { readbackUnverified: true } }
   } catch (error: unknown) {
+    const apiError =
+      error instanceof Error ? (error as BackendApiError) : undefined
+
     return {
       success: false,
-      error: getActionError(error, dictionary.telegram.routing.updateError),
+      error:
+        error instanceof z.ZodError
+          ? dictionary.telegram.routing.updateError
+          : apiError?.code === "USER_INACTIVE"
+            ? dictionary.telegram.routing.updateError
+            : apiError?.status === 401 || apiError?.status === 403
+              ? dictionary.telegram.routing.updatePermissionDenied
+              : dictionary.telegram.routing.updateError,
     }
   }
 }
@@ -392,31 +660,6 @@ export async function updateTelegramMarketAnalysisSchedule(
     return {
       success: false,
       error: getActionError(error, dictionary.telegram.schedule.updateError),
-    }
-  }
-}
-
-export async function disableTelegramMarketAnalysisSchedule(
-  id: number
-): Promise<ActionResult<TelegramMarketAnalysisScheduleResponse>> {
-  const dictionary = await getTelegramDictionary()
-
-  try {
-    const data =
-      await fetchAuthenticated<TelegramMarketAnalysisScheduleResponse>(
-        `/telegram/market-analysis-schedules/${id}/disable`,
-        {
-          method: "PATCH",
-        }
-      )
-
-    revalidateTelegramConfiguration()
-
-    return { success: true, data }
-  } catch (error: unknown) {
-    return {
-      success: false,
-      error: getActionError(error, dictionary.telegram.schedule.disableError),
     }
   }
 }

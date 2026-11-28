@@ -9,6 +9,7 @@ import {
   screen,
   within,
 } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import type { Settings } from "sigma/settings"
 
@@ -29,9 +30,11 @@ import type {
   ForceNode,
 } from "@/app/[lang]/(main)/graph-view/d3-layout.worker"
 
-vi.mock("@/app/api/events/action", () => ({ getEventById: vi.fn() }))
+vi.mock("@/app/api/events/action", () => ({
+  getEventByIdForQuickDetail: vi.fn(),
+}))
 vi.mock("@/app/api/news-articles/action", () => ({
-  getNewsArticleById: vi.fn(),
+  getNewsArticleByIdForQuickDetail: vi.fn(),
 }))
 vi.mock("next-themes", () => ({ useTheme: () => ({ resolvedTheme: "light" }) }))
 vi.mock("sigma/rendering", () => ({ drawStraightEdgeLabel: vi.fn() }))
@@ -44,9 +47,14 @@ vi.mock("sigma", () => ({
 }))
 
 import { SigmaGraphView } from "@/app/[lang]/(main)/graph-view/sigma-graph-view"
+import { getEventByIdForQuickDetail } from "@/app/api/events/action"
+import { getNewsArticleByIdForQuickDetail } from "@/app/api/news-articles/action"
 import { en } from "@/app/lib/i18n/dictionaries/en"
 import { vi as viDictionary } from "@/app/lib/i18n/dictionaries/vi"
+import type { EventResponse } from "@/app/lib/events/definitions"
 import { LocalizationProvider } from "@/app/lib/i18n/provider"
+import type { NewsArticleResponse } from "@/app/lib/news-articles/definitions"
+import { PermissionProvider } from "@/components/permission-provider"
 
 // Only the renderer and asynchronous worker are doubled; graph, drag handlers,
 // layout adapter, label placement, selection and inspector are the real components.
@@ -151,6 +159,47 @@ class WorkerDouble {
 
 const frames = new Map<number, FrameRequestCallback>()
 let frameId = 0
+
+const quickEvent: EventResponse = {
+  id: 1,
+  title: "Rates detail",
+  canonicalKey: "rates-detail",
+  description: "The selected event description.",
+  status: "ENRICHED",
+  confidence: 0.9,
+  occurredAt: "2026-11-20T12:00:00.000Z",
+  createdDate: "2026-11-20T12:00:00.000Z",
+  assets: [],
+  themes: [],
+  evidence: [
+    {
+      newsArticleId: 77,
+      newsArticleTitle: "Source article title",
+      newsArticleUrl: "https://source.example/article/77",
+      sourceName: "Fixture Wire",
+      publishedAt: "2026-11-20T11:00:00.000Z",
+      evidenceRole: "PRIMARY",
+      confidence: 0.82,
+      evidenceNote: "Evidence note from the selected source.",
+    },
+  ],
+  marketReactions: [],
+}
+
+const quickArticle: NewsArticleResponse = {
+  id: 4,
+  title: "Graph article detail",
+  description: "The selected article description.",
+  url: "https://source.example/article/4",
+  sourceName: "Fixture Wire",
+  publishedAt: "2026-11-20T11:00:00.000Z",
+  status: "INGESTED",
+  createdDate: "2026-11-20T11:00:00.000Z",
+  content: "The selected article body.",
+  featureImage: null,
+  linkedEvents: [],
+}
+
 function flushFrames() {
   const pending = [...frames.values()]
   frames.clear()
@@ -178,7 +227,10 @@ async function mountGraph(
   options: {
     parallel?: boolean
     includeArticle?: boolean
+    articleNodeId?: string
+    articleUrl?: string | null
     includeNarrative?: boolean
+    permissions?: string[]
     locale?: "en" | "vi"
     edgeNote?: string | null
     edges?: GraphViewEdge[]
@@ -187,7 +239,10 @@ async function mountGraph(
   const {
     parallel = false,
     includeArticle = false,
+    articleNodeId = "news-article:4",
+    articleUrl = "https://example.test/article",
     includeNarrative = false,
+    permissions = ["event:read", "news-article:read"],
     locale = "en",
     edgeNote = null,
     edges: edgeOverrides,
@@ -226,10 +281,10 @@ async function mountGraph(
       node("asset:3", "asset", "Gold"),
       ...(includeArticle
         ? [
-            node("news-article:4", "news-article", "Article", {
+            node(articleNodeId, "news-article", "Article", {
               ...metadata,
               sourceName: "Fixture Wire",
-              url: "https://example.test/article",
+              url: articleUrl,
             }),
           ]
         : []),
@@ -267,7 +322,7 @@ async function mountGraph(
             {
               id: "news-article-event:4",
               kind: "news-article-event" as const,
-              sourceNodeId: "news-article:4",
+              sourceNodeId: articleNodeId,
               targetNodeId: "event:1",
               relationType: "PRIMARY" as const,
               weight: null,
@@ -304,9 +359,11 @@ async function mountGraph(
   }
   const dictionary = locale === "vi" ? viDictionary : en
   const renderGraph = (value: GraphViewResponse) => (
-    <LocalizationProvider locale={locale} dictionary={dictionary}>
-      <SigmaGraphView graphView={value} />
-    </LocalizationProvider>
+    <PermissionProvider permissions={permissions}>
+      <LocalizationProvider locale={locale} dictionary={dictionary}>
+        <SigmaGraphView graphView={value} />
+      </LocalizationProvider>
+    </PermissionProvider>
   )
   const rendered = render(renderGraph(graphView))
   await act(async () => {
@@ -495,11 +552,130 @@ afterEach(() => {
   cleanup()
   frames.clear()
   vi.unstubAllGlobals()
+  vi.clearAllMocks()
 })
 
 describe("Sigma drag release", () => {
-  it("keeps live article source actions outside the graph inspector", async () => {
-    const { sigma } = await mountGraph({ includeArticle: true })
+  it("opens the selected live Event and keeps its source identity", async () => {
+    vi.mocked(getEventByIdForQuickDetail).mockResolvedValueOnce({
+      success: true,
+      data: quickEvent,
+    })
+    const { sigma } = await mountGraph({
+      permissions: ["graph-view:read", "event:read", "news-article:read"],
+    })
+    act(() => {
+      sigma.emit("clickNode", {
+        node: "event:1",
+        preventSigmaDefault() {},
+      })
+    })
+
+    const inspector = screen.getByTestId("graph-demo-inspector")
+    const readEvent = within(inspector).getByRole("button", {
+      name: en.graphView.inspector.readEvent,
+    })
+    fireEvent.click(readEvent)
+
+    expect(getEventByIdForQuickDetail).toHaveBeenCalledWith(1)
+    expect(
+      await screen.findByRole("heading", {
+        level: 2,
+        name: "Rates detail",
+      })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("Evidence note from the selected source.")
+    ).toBeInTheDocument()
+    expect(
+      screen
+        .getAllByRole("link")
+        .some((link) => link.getAttribute("href") === "/en/news-articles/77")
+    ).toBe(true)
+    expect(
+      screen
+        .getAllByRole("link")
+        .some(
+          (link) =>
+            link.getAttribute("href") === "https://source.example/article/77"
+        )
+    ).toBe(true)
+  })
+
+  it("opens the selected live Article by its Graph identity and source URL", async () => {
+    vi.mocked(getNewsArticleByIdForQuickDetail).mockResolvedValueOnce({
+      success: true,
+      data: quickArticle,
+    })
+    const { sigma } = await mountGraph({
+      includeArticle: true,
+      permissions: ["graph-view:read", "news-article:read"],
+    })
+    act(() => {
+      sigma.emit("clickNode", {
+        node: "news-article:4",
+        preventSigmaDefault() {},
+      })
+    })
+
+    const inspector = screen.getByTestId("graph-demo-inspector")
+    const readArticle = within(inspector).getByRole("button", {
+      name: en.graphView.inspector.readArticle,
+    })
+    expect(
+      within(inspector).getByRole("link", { name: /Open original source/ })
+    ).toHaveAttribute("href", "https://example.test/article")
+
+    fireEvent.click(readArticle)
+
+    expect(getNewsArticleByIdForQuickDetail).toHaveBeenCalledWith(4)
+    expect(
+      await screen.findByRole("heading", {
+        level: 2,
+        name: "Graph article detail",
+      })
+    ).toBeInTheDocument()
+    expect(
+      screen
+        .getAllByRole("link")
+        .some((link) => link.getAttribute("href") === "/en/news-articles/4")
+    ).toBe(true)
+    expect(
+      screen
+        .getAllByRole("link")
+        .some((link) => link.getAttribute("href") === quickArticle.url)
+    ).toBe(true)
+  })
+
+  it("keeps an original source link when the Graph Article has no Signapse identity", async () => {
+    const { sigma } = await mountGraph({
+      includeArticle: true,
+      articleNodeId: "news-article:unknown",
+    })
+    act(() => {
+      sigma.emit("clickNode", {
+        node: "news-article:unknown",
+        preventSigmaDefault() {},
+      })
+    })
+
+    const inspector = screen.getByTestId("graph-demo-inspector")
+    expect(
+      within(inspector).queryByRole("button", {
+        name: en.graphView.inspector.readArticle,
+      })
+    ).not.toBeInTheDocument()
+    expect(
+      within(inspector).getByRole("link", { name: /Open original source/ })
+    ).toHaveAttribute("href", "https://example.test/article")
+    expect(getNewsArticleByIdForQuickDetail).not.toHaveBeenCalled()
+  })
+
+  it("shows when the Graph Article has no original source URL", async () => {
+    const { sigma } = await mountGraph({
+      includeArticle: true,
+      articleUrl: null,
+    })
     act(() => {
       sigma.emit("clickNode", {
         node: "news-article:4",
@@ -509,10 +685,67 @@ describe("Sigma drag release", () => {
 
     const inspector = screen.getByTestId("graph-demo-inspector")
     expect(
-      within(inspector).queryByTestId("graph-demo-open-quick-detail")
-    ).not.toBeInTheDocument()
+      within(inspector).getByRole("button", {
+        name: en.graphView.inspector.readArticle,
+      })
+    ).toBeInTheDocument()
+    expect(
+      within(inspector).getByText(en.graphView.demo.sourceUnavailable)
+    ).toBeInTheDocument()
     expect(within(inspector).queryByRole("link")).not.toBeInTheDocument()
-    expect(inspector).not.toHaveTextContent(en.graphView.demo.sourceUnavailable)
+  })
+
+  it("does not grant Event detail access from Graph access", async () => {
+    const { sigma } = await mountGraph({ permissions: ["graph-view:read"] })
+    act(() => {
+      sigma.emit("clickNode", {
+        node: "event:1",
+        preventSigmaDefault() {},
+      })
+    })
+
+    const inspector = screen.getByTestId("graph-demo-inspector")
+    fireEvent.click(
+      within(inspector).getByRole("button", {
+        name: en.graphView.inspector.readEvent,
+      })
+    )
+
+    expect(
+      await screen.findByRole("heading", {
+        level: 2,
+        name: en.events.quickAccessDeniedTitle,
+      })
+    ).toBeInTheDocument()
+    expect(getEventByIdForQuickDetail).not.toHaveBeenCalled()
+  })
+
+  it("does not grant Article detail access from Graph access", async () => {
+    const { sigma } = await mountGraph({
+      includeArticle: true,
+      permissions: ["graph-view:read"],
+    })
+    act(() => {
+      sigma.emit("clickNode", {
+        node: "news-article:4",
+        preventSigmaDefault() {},
+      })
+    })
+
+    const inspector = screen.getByTestId("graph-demo-inspector")
+    fireEvent.click(
+      within(inspector).getByRole("button", {
+        name: en.graphView.inspector.readArticle,
+      })
+    )
+
+    expect(
+      await screen.findByRole("heading", {
+        level: 2,
+        name: en.newsArticles.quickAccessDeniedTitle,
+      })
+    ).toBeInTheDocument()
+    expect(getNewsArticleByIdForQuickDetail).not.toHaveBeenCalled()
   })
 
   it.each(["upNode", "touchend", "touchcancel", "pointercancel", "blur"])(
@@ -1008,5 +1241,208 @@ describe("Sigma drag release", () => {
       "Rates"
     )
     expect(sigma.getNodeDisplayData("event:1").highlighted).toBe(true)
+  })
+
+  it("filters node kinds independently, keeps isolated nodes, and recovers from an all-off canvas", async () => {
+    const user = userEvent.setup()
+    await mountGraph({
+      includeNarrative: true,
+      edges: [
+        {
+          id: "narrative-event:5",
+          kind: "narrative-event",
+          sourceNodeId: "narrative:5",
+          targetNodeId: "event:1",
+          relationType: "DRIVER",
+          weight: null,
+          confidence: null,
+          note: null,
+        },
+        {
+          id: "narrative-asset:5",
+          kind: "narrative-asset",
+          sourceNodeId: "narrative:5",
+          targetNodeId: "asset:2",
+          relationType: "AFFECTED",
+          weight: null,
+          confidence: null,
+          note: null,
+        },
+      ],
+    })
+
+    const narrativeFilter = screen.getByTestId(
+      "graph-demo-node-filter-narrative"
+    )
+    await user.click(narrativeFilter)
+
+    await vi.waitFor(() => {
+      expect(SigmaDouble.current.graph.hasNode("narrative:5")).toBe(false)
+      expect(SigmaDouble.current.graph.nodes()).toEqual([
+        "event:1",
+        "asset:2",
+        "asset:3",
+      ])
+      expect(SigmaDouble.current.graph.edges()).toEqual([])
+    })
+    expect(narrativeFilter).toHaveAttribute("aria-pressed", "false")
+    expect(screen.getByTestId("graph-demo-node-filter-event")).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    )
+
+    await user.click(narrativeFilter)
+    await vi.waitFor(() => {
+      expect(SigmaDouble.current.graph.hasNode("narrative:5")).toBe(true)
+      expect(SigmaDouble.current.graph.edges()).toEqual([
+        "narrative-event:5",
+        "narrative-asset:5",
+      ])
+    })
+
+    for (const kind of [
+      "event",
+      "asset",
+      "news-article",
+      "narrative",
+    ] as const) {
+      await user.click(screen.getByTestId(`graph-demo-node-filter-${kind}`))
+    }
+
+    expect(await screen.findByTestId("graph-filter-empty")).toHaveTextContent(
+      en.graphView.demo.emptyFilteredNodes
+    )
+    for (const kind of [
+      "event",
+      "asset",
+      "news-article",
+      "narrative",
+    ] as const) {
+      expect(
+        screen.getByTestId(`graph-demo-node-filter-${kind}`)
+      ).toHaveAttribute("aria-pressed", "false")
+    }
+
+    await user.click(screen.getByTestId("graph-demo-node-filter-event"))
+    expect(screen.queryByTestId("graph-filter-empty")).not.toBeInTheDocument()
+    await vi.waitFor(() => {
+      expect(SigmaDouble.current.graph.nodes()).toEqual(["event:1"])
+    })
+  })
+
+  it("exposes localized pressed state and supports keyboard activation", async () => {
+    const user = userEvent.setup()
+    await mountGraph({ includeArticle: true, locale: "vi" })
+
+    const filters = screen.getByRole("group", { name: "Bộ lọc loại nút" })
+    const eventFilter = screen.getByTestId("graph-demo-node-filter-event")
+    const assetFilter = screen.getByTestId("graph-demo-node-filter-asset")
+
+    expect(filters).toBeInTheDocument()
+    expect(eventFilter).toHaveAttribute("aria-pressed", "true")
+    await user.tab()
+    expect(eventFilter).toHaveFocus()
+    await user.tab()
+    expect(assetFilter).toHaveFocus()
+    await user.keyboard(" ")
+
+    expect(assetFilter).toHaveAttribute("aria-pressed", "false")
+    expect(assetFilter).toHaveAttribute("data-state", "off")
+    expect(eventFilter).toHaveAttribute("aria-pressed", "true")
+  })
+
+  it("preserves visible selection and closes the inspector when its node or edge is hidden", async () => {
+    const user = userEvent.setup()
+    const { sigma, graphView } = await mountGraph({
+      includeArticle: true,
+      includeNarrative: true,
+    })
+    act(() => {
+      sigma.emit("clickNode", {
+        node: "asset:2",
+        preventSigmaDefault() {},
+      })
+    })
+    expect(screen.getByTestId("graph-demo-inspector")).toHaveTextContent(
+      "Bitcoin"
+    )
+
+    await user.click(screen.getByTestId("graph-demo-node-filter-narrative"))
+    await vi.waitFor(() => {
+      expect(SigmaDouble.current.graph.hasNode("narrative:5")).toBe(false)
+    })
+    expect(screen.getByTestId("graph-demo-inspector")).toHaveTextContent(
+      "Bitcoin"
+    )
+
+    await user.click(screen.getByTestId("graph-demo-node-filter-asset"))
+    await vi.waitFor(() => {
+      expect(SigmaDouble.current.graph.hasNode("asset:2")).toBe(false)
+    })
+    expect(screen.queryByTestId("graph-demo-inspector")).not.toBeInTheDocument()
+
+    await user.click(screen.getByTestId("graph-demo-node-filter-asset"))
+    await vi.waitFor(() => {
+      expect(SigmaDouble.current.graph.hasNode("asset:2")).toBe(true)
+    })
+    clickGraphEdge(SigmaDouble.current, graphView.edges[0]!)
+    expect(screen.getByTestId("graph-edge-inspector")).toBeInTheDocument()
+
+    await user.click(screen.getByTestId("graph-demo-node-filter-news-article"))
+    await vi.waitFor(() => {
+      expect(SigmaDouble.current.graph.hasEdge("news-article-event:4")).toBe(
+        false
+      )
+    })
+    expect(screen.getByTestId("graph-edge-inspector")).toBeInTheDocument()
+
+    await user.click(screen.getByTestId("graph-demo-node-filter-asset"))
+    await vi.waitFor(() => {
+      expect(SigmaDouble.current.graph.hasEdge("event-asset:1")).toBe(false)
+    })
+    expect(screen.queryByTestId("graph-edge-inspector")).not.toBeInTheDocument()
+    expect(SigmaDouble.current.graph.hasNode("asset:2")).toBe(false)
+  })
+
+  it("keeps Event evidence available and preserves filters when quick detail closes", async () => {
+    const user = userEvent.setup()
+    vi.mocked(getEventByIdForQuickDetail).mockResolvedValueOnce({
+      success: true,
+      data: quickEvent,
+    })
+    await mountGraph({
+      includeArticle: true,
+      permissions: ["graph-view:read", "event:read", "news-article:read"],
+    })
+    await user.click(screen.getByTestId("graph-demo-node-filter-news-article"))
+    await vi.waitFor(() => {
+      expect(SigmaDouble.current.graph.hasNode("news-article:4")).toBe(false)
+    })
+    act(() => {
+      SigmaDouble.current.emit("clickNode", {
+        node: "event:1",
+        preventSigmaDefault() {},
+      })
+    })
+    fireEvent.click(
+      within(screen.getByTestId("graph-demo-inspector")).getByRole("button", {
+        name: en.graphView.inspector.readEvent,
+      })
+    )
+    await screen.findByRole("heading", { level: 2, name: "Rates detail" })
+
+    expect(screen.getByText("Source article title")).toBeInTheDocument()
+    expect(screen.getByRole("heading", { name: "Rates detail" })).toBeVisible()
+
+    await user.click(screen.getByRole("button", { name: en.common.close }))
+    await vi.waitFor(() => {
+      expect(screen.queryByRole("heading", { name: "Rates detail" })).toBeNull()
+    })
+    expect(
+      screen.getByTestId("graph-demo-node-filter-news-article")
+    ).toHaveAttribute("aria-pressed", "false")
+    expect(screen.getByTestId("graph-demo-inspector")).toHaveTextContent(
+      "Rates"
+    )
   })
 })

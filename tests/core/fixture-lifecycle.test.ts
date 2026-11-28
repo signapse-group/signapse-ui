@@ -23,7 +23,7 @@ beforeAll(async () => {
   baseUrl = `http://127.0.0.1:${address.port}`
   fixtureProcess = spawn(
     process.execPath,
-    [resolve("tests/e2e/fixtures/fixture-server.mjs")],
+    [resolve("tests/fixtures/fixture-server.mjs")],
     {
       env: {
         PATH: process.env.PATH,

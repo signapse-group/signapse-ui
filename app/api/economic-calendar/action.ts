@@ -13,6 +13,8 @@ import {
 } from "@/app/lib/economic-calendar/definitions"
 import { queryParamsToString } from "@/app/lib/utils"
 
+const ECONOMIC_CALENDAR_PAGE_SIZE = 2000
+
 function revalidateEconomicCalendarRoutes(id?: number) {
   revalidatePath("/economic-calendar")
 
@@ -30,6 +32,30 @@ export async function getEconomicCalendarEntries(
   return fetchAuthenticated<Page<EconomicCalendarListResponse>>(
     `/economic-calendar?${queryParamsToString(searchParams)}`
   )
+}
+
+export async function getAllEconomicCalendarEntries(
+  searchParams: Pick<SearchParams, "filter" | "sort">
+): Promise<EconomicCalendarListResponse[]> {
+  let pageNumber = 0
+  let page = await getEconomicCalendarEntries({
+    ...searchParams,
+    page: pageNumber,
+    size: ECONOMIC_CALENDAR_PAGE_SIZE,
+  })
+  const entries = [...page.content]
+
+  while (!page.last) {
+    pageNumber += 1
+    page = await getEconomicCalendarEntries({
+      ...searchParams,
+      page: pageNumber,
+      size: ECONOMIC_CALENDAR_PAGE_SIZE,
+    })
+    entries.push(...page.content)
+  }
+
+  return entries
 }
 
 export async function getEconomicCalendarEntryById(

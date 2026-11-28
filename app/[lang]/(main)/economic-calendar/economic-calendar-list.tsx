@@ -5,7 +5,6 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { Fragment, useMemo, useSyncExternalStore, useTransition } from "react"
 import { LocalizedLink as Link } from "@/components/localized-link"
 
-import { Page } from "@/app/lib/definitions"
 import { useLocalization } from "@/app/lib/i18n/provider"
 import {
   EconomicCalendarListResponse,
@@ -37,9 +36,11 @@ import {
 } from "@/components/ui/table"
 import { cn } from "@/lib/utils"
 
+import { EconomicCalendarFilters } from "./economic-calendar-filters"
 import { EconomicCalendarSearch } from "./economic-calendar-search"
 import { EconomicCalendarSyncButton } from "./economic-calendar-sync-button"
 import {
+  ECONOMIC_CALENDAR_FILTER_PARAMS,
   EconomicCalendarDateState,
   type EconomicCalendarScheduledSort,
   formatUtc7DayTimestamp,
@@ -51,7 +52,7 @@ import {
 
 interface EconomicCalendarListProps {
   dateState: EconomicCalendarDateState
-  economicCalendarPage: Page<EconomicCalendarListResponse>
+  economicCalendarEntries: EconomicCalendarListResponse[]
   sort: EconomicCalendarScheduledSort
 }
 
@@ -477,15 +478,31 @@ function AdjacentDayButton({
 
 export function EconomicCalendarList({
   dateState,
-  economicCalendarPage,
+  economicCalendarEntries,
   sort,
 }: EconomicCalendarListProps) {
   const { dictionary, formatDateTime } = useLocalization()
+  const searchParams = useSearchParams()
   const now = useCurrentMinuteDate()
-  const entries = useMemo(
-    () => economicCalendarPage.content ?? [],
-    [economicCalendarPage.content]
+  const entries = economicCalendarEntries
+  const currencyCodes = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          entries
+            .map((entry) => entry.currencyCode?.trim())
+            .filter((currencyCode): currencyCode is string =>
+              Boolean(currencyCode)
+            )
+        )
+      ),
+    [entries]
   )
+  const hasActiveFilters = [
+    ECONOMIC_CALENDAR_FILTER_PARAMS.title,
+    ECONOMIC_CALENDAR_FILTER_PARAMS.currencyCode,
+    ECONOMIC_CALENDAR_FILTER_PARAMS.impact,
+  ].some((key) => Boolean(searchParams.get(key)))
   const groups = useMemo(
     () =>
       groupEconomicCalendarEntries(
@@ -517,6 +534,7 @@ export function EconomicCalendarList({
           <EconomicCalendarSearch />
         </AppListToolbarLeading>
         <AppListToolbarTrailing>
+          <EconomicCalendarFilters currencyCodes={currencyCodes} />
           <SortSelect
             className="w-full sm:w-auto"
             defaultValue={sort}
@@ -602,7 +620,11 @@ export function EconomicCalendarList({
                           colSpan={8}
                           className="px-3 py-3 text-sm text-muted-foreground"
                         >
-                          {dictionary.economicCalendar.emptyDay}
+                          <div role="status">
+                            {hasActiveFilters
+                              ? dictionary.economicCalendar.emptyDescription
+                              : dictionary.economicCalendar.emptyDay}
+                          </div>
                         </TableCell>
                       </TableRow>
                     </>

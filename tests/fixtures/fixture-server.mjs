@@ -1,0 +1,5317 @@
+import { appendFile, mkdir } from "node:fs/promises"
+import { dirname } from "node:path"
+import { createServer } from "node:http"
+import { URL } from "node:url"
+
+import {
+  contractPathMatches,
+  fixtureContracts,
+} from "../contract/contract-registry.mjs"
+
+const port = Number(process.env.FIXTURE_PORT ?? 4100)
+const logFile = process.env.FIXTURE_LOG_FILE
+const testRuns = new Map()
+
+const NOW = "2026-01-15T08:00:00.000Z"
+
+const AI_TASK_FIXTURES = [
+  [
+    "NEWS_CONTENT_NORMALIZATION",
+    "NEWS_PROCESSING",
+    16384,
+    ["NEWS_ARTICLE_CONTENT_LOCALIZATION", "FIRECRAWL_SOURCE_DOCUMENT_FILTER"],
+  ],
+  [
+    "ECONOMIC_CALENDAR_DESCRIPTION_TRANSLATION",
+    "ECONOMIC_CALENDAR",
+    8192,
+    ["ECONOMIC_CALENDAR_ENTRY_TEXT_LOCALIZATION"],
+  ],
+  [
+    "NEWS_EVENT_EXTRACTION",
+    "NEWS_PROCESSING",
+    8192,
+    ["NEWS_PRIMARY_EVENT_DERIVATION"],
+  ],
+  [
+    "EVENT_ASSET_THEME_ENRICHMENT",
+    "EVENT_INTELLIGENCE",
+    8192,
+    ["EVENT_ASSET_THEME_ENRICHMENT"],
+  ],
+  [
+    "MARKET_REACTION_ANALYSIS",
+    "EVENT_INTELLIGENCE",
+    8192,
+    ["EVENT_MARKET_REACTION_DERIVATION"],
+  ],
+  [
+    "MARKET_REACTION_SUMMARY",
+    "EVENT_INTELLIGENCE",
+    8192,
+    ["MARKET_REACTION_OUTCOME_SUMMARY"],
+  ],
+  [
+    "EVENT_NARRATIVE_REFRESH",
+    "EVENT_INTELLIGENCE",
+    8192,
+    ["EVENT_NARRATIVE_REFRESH"],
+  ],
+  [
+    "WARM_ABSORPTION_DECISION",
+    "WARM_KNOWLEDGE",
+    8192,
+    ["WARM_ABSORPTION_EVENT_ASSET_DECISION"],
+  ],
+  [
+    "MARKET_QUESTION_UNDERSTANDING",
+    "AI_ASSISTANT",
+    null,
+    ["MARKET_QUESTION_UNDERSTANDING"],
+  ],
+  [
+    "MARKET_CONVERSATION_RESPONSE",
+    "AI_ASSISTANT",
+    null,
+    ["MARKET_QUERY_CONVERSATION_ORCHESTRATION"],
+  ],
+  [
+    "SCHEDULED_TELEGRAM_ANALYSIS",
+    "SCHEDULED_TELEGRAM_ANALYSIS",
+    32768,
+    [
+      "TELEGRAM_MARKET_ANALYSIS_ASSESSMENT",
+      "TELEGRAM_MARKET_ANALYSIS_SCALPING",
+      "TELEGRAM_MARKET_ANALYSIS_EXPLANATION",
+    ],
+  ],
+]
+
+const SYSTEM_PROMPT_CONTENT_TYPES = new Set([
+  "ECONOMIC_CALENDAR_ENTRY_TEXT_LOCALIZATION",
+  "NEWS_ARTICLE_CONTENT_LOCALIZATION",
+  "NEWS_PRIMARY_EVENT_DERIVATION",
+  "EVENT_ASSET_THEME_ENRICHMENT",
+  "EVENT_MARKET_REACTION_DERIVATION",
+  "MARKET_REACTION_OUTCOME_SUMMARY",
+  "WARM_ABSORPTION_EVENT_ASSET_DECISION",
+  "EVENT_NARRATIVE_REFRESH",
+  "MARKET_QUESTION_UNDERSTANDING",
+  "MARKET_QUERY_CONVERSATION_ORCHESTRATION",
+  "TELEGRAM_MARKET_ANALYSIS_ASSESSMENT",
+  "TELEGRAM_MARKET_ANALYSIS_SCALPING",
+  "TELEGRAM_MARKET_ANALYSIS_EXPLANATION",
+])
+
+function aiTaskConfigurations() {
+  return AI_TASK_FIXTURES.map(
+    ([task, feature, defaultOutputTokens, promptTypes], index) => {
+      const configured = index < 3
+      const selectedConnectionId = configured ? 14 : null
+      const customOutputTokens =
+        task === "NEWS_CONTENT_NORMALIZATION" ? 20000 : null
+      return {
+        task,
+        feature,
+        purpose: task,
+        defaultOutputTokens,
+        promptTypes,
+        configured,
+        selectedConnectionId,
+        selectedProviderType: configured ? "DEEPSEEK" : null,
+        selectedModel: configured ? "deepseek-v4-flash" : null,
+        customOutputTokens,
+        effectiveOutputTokens: customOutputTokens ?? defaultOutputTokens,
+      }
+    }
+  )
+}
+
+function aiProviderConfigurations() {
+  return [
+    {
+      id: 14,
+      providerType: "DEEPSEEK",
+      description: "Fixture DeepSeek connection",
+      defaultProvider: true,
+      credentials: [],
+    },
+    {
+      id: 15,
+      providerType: "OPENAI",
+      description: "Fixture OpenAI connection",
+      defaultProvider: false,
+      credentials: [],
+    },
+  ]
+}
+
+function positiveOutOfRangeAiProviderConfigs() {
+  return Array.from({ length: 11 }, (_, index) => ({
+    id: index + 1,
+    providerType: "OPENAI",
+    description: `Fixture connection ${index + 1}`,
+    defaultProvider: false,
+    credentials: [],
+  }))
+}
+
+function pageTwoSizeTwentyAiProviderConfigs() {
+  return Array.from({ length: 101 }, (_, index) => {
+    const id = 101 - index
+    return {
+      id,
+      providerType: "OPENAI",
+      description: `Fixture connection ${id}`,
+      defaultProvider: false,
+      credentials: [{ id: id + 1000, keyPreview: `key-...${id}` }],
+    }
+  })
+}
+
+function workspace(id, name, currentWorkspace = false) {
+  return {
+    id,
+    name,
+    currentWorkspace,
+    createdDate: "2025-01-01T08:00:00.000Z",
+    lastModifiedDate: NOW,
+  }
+}
+
+function page(
+  content,
+  pageNumber = 0,
+  size = 10,
+  totalElements = content.length
+) {
+  const totalPages = totalElements === 0 ? 0 : Math.ceil(totalElements / size)
+
+  return {
+    content,
+    pageable: {
+      pageNumber,
+      pageSize: size,
+      offset: pageNumber * size,
+      paged: true,
+      unpaged: false,
+    },
+    last: pageNumber >= Math.max(totalPages - 1, 0),
+    totalElements,
+    totalPages,
+    size,
+    number: pageNumber,
+    first: pageNumber === 0,
+    numberOfElements: content.length,
+    empty: content.length === 0,
+  }
+}
+
+function note(id, title, text) {
+  return {
+    id,
+    title,
+    contentSchemaVersion: 1,
+    content: [{ type: "p", children: [{ text }] }],
+    createdDate: "2025-01-01T08:00:00.000Z",
+    lastModifiedDate: NOW,
+  }
+}
+
+function blogPost(id) {
+  return {
+    id,
+    title: "Fixture article",
+    slug: "fixture-article",
+    shortDescription: "A fixture blog post for the authoring form.",
+    content: [{ type: "p", children: [{ text: "Original article body." }] }],
+    contentSchemaVersion: 1,
+    status: "DRAFT",
+    publishedAt: null,
+    createdDate: "2025-01-01T08:00:00.000Z",
+    lastModifiedDate: NOW,
+  }
+}
+
+const FEEDBACK_OWNER_ID = 9001
+const FEEDBACK_OWNER = {
+  id: FEEDBACK_OWNER_ID,
+  email: "fixture.user@signapse.test",
+  firstName: "Fixture",
+  lastName: "User",
+  active: true,
+}
+const FEEDBACK_SCREENSHOT_BYTES = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+  "base64"
+)
+
+function feedbackRecord(id, content, status = "PENDING_REVIEW", options = {}) {
+  const screenshot = options.screenshot
+    ? {
+        id: 1000 + id,
+        mimeType: options.mimeType ?? "image/png",
+        size: FEEDBACK_SCREENSHOT_BYTES.length,
+      }
+    : null
+  return {
+    id,
+    ownerId: options.ownerId ?? FEEDBACK_OWNER_ID,
+    content,
+    clientContext:
+      options.clientContext === false
+        ? null
+        : (options.clientContext ?? {
+            pagePath: "/vi/dashboard",
+            appVersion: "web",
+            browserName: "Chrome",
+            browserVersion: "128",
+            osName: "Windows",
+            osVersion: "11",
+            locale: "vi",
+          }),
+    screenshot,
+    status,
+    createdDate: options.createdDate ?? NOW,
+    lastModifiedDate: options.lastModifiedDate ?? NOW,
+    reviewMessage: options.reviewMessage ?? null,
+    reporter: FEEDBACK_OWNER,
+  }
+}
+
+function feedbackListItem(record) {
+  return {
+    id: record.id,
+    content: record.content,
+    status: record.status,
+    createdDate: record.createdDate,
+    lastModifiedDate: record.lastModifiedDate,
+    screenshot: record.screenshot,
+  }
+}
+
+function feedbackDetail(record, moderation = false) {
+  const detail = { ...record }
+  if (!moderation) {
+    delete detail.ownerId
+    delete detail.reporter
+  }
+  return detail
+}
+
+function feedbackRecords() {
+  return [
+    feedbackRecord(
+      1,
+      "Biểu đồ không giữ bộ lọc sau khi đổi ngôn ngữ",
+      "PENDING_REVIEW",
+      { screenshot: true, createdDate: "2026-01-15T08:00:00.000Z" }
+    ),
+    feedbackRecord(2, "Thêm bộ lọc tài sản yêu thích", "REVIEWED", {
+      clientContext: false,
+      createdDate: "2026-01-14T08:00:00.000Z",
+      reviewMessage: "Đã xem xét phản hồi của bạn.",
+    }),
+    feedbackRecord(3, "Thông báo lỗi thiếu hướng dẫn", "REVIEWED", {
+      clientContext: false,
+      createdDate: "2026-01-13T08:00:00.000Z",
+      reviewMessage: "Đã xem xét phản hồi của bạn.",
+    }),
+    feedbackRecord(4, "Cải thiện trang tổng quan", "PENDING_REVIEW", {
+      ownerId: 9010,
+      createdDate: "2026-01-12T08:00:00.000Z",
+    }),
+    feedbackRecord(5, "Ảnh chụp màn hình không hiển thị", "PENDING_REVIEW", {
+      screenshot: true,
+      createdDate: "2026-01-11T08:00:00.000Z",
+    }),
+    feedbackRecord(
+      6,
+      "Tín hiệu thị trường cần thêm ngữ cảnh",
+      "PENDING_REVIEW",
+      { screenshot: true, createdDate: "2026-01-10T08:00:00.000Z" }
+    ),
+    ...Array.from({ length: 6 }, (_, index) =>
+      feedbackRecord(
+        index + 7,
+        `Phản hồi cá nhân bổ sung ${index + 1}`,
+        "PENDING_REVIEW",
+        {
+          createdDate: `2026-01-${String(9 - index).padStart(2, "0")}T08:00:00.000Z`,
+        }
+      )
+    ),
+  ]
+}
+
+function contactRequestRecords() {
+  return Array.from({ length: 21 }, (_, index) => {
+    const id = index + 1
+    const createdDate = new Date(
+      Date.parse("2026-10-07T00:00:00.000Z") - index * 24 * 60 * 60 * 1000
+    ).toISOString()
+    const repeatedEmail = id <= 2
+    const email = repeatedEmail
+      ? "repeat@example.test"
+      : `request-${id}@example.test`
+
+    return {
+      id,
+      email,
+      name: id === 1 ? "Minh Anh" : id === 3 ? "Quang Nguyen" : null,
+      message:
+        id === 1
+          ? `Xin chào Signapse. ${"Tôi muốn tìm hiểu thêm về sản phẩm. ".repeat(5)}\nDòng thứ hai có Unicode: tiếng Việt, 日本語 👋 <script>alert(1)</script>`
+          : `Lời nhắn ${id} cho Signapse.`,
+      createdDate,
+    }
+  })
+}
+
+function cronjobRecords() {
+  return [
+    {
+      id: 1,
+      jobName: "Scheduled and running",
+      jobGroup: "MarketIntelligencePipelineJobGroupWithLongMetadata",
+      scheduleStatus: "SCHEDULED",
+      executionStatus: "RUNNING",
+      cronExpression: "0 15,30 4,10 * JAN,MAR,SEP MON-FRI 2026/2",
+      description:
+        "This description contains the full operational context, recovery behavior, and source system information for the scheduled job.",
+      latestResult: "SUCCESS",
+      lastExecutedTime: "2026-11-05T07:00:00Z",
+      nextTriggeredTime: "2026-11-05T07:05:00Z",
+    },
+    {
+      id: 2,
+      jobName: "Paused during execution",
+      jobGroup: "market",
+      scheduleStatus: "PAUSED",
+      executionStatus: "RUNNING",
+      cronExpression: "0 0/5 * * * ?",
+      description: null,
+      latestResult: null,
+      lastExecutedTime: "2026-11-05T07:00:00Z",
+      nextTriggeredTime: "2026-11-05T08:00:00Z",
+    },
+    {
+      id: 3,
+      jobName: "Paused after execution",
+      jobGroup: "market",
+      scheduleStatus: "PAUSED",
+      executionStatus: "NOT_RUNNING",
+      cronExpression: "0 0/5 * * * ?",
+      description: "The last attempt failed.",
+      latestResult: "FAILED",
+      lastExecutedTime: "2026-11-05T06:55:00Z",
+      nextTriggeredTime: null,
+    },
+    {
+      id: 4,
+      jobName: "Immediate trigger not started",
+      jobGroup: "manual",
+      scheduleStatus: "UNSCHEDULED",
+      executionStatus: "NOT_RUNNING",
+      cronExpression: "0 0/5 * * * ?",
+      description: null,
+      latestResult: null,
+      lastExecutedTime: null,
+      nextTriggeredTime: null,
+    },
+  ]
+}
+
+function shortCronjobDesignRecords(cronjobs) {
+  return [
+    {
+      ...cronjobs[0],
+      jobName: "RefreshPendingNarrativesJob",
+      jobGroup: "MarketIntelligencePipelineJobGroup",
+      scheduleStatus: "SCHEDULED",
+      executionStatus: "NOT_RUNNING",
+      cronExpression: "0 */30 * * * ?",
+      description: "Refresh pending narratives from market data",
+      latestResult: "SUCCESS",
+    },
+    {
+      ...cronjobs[1],
+      jobName: "Paused after failed run",
+      jobGroup: "market",
+      scheduleStatus: "PAUSED",
+      executionStatus: "NOT_RUNNING",
+      cronExpression: "0 7/15 * * * ?",
+      description: "The last attempt failed.",
+      latestResult: "FAILED",
+      nextTriggeredTime: null,
+    },
+  ]
+}
+
+function systemPromptRecords() {
+  const requiredVariables = [
+    "locale",
+    "asOfTime",
+    "rawQuestion",
+    "watchlistAssetCandidates",
+    "deterministicAssetMatches",
+    "deterministicThemeMatches",
+    "previousConversationHints",
+  ]
+
+  return [
+    ["NEWS_ARTICLE_CONTENT_LOCALIZATION", "News content normalization"],
+    [
+      "ECONOMIC_CALENDAR_ENTRY_TEXT_LOCALIZATION",
+      "Economic calendar localization",
+    ],
+    ["NEWS_PRIMARY_EVENT_DERIVATION", "Primary event derivation"],
+    ["EVENT_ASSET_THEME_ENRICHMENT", "Asset and theme enrichment"],
+    ["EVENT_MARKET_REACTION_DERIVATION", "Market reaction derivation"],
+    ["MARKET_REACTION_OUTCOME_SUMMARY", "Market reaction outcome summary"],
+    ["EVENT_NARRATIVE_REFRESH", "Narrative refresh"],
+    [
+      "WARM_ABSORPTION_EVENT_ASSET_DECISION",
+      "Monthly knowledge absorption · Warm",
+    ],
+    ["MARKET_QUESTION_UNDERSTANDING", "AI assistant · Question understanding"],
+    ["MARKET_QUERY_CONVERSATION_ORCHESTRATION", "AI assistant · Response"],
+    ["TELEGRAM_MARKET_ANALYSIS_ASSESSMENT", "Telegram · Assessment"],
+    ["TELEGRAM_MARKET_ANALYSIS_SCALPING", "Telegram · Scalping"],
+    ["TELEGRAM_MARKET_ANALYSIS_EXPLANATION", "Telegram · Explanation"],
+  ].map(([promptType, name]) => {
+    const variables =
+      promptType === "MARKET_QUESTION_UNDERSTANDING" ? requiredVariables : []
+
+    return {
+      promptType,
+      name,
+      content:
+        variables.length > 0
+          ? `Fixture content for ${promptType}. ${variables
+              .map((variable) => `{${variable}}`)
+              .join(" ")}`
+          : `Fixture content for ${promptType}.`,
+      requiredVariables: variables,
+      lastModifiedDate: "2026-10-18T13:21:00.000Z",
+    }
+  })
+}
+
+function createState() {
+  const primaryWorkspace = workspace(1, "Workspace Alpha", true)
+  const secondaryWorkspace = workspace(2, "Workspace Beta")
+  const destination = {
+    id: 21,
+    botConnectionId: 11,
+    botUsername: "signapse_fixture_bot",
+    botDisplayLabel: "Signapse Fixture Bot",
+    chatId: "-100000000021",
+    chatType: "CHANNEL",
+    displayLabel: "Operations channel",
+    chatTitle: "Operations channel",
+    username: "operations",
+    status: "ACTIVE",
+    createdDate: "2025-01-02T08:00:00.000Z",
+    lastModifiedDate: NOW,
+  }
+
+  return {
+    workspaces: [primaryWorkspace, secondaryWorkspace],
+    marketConversations: [],
+    marketConversationTurns: [],
+    marketConversationAttempts: [],
+    notes: [note(31, "Morning brief", "Review the fixture market brief.")],
+    feedback: feedbackRecords(),
+    contactRequests: contactRequestRecords(),
+    cronjobs: cronjobRecords(),
+    systemPrompts: systemPromptRecords(),
+    aiProviderConfigs: [
+      {
+        id: 12,
+        providerType: "GROQ",
+        description: "Legacy connection retained after migration.",
+        defaultProvider: true,
+        credentials: [{ id: 101, keyPreview: "gsk-...legacy" }],
+      },
+    ],
+    profile: {
+      birthday: "1990-01-02T00:00:00.000Z",
+      phone: "2025550199",
+    },
+    smtpConfiguration: {
+      configured: true,
+      enabled: false,
+      passwordConfigured: true,
+      version: 1,
+      host: "smtp.example.com",
+      port: 587,
+      username: "notifications",
+      securityMode: "STARTTLS",
+      fromAddress: "notifications@signapse.test",
+      fromName: "Signapse Notifications",
+      createdDate: NOW,
+      lastModifiedDate: NOW,
+    },
+    permissions: ["*"],
+    aiTaskConfigurations: aiTaskConfigurations(),
+    aiProviderConfigurations: aiProviderConfigurations(),
+    feedbackScenarios: {},
+    preferredLanguage: { isoCode: "vi", name: "Tiếng Việt" },
+    assets: [
+      {
+        id: 101,
+        assetId: 101,
+        assetName: "Bitcoin",
+        assetSymbol: "BTC/USDT",
+        assetType: "CRYPTO",
+        createdDate: "2025-01-03T08:00:00.000Z",
+        lastModifiedDate: NOW,
+      },
+      {
+        id: 102,
+        assetId: 102,
+        assetName: "Gold",
+        assetSymbol: "XAUUSD",
+        assetType: "COMMODITY",
+        createdDate: "2025-01-04T08:00:00.000Z",
+        lastModifiedDate: NOW,
+      },
+    ],
+    botConnections: [
+      {
+        id: 11,
+        botId: 10011,
+        botUsername: "signapse_fixture_bot",
+        botFirstName: "Signapse Fixture",
+        displayLabel: "Fixture operations bot",
+        status: "ACTIVE",
+        webhookUrl: "https://fixture.invalid/telegram/webhook/11",
+        verifiedAt: NOW,
+        lastValidatedAt: NOW,
+        lastWebhookRegisteredAt: NOW,
+        createdDate: "2025-01-02T08:00:00.000Z",
+        lastModifiedDate: NOW,
+      },
+    ],
+    destinations: [
+      destination,
+      {
+        ...destination,
+        id: 22,
+        chatId: "-100000000022",
+        displayLabel: "Disabled channel",
+        chatTitle: "Disabled channel",
+        status: "DISABLED",
+      },
+    ],
+    featureSettings: [
+      {
+        id: 41,
+        featureKey: "ECONOMIC_CALENDAR_ALERT",
+        workspaceId: primaryWorkspace.id,
+        workspaceName: primaryWorkspace.name,
+        enabled: true,
+        destination,
+        outputLanguage: { id: 2, isoCode: "en", name: "English" },
+        createdDate: "2025-01-05T08:00:00.000Z",
+        lastModifiedDate: NOW,
+      },
+      {
+        id: 42,
+        featureKey: "MARKET_NEWS_ALERT",
+        workspaceId: primaryWorkspace.id,
+        workspaceName: primaryWorkspace.name,
+        enabled: false,
+        destination,
+        outputLanguage: { id: 1, isoCode: "vi", name: "Tiếng Việt" },
+        createdDate: "2025-01-05T08:00:00.000Z",
+        lastModifiedDate: NOW,
+      },
+      {
+        id: 43,
+        featureKey: "SCHEDULED_MARKET_ANALYSIS",
+        workspaceId: primaryWorkspace.id,
+        workspaceName: primaryWorkspace.name,
+        enabled: true,
+        destination,
+        outputLanguage: { id: 2, isoCode: "en", name: "English" },
+        createdDate: "2025-01-05T08:00:00.000Z",
+        lastModifiedDate: NOW,
+      },
+    ],
+    schedules: [
+      {
+        id: 51,
+        name: "BTC morning analysis",
+        workspaceId: primaryWorkspace.id,
+        workspaceName: primaryWorkspace.name,
+        destination,
+        timezone: "Asia/Ho_Chi_Minh",
+        localTimes: ["08:30"],
+        asset: { assetId: 101, assetSymbol: "BTC/USDT", assetName: "Bitcoin" },
+        outputLanguage: { id: 1, isoCode: "vi", name: "Tiếng Việt" },
+        status: "ACTIVE",
+        createdDate: "2025-01-06T08:00:00.000Z",
+        lastModifiedDate: NOW,
+      },
+      {
+        id: 52,
+        name: "Legacy inactive analysis",
+        workspaceId: secondaryWorkspace.id,
+        workspaceName: secondaryWorkspace.name,
+        destination: null,
+        timezone: "Asia/Bangkok",
+        localTimes: ["18:30"],
+        asset: { assetId: 102, assetSymbol: "ETH/USDT", assetName: "Ethereum" },
+        outputLanguage: null,
+        status: "DISABLED",
+        createdDate: "2025-01-06T08:00:00.000Z",
+        lastModifiedDate: NOW,
+      },
+      {
+        id: 53,
+        name: "Removed analysis",
+        workspaceId: primaryWorkspace.id,
+        workspaceName: primaryWorkspace.name,
+        destination,
+        timezone: "Asia/Ho_Chi_Minh",
+        localTimes: ["12:00"],
+        asset: { assetId: 101, assetSymbol: "BTC/USDT", assetName: "Bitcoin" },
+        outputLanguage: null,
+        status: "REMOVED",
+        createdDate: "2025-01-06T08:00:00.000Z",
+        lastModifiedDate: NOW,
+      },
+    ],
+    languages: [
+      { isoCode: "vi", name: "Tiếng Việt" },
+      { isoCode: "en", name: "English" },
+    ],
+    events: [
+      {
+        id: 61,
+        title: "Central bank signals a slower easing path",
+        canonicalKey: "fixture-central-bank-easing",
+        description: "Synthetic event used by the browser quality gate.",
+        status: "ENRICHED",
+        confidence: 0.92,
+        occurredAt: NOW,
+        createdDate: "2025-01-07T08:00:00.000Z",
+        lastModifiedDate: NOW,
+      },
+      {
+        id: 62,
+        title: "Energy demand outlook revised higher",
+        canonicalKey: "fixture-energy-demand",
+        description: "Second synthetic event for URL and pagination checks.",
+        status: "ENRICHMENT_PENDING",
+        confidence: 0.74,
+        occurredAt: "2026-01-14T08:00:00.000Z",
+        createdDate: "2025-01-08T08:00:00.000Z",
+        lastModifiedDate: NOW,
+      },
+      ...Array.from({ length: 8 }, (_, index) => ({
+        id: index + 64,
+        title: `Fixture pagination event ${index + 1}`,
+        canonicalKey: `fixture-pagination-event-${index + 1}`,
+        description:
+          "Synthetic event used to keep multiple pages in the fixture.",
+        status: "ENRICHED",
+        confidence: 0.7,
+        occurredAt: NOW,
+        createdDate: `2025-01-${String(index + 9).padStart(2, "0")}T08:00:00.000Z`,
+        lastModifiedDate: NOW,
+      })),
+      {
+        id: 63,
+        title: "Macro liquidity conditions stabilize",
+        canonicalKey: "fixture-macro-liquidity",
+        description: "Third synthetic event for search filtering.",
+        status: "ENRICHED",
+        confidence: 0.81,
+        occurredAt: "2026-01-13T08:00:00.000Z",
+        createdDate: "2025-01-09T08:00:00.000Z",
+        lastModifiedDate: NOW,
+      },
+    ],
+    newsArticles: [
+      {
+        id: 71,
+        title: "Fixture market update",
+        description: "Synthetic news item.",
+        url: "https://fixture.invalid/news/71",
+        sourceName: "Fixture Wire",
+        featureImage: null,
+        publishedAt: NOW,
+        status: "INGESTED",
+        createdDate: NOW,
+        featureImage: null,
+        content: "# Full article fixture\n\nProcessed fixture article content.",
+        linkedEvents: [
+          {
+            eventId: 61,
+            eventTitle: "Central bank signals a slower easing path",
+            eventCanonicalKey: "central-bank-slower-easing",
+            eventStatus: "ENRICHED",
+            evidenceRole: "PRIMARY",
+            evidenceConfidence: 0.92,
+            evidenceNote: "Fixture evidence summary.",
+          },
+        ],
+      },
+    ],
+    newsOutlets: [
+      {
+        id: 7,
+        name: "Fixture News Outlet",
+        description: null,
+        homepageUrl: "ftp://fixture.example/source",
+        rssUrl: null,
+        active: true,
+        createdDate: NOW,
+        lastModifiedDate: NOW,
+      },
+    ],
+    scenarios: {},
+    responses: new Set(),
+    pendingRequests: new Map(),
+    streamConnections: 0,
+    requests: [],
+    violations: [],
+    nextIds: {
+      workspace: 3,
+      note: 32,
+      schedule: 52,
+      feedback: 13,
+      newsOutlet: 8,
+      conversation: 1,
+      message: 1,
+    },
+  }
+}
+
+function getState(testRunId) {
+  if (!testRuns.has(testRunId)) {
+    testRuns.set(testRunId, createState())
+  }
+  return testRuns.get(testRunId)
+}
+
+function trackResponse(state, response) {
+  state.responses.add(response)
+  response.once("close", () => state.responses.delete(response))
+}
+
+function isPending(state, method, pathname) {
+  return (
+    getScenario(state, method, pathname) === "delayed" ||
+    getScenario(state, method, pathname) === "delayed-old-workspace" ||
+    feedbackScenarioFor(state, method, pathname) === "pending"
+  )
+}
+
+function holdResponse(state, response, method, pathname) {
+  if (response.destroyed) return Promise.resolve(false)
+  trackResponse(state, response)
+  return new Promise((resolve) => {
+    const onClose = () => resume(false)
+    const resume = (released) => {
+      state.pendingRequests.delete(response)
+      response.removeListener("close", onClose)
+      resolve(released)
+    }
+    state.pendingRequests.set(response, { method, pathname, resume })
+    response.once("close", onClose)
+  })
+}
+
+function releasePending(state) {
+  for (const pending of state.pendingRequests.values()) {
+    if (!isPending(state, pending.method, pending.pathname))
+      pending.resume(true)
+  }
+}
+
+function closeResponses(state) {
+  for (const response of state.responses) response.end()
+}
+
+function jsonHeaders() {
+  return {
+    "Content-Type": "application/json; charset=utf-8",
+    "Cache-Control": "no-store",
+    "Access-Control-Allow-Origin": "*",
+  }
+}
+
+function sendJson(response, status, payload) {
+  response.writeHead(status, jsonHeaders())
+  response.end(JSON.stringify(payload))
+}
+
+function sendEmpty(response, status = 204) {
+  response.writeHead(status, {
+    "Cache-Control": "no-store",
+    "Access-Control-Allow-Origin": "*",
+  })
+  response.end()
+}
+
+function errorPayload(message, code = "FIXTURE_FAILURE") {
+  return { code, message }
+}
+
+async function readBody(request) {
+  const chunks = []
+  for await (const chunk of request) chunks.push(chunk)
+  if (chunks.length === 0) return null
+
+  const buffer = Buffer.concat(chunks)
+  const contentType = String(request.headers["content-type"] ?? "")
+  if (contentType.startsWith("multipart/form-data;")) {
+    return { __multipart: true, raw: buffer, contentType }
+  }
+
+  const raw = buffer.toString("utf8")
+  if (!raw) return null
+
+  try {
+    return JSON.parse(raw)
+  } catch {
+    return raw
+  }
+}
+
+function multipartSubmission(body) {
+  if (!body?.__multipart || !Buffer.isBuffer(body.raw)) return null
+  const text = body.raw.toString("utf8")
+  const match = text.match(
+    /name="submission"[^\r\n]*\r\n(?:[^\r\n]*\r\n)*\r\n([\s\S]*?)\r\n--/
+  )
+  let submission = null
+  try {
+    submission = match ? JSON.parse(match[1]) : null
+  } catch {
+    submission = null
+  }
+  return {
+    submission,
+    hasScreenshot: /name="screenshot"/.test(text),
+  }
+}
+
+function getScenario(state, method, pathname) {
+  return (
+    state.scenarios[`${method} ${pathname}`] ??
+    state.scenarios[pathname] ??
+    state.scenarios["*"] ??
+    "success"
+  )
+}
+
+function getPageParams(url) {
+  const pageNumber = Math.max(0, Number(url.searchParams.get("page") ?? 0))
+  const size = Math.max(1, Number(url.searchParams.get("size") ?? 10))
+  const filterTerms = [...url.searchParams.entries()]
+    .filter(([key]) => key.toLowerCase().includes("containsignorecase"))
+    .map(([, value]) => value)
+    .concat(
+      [...(url.searchParams.get("$filter")?.matchAll(/'([^']+)'/g) ?? [])].map(
+        (match) => match[1]
+      )
+    )
+    .concat(url.searchParams.get("filter") ?? "")
+  const filter = [
+    ...new Set(
+      filterTerms.map((term) => term.trim().toLowerCase()).filter(Boolean)
+    ),
+  ]
+
+  return { pageNumber, size, filter }
+}
+
+function slicePage(items, url) {
+  const { pageNumber, size, filter } = getPageParams(url)
+  const filtered = filter.length
+    ? items.filter((item) => {
+        const serialized = JSON.stringify(item).toLowerCase()
+        return filter.some((term) => serialized.includes(term))
+      })
+    : items
+  return page(
+    filtered.slice(pageNumber * size, pageNumber * size + size),
+    pageNumber,
+    size,
+    filtered.length
+  )
+}
+
+function eventsPage(items, url) {
+  const { pageNumber, size, filter } = getPageParams(url)
+  const filtered = filter.length
+    ? items.filter((event) =>
+        filter.some((term) =>
+          [event.title, event.description, event.canonicalKey].some((value) =>
+            value?.toLowerCase().includes(term)
+          )
+        )
+      )
+    : items
+  const sort = url.searchParams.get("sort")
+  const sortOptions = new Set([
+    "occurredAt,desc",
+    "occurredAt,asc",
+    "confidence,desc",
+    "createdDate,desc",
+  ])
+  const sorted = sortOptions.has(sort)
+    ? [...filtered].sort((left, right) => {
+        const [field, direction] = sort.split(",")
+        const leftValue = left[field] ?? ""
+        const rightValue = right[field] ?? ""
+        const comparison =
+          typeof leftValue === "number" && typeof rightValue === "number"
+            ? leftValue - rightValue
+            : String(leftValue).localeCompare(String(rightValue))
+
+        return direction === "asc" ? comparison : -comparison
+      })
+    : filtered
+
+  return page(
+    sorted.slice(pageNumber * size, pageNumber * size + size),
+    pageNumber,
+    size,
+    filtered.length
+  )
+}
+
+function getNewsArticleFilterValue(filter, expression) {
+  const match = filter.match(expression)
+  return match?.[1]?.replaceAll("''", "'")
+}
+
+function filterAndSortNewsArticles(articles, url) {
+  const filter = url.searchParams.get("$filter") ?? ""
+  const keyword = getNewsArticleFilterValue(
+    filter,
+    /containsIgnoreCase\(keyword,'((?:[^']|'')*)'\)/i
+  )?.toLowerCase()
+  const status = getNewsArticleFilterValue(
+    filter,
+    /\bstatus eq '((?:[^']|'')*)'/i
+  )
+  const sourceName = getNewsArticleFilterValue(
+    filter,
+    /\bsourceName eq '((?:[^']|'')*)'/i
+  )
+  const publishedFrom = getNewsArticleFilterValue(
+    filter,
+    /\bpublishedAt ge '((?:[^']|'')*)'/i
+  )
+  const publishedTo = getNewsArticleFilterValue(
+    filter,
+    /\bpublishedAt lt '((?:[^']|'')*)'/i
+  )
+
+  const filtered = articles.filter((article) => {
+    if (
+      keyword &&
+      ![article.title, article.description].some((value) =>
+        value?.toLowerCase().includes(keyword)
+      )
+    ) {
+      return false
+    }
+    if (status && article.status !== status) return false
+    if (sourceName && article.sourceName !== sourceName) return false
+
+    const publishedAt = article.publishedAt
+      ? new Date(article.publishedAt).getTime()
+      : null
+    if (
+      publishedFrom &&
+      (publishedAt === null || publishedAt < Date.parse(publishedFrom))
+    ) {
+      return false
+    }
+    if (
+      publishedTo &&
+      (publishedAt === null || publishedAt >= Date.parse(publishedTo))
+    ) {
+      return false
+    }
+    return true
+  })
+
+  const [sortField, sortDirection] = (
+    url.searchParams.get("sort") ?? "publishedAt,desc"
+  ).split(",")
+  if (["publishedAt", "createdDate"].includes(sortField)) {
+    const direction = sortDirection === "asc" ? 1 : -1
+    filtered.sort((left, right) => {
+      const leftValue = left[sortField]
+      const rightValue = right[sortField]
+      if (sortField === "publishedAt" && !leftValue)
+        return rightValue ? 1 : left.id - right.id
+      if (sortField === "publishedAt" && !rightValue) return -1
+      const comparison = String(leftValue ?? "").localeCompare(
+        String(rightValue ?? "")
+      )
+      return comparison === 0 ? left.id - right.id : comparison * direction
+    })
+  }
+
+  const pagingUrl = new URL(url)
+  pagingUrl.searchParams.delete("$filter")
+  return slicePage(filtered, pagingUrl)
+}
+
+function dashboardSummary(workspaceId, scenario = "success", locale = "en") {
+  const isVietnamese = locale.toLowerCase().startsWith("vi")
+  const summary = {
+    asOf: NOW,
+    timezone: "Asia/Ho_Chi_Minh",
+    scope: { workspaceId, watchlistAssetCount: 2 },
+    nextKeyEvent: {
+      state: "AVAILABLE",
+      data: {
+        id: 61,
+        title: "Central bank signals a slower easing path",
+        currencyCode: "USD",
+        impact: "HIGH",
+        scheduledAt: NOW,
+      },
+      errorCode: null,
+    },
+    recentEvents: {
+      state: "AVAILABLE",
+      items: [
+        {
+          id: 61,
+          title: "Central bank signals a slower easing path",
+          description: "Synthetic dashboard event.",
+          occurredAt: NOW,
+          confidence: 0.92,
+          themes: [],
+          affectedAssets: [
+            {
+              assetId: 101,
+              assetName: "Bitcoin",
+              assetSymbol: "BTC/USDT",
+              assetType: "CRYPTO",
+              relationType: "AFFECTED_ASSET",
+              weight: 1,
+            },
+          ],
+        },
+      ],
+      errorCode: null,
+    },
+    marketEvents24h: {
+      state: "AVAILABLE",
+      count: 12,
+      window: { from: "2026-01-14T08:00:00.000Z", to: NOW },
+      errorCode: null,
+    },
+    activeNarratives: {
+      state: "AVAILABLE",
+      count: 3,
+      statuses: ["EMERGING", "ACTIVE"],
+      errorCode: null,
+    },
+    marketNarratives: {
+      state: "AVAILABLE",
+      items: [
+        {
+          id: 81,
+          title: isVietnamese
+            ? "Khẩu vị rủi ro trở lại"
+            : "Risk appetite returns",
+          thesis: isVietnamese ? "Luận điểm tổng hợp." : "Synthetic narrative.",
+          status: "ACTIVE",
+          confidence: 0.8,
+          lastUpdatedAt: NOW,
+          primaryTheme: {
+            themeId: 91,
+            themeTitle: isVietnamese ? "Kinh tế vĩ mô" : "Macro",
+            themeSlug: "macro",
+          },
+          assets: [],
+        },
+      ],
+      errorCode: null,
+    },
+    latestNews6h: {
+      state: "AVAILABLE",
+      count: 1,
+      window: { from: "2026-01-15T02:00:00.000Z", to: NOW },
+      errorCode: null,
+    },
+    assetsInFocus: {
+      state: "AVAILABLE",
+      items: [
+        {
+          assetId: 101,
+          assetName: "Bitcoin",
+          assetSymbol: "BTC/USDT",
+          assetType: "CRYPTO",
+          context: {
+            title: isVietnamese
+              ? "Động lượng giá tổng hợp"
+              : "Synthetic price momentum",
+            summary: isVietnamese
+              ? "Bối cảnh mẫu cho bảng tổng quan."
+              : "Fixture context for the dashboard.",
+            observedAt: NOW,
+          },
+        },
+      ],
+      errorCode: null,
+    },
+  }
+
+  if (workspaceId === 2) {
+    summary.scope.watchlistAssetCount = 1
+    summary.recentEvents.items[0] = {
+      ...summary.recentEvents.items[0],
+      id: 62,
+      title: "Energy demand outlook revised higher",
+      description: "Workspace Beta synthetic event.",
+      occurredAt: "2026-01-14T08:00:00.000Z",
+    }
+    summary.assetsInFocus.items[0] = {
+      assetId: 201,
+      assetName: "Beta only fixture asset",
+      assetSymbol: "BETA",
+      assetType: "CRYPTO",
+      context: {
+        title: "Workspace Beta synthetic asset context",
+        summary: "Scoped to Workspace Beta.",
+        observedAt: NOW,
+      },
+    }
+    summary.marketNarratives.items[0] = {
+      ...summary.marketNarratives.items[0],
+      id: 82,
+      title: isVietnamese
+        ? "Luận điểm riêng của Workspace Beta"
+        : "Workspace Beta narrative",
+      thesis: isVietnamese
+        ? "Luận điểm thuộc Workspace Beta."
+        : "A narrative scoped to Workspace Beta.",
+    }
+  }
+
+  if (scenario === "overview-expanded") {
+    summary.scope.watchlistAssetCount = 9
+    summary.activeNarratives.count = 14
+    summary.assetsInFocus.items = [
+      {
+        assetId: 101,
+        assetName: "Bitcoin",
+        assetSymbol: "BTC/USDT",
+        assetType: "CRYPTO",
+        context: {
+          title: isVietnamese
+            ? "Động lượng giá tổng hợp"
+            : "Synthetic price momentum",
+          summary: isVietnamese
+            ? "Bối cảnh mẫu cho bảng tổng quan."
+            : "Fixture context for the dashboard.",
+          observedAt: NOW,
+        },
+      },
+      ...["EQUITY", "ETF", "COMMODITY", "FX", "INDEX"].map(
+        (assetType, index) => ({
+          assetId: 301 + index,
+          assetName: isVietnamese
+            ? "Tài sản chú ý mẫu " + (index + 2)
+            : "Overview focus asset " + (index + 2),
+          assetSymbol: "FOCUS" + (index + 2),
+          assetType,
+          context: {
+            title: isVietnamese
+              ? "Bối cảnh chú ý " + (index + 2)
+              : "Focus context " + (index + 2),
+            summary:
+              index % 2 === 0
+                ? null
+                : isVietnamese
+                  ? "Tóm tắt bối cảnh bổ sung."
+                  : "Additional context summary.",
+            observedAt: index === 2 ? "2026-01-14T08:00:00.000Z" : NOW,
+          },
+        })
+      ),
+    ]
+    const activeNarrative = summary.marketNarratives.items[0]
+    summary.marketNarratives.items = [
+      {
+        ...activeNarrative,
+        id: 83,
+        title: isVietnamese ? "Thanh khoản lan rộng" : "Liquidity broadens",
+        thesis: isVietnamese
+          ? "Dòng tiền đang mở rộng sang nhiều nhóm tài sản."
+          : "Flows are broadening across asset groups.",
+        status: "EMERGING",
+        confidence: 0.91,
+        primaryTheme: {
+          themeId: 93,
+          themeTitle: isVietnamese ? "Kinh tế vĩ mô" : "Macro",
+          themeSlug: "macro",
+        },
+        assets: [
+          {
+            assetId: 101,
+            assetName: "Bitcoin",
+            assetSymbol: "BTC/USDT",
+            assetType: "CRYPTO",
+            relationType: "PRIMARY",
+            weight: null,
+          },
+          {
+            assetId: 999,
+            assetName: "Gold",
+            assetSymbol: "GOLD",
+            assetType: "COMMODITY",
+            relationType: "AFFECTED",
+            weight: 0.5,
+          },
+        ],
+      },
+      {
+        ...activeNarrative,
+        id: 82,
+        title: null,
+        thesis: null,
+        status: "WEAKENING",
+        confidence: null,
+        primaryTheme: {
+          themeId: 92,
+          themeTitle: null,
+          themeSlug: "must-not-be-rendered",
+        },
+        assets: [
+          {
+            assetId: 999,
+            assetName: "Oil",
+            assetSymbol: "OIL",
+            assetType: "COMMODITY",
+            relationType: "AFFECTED",
+            weight: null,
+          },
+        ],
+      },
+      activeNarrative,
+    ]
+    summary.recentEvents.items = Array.from({ length: 7 }, (_, index) => {
+      const event = summary.recentEvents.items[0]
+      return {
+        ...event,
+        id: 61 + index,
+        title:
+          index === 0
+            ? "Central bank signals a slower easing path"
+            : index === 1
+              ? null
+              : `Fixture overview event ${index + 1}`,
+        description: `Synthetic event ${index + 1} for the Overview fixture.`,
+        occurredAt:
+          index === 3
+            ? "2026-01-13T08:00:00.000Z"
+            : `2026-01-15T0${8 - index}:00:00.000Z`,
+      }
+    })
+    summary.marketEvents24h.count = 29
+    summary.latestNews6h.count = 17
+  }
+
+  if (scenario === "scope-mismatch") {
+    summary.scope.workspaceId = workspaceId === 1 ? 2 : 1
+  }
+
+  return summary
+}
+
+function overviewAssets() {
+  return Array.from({ length: 9 }, (_, index) => ({
+    id: index === 0 ? 101 : 300 + index,
+    assetId: index === 0 ? 101 : 300 + index,
+    assetName: `Overview tracked asset ${index + 1}`,
+    assetSymbol: `OVR${index + 1}`,
+    assetType: ["CRYPTO", "EQUITY", "ETF", "COMMODITY"][index] ?? "CRYPTO",
+    createdDate: NOW,
+  }))
+}
+
+function overviewNews() {
+  return Array.from({ length: 7 }, (_, index) => ({
+    id: 71 + index,
+    title: `Global fixture news ${index + 1}`,
+    description: `System-wide news item ${index + 1}, not linked to a workspace asset or event.`,
+    url: `https://fixture.invalid/news/${71 + index}`,
+    sourceName: "Fixture Wire",
+    featureImage: null,
+    publishedAt: new Date(Date.parse(NOW) - index * 60_000).toISOString(),
+    status: "INGESTED",
+    createdDate: NOW,
+  }))
+}
+
+function articleReaderLongContent() {
+  const paragraphs = Array.from(
+    { length: 30 },
+    (_, index) =>
+      `Đoạn nội dung ${index + 1}: Bản tin giữ nguyên toàn bộ phần nội dung đã được xử lý để người đọc có thể đối chiếu bối cảnh và nguồn. ` +
+      "Dữ liệu trong đoạn này được cung cấp bởi fixture cục bộ."
+  )
+  const wideTable = [
+    "| Mã tài sản | Ngôn ngữ | Thời điểm công bố | Trạng thái xử lý | Nguồn snapshot | URL chuẩn | Mức độ liên quan | Ghi chú |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- |",
+    "| BTC/USDT | vi-VN | 2026-11-04T08:00:00Z | DERIVATION_FAILED | Fixture Wire | /news-articles/71 | 0.987654321 | Nội dung bài vẫn đọc được |",
+  ].join("\n")
+
+  return [
+    "# Bản tin đầy đủ",
+    ...paragraphs,
+    '```ts\nconst sourceSnapshot = "' +
+      "market-source-reference-".repeat(18) +
+      '";\n```',
+    wideTable,
+    "### Dấu mốc cuối bài: Nội dung dài vẫn được giữ đầy đủ.",
+  ].join("\n\n")
+}
+
+function graphView(state) {
+  const scenario = getScenario(state, "GET", "/graph-view")
+  if (scenario === "empty") return { nodes: [], edges: [] }
+
+  if (scenario === "invalid-schema") {
+    return {
+      nodes: [{ id: "event:61", kind: "event", label: "Invalid fixture" }],
+      edges: [],
+    }
+  }
+
+  const event = state.events[0]
+  const asset = state.assets[0]
+  const article = state.newsArticles[0]
+  const currentWorkspace = state.workspaces.find(
+    (item) => item.currentWorkspace
+  )
+
+  return {
+    nodes: [
+      ...(scenario === "graph-article-node"
+        ? [
+            {
+              id: `news-article:${article.id}`,
+              kind: "news-article",
+              label: article.title,
+              secondaryLabel: article.sourceName,
+              metadata: {
+                slug: null,
+                canonicalKey: null,
+                symbol: null,
+                assetType: null,
+                sourceName: article.sourceName,
+                url: article.url,
+                occurredAt: null,
+                publishedAt: article.publishedAt,
+                status: null,
+                narrativeStatus: null,
+                confidence: null,
+                thesis: null,
+                themes: null,
+              },
+            },
+          ]
+        : []),
+      {
+        id: `event:${event.id}`,
+        kind: "event",
+        label:
+          currentWorkspace?.id === 2 ? "Workspace Beta event" : event.title,
+        secondaryLabel: event.canonicalKey,
+        metadata: {
+          slug: null,
+          canonicalKey: event.canonicalKey,
+          symbol: null,
+          assetType: null,
+          sourceName: null,
+          url: null,
+          occurredAt: event.occurredAt,
+          publishedAt: null,
+          status: "ENRICHED",
+          narrativeStatus: null,
+          confidence: event.confidence,
+          thesis: null,
+          themes: null,
+        },
+      },
+      {
+        id: `asset:${asset.assetId}`,
+        kind: "asset",
+        label: asset.assetName,
+        secondaryLabel: asset.assetSymbol,
+        metadata: {
+          slug: null,
+          canonicalKey: null,
+          symbol: asset.assetSymbol,
+          assetType: asset.assetType,
+          sourceName: null,
+          url: null,
+          occurredAt: null,
+          publishedAt: null,
+          status: null,
+          narrativeStatus: null,
+          confidence: null,
+          thesis: null,
+          themes: null,
+        },
+      },
+    ],
+    edges: [
+      ...(scenario === "graph-article-node"
+        ? [
+            {
+              id: `news-article-${article.id}-event-${event.id}`,
+              kind: "news-article-event",
+              sourceNodeId: `news-article:${article.id}`,
+              targetNodeId: `event:${event.id}`,
+              relationType: "PRIMARY",
+              weight: null,
+              confidence: article.linkedEvents[0]?.evidenceConfidence ?? null,
+              note: article.linkedEvents[0]?.evidenceNote ?? null,
+            },
+          ]
+        : []),
+      {
+        id: `event-${event.id}-asset-${asset.assetId}`,
+        kind: "event-asset",
+        sourceNodeId: `event:${event.id}`,
+        targetNodeId: `asset:${asset.assetId}`,
+        relationType: "AFFECTED_ASSET",
+        weight: null,
+        confidence: event.confidence,
+        note: null,
+      },
+    ],
+  }
+}
+
+function marketChartAnnotations(url, scenario) {
+  const assetId = Number(url.searchParams.get("assetId") ?? 101)
+  const anchorTime = url.searchParams.get("to") ?? NOW
+  const annotationTime = new Date(Date.parse(anchorTime) - 1000).toISOString()
+
+  if (scenario === "annotations-many") {
+    return Array.from({ length: 125 }, (_, index) => ({
+      id: `fixture-hot-event-${index + 1}`,
+      annotationType: "HOT_EVENT",
+      assetId,
+      time: annotationTime,
+      hotEvent: {
+        eventId: index === 124 ? 63 : 61,
+        severity: "HIGH",
+        direction: "BULLISH",
+        title: `Fixture annotation ${index + 1}`,
+        summary: "Synthetic chart annotation for the browser quality gate.",
+        confidence: 0.92,
+        topMarketReaction: null,
+        marketReactions: [],
+        evidence: [
+          {
+            newsArticleId: 71,
+            title: `Fixture evidence ${index + 1}`,
+            publisher: "Fixture Wire",
+            url: "https://fixture.invalid/news/71",
+            publishedAt: annotationTime,
+            evidenceRole: "PRIMARY",
+            confidence: 0.92,
+            evidenceNote: "Synthetic evidence for the browser quality gate.",
+          },
+        ],
+        links: { eventDetail: `/events/${index === 124 ? 63 : 61}` },
+      },
+      warmEpisode: null,
+    }))
+  }
+
+  if (scenario === "annotations-warm-episode") {
+    const periodStart = new Date(
+      Date.parse(NOW) - 2 * 24 * 60 * 60 * 1000
+    ).toISOString()
+    const from = Date.parse(url.searchParams.get("from") ?? "")
+    const periodStartTime = Date.parse(periodStart)
+    const periodEndTime = Date.parse(anchorTime)
+
+    if (
+      !Number.isFinite(from) ||
+      periodStartTime < from ||
+      periodStartTime >= periodEndTime
+    ) {
+      return []
+    }
+
+    const firstEventTime = new Date(
+      Date.parse(periodStart) + 60 * 60 * 1000
+    ).toISOString()
+    const secondEventTime = new Date(
+      Date.parse(periodStart) + 2 * 60 * 60 * 1000
+    ).toISOString()
+
+    return [
+      {
+        id: "fixture-warm-episode-42",
+        annotationType: "WARM_EPISODE",
+        assetId,
+        time: periodStart,
+        hotEvent: null,
+        warmEpisode: {
+          warmEpisodeId: 42,
+          periodStart,
+          periodEnd: anchorTime,
+          direction: "NEUTRAL",
+          summary: "Fixture warm episode",
+          outcome: null,
+          events: [
+            {
+              warmEpisodeEventId: 420,
+              time: firstEventTime,
+              severity: "HIGH",
+              direction: "BEARISH",
+              title: "U.S. debt snapshot",
+              summary:
+                "Years of widening deficits pushed federal debt past $40 trillion.",
+              confidence: 0.05,
+              relationType: "PRIMARY_SUBJECT",
+              reaction: {
+                id: 421,
+                direction: "BULLISH",
+                timeHorizon: "MEDIUM_TERM",
+                confidence: 0.7,
+                reasoning:
+                  "Persistent deficits may increase demand for inflation hedges over the medium term.",
+                observedAt: firstEventTime,
+                outcome: null,
+              },
+            },
+            {
+              warmEpisodeEventId: 422,
+              time: secondEventTime,
+              severity: "LOW",
+              direction: "BULLISH",
+              title: "UAE trade snapshot",
+              summary:
+                "A missile strike prompted the UAE to suspend trade and financial transactions with Iran.",
+              confidence: 0.95,
+              relationType: "AFFECTED_ASSET",
+              reaction: {
+                id: 423,
+                direction: "BEARISH",
+                timeHorizon: "SHORT_TERM",
+                confidence: 0.35,
+                reasoning: " \t ",
+                observedAt: secondEventTime,
+                outcome: null,
+              },
+            },
+          ],
+        },
+      },
+    ]
+  }
+
+  const evidenceUrl =
+    scenario === "annotations-unsafe-evidence-url"
+      ? "javascript:alert(1)"
+      : "https://fixture.invalid/news/71"
+
+  return [
+    {
+      id: "fixture-hot-event-61",
+      annotationType: "HOT_EVENT",
+      assetId,
+      time: annotationTime,
+      hotEvent: {
+        eventId: 61,
+        severity: "HIGH",
+        direction: "BULLISH",
+        title:
+          assetId === 102
+            ? "Fixture Gold annotation"
+            : "Central bank signals a slower easing path",
+        summary: "Synthetic chart annotation for the browser quality gate.",
+        confidence: 0.92,
+        topMarketReaction:
+          scenario === "annotations-hot-event-reaction"
+            ? {
+                id: 610,
+                direction: "BULLISH",
+                timeHorizon: "SHORT_TERM",
+                confidence: 0.92,
+                reasoning: "Synthetic reaction for the browser quality gate.",
+                observedAt: annotationTime,
+                outcome: null,
+              }
+            : null,
+        marketReactions: [],
+        evidence: [
+          {
+            newsArticleId: 71,
+            title: "Fixture market update",
+            publisher: "Fixture Wire",
+            url: evidenceUrl,
+            publishedAt: annotationTime,
+            evidenceRole: "PRIMARY",
+            confidence: 0.92,
+            evidenceNote: "Synthetic evidence for the browser quality gate.",
+          },
+        ],
+        links: { eventDetail: "/events/61" },
+      },
+      warmEpisode: null,
+    },
+  ]
+}
+
+function marketChartEconomicCalendarEvents(url, scenario) {
+  if (scenario === "calendar-empty") return []
+  if (scenario === "calendar-error") {
+    return {
+      __status: 503,
+      payload: errorPayload(
+        "Calendar fixture unavailable",
+        "SERVICE_UNAVAILABLE"
+      ),
+    }
+  }
+
+  const assetId = Number(url.searchParams.get("assetId") ?? 101)
+  const from = Date.parse(url.searchParams.get("from") ?? "")
+  const to = Date.parse(url.searchParams.get("to") ?? "")
+  const impacts = url.searchParams.getAll("impact")
+  const fixtureNow = Date.parse(NOW)
+  const waiting =
+    scenario === "calendar-awaiting" || scenario === "calendar-available"
+  const historical = scenario === "calendar-historical"
+  const status = scenario === "calendar-available" ? "AVAILABLE" : "PENDING"
+  const events = [
+    {
+      id: historical ? 903 : 901,
+      time: fixtureNow + (historical ? -360 : waiting ? -30 : 120) * 60 * 1000,
+      title: historical
+        ? "Fixture historical inflation release"
+        : "Fixture inflation release",
+      impact: "HIGH",
+      status,
+    },
+    ...(scenario === "calendar-upcoming-window"
+      ? [
+          {
+            id: 902,
+            time: fixtureNow + 48 * 60 * 60 * 1000,
+            title: "Fixture employment release",
+            impact: "MEDIUM",
+            status: "PENDING",
+          },
+        ]
+      : []),
+  ]
+
+  return events
+    .filter(
+      (event) =>
+        event.time >= from &&
+        event.time < to &&
+        (!impacts.length || impacts.includes(event.impact))
+    )
+    .map((event) => ({
+      ...event,
+      assetId,
+      time: new Date(event.time).toISOString(),
+      scheduledAt: new Date(event.time).toISOString(),
+      currencyCode: "USD",
+      type: event.id === 902 ? "EMPLOYMENT" : "INFLATION",
+      forecastValue: "3.0",
+      previousValue: "3.1",
+      actualValue: event.status === "AVAILABLE" ? "3.0" : null,
+      revision: null,
+      actualBetterWorse: null,
+      revisionBetterWorse: null,
+      description:
+        scenario === "calendar-upcoming"
+          ? "This long synthetic calendar description continues across several lines and remains fully readable in the chart event detail. It includes the source explanation and additional context without requiring a second detail page."
+          : "Synthetic calendar event.",
+    }))
+}
+
+function candles(url, dailyHistory = false) {
+  const timeframe = url.searchParams.get("timeframe") ?? "1h"
+  const assetId = Number(url.searchParams.get("assetId") ?? 101)
+  const countBack = Math.max(1, Number(url.searchParams.get("countBack") ?? 4))
+  const to = url.searchParams.get("to") ?? NOW
+  const anchorTimestamp = Date.parse(to)
+  const intervalMinutes =
+    {
+      "1m": 1,
+      "5m": 5,
+      "15m": 15,
+      "30m": 30,
+      "1h": 60,
+      "4h": 240,
+      "1d": 1440,
+      "1w": 10080,
+      "1mo": 43200,
+    }[timeframe] ?? 60
+  const intervalMs = intervalMinutes * 60 * 1000
+  const values = [
+    [100, 104, 98, 102],
+    [102, 108, 101, 107],
+    [107, 109, 103, 105],
+    [105, 111, 104, 110],
+  ]
+  const offsets = assetId === 102 ? [10, 7, 1] : [4, 3, 2, 1]
+  const selectedOffsets = offsets.slice(-Math.min(countBack, offsets.length))
+  const times = selectedOffsets.map((offset) => {
+    if (timeframe === "1mo") {
+      const anchorDate = new Date(anchorTimestamp)
+      return new Date(
+        Date.UTC(
+          anchorDate.getUTCFullYear(),
+          anchorDate.getUTCMonth() - offset,
+          1
+        )
+      ).toISOString()
+    }
+
+    const dailyOpenOffset =
+      dailyHistory && new Date(anchorTimestamp).getUTCHours() === 0
+        ? 22 * 60 * 60 * 1000
+        : 0
+    return new Date(
+      anchorTimestamp - offset * intervalMs + dailyOpenOffset
+    ).toISOString()
+  })
+  const from = times[0] ?? to
+
+  return {
+    provider: "fixture",
+    symbol: assetId === 102 ? "XAUUSD" : "BTC/USDT",
+    asset: {
+      id: assetId,
+      name: assetId === 102 ? "Gold" : "Bitcoin",
+      symbol: assetId === 102 ? "XAUUSD" : "BTC/USDT",
+      type: assetId === 102 ? "COMMODITY" : "CRYPTO",
+      pricePrecision: 2,
+    },
+    timeframe,
+    from,
+    to,
+    candles: times.map((time, index) => {
+      const value = values[index % values.length]
+      const priceOffset = dailyHistory ? 2395 : 0
+
+      return {
+        time,
+        open: value[0] + priceOffset,
+        high: value[1] + priceOffset,
+        low: value[2] + priceOffset,
+        close: value[3] + priceOffset,
+        volume: 1000 + index,
+        partial: index === times.length - 1,
+      }
+    }),
+  }
+}
+
+function liveSnapshot(
+  assetId,
+  state = "SUBSCRIBED",
+  timeframe = "1h",
+  staleQuote = state === "STALE"
+) {
+  const symbol = assetId === 102 ? "XAUUSD" : "BTC/USDT"
+  const quote =
+    state === "MARKET_CLOSED" || (state === "CONNECTING" && !staleQuote)
+      ? null
+      : {
+          assetId,
+          symbol,
+          price: assetId === 102 ? 2500.25 : 110.5,
+          receivedAt: NOW,
+          stale: staleQuote,
+        }
+  return {
+    asset: {
+      id: assetId,
+      name: assetId === 102 ? "Gold" : "Bitcoin",
+      symbol,
+      type: assetId === 102 ? "COMMODITY" : "CRYPTO",
+      pricePrecision: 2,
+    },
+    symbol,
+    timeframe,
+    quote,
+    status: {
+      assetId,
+      symbol,
+      state,
+      message: null,
+      stale: staleQuote,
+      observedAt: NOW,
+    },
+  }
+}
+
+function writeSse(response, event, payload) {
+  response.write(`event: ${event}\ndata: ${JSON.stringify(payload)}\n\n`)
+}
+
+async function streamLive(response, state, url, scenario) {
+  const assetId = Number(url.searchParams.get("assetId") ?? 101)
+  state.streamConnections += 1
+  response.writeHead(200, {
+    "Content-Type": "text/event-stream; charset=utf-8",
+    "Cache-Control": "no-cache, no-transform",
+    Connection: "keep-alive",
+    "Access-Control-Allow-Origin": "*",
+  })
+  trackResponse(state, response)
+
+  if (scenario === "post-open-error") {
+    writeSse(response, "error", {
+      assetId,
+      symbol: assetId === 102 ? "XAUUSD" : "BTC/USDT",
+      message: "Fixture stream outage",
+      observedAt: NOW,
+    })
+    return
+  }
+
+  if (scenario === "error-reconnect" && state.streamConnections === 1) {
+    response.write("retry: 3000\n\n")
+    const snapshot = liveSnapshot(
+      assetId,
+      "SUBSCRIBED",
+      url.searchParams.get("timeframe") ?? "1h"
+    )
+    writeSse(response, "status", snapshot.status)
+    writeSse(response, "snapshot", snapshot)
+    if (snapshot.quote) writeSse(response, "price", snapshot.quote)
+    writeSse(response, "error", {
+      assetId,
+      symbol: snapshot.symbol,
+      message: "Fixture stream error before reconnect",
+      observedAt: NOW,
+    })
+    response.end()
+    return
+  }
+
+  if (scenario === "reconnect" && state.streamConnections === 1) {
+    response.write("retry: 50\n\n")
+    writeSse(response, "status", liveSnapshot(assetId, "RECONNECTING").status)
+    response.end()
+    return
+  }
+
+  const liveState =
+    {
+      "connecting-stale": "CONNECTING",
+      "market-closed": "MARKET_CLOSED",
+      "no-quote": "CONNECTING",
+      "reconnecting-stale": "RECONNECTING",
+      stale: "STALE",
+    }[scenario] ?? "SUBSCRIBED"
+  const snapshot = liveSnapshot(
+    assetId,
+    liveState,
+    url.searchParams.get("timeframe") ?? "1h",
+    ["connecting-stale", "reconnecting-stale"].includes(scenario) ||
+      liveState === "STALE"
+  )
+  writeSse(response, "status", snapshot.status)
+  writeSse(response, "snapshot", snapshot)
+  if (snapshot.quote && !snapshot.quote.stale) {
+    writeSse(response, "price", snapshot.quote)
+    if (scenario === "daily-history-retry") {
+      const quote = { ...snapshot.quote }
+      const timer = setInterval(() => {
+        quote.price += 0.25
+        writeSse(response, "price", quote)
+      }, 350)
+      response.once("close", () => clearInterval(timer))
+    }
+  }
+  if (
+    [
+      "error-reconnect",
+      "market-closed",
+      "no-quote",
+      "reconnect",
+      "connecting-stale",
+      "reconnecting-stale",
+      "stale",
+    ].includes(scenario)
+  ) {
+    return
+  }
+}
+
+function hasFixturePermission(state, permission) {
+  return (
+    state.permissions.includes("*") || state.permissions.includes(permission)
+  )
+}
+
+function roleReadFixtures(locale) {
+  const isVietnamese = locale?.startsWith("vi")
+  return [
+    {
+      id: 901,
+      key: "CONTENT_REVIEWER",
+      name: isVietnamese ? "Người duyệt nội dung" : "Content Reviewer",
+      description: isVietnamese
+        ? "Có thể duyệt nội dung."
+        : "Can review content.",
+      permissions: [
+        {
+          id: 1,
+          key: "news-article:read",
+          name: isVietnamese ? "Đọc bài viết tin tức" : "Read news articles",
+          description: null,
+        },
+        {
+          id: 2,
+          key: "event:read",
+          name: isVietnamese ? "Đọc sự kiện" : "Read events",
+          description: null,
+        },
+      ],
+    },
+    {
+      id: 902,
+      key: "EMPTY_READER",
+      name: isVietnamese ? "Người đọc trống" : "Empty reader",
+      description: null,
+      permissions: [],
+    },
+  ]
+}
+
+function aiTaskConfigurationRouteResult(state, method, pathname, body, url) {
+  if (method === "GET" && pathname === "/ai-task-configurations") {
+    if (!hasFixturePermission(state, "ai-task-configuration:read")) {
+      return {
+        __status: 403,
+        payload: errorPayload(
+          "AI task configuration permission denied",
+          "FORBIDDEN"
+        ),
+      }
+    }
+    const configurations = state.aiTaskConfigurations.map((configuration) => ({
+      ...configuration,
+    }))
+    if (
+      getScenario(state, method, pathname) === "legacy-saved-provider-selection"
+    ) {
+      return configurations.map((configuration) =>
+        configuration.task === "MARKET_QUESTION_UNDERSTANDING"
+          ? {
+              ...configuration,
+              configured: true,
+              selectedConnectionId: 16,
+              selectedProviderType: "GROQ",
+              selectedModel: "legacy-model",
+            }
+          : configuration
+      )
+    }
+    return configurations
+  }
+
+  const selectionMatch = pathname.match(
+    /^\/ai-task-configurations\/([A-Z_]+)\/selection$/
+  )
+  if (method === "PUT" && selectionMatch) {
+    if (!hasFixturePermission(state, "ai-task-configuration:update")) {
+      return {
+        __status: 403,
+        payload: errorPayload("AI task update permission denied", "FORBIDDEN"),
+      }
+    }
+    const configuration = state.aiTaskConfigurations.find(
+      (item) => item.task === selectionMatch[1]
+    )
+    const connection = state.aiProviderConfigurations.find(
+      (item) => item.id === body?.connectionId
+    )
+    const allowedModels = {
+      DEEPSEEK: new Set(["deepseek-v4-flash", "deepseek-v4-pro"]),
+      OPENAI: new Set(["gpt-4.1-mini", "gpt-4.1"]),
+    }
+    if (
+      !configuration ||
+      !connection ||
+      !allowedModels[connection.providerType]?.has(body?.model) ||
+      Object.keys(body ?? {}).some(
+        (key) => !["connectionId", "model"].includes(key)
+      )
+    ) {
+      return {
+        __status: configuration ? 400 : 404,
+        payload: errorPayload(
+          "Invalid AI task selection",
+          "FIXTURE_VALIDATION"
+        ),
+      }
+    }
+    configuration.selectedConnectionId = connection.id
+    configuration.selectedProviderType = connection.providerType
+    configuration.selectedModel = body.model
+    configuration.configured = true
+    return { ...configuration }
+  }
+
+  const outputTokenMatch = pathname.match(
+    /^\/ai-task-configurations\/([A-Z_]+)\/output-token$/
+  )
+  if (method === "PUT" && outputTokenMatch) {
+    if (!hasFixturePermission(state, "ai-task-configuration:update")) {
+      return {
+        __status: 403,
+        payload: errorPayload("AI task update permission denied", "FORBIDDEN"),
+      }
+    }
+    const configuration = state.aiTaskConfigurations.find(
+      (item) => item.task === outputTokenMatch[1]
+    )
+    const tokenValue = body?.maxOutputTokens
+    if (
+      !configuration ||
+      !(
+        tokenValue === null ||
+        (Number.isInteger(tokenValue) &&
+          tokenValue > 0 &&
+          tokenValue <= 2_147_483_647)
+      ) ||
+      Object.keys(body ?? {}).some((key) => key !== "maxOutputTokens")
+    ) {
+      return {
+        __status: configuration ? 400 : 404,
+        payload: errorPayload(
+          "Invalid AI task output-token setting",
+          "FIXTURE_VALIDATION"
+        ),
+      }
+    }
+    configuration.customOutputTokens = tokenValue
+    configuration.effectiveOutputTokens =
+      tokenValue ?? configuration.defaultOutputTokens
+    return { ...configuration }
+  }
+
+  if (method === "GET" && pathname === "/ai-provider-configs") {
+    const scenario = getScenario(state, method, pathname)
+    if (!hasFixturePermission(state, "ai-provider-config:read")) {
+      return {
+        __status: 403,
+        payload: errorPayload(
+          "AI provider read permission denied",
+          "FORBIDDEN"
+        ),
+      }
+    }
+    const connections =
+      scenario === "legacy-provider-options"
+        ? [
+            ...state.aiProviderConfigurations,
+            {
+              id: 16,
+              providerType: "GROQ",
+              defaultProvider: false,
+              credentials: [],
+            },
+            {
+              id: 17,
+              providerType: "ZAI",
+              defaultProvider: false,
+              credentials: [],
+            },
+          ]
+        : scenario === "positive-out-of-range"
+          ? positiveOutOfRangeAiProviderConfigs()
+          : scenario === "authorized-page-two-size-twenty-101"
+            ? pageTwoSizeTwentyAiProviderConfigs()
+            : state.aiProviderConfigs
+    const result = slicePage(connections, url)
+    const sort = { sorted: false, unsorted: true, empty: true }
+    return {
+      ...result,
+      pageable: { ...result.pageable, sort },
+      sort,
+    }
+  }
+
+  const modelCatalogMatch = pathname.match(
+    /^\/ai-provider-configs\/(\d+)\/model-catalog$/
+  )
+  if (method === "GET" && modelCatalogMatch) {
+    if (!hasFixturePermission(state, "ai-provider-config:model-catalog")) {
+      return {
+        __status: 403,
+        payload: errorPayload(
+          "AI model catalog permission denied",
+          "FORBIDDEN"
+        ),
+      }
+    }
+    const connection = state.aiProviderConfigurations.find(
+      (item) => item.id === Number(modelCatalogMatch[1])
+    )
+    if (!connection) {
+      return {
+        __status: 404,
+        payload: errorPayload("AI provider connection not found", "NOT_FOUND"),
+      }
+    }
+    const modelsByProvider = {
+      DEEPSEEK: [
+        { id: "deepseek-v4-flash", label: "deepseek-v4-flash" },
+        { id: "deepseek-v4-pro", label: "deepseek-v4-pro" },
+      ],
+      OPENAI: [
+        { id: "gpt-4.1-mini", label: "gpt-4.1-mini" },
+        { id: "gpt-4.1", label: "gpt-4.1" },
+      ],
+    }
+    return {
+      providerType: connection.providerType,
+      models: modelsByProvider[connection.providerType] ?? [],
+    }
+  }
+
+  const promptMatch = pathname.match(/^\/system-prompts\/([^/]+)$/)
+  if (method === "GET" && promptMatch) {
+    if (!hasFixturePermission(state, "system-prompt:read")) {
+      return {
+        __status: 403,
+        payload: errorPayload(
+          "System prompt read permission denied",
+          "FORBIDDEN"
+        ),
+      }
+    }
+    const promptType = decodeURIComponent(promptMatch[1])
+    if (!SYSTEM_PROMPT_CONTENT_TYPES.has(promptType)) {
+      return {
+        __status: 404,
+        payload: errorPayload("System prompt not found", "NOT_FOUND"),
+      }
+    }
+    const prompt = state.systemPrompts.find(
+      (entry) => entry.promptType === promptType
+    )
+    return prompt ? { ...prompt } : null
+  }
+
+  return null
+}
+
+function smtpConfigurationResponse(configuration) {
+  return configuration
+    ? { ...configuration }
+    : {
+        configured: false,
+        enabled: false,
+        passwordConfigured: false,
+        version: null,
+        host: null,
+        port: null,
+        username: null,
+        securityMode: null,
+        fromAddress: null,
+        fromName: null,
+        createdDate: null,
+        lastModifiedDate: null,
+      }
+}
+
+function smtpConfigurationRouteResult(state, method, pathname, body) {
+  if (!pathname.startsWith("/smtp-configuration")) return null
+
+  const permission =
+    method === "GET" ? "smtp-configuration:read" : "smtp-configuration:manage"
+  if (!hasFixturePermission(state, permission)) {
+    return {
+      __status: 403,
+      payload: errorPayload(
+        "SMTP configuration permission required",
+        "PERMISSION_DENIED"
+      ),
+    }
+  }
+
+  const current = state.smtpConfiguration
+  if (method === "GET" && pathname === "/smtp-configuration") {
+    return smtpConfigurationResponse(current)
+  }
+
+  if (method === "PUT" && pathname === "/smtp-configuration") {
+    if (
+      (current && body?.version !== current.version) ||
+      (!current && body?.version !== undefined)
+    ) {
+      return {
+        __status: 409,
+        payload: errorPayload(
+          "SMTP configuration changed",
+          "SMTP_CONFIGURATION_VERSION_CONFLICT"
+        ),
+      }
+    }
+    if (!current?.passwordConfigured && !body?.password) {
+      return {
+        __status: 422,
+        payload: errorPayload(
+          "SMTP password is required",
+          "SMTP_PASSWORD_REQUIRED"
+        ),
+      }
+    }
+
+    state.smtpConfiguration = {
+      configured: true,
+      enabled: current?.enabled ?? false,
+      passwordConfigured:
+        Boolean(body?.password) || Boolean(current?.passwordConfigured),
+      version: current ? current.version + 1 : 1,
+      host: body.host,
+      port: body.port,
+      username: body.username,
+      securityMode: body.securityMode,
+      fromAddress: body.fromAddress,
+      fromName: body.fromName ?? "",
+      createdDate: current?.createdDate ?? NOW,
+      lastModifiedDate: NOW,
+    }
+    return smtpConfigurationResponse(state.smtpConfiguration)
+  }
+
+  if (method === "POST" && pathname === "/smtp-configuration/test") {
+    if (!body?.password && !current?.passwordConfigured) {
+      return {
+        __status: 422,
+        payload: errorPayload(
+          "SMTP password is required",
+          "SMTP_PASSWORD_REQUIRED"
+        ),
+      }
+    }
+    return { accepted: true }
+  }
+
+  if (
+    method === "POST" &&
+    (pathname === "/smtp-configuration/enable" ||
+      pathname === "/smtp-configuration/disable")
+  ) {
+    if (!current || body?.version !== current.version) {
+      return {
+        __status: 409,
+        payload: errorPayload(
+          "SMTP configuration changed",
+          "SMTP_CONFIGURATION_VERSION_CONFLICT"
+        ),
+      }
+    }
+    state.smtpConfiguration = {
+      ...current,
+      enabled: pathname.endsWith("/enable"),
+      version: current.version + 1,
+      lastModifiedDate: NOW,
+    }
+    return smtpConfigurationResponse(state.smtpConfiguration)
+  }
+
+  if (method === "DELETE" && pathname === "/smtp-configuration") {
+    if (!current || body?.version !== current.version) {
+      return {
+        __status: 409,
+        payload: errorPayload(
+          "SMTP configuration changed",
+          "SMTP_CONFIGURATION_VERSION_CONFLICT"
+        ),
+      }
+    }
+    if (current.enabled) {
+      return {
+        __status: 409,
+        payload: errorPayload(
+          "Disable SMTP delivery first",
+          "SMTP_CONFIGURATION_ENABLED"
+        ),
+      }
+    }
+    state.smtpConfiguration = null
+    return { deleted: true }
+  }
+
+  return null
+}
+
+function feedbackScenarioFor(state, method, pathname) {
+  if (method === "POST" && pathname === "/me/feedback-submissions") {
+    return state.feedbackScenarios.compose ?? state.feedbackScenarios.feedback
+  }
+  if (pathname.startsWith("/me/feedback-submissions/") && method === "DELETE") {
+    return state.feedbackScenarios.withdraw ?? state.feedbackScenarios.feedback
+  }
+  if (pathname.endsWith("/review")) {
+    return state.feedbackScenarios.review ?? state.feedbackScenarios.feedback
+  }
+  if (pathname.startsWith("/feedback-submissions/") && method === "DELETE") {
+    return state.feedbackScenarios.erase ?? state.feedbackScenarios.feedback
+  }
+  if (pathname.includes("/screenshot")) {
+    return (
+      state.feedbackScenarios.screenshot ?? state.feedbackScenarios.feedback
+    )
+  }
+  return state.feedbackScenarios.feedback
+}
+
+function feedbackErrorForScenario(scenario, kind) {
+  if (scenario === "validation-error") {
+    return {
+      __status: 400,
+      payload: errorPayload("Fixture validation failed", "FIXTURE_VALIDATION"),
+    }
+  }
+  if (scenario === "payload-too-large") {
+    return {
+      __status: 413,
+      payload: errorPayload(
+        "Fixture payload is too large",
+        "FIXTURE_PAYLOAD_TOO_LARGE"
+      ),
+    }
+  }
+  if (scenario === "storage-failure") {
+    return {
+      __status: 502,
+      payload: errorPayload(
+        "Fixture storage unavailable",
+        "FIXTURE_STORAGE_FAILURE"
+      ),
+    }
+  }
+  if (scenario === "not-found") {
+    return {
+      __status: 404,
+      payload: errorPayload("Feedback not found", "NOT_FOUND"),
+    }
+  }
+  if (scenario === "lifecycle-conflict") {
+    const code =
+      kind === "withdraw"
+        ? "FEEDBACK_NO_LONGER_WITHDRAWABLE"
+        : "FEEDBACK_ALREADY_REVIEWED"
+    return {
+      __status: 409,
+      payload: errorPayload("Feedback lifecycle changed", code),
+    }
+  }
+  if (scenario === "malformed") {
+    return { __status: 200, payload: { id: "malformed" } }
+  }
+  return null
+}
+
+function feedbackRouteResult(state, method, pathname, url, body) {
+  const personalDetailMatch = pathname.match(
+    /^\/me\/feedback-submissions\/(\d+)$/
+  )
+  const moderationDetailMatch = pathname.match(
+    /^\/feedback-submissions\/(\d+)$/
+  )
+  const personalScreenshotMatch = pathname.match(
+    /^\/me\/feedback-submissions\/(\d+)\/screenshot$/
+  )
+  const moderationScreenshotMatch = pathname.match(
+    /^\/feedback-submissions\/(\d+)\/screenshot$/
+  )
+  const reviewMatch = pathname.match(/^\/feedback-submissions\/(\d+)\/review$/)
+  const scenario = feedbackScenarioFor(state, method, pathname) ?? "success"
+  const kind =
+    pathname.startsWith("/me/") && method === "DELETE"
+      ? "withdraw"
+      : pathname.endsWith("/review")
+        ? "review"
+        : pathname.startsWith("/feedback-submissions/") && method === "DELETE"
+          ? "erase"
+          : "feedback"
+  if (scenario === "timeout")
+    return {
+      __status: 504,
+      payload: errorPayload("Fixture request timed out", "FIXTURE_TIMEOUT"),
+    }
+  if (scenario === "outage")
+    return {
+      __status: 503,
+      payload: errorPayload("Fixture backend is unavailable", "FIXTURE_OUTAGE"),
+    }
+  if (scenario === "server-failure")
+    return {
+      __status: 500,
+      payload: errorPayload("Fixture server failure", "FIXTURE_SERVER_FAILURE"),
+    }
+  if (scenario === "mutation-failure") {
+    return {
+      __status: 409,
+      payload: errorPayload(
+        "Fixture mutation failed",
+        kind === "withdraw"
+          ? "FEEDBACK_NO_LONGER_WITHDRAWABLE"
+          : "FEEDBACK_ALREADY_REVIEWED"
+      ),
+    }
+  }
+  const scenarioError = feedbackErrorForScenario(scenario, kind)
+  if (scenarioError) return scenarioError
+
+  const moderationPath = pathname.startsWith("/feedback-submissions")
+  if (
+    moderationPath &&
+    pathname !== "/feedback-submissions" &&
+    !hasFixturePermission(
+      state,
+      pathname.endsWith("/review")
+        ? "feedback:review"
+        : pathname.endsWith("/screenshot") || method === "GET"
+          ? "feedback:read"
+          : "feedback:delete"
+    )
+  ) {
+    return {
+      __status: 403,
+      payload: errorPayload("Feedback permission denied", "FORBIDDEN"),
+    }
+  }
+  if (
+    moderationPath &&
+    pathname === "/feedback-submissions" &&
+    !hasFixturePermission(state, "feedback:read")
+  ) {
+    return {
+      __status: 403,
+      payload: errorPayload("Feedback permission denied", "FORBIDDEN"),
+    }
+  }
+
+  if (method === "GET" && pathname === "/me/feedback-submissions") {
+    return slicePage(
+      state.feedback
+        .filter((item) => item.ownerId === FEEDBACK_OWNER_ID)
+        .map(feedbackListItem),
+      url
+    )
+  }
+  if (method === "GET" && pathname === "/feedback-submissions") {
+    return slicePage(state.feedback.map(feedbackListItem), url)
+  }
+  if (method === "POST" && pathname === "/me/feedback-submissions") {
+    const parsed = multipartSubmission(body)
+    const submission = parsed?.submission
+    const submissionKeys =
+      submission && typeof submission === "object"
+        ? Object.keys(submission)
+        : []
+    if (
+      !submission ||
+      typeof submission.content !== "string" ||
+      submission.content.trim().length === 0 ||
+      submission.content.trim().length > 5000 ||
+      submissionKeys.some((key) => !["content", "clientContext"].includes(key))
+    ) {
+      return {
+        __status: 400,
+        payload: errorPayload(
+          "Invalid feedback submission",
+          "FIXTURE_VALIDATION"
+        ),
+      }
+    }
+    if (
+      submission.clientContext &&
+      typeof submission.clientContext === "object"
+    ) {
+      const contextKeys = Object.keys(submission.clientContext)
+      if (
+        contextKeys.some(
+          (key) =>
+            ![
+              "pagePath",
+              "appVersion",
+              "browserName",
+              "browserVersion",
+              "osName",
+              "osVersion",
+              "locale",
+            ].includes(key)
+        )
+      ) {
+        return {
+          __status: 400,
+          payload: errorPayload(
+            "Invalid feedback context",
+            "FIXTURE_VALIDATION"
+          ),
+        }
+      }
+    }
+    const created = feedbackRecord(
+      state.nextIds.feedback++,
+      submission.content.trim(),
+      "PENDING_REVIEW",
+      {
+        clientContext: submission.clientContext ?? false,
+        screenshot: Boolean(parsed?.hasScreenshot),
+      }
+    )
+    state.feedback.unshift(created)
+    return feedbackDetail(created, false)
+  }
+  if (personalDetailMatch) {
+    const id = Number(personalDetailMatch[1])
+    const existing = state.feedback.find(
+      (item) => item.id === id && item.ownerId === FEEDBACK_OWNER_ID
+    )
+    if (!existing)
+      return {
+        __status: 404,
+        payload: errorPayload("Feedback not found", "NOT_FOUND"),
+      }
+    if (method === "DELETE") {
+      if (existing.status !== "PENDING_REVIEW") {
+        return {
+          __status: 409,
+          payload: errorPayload(
+            "Feedback is no longer withdrawable",
+            "FEEDBACK_NO_LONGER_WITHDRAWABLE"
+          ),
+        }
+      }
+      state.feedback = state.feedback.filter((item) => item.id !== id)
+      return { __status: 204 }
+    }
+    return feedbackDetail(existing, false)
+  }
+  if (personalScreenshotMatch) {
+    const id = Number(personalScreenshotMatch[1])
+    const existing = state.feedback.find(
+      (item) => item.id === id && item.ownerId === FEEDBACK_OWNER_ID
+    )
+    if (!existing || !existing.screenshot)
+      return {
+        __status: 404,
+        payload: errorPayload("Feedback screenshot not found", "NOT_FOUND"),
+      }
+    return {
+      __binary: FEEDBACK_SCREENSHOT_BYTES,
+      mimeType: existing.screenshot.mimeType,
+    }
+  }
+  if (moderationScreenshotMatch) {
+    const existing = state.feedback.find(
+      (item) => item.id === Number(moderationScreenshotMatch[1])
+    )
+    if (!existing || !existing.screenshot)
+      return {
+        __status: 404,
+        payload: errorPayload("Feedback screenshot not found", "NOT_FOUND"),
+      }
+    return {
+      __binary: FEEDBACK_SCREENSHOT_BYTES,
+      mimeType: existing.screenshot.mimeType,
+    }
+  }
+  if (moderationDetailMatch) {
+    const id = Number(moderationDetailMatch[1])
+    const existing = state.feedback.find((item) => item.id === id)
+    if (!existing)
+      return {
+        __status: 404,
+        payload: errorPayload("Feedback not found", "NOT_FOUND"),
+      }
+    if (method === "DELETE") {
+      state.feedback = state.feedback.filter((item) => item.id !== id)
+      return { __status: 204 }
+    }
+    return feedbackDetail(existing, true)
+  }
+  if (reviewMatch) {
+    const id = Number(reviewMatch[1])
+    const existing = state.feedback.find((item) => item.id === id)
+    if (!existing)
+      return {
+        __status: 404,
+        payload: errorPayload("Feedback not found", "NOT_FOUND"),
+      }
+    if (existing.status !== "PENDING_REVIEW") {
+      return {
+        __status: 409,
+        payload: errorPayload(
+          "Feedback already reviewed",
+          "FEEDBACK_ALREADY_REVIEWED"
+        ),
+      }
+    }
+    const parsedBody = body && !body.__multipart ? body : {}
+    if (
+      !parsedBody ||
+      typeof parsedBody.reviewMessage !== "string" ||
+      parsedBody.reviewMessage.trim().length === 0 ||
+      parsedBody.reviewMessage.trim().length > 1000 ||
+      Object.keys(parsedBody).some((key) => key !== "reviewMessage")
+    ) {
+      return {
+        __status: 400,
+        payload: errorPayload("Invalid review message", "FIXTURE_VALIDATION"),
+      }
+    }
+    existing.status = "REVIEWED"
+    existing.reviewMessage = parsedBody.reviewMessage.trim()
+    existing.lastModifiedDate = NOW
+    return feedbackDetail(existing, true)
+  }
+  return null
+}
+
+function responseForRoute(
+  state,
+  method,
+  pathname,
+  url,
+  body,
+  locale = "en",
+  requestHeaders = {}
+) {
+  const aiTaskResult = aiTaskConfigurationRouteResult(
+    state,
+    method,
+    pathname,
+    body,
+    url
+  )
+  if (aiTaskResult) return aiTaskResult
+
+  const smtpResult = smtpConfigurationRouteResult(state, method, pathname, body)
+  if (smtpResult) return smtpResult
+
+  const roleDetailMatch = pathname.match(/^\/roles\/([^/]+)$/)
+  if (method === "GET" && (pathname === "/roles" || roleDetailMatch !== null)) {
+    const scenario = getScenario(state, method, pathname)
+    if (
+      scenario === "permission-denied" ||
+      !hasFixturePermission(state, "role:read")
+    ) {
+      return {
+        __status: 403,
+        payload: errorPayload("Role read permission denied", "FORBIDDEN"),
+      }
+    }
+    if (scenario === "outage") {
+      return {
+        __status: 503,
+        payload: errorPayload(
+          "Roles are temporarily unavailable",
+          "UNAVAILABLE"
+        ),
+      }
+    }
+    if (pathname === "/roles") {
+      return scenario === "empty" ? [] : roleReadFixtures(locale)
+    }
+
+    let roleKey = roleDetailMatch?.[1] ?? ""
+    try {
+      roleKey = decodeURIComponent(roleKey)
+    } catch {
+      return {
+        __status: 404,
+        payload: errorPayload("Role not found", "NOT_FOUND"),
+      }
+    }
+    const role = roleReadFixtures(locale).find((item) => item.key === roleKey)
+    return (
+      role ?? {
+        __status: 404,
+        payload: errorPayload("Role not found", "NOT_FOUND"),
+      }
+    )
+  }
+
+  if (method === "GET" && pathname === "/me") {
+    const currentWorkspace = state.workspaces.find(
+      (item) => item.currentWorkspace
+    )
+    return {
+      id: FEEDBACK_OWNER_ID,
+      email: FEEDBACK_OWNER.email,
+      firstName: FEEDBACK_OWNER.firstName,
+      lastName: FEEDBACK_OWNER.lastName,
+      birthday: state.profile.birthday,
+      phone: state.profile.phone,
+      preferredLanguage: state.preferredLanguage,
+      role_name: "Fixture",
+      currentWorkspace: currentWorkspace
+        ? { id: currentWorkspace.id, name: currentWorkspace.name }
+        : null,
+      mainImage: null,
+      permissions: state.permissions,
+    }
+  }
+
+  if (method === "PATCH" && pathname === "/me") {
+    const currentWorkspace = state.workspaces.find(
+      (item) => item.currentWorkspace
+    )
+    state.profile = { birthday: body.birthday, phone: body.phone }
+    return {
+      id: FEEDBACK_OWNER_ID,
+      email: FEEDBACK_OWNER.email,
+      firstName: body.firstName,
+      lastName: body.lastName,
+      birthday: state.profile.birthday,
+      phone: state.profile.phone,
+      preferredLanguage: state.preferredLanguage,
+      role_name: "Fixture",
+      currentWorkspace: currentWorkspace
+        ? { id: currentWorkspace.id, name: currentWorkspace.name }
+        : null,
+      mainImage: null,
+      permissions: state.permissions,
+    }
+  }
+
+  if (method === "PATCH" && pathname === "/me/preferred-language") {
+    const language = state.languages.find(
+      (option) => option.isoCode === body?.isoCode
+    )
+    if (!language) {
+      return {
+        __status: 400,
+        payload: errorPayload("Choose an enabled language", "INVALID_LANGUAGE"),
+      }
+    }
+    state.preferredLanguage = language
+    const currentWorkspace = state.workspaces.find(
+      (item) => item.currentWorkspace
+    )
+    return {
+      id: FEEDBACK_OWNER_ID,
+      email: FEEDBACK_OWNER.email,
+      firstName: FEEDBACK_OWNER.firstName,
+      lastName: FEEDBACK_OWNER.lastName,
+      birthday: state.profile.birthday,
+      phone: state.profile.phone,
+      preferredLanguage: state.preferredLanguage,
+      role_name: "Fixture",
+      currentWorkspace: currentWorkspace
+        ? { id: currentWorkspace.id, name: currentWorkspace.name }
+        : null,
+      mainImage: null,
+      permissions: state.permissions,
+    }
+  }
+
+  if (method === "GET" && pathname === "/contact-requests") {
+    if (!hasFixturePermission(state, "contact-request:read")) {
+      return {
+        __status: 403,
+        payload: errorPayload("Contact request permission denied", "FORBIDDEN"),
+      }
+    }
+    const pageResponse = slicePage(state.contactRequests, url)
+    return Number(url.searchParams.get("size")) === 50
+      ? { content: pageResponse.content }
+      : pageResponse
+  }
+
+  if (method === "GET" && pathname === "/cronjobs") {
+    if (!hasFixturePermission(state, "cronjob:read")) {
+      return {
+        __status: 403,
+        payload: errorPayload("Cronjob permission denied", "FORBIDDEN"),
+      }
+    }
+
+    if (getScenario(state, method, pathname) === "missing-content") {
+      return {}
+    }
+
+    if (getScenario(state, method, pathname) === "short") {
+      return slicePage(shortCronjobDesignRecords(state.cronjobs), url)
+    }
+
+    return slicePage(state.cronjobs, url)
+  }
+
+  const cronjobDetailMatch = pathname.match(/^\/cronjobs\/(\d+)$/)
+  if (method === "GET" && cronjobDetailMatch) {
+    if (!hasFixturePermission(state, "cronjob:read")) {
+      return {
+        __status: 403,
+        payload: errorPayload("Cronjob permission denied", "FORBIDDEN"),
+      }
+    }
+
+    const id = Number(cronjobDetailMatch[1])
+    const cronjob = state.cronjobs.find((item) => item.id === id)
+    if (!cronjob) {
+      return {
+        __status: 404,
+        payload: errorPayload("Cronjob not found", "NOT_FOUND"),
+      }
+    }
+
+    return cronjob
+  }
+
+  const cronjobPauseMatch = pathname.match(/^\/cronjobs\/(\d+)\/pause$/)
+  if (method === "POST" && cronjobPauseMatch) {
+    if (!hasFixturePermission(state, "cronjob:pause")) {
+      return {
+        __status: 403,
+        payload: errorPayload("Cronjob pause permission denied", "FORBIDDEN"),
+      }
+    }
+
+    const id = Number(cronjobPauseMatch[1])
+    const cronjob = state.cronjobs.find((item) => item.id === id)
+    if (!cronjob) {
+      return {
+        __status: 404,
+        payload: errorPayload("Cronjob not found", "NOT_FOUND"),
+      }
+    }
+    if (cronjob.scheduleStatus !== "SCHEDULED") {
+      return {
+        __status: 409,
+        payload: errorPayload("Cronjob schedule is not active", "CONFLICT"),
+      }
+    }
+
+    cronjob.scheduleStatus = "PAUSED"
+    cronjob.nextTriggeredTime = null
+    return cronjob
+  }
+
+  if (pathname === "/system-prompts" && method === "GET") {
+    if (!hasFixturePermission(state, "system-prompt:read")) {
+      return {
+        __status: 403,
+        payload: errorPayload(
+          "System prompt read permission denied",
+          "FORBIDDEN"
+        ),
+      }
+    }
+    const response = page(
+      state.systemPrompts,
+      Number(url.searchParams.get("page") ?? 0),
+      Number(url.searchParams.get("size") ?? 20),
+      state.systemPrompts.length
+    )
+    return response
+  }
+
+  const systemPromptMatch = pathname.match(/^\/system-prompts\/([^/]+)$/)
+  if (systemPromptMatch) {
+    const promptType = decodeURIComponent(systemPromptMatch[1])
+    const prompt = state.systemPrompts.find(
+      (entry) => entry.promptType === promptType
+    )
+    if (!prompt) {
+      return {
+        __status: 404,
+        payload: errorPayload("System prompt not found", "NOT_FOUND"),
+      }
+    }
+    if (method === "GET") {
+      if (!hasFixturePermission(state, "system-prompt:read")) {
+        return {
+          __status: 403,
+          payload: errorPayload(
+            "System prompt read permission denied",
+            "FORBIDDEN"
+          ),
+        }
+      }
+      return { ...prompt }
+    }
+    if (method === "PUT") {
+      if (!hasFixturePermission(state, "system-prompt:update")) {
+        return {
+          __status: 403,
+          payload: errorPayload(
+            "System prompt update permission denied",
+            "FORBIDDEN"
+          ),
+        }
+      }
+      if (
+        !body ||
+        Object.keys(body).length !== 1 ||
+        typeof body.content !== "string" ||
+        !/\S/.test(body.content) ||
+        body.content.length > 10_000
+      ) {
+        return {
+          __status: 400,
+          payload: errorPayload(
+            "Invalid content-only update",
+            "FIXTURE_VALIDATION"
+          ),
+        }
+      }
+      if (prompt.requiredVariables.length > 0) {
+        const missing = prompt.requiredVariables
+          .map((variable) => `{${variable}}`)
+          .filter((placeholder) => !body.content.includes(placeholder))
+        if (missing.length) {
+          return {
+            __status: 400,
+            payload: errorPayload(
+              `Missing required prompt placeholders: ${missing.join(", ")}`,
+              "PROMPT_PLACEHOLDERS_MISSING"
+            ),
+          }
+        }
+      }
+      prompt.content = body.content
+      prompt.lastModifiedDate = "2026-10-28T03:45:00.000Z"
+      return { ...prompt }
+    }
+  }
+
+  if (method === "POST" && pathname === "/ai-provider-configs") {
+    if (!hasFixturePermission(state, "ai-provider-config:create")) {
+      return {
+        __status: 403,
+        payload: errorPayload(
+          "AI connection permission required",
+          "PERMISSION_DENIED"
+        ),
+      }
+    }
+
+    if (method === "GET") {
+      const result = slicePage(state.aiProviderConfigs, url)
+      const sort = { sorted: false, unsorted: true, empty: true }
+      return {
+        ...result,
+        pageable: { ...result.pageable, sort },
+        sort,
+      }
+    }
+
+    if (method === "POST") {
+      if (
+        !["DEEPSEEK", "GEMINI", "OPENAI"].includes(body?.providerType) ||
+        !Array.isArray(body?.credentials) ||
+        body.credentials.length < 1 ||
+        body.credentials.some(
+          (credential) =>
+            typeof credential?.apiKey !== "string" ||
+            !/\S/.test(credential.apiKey)
+        )
+      ) {
+        return {
+          __status: 400,
+          payload: errorPayload(
+            "Provider and non-empty API keys are required",
+            "FIXTURE_VALIDATION"
+          ),
+        }
+      }
+
+      const id = Math.max(...state.aiProviderConfigs.map((item) => item.id)) + 1
+      const connection = {
+        id,
+        providerType: body.providerType,
+        ...(typeof body.description === "string" && body.description
+          ? { description: body.description }
+          : {}),
+        ...(typeof body.baseUrl === "string" && body.baseUrl
+          ? { baseUrl: body.baseUrl }
+          : {}),
+        defaultProvider: false,
+        credentials: body.credentials.map((credential, index) => ({
+          id: id * 100 + index,
+          keyPreview: `key-...${credential.apiKey.slice(-4)}`,
+        })),
+      }
+      state.aiProviderConfigs.unshift(connection)
+      return { __status: 201, payload: connection }
+    }
+  }
+
+  const aiProviderConfigId = pathname.match(/^\/ai-provider-configs\/(\d+)$/)
+  if (method === "GET" && aiProviderConfigId) {
+    const scenario = getScenario(state, "GET", "/ai-provider-configs")
+    if (!hasFixturePermission(state, "ai-provider-config:read")) {
+      return {
+        __status: 403,
+        payload: errorPayload(
+          "AI connection read permission required",
+          "PERMISSION_DENIED"
+        ),
+      }
+    }
+    const connectionSource =
+      scenario === "positive-out-of-range"
+        ? positiveOutOfRangeAiProviderConfigs()
+        : scenario === "authorized-page-two-size-twenty-101"
+          ? pageTwoSizeTwentyAiProviderConfigs()
+          : state.aiProviderConfigs
+    const connection = connectionSource.find(
+      (item) => item.id === Number(aiProviderConfigId[1])
+    )
+    return connection
+      ? {
+          ...connection,
+          taskReferences:
+            connection.id === 12
+              ? [
+                  {
+                    task: "NEWS_CONTENT_NORMALIZATION",
+                    model: "deepseek-v4-flash",
+                  },
+                  {
+                    task: "ECONOMIC_CALENDAR_DESCRIPTION_TRANSLATION",
+                    model: "deepseek-v4-flash",
+                  },
+                  {
+                    task: "NEWS_EVENT_EXTRACTION",
+                    model: "deepseek-v4-flash",
+                  },
+                ]
+              : [],
+        }
+      : {
+          __status: 404,
+          payload: errorPayload("AI connection not found", "NOT_FOUND"),
+        }
+  }
+
+  if (method === "POST" && pathname === "/ai-provider-configs/model-catalog") {
+    if (!hasFixturePermission(state, "ai-provider-config:model-catalog")) {
+      return {
+        __status: 403,
+        payload: errorPayload(
+          "AI catalog permission required",
+          "PERMISSION_DENIED"
+        ),
+      }
+    }
+    return {
+      providerType: body?.providerType,
+      models: [{ id: "fixture-model", label: "Fixture model" }],
+    }
+  }
+
+  const blogIdMatch = pathname.match(/^\/blogs\/(\d+)$/)
+  if (method === "GET" && blogIdMatch) {
+    const id = Number(blogIdMatch[1])
+    if (id === 71) return blogPost(id)
+    return {
+      __status: 404,
+      payload: errorPayload("Blog post not found", "NOT_FOUND"),
+    }
+  }
+
+  const feedbackResult = feedbackRouteResult(state, method, pathname, url, body)
+  if (feedbackResult) return feedbackResult
+
+  if (method === "POST" && pathname === "/market-conversations") {
+    if (!hasFixturePermission(state, "query:execute")) {
+      return {
+        __status: 403,
+        payload: errorPayload(
+          "Market conversation permission denied",
+          "FORBIDDEN"
+        ),
+      }
+    }
+    const title = String(body?.title ?? "").trim()
+    const currentWorkspace = state.workspaces.find(
+      (item) => item.currentWorkspace
+    )
+    if (!title || !currentWorkspace) {
+      return {
+        __status: currentWorkspace ? 400 : 409,
+        payload: errorPayload(
+          currentWorkspace
+            ? "Conversation title is required"
+            : "Select a workspace first",
+          currentWorkspace ? "VALIDATION_ERROR" : "WORKSPACE_REQUIRED"
+        ),
+      }
+    }
+    const conversation = {
+      id: state.nextIds.conversation++,
+      title,
+      workspaceId: currentWorkspace.id,
+      createdDate: NOW,
+      lastModifiedDate: NOW,
+    }
+    state.marketConversations.push(conversation)
+    if (getScenario(state, method, pathname) === "conversation-without-id") {
+      return {
+        title: conversation.title,
+        workspaceId: conversation.workspaceId,
+        createdDate: conversation.createdDate,
+        lastModifiedDate: conversation.lastModifiedDate,
+      }
+    }
+    return conversation
+  }
+
+  const conversationMessageMatch = pathname.match(
+    /^\/market-conversations\/(\d+)\/messages$/
+  )
+  if (method === "POST" && conversationMessageMatch) {
+    const id = Number(conversationMessageMatch[1])
+    const conversation = state.marketConversations.find(
+      (item) => item.id === id
+    )
+    const currentWorkspace = state.workspaces.find(
+      (item) => item.currentWorkspace
+    )
+    if (!hasFixturePermission(state, "query:execute")) {
+      return {
+        __status: 403,
+        payload: errorPayload(
+          "Market conversation permission denied",
+          "FORBIDDEN"
+        ),
+      }
+    }
+    if (
+      !conversation ||
+      !currentWorkspace ||
+      conversation.workspaceId !== currentWorkspace.id
+    ) {
+      return {
+        __status: 403,
+        payload: errorPayload(
+          "Conversation workspace access denied",
+          "FORBIDDEN"
+        ),
+      }
+    }
+    const message = String(body?.message ?? "").trim()
+    const idempotencyKey = String(
+      requestHeaders["idempotency-key"] ?? ""
+    ).trim()
+    if (!message || !idempotencyKey) {
+      return {
+        __status: 400,
+        payload: errorPayload(
+          "Message and idempotency key are required",
+          "VALIDATION_ERROR"
+        ),
+      }
+    }
+
+    const existingTurn = state.marketConversationTurns.find(
+      (item) =>
+        item.conversationId === id && item.idempotencyKey === idempotencyKey
+    )
+    state.marketConversationAttempts.push({
+      conversationId: id,
+      workspaceId: currentWorkspace.id,
+      idempotencyKey,
+      replay: Boolean(existingTurn),
+    })
+    if (existingTurn) {
+      if (existingTurn.message !== message) {
+        return {
+          __status: 409,
+          payload: errorPayload(
+            "Idempotency key was reused for another message",
+            "IDEMPOTENCY_KEY_REUSED"
+          ),
+        }
+      }
+      return existingTurn.response
+    }
+
+    const userMessage = {
+      id: state.nextIds.message++,
+      role: "USER",
+      status: "COMPLETED",
+      content: message,
+      failureReason: null,
+      createdDate: NOW,
+    }
+    const scenario = getScenario(state, method, pathname)
+    const assistantMessage =
+      scenario === "assistant-failed"
+        ? {
+            id: state.nextIds.message++,
+            role: "ASSISTANT",
+            status: "FAILED",
+            content: null,
+            failureReason: "Fixture assistant failure",
+            createdDate: NOW,
+          }
+        : scenario === "completed-without-content"
+          ? {
+              id: state.nextIds.message++,
+              role: "ASSISTANT",
+              status: "COMPLETED",
+              content: null,
+              failureReason: null,
+              createdDate: NOW,
+            }
+          : {
+              id: state.nextIds.message++,
+              role: "ASSISTANT",
+              status: "COMPLETED",
+              content: `The fixture report shows BTC moved during the review period. [Market source](https://example.com/reports/btc-fixture)
+
+Which asset did you mean? The available data is limited. Add TSLA to your watchlist before continuing.`,
+              failureReason: null,
+              createdDate: NOW,
+            }
+    const response = { userMessage, assistantMessage }
+    state.marketConversationTurns.push({
+      conversationId: id,
+      workspaceId: currentWorkspace.id,
+      idempotencyKey,
+      message,
+      response,
+    })
+    return response
+  }
+
+  if (method === "GET" && pathname === "/me/workspaces") {
+    return slicePage(state.workspaces, url)
+  }
+
+  if (method === "GET" && pathname === "/me/usage-limits") {
+    return {
+      workspace: { used: 2, limit: 5 },
+      watchlist: {
+        limit: 3,
+        workspaces: [
+          { workspaceId: 101, used: 0 },
+          { workspaceId: 102, used: 4 },
+          { workspaceId: 103, used: 0 },
+          { workspaceId: 104, used: 1 },
+          { workspaceId: 105, used: 2 },
+          { workspaceId: 106, used: 3 },
+          { workspaceId: 107, used: 1 },
+          ...Array.from({ length: 18 }, (_, index) => ({
+            workspaceId: index + 108,
+            used: index % 4,
+          })),
+        ],
+      },
+      conversationTurns: {
+        used: 1001,
+        limit: 1000,
+        periodStartUtc: "2026-09-01T00:00:00Z",
+        resetAtUtc: "2026-10-01T00:00:00Z",
+      },
+      activeSchedules: { used: 2, limit: 1 },
+    }
+  }
+
+  if (method === "POST" && pathname === "/me/workspaces") {
+    const next = workspace(
+      state.nextIds.workspace++,
+      String(body?.name ?? "New workspace")
+    )
+    state.workspaces.push(next)
+    return next
+  }
+
+  const workspaceIdMatch = pathname.match(
+    /^\/me\/workspaces\/(\d+)(?:\/set-current)?$/
+  )
+  if (workspaceIdMatch) {
+    const id = Number(workspaceIdMatch[1])
+    const selected = state.workspaces.find((item) => item.id === id)
+    if (!selected)
+      return {
+        __status: 404,
+        payload: errorPayload("Workspace not found", "NOT_FOUND"),
+      }
+
+    if (pathname.endsWith("/set-current")) {
+      state.workspaces = state.workspaces.map((item) => ({
+        ...item,
+        currentWorkspace: item.id === id,
+      }))
+    } else if (method === "PUT" && body?.name) {
+      selected.name = String(body.name)
+      selected.lastModifiedDate = NOW
+    }
+    return state.workspaces.find((item) => item.id === id)
+  }
+
+  if (method === "GET" && pathname === "/dashboard/summary") {
+    const current =
+      state.workspaces.find((item) => item.currentWorkspace) ??
+      state.workspaces[0]
+    return dashboardSummary(
+      current?.id ?? 1,
+      getScenario(state, method, pathname),
+      locale
+    )
+  }
+
+  if (method === "GET" && pathname === "/graph-view") return graphView(state)
+
+  if (
+    method === "GET" &&
+    (pathname === "/watchlists" || pathname === "/watchlists/assets")
+  ) {
+    const currentWorkspace = state.workspaces.find(
+      (item) => item.currentWorkspace
+    )
+    const baseAssets =
+      currentWorkspace?.id === 2
+        ? [
+            {
+              id: 201,
+              assetId: 201,
+              assetName: "Beta only fixture asset",
+              assetSymbol: "BETA",
+              assetType: "CRYPTO",
+              createdDate: NOW,
+            },
+          ]
+        : state.assets
+    const assets = baseAssets.map((item) => ({
+      ...item,
+      lastModifiedDate: undefined,
+    }))
+
+    if (
+      pathname === "/watchlists" &&
+      getScenario(state, method, pathname) === "overview-expanded"
+    ) {
+      assets.splice(0, assets.length, ...overviewAssets())
+    }
+
+    if (
+      pathname === "/watchlists" &&
+      getScenario(state, method, pathname) === "chart-later-page"
+    ) {
+      assets.push(
+        ...Array.from({ length: 98 }, (_, index) => ({
+          id: 1000 + index,
+          assetId: 1000 + index,
+          assetName: `Fixture asset ${index + 1}`,
+          assetSymbol: `FX${index + 1}`,
+          assetType: "CRYPTO",
+          createdDate: NOW,
+        })),
+        {
+          id: 9999,
+          assetId: 9999,
+          assetName: "Later page asset",
+          assetSymbol: "LATE",
+          assetType: "CRYPTO",
+          createdDate: NOW,
+        }
+      )
+    }
+
+    return slicePage(assets, url)
+  }
+
+  if (method === "POST" && pathname === "/watchlists/assets") {
+    return {
+      items: state.assets,
+      createdAssetIds: body?.assetIds ?? [],
+      existingAssetIds: [],
+    }
+  }
+
+  if (method === "DELETE" && /^\/watchlists\/assets\/\d+$/.test(pathname)) {
+    const id = Number(pathname.split("/").pop())
+    state.assets = state.assets.filter((item) => item.assetId !== id)
+    return { __status: 204 }
+  }
+
+  if (method === "GET" && pathname === "/news-articles") {
+    if (!hasFixturePermission(state, "news-article:read")) {
+      return {
+        __status: 403,
+        payload: errorPayload("News article permission denied", "FORBIDDEN"),
+      }
+    }
+    const articles =
+      getScenario(state, method, pathname) === "overview-expanded"
+        ? overviewNews()
+        : state.newsArticles
+    return filterAndSortNewsArticles(articles, url)
+  }
+
+  if (method === "GET" && pathname === "/news-articles/publisher-options") {
+    if (!hasFixturePermission(state, "news-article:read")) {
+      return {
+        __status: 403,
+        payload: errorPayload("News article permission denied", "FORBIDDEN"),
+      }
+    }
+
+    const searchTerm = getNewsArticleFilterValue(
+      url.searchParams.get("$filter") ?? "",
+      /containsIgnoreCase\(sourceName,'((?:[^']|'')*)'\)/i
+    )?.toLowerCase()
+    return [
+      ...new Set(
+        state.newsArticles
+          .map((article) => article.sourceName)
+          .filter((sourceName) => typeof sourceName === "string" && sourceName)
+          .filter(
+            (sourceName) =>
+              !searchTerm || sourceName.toLowerCase().includes(searchTerm)
+          )
+      ),
+    ]
+  }
+
+  if (method === "GET" && pathname === "/news-outlets") {
+    if (!hasFixturePermission(state, "news-outlet:read")) {
+      return {
+        __status: 403,
+        payload: errorPayload("News outlet permission denied", "FORBIDDEN"),
+      }
+    }
+
+    return slicePage(state.newsOutlets, url)
+  }
+
+  if (method === "POST" && pathname === "/news-outlets") {
+    if (!hasFixturePermission(state, "news-outlet:create")) {
+      return {
+        __status: 403,
+        payload: errorPayload("News outlet permission denied", "FORBIDDEN"),
+      }
+    }
+
+    const name = String(body?.name ?? "").trim()
+    const homepageUrl = String(body?.homepageUrl ?? "").trim()
+    const isVietnamese = locale.toLowerCase().startsWith("vi")
+    if (!name || !homepageUrl) {
+      return {
+        __status: 400,
+        payload: errorPayload(
+          isVietnamese
+            ? "Tên và URL trang chủ là bắt buộc."
+            : "Name and homepage URL are required.",
+          "INVALID_NEWS_OUTLET"
+        ),
+      }
+    }
+    if (
+      state.newsOutlets.some((item) => item.homepageUrl.trim() === homepageUrl)
+    ) {
+      return {
+        __status: 400,
+        payload: errorPayload(
+          isVietnamese
+            ? `Homepage URL đã tồn tại: ${homepageUrl}`
+            : `Homepage URL already exists: ${homepageUrl}`,
+          "DUPLICATE_HOMEPAGE_URL"
+        ),
+      }
+    }
+
+    const created = {
+      id: state.nextIds.newsOutlet++,
+      name,
+      homepageUrl,
+      rssUrl: String(body?.rssUrl ?? "").trim() || null,
+      description: String(body?.description ?? "").trim() || null,
+      active: typeof body?.active === "boolean" ? body.active : true,
+      createdDate: NOW,
+      lastModifiedDate: NOW,
+    }
+    state.newsOutlets.push(created)
+    return created
+  }
+
+  const newsOutletDetailMatch = pathname.match(/^\/news-outlets\/(\d+)$/)
+  if (method === "GET" && newsOutletDetailMatch) {
+    if (!hasFixturePermission(state, "news-outlet:read")) {
+      return {
+        __status: 403,
+        payload: errorPayload("News outlet permission denied", "FORBIDDEN"),
+      }
+    }
+
+    const id = Number(newsOutletDetailMatch[1])
+    const newsOutlet = state.newsOutlets.find((item) => item.id === id)
+    if (!newsOutlet) {
+      return {
+        __status: 404,
+        payload: errorPayload("News outlet not found", "NOT_FOUND"),
+      }
+    }
+
+    return newsOutlet
+  }
+
+  if (method === "PUT" && newsOutletDetailMatch) {
+    if (!hasFixturePermission(state, "news-outlet:update")) {
+      return {
+        __status: 403,
+        payload: errorPayload("News outlet permission denied", "FORBIDDEN"),
+      }
+    }
+
+    const id = Number(newsOutletDetailMatch[1])
+    const newsOutlet = state.newsOutlets.find((item) => item.id === id)
+    if (!newsOutlet) {
+      return {
+        __status: 404,
+        payload: errorPayload("News outlet not found", "NOT_FOUND"),
+      }
+    }
+
+    const isVietnamese = locale.toLowerCase().startsWith("vi")
+    const name = typeof body?.name === "string" ? body.name.trim() : undefined
+    const homepageUrl =
+      typeof body?.homepageUrl === "string"
+        ? body.homepageUrl.trim()
+        : undefined
+    if (name !== undefined && !name) {
+      return {
+        __status: 400,
+        payload: errorPayload(
+          isVietnamese ? "Tên nguồn tin là bắt buộc." : "Name is required.",
+          "INVALID_NEWS_OUTLET"
+        ),
+      }
+    }
+    if (
+      homepageUrl &&
+      state.newsOutlets.some(
+        (item) => item.id !== id && item.homepageUrl.trim() === homepageUrl
+      )
+    ) {
+      return {
+        __status: 400,
+        payload: errorPayload(
+          isVietnamese
+            ? `Homepage URL đã tồn tại: ${homepageUrl}`
+            : `Homepage URL already exists: ${homepageUrl}`,
+          "DUPLICATE_HOMEPAGE_URL"
+        ),
+      }
+    }
+
+    if (name !== undefined) newsOutlet.name = name
+    if (homepageUrl) newsOutlet.homepageUrl = homepageUrl
+
+    if (typeof body?.rssUrl === "string") {
+      newsOutlet.rssUrl = body.rssUrl.trim() || null
+    }
+    if (typeof body?.description === "string") {
+      newsOutlet.description = body.description.trim() || null
+    }
+    if (typeof body?.active === "boolean") newsOutlet.active = body.active
+    newsOutlet.lastModifiedDate = NOW
+    return newsOutlet
+  }
+
+  const newsArticleDetailMatch = pathname.match(/^\/news-articles\/(\d+)$/)
+  if (method === "GET" && newsArticleDetailMatch) {
+    if (!hasFixturePermission(state, "news-article:read")) {
+      return {
+        __status: 403,
+        payload: errorPayload("News article permission denied", "FORBIDDEN"),
+      }
+    }
+    const id = Number(newsArticleDetailMatch[1])
+    const scenario = getScenario(state, method, "/news-articles")
+    const articles =
+      scenario === "overview-expanded" ? overviewNews() : state.newsArticles
+    const article = articles.find((item) => item.id === id)
+
+    if (!article) {
+      return {
+        __status: 404,
+        payload: errorPayload("News article not found", "NOT_FOUND"),
+      }
+    }
+
+    if (scenario === "article-reader-long-content") {
+      return {
+        ...article,
+        title: "Bản tin thị trường đã bản địa hóa",
+        description: "Tóm tắt tiếng Việt từ nguồn snapshot đã lưu.",
+        featureImage: {
+          id: 711,
+          name: "Fixture article image",
+          altText: "Ảnh minh họa bài viết mẫu",
+          urlOriginal: "/images/signapse_logo_dark_2048x2048.webp",
+          urlLarge: "/images/signapse_logo_dark_2048x2048.webp",
+          urlMedium: "/images/signapse_logo_dark_2048x2048.webp",
+        },
+        content: articleReaderLongContent(),
+        status: "DERIVATION_FAILED",
+      }
+    }
+
+    return { ...article, content: null }
+  }
+
+  if (method === "GET" && pathname === "/economic-calendar") {
+    if (!hasFixturePermission(state, "economic-calendar:read")) {
+      return {
+        __status: 403,
+        payload: errorPayload(
+          "Economic calendar permission denied",
+          "FORBIDDEN"
+        ),
+      }
+    }
+
+    const entries = [
+      {
+        id: 8301,
+        title: "Fixture CPI release",
+        currencyCode: "USD",
+        type: "CPI",
+        impact: "HIGH",
+        forecastValue: null,
+        previousValue: "0.2%",
+        actualValue: "0",
+        description: null,
+        revision: null,
+        newsUrl: null,
+        actualBetterWorse: null,
+        revisionBetterWorse: null,
+        status: "AVAILABLE",
+        scheduledAt: "2026-11-20T17:30:00.000Z",
+        syncedAt: null,
+        createdDate: "2026-11-20T16:00:00.000Z",
+        lastModifiedDate: null,
+      },
+      {
+        id: 8302,
+        title: "Fixture employment report",
+        currencyCode: "JPY",
+        type: "EMPLOYMENT",
+        impact: "LOW",
+        forecastValue: "3.1%",
+        previousValue: null,
+        actualValue: null,
+        description: null,
+        revision: null,
+        newsUrl: null,
+        actualBetterWorse: null,
+        revisionBetterWorse: null,
+        status: "PENDING",
+        scheduledAt: "2026-11-21T16:30:00.000Z",
+        syncedAt: null,
+        createdDate: "2026-11-20T16:00:00.000Z",
+        lastModifiedDate: null,
+      },
+    ]
+
+    return page(
+      entries,
+      Number(url.searchParams.get("page") ?? 0),
+      Number(url.searchParams.get("size") ?? 20),
+      entries.length
+    )
+  }
+
+  const economicCalendarDetailMatch = pathname.match(
+    /^\/economic-calendar\/(\d+)$/
+  )
+  if (method === "GET" && economicCalendarDetailMatch) {
+    if (!hasFixturePermission(state, "economic-calendar:read")) {
+      return {
+        __status: 403,
+        payload: errorPayload(
+          "Economic calendar permission denied",
+          "FORBIDDEN"
+        ),
+      }
+    }
+
+    const id = Number(economicCalendarDetailMatch[1])
+    if (id === 8201) {
+      return {
+        id,
+        title: "Fixture release details",
+        currencyCode: "USD",
+        type: "CPI",
+        impact: "HIGH",
+        forecastValue: "0.1%",
+        previousValue: "0.2%",
+        actualValue: "0",
+        description: "Description in the current locale.",
+        revision: null,
+        newsUrl: null,
+        actualBetterWorse: null,
+        revisionBetterWorse: null,
+        status: "AVAILABLE",
+        scheduledAt: "2026-06-30T23:30:00.000Z",
+        syncedAt: "2026-06-30T22:45:00.000Z",
+        createdDate: "2026-06-30T20:00:00.000Z",
+        lastModifiedDate: "2026-06-30T21:15:00.000Z",
+      }
+    }
+
+    if (id === 8202) {
+      return {
+        id,
+        title: "Pending fixture release",
+        currencyCode: "USD",
+        type: "CPI",
+        impact: "LOW",
+        forecastValue: null,
+        previousValue: "0",
+        actualValue: "0",
+        description: "Mô tả trong ngôn ngữ hiện tại.",
+        revision: null,
+        newsUrl: null,
+        actualBetterWorse: null,
+        revisionBetterWorse: null,
+        status: "PENDING",
+        scheduledAt: null,
+        syncedAt: null,
+        lastModifiedDate: null,
+      }
+    }
+
+    return {
+      __status: 404,
+      payload: errorPayload("Economic calendar entry not found", "NOT_FOUND"),
+    }
+  }
+
+  if (method === "GET" && pathname === "/events") {
+    const scenario = getScenario(state, method, pathname)
+    if (scenario === "event-list-denied") {
+      return {
+        __status: 403,
+        payload: errorPayload("Event permission denied", "FORBIDDEN"),
+      }
+    }
+
+    if (scenario === "event-list-error") {
+      return {
+        __status: 503,
+        payload: errorPayload("Event list unavailable", "SERVICE_UNAVAILABLE"),
+      }
+    }
+
+    if (scenario === "event-list-empty") {
+      return eventsPage([], url)
+    }
+
+    const events = scenario.startsWith("event-partial")
+      ? state.events.map((event) =>
+          event.id === 62
+            ? {
+                ...event,
+                title: null,
+                description: null,
+                confidence: null,
+                occurredAt: null,
+              }
+            : event
+        )
+      : state.events
+
+    return eventsPage(events, url)
+  }
+
+  const eventDetailMatch = pathname.match(/^\/events\/(\d+)$/)
+  if (method === "GET" && eventDetailMatch) {
+    const id = Number(eventDetailMatch[1])
+    const event = state.events.find((item) => item.id === id)
+
+    if (!event) {
+      return {
+        __status: 404,
+        payload: errorPayload("Event not found", "NOT_FOUND"),
+      }
+    }
+
+    const scenario = getScenario(state, method, "/events")
+    const isVietnamese = String(locale ?? "en")
+      .toLowerCase()
+      .startsWith("vi")
+
+    if (scenario === "event-detail-error") {
+      return {
+        __status: 503,
+        payload: errorPayload("Event data unavailable", "SERVICE_UNAVAILABLE"),
+      }
+    }
+
+    if (scenario === "event-detail-denied") {
+      return {
+        __status: 403,
+        payload: errorPayload("Event permission denied", "FORBIDDEN"),
+      }
+    }
+
+    if (scenario === "event-detail-not-found") {
+      return {
+        __status: 404,
+        payload: errorPayload("Event not found", "NOT_FOUND"),
+      }
+    }
+
+    let status = event.status
+    let assets = []
+    let themes = []
+
+    if (scenario === "event-links") {
+      assets = [
+        {
+          assetId: 101,
+          assetName: "SPDR S&P 500 ETF Trust",
+          assetSymbol: "SPY",
+          assetType: "ETF",
+          relationType: "PRIMARY_SUBJECT",
+          weight: 1,
+        },
+        {
+          assetId: 102,
+          assetName: "JPMorgan Chase & Co.",
+          assetSymbol: "JPM",
+          assetType: "EQUITY",
+          relationType: "AFFECTED_ASSET",
+          weight: 0.65,
+        },
+        {
+          assetId: 103,
+          assetName: "US Dollar Index",
+          assetSymbol: "DXY",
+          assetType: "INDEX",
+          relationType: "REFERENCE_ASSET",
+          weight: 0.35,
+        },
+      ]
+      themes = [
+        {
+          themeId: 201,
+          themeTitle: isVietnamese ? "Lãi suất" : "Interest rates",
+          themeSlug: "interest-rates",
+          relationType: "PRIMARY_THEME",
+          weight: 0.9,
+        },
+        {
+          themeId: 202,
+          themeTitle: isVietnamese
+            ? "Thị trường trái phiếu"
+            : "Treasury markets",
+          themeSlug: "treasury-markets",
+          relationType: "SECONDARY_THEME",
+          weight: 0.5,
+        },
+      ]
+    } else if (
+      scenario === "event-quick-detail-long" ||
+      scenario === "event-quick-detail-no-links"
+    ) {
+      assets = [
+        {
+          assetId: 103,
+          assetName: "US Dollar Index",
+          assetSymbol: "DXY",
+          assetType: "INDEX",
+          relationType: "REFERENCE_ASSET",
+          weight: 0.8,
+        },
+        {
+          assetId: 101,
+          assetName: "Bitcoin",
+          assetSymbol: "BTC/USDT",
+          assetType: "CRYPTO",
+          relationType: "PRIMARY_SUBJECT",
+          weight: 1,
+        },
+        {
+          assetId: 104,
+          assetName: "Akamai Technologies",
+          assetSymbol: "AKAM",
+          assetType: "EQUITY",
+          relationType: "AFFECTED_ASSET",
+          weight: 0.65,
+        },
+        {
+          assetId: 102,
+          assetName: "Gold",
+          assetSymbol: "XAUUSD",
+          assetType: "COMMODITY",
+          relationType: "REFERENCE_ASSET",
+          weight: 0.35,
+        },
+        {
+          assetId: 105,
+          assetName: "Microsoft",
+          assetSymbol: "MSFT",
+          assetType: "EQUITY",
+          relationType: "REFERENCE_ASSET",
+          weight: 0.25,
+        },
+        {
+          assetId: 106,
+          assetName: "SPDR S&P 500 ETF Trust",
+          assetSymbol: "SPY",
+          assetType: "ETF",
+          relationType: "REFERENCE_ASSET",
+          weight: 0.15,
+        },
+      ]
+      themes = [
+        {
+          themeId: 201,
+          themeTitle: isVietnamese ? "Lãi suất" : "Interest rates",
+          themeSlug: "interest-rates",
+          relationType: "PRIMARY_THEME",
+          weight: 0.9,
+        },
+        {
+          themeId: 202,
+          themeTitle: isVietnamese
+            ? "Thị trường trái phiếu"
+            : "Treasury markets",
+          themeSlug: "treasury-markets",
+          relationType: "SECONDARY_THEME",
+          weight: 0.5,
+        },
+      ]
+    } else if (scenario === "event-empty-no-match") {
+      status = "ENRICHMENT_NO_MATCH"
+    } else if (scenario === "event-empty-failed") {
+      status = "ENRICHMENT_FAILED"
+    } else if (
+      scenario === "event-market-reactions" ||
+      scenario === "event-market-reactions-null-fields"
+    ) {
+      assets = [
+        {
+          assetId: 101,
+          assetName: "Akamai Technologies",
+          assetSymbol: "AKAM",
+          assetType: "EQUITY",
+          relationType: "PRIMARY_SUBJECT",
+          weight: 1,
+        },
+        {
+          assetId: 102,
+          assetName: "First Trust Cloud Computing ETF",
+          assetSymbol: "SKYY",
+          assetType: "ETF",
+          relationType: "AFFECTED_ASSET",
+          weight: 0.65,
+        },
+        {
+          assetId: 103,
+          assetName: "Microsoft",
+          assetSymbol: "MSFT",
+          assetType: "EQUITY",
+          relationType: "REFERENCE_ASSET",
+          weight: 0.35,
+        },
+        {
+          assetId: 104,
+          assetName: "US Dollar Index",
+          assetSymbol: "DXY",
+          assetType: "INDEX",
+          relationType: "REFERENCE_ASSET",
+          weight: 0.2,
+        },
+      ]
+      themes = [
+        {
+          themeId: 201,
+          themeTitle: isVietnamese ? "Công nghệ" : "Technology",
+          themeSlug: "technology",
+          relationType: "PRIMARY_THEME",
+          weight: 0.9,
+        },
+      ]
+    }
+
+    const marketReactions =
+      id !== 61
+        ? []
+        : scenario === "event-market-reactions"
+          ? [
+              {
+                id: 701,
+                assetId: 101,
+                assetName: "Akamai Technologies",
+                assetSymbol: "AKAM",
+                assetType: "EQUITY",
+                direction: "BULLISH",
+                timeHorizon: "SHORT_TERM",
+                confidence: 0.84,
+                reasoning: isVietnamese
+                  ? "Hợp đồng điện toán đám mây dài hạn có thể cải thiện khả năng dự đoán doanh thu của Akamai, hỗ trợ triển vọng tăng trong ngắn hạn."
+                  : "The long-term cloud contract could improve Akamai’s revenue visibility, supporting a bullish short-term outlook.",
+                observedAt: "2026-11-18T08:00:00.000Z",
+              },
+              {
+                id: 702,
+                assetId: 102,
+                assetName: "First Trust Cloud Computing ETF",
+                assetSymbol: "SKYY",
+                assetType: "ETF",
+                direction: "NEUTRAL",
+                timeHorizon: "MEDIUM_TERM",
+                confidence: 0.64,
+                reasoning: isVietnamese
+                  ? "Thỏa thuận có thể hỗ trợ nhu cầu năng lực điện toán đám mây, trong khi ETF đa dạng hóa làm giảm tác động của một hợp đồng riêng lẻ."
+                  : "The agreement could support demand for cloud capacity, while the diversified ETF limits the impact of a single deal.",
+                observedAt: "2026-11-18T08:00:00.000Z",
+              },
+              {
+                id: 703,
+                assetId: 103,
+                assetName: "Microsoft",
+                assetSymbol: "MSFT",
+                assetType: "EQUITY",
+                direction: "BEARISH",
+                timeHorizon: "SHORT_TERM",
+                confidence: 0.68,
+                reasoning: isVietnamese
+                  ? "Cạnh tranh gia tăng trong lĩnh vực điện toán đám mây có thể gây áp lực lên biên lợi nhuận ngắn hạn của Microsoft."
+                  : "More competition for cloud workloads could pressure Microsoft’s near-term margins.",
+                observedAt: "2026-11-18T08:00:00.000Z",
+              },
+              {
+                id: 704,
+                assetId: 102,
+                assetName: "First Trust Cloud Computing ETF",
+                assetSymbol: "SKYY",
+                assetType: "ETF",
+                direction: "MIXED",
+                timeHorizon: "LONG_TERM",
+                confidence: 0.61,
+                reasoning: isVietnamese
+                  ? "Nhu cầu điện toán đám mây có thể hỗ trợ các công ty trong ETF, nhưng chi phí hạ tầng tăng cũng có thể gây áp lực lên biên lợi nhuận."
+                  : "Cloud demand could lift holdings, while higher infrastructure costs could pressure margins.",
+                observedAt: "2026-11-18T08:00:00.000Z",
+              },
+            ]
+          : scenario === "event-market-reactions-null-fields"
+            ? [
+                {
+                  id: 705,
+                  assetId: 101,
+                  assetName: "",
+                  assetSymbol: "",
+                  assetType: "EQUITY",
+                  direction: "MIXED",
+                  timeHorizon: "LONG_TERM",
+                  confidence: null,
+                  reasoning: null,
+                  observedAt: null,
+                },
+              ]
+            : []
+
+    const response = {
+      ...event,
+      ...(scenario === "event-quick-detail-long" ||
+      scenario === "event-quick-detail-no-links"
+        ? {
+            title: `Central bank signals a slower easing path ${"across global markets ".repeat(5)}`,
+            description: `Synthetic long-form event description ${"with preserved market context and complete supplied wording. ".repeat(12)}`,
+          }
+        : {}),
+      status,
+      assets,
+      themes,
+      evidence:
+        (scenario === "event-quick-detail-long" ||
+          scenario === "event-quick-detail-no-links") &&
+        id === 61
+          ? Array.from({ length: 6 }, (_, index) => ({
+              newsArticleId:
+                scenario === "event-quick-detail-no-links" ? null : 71 + index,
+              newsArticleTitle: `Fixture evidence ${index + 1} ${"long title remains complete ".repeat(4)}`,
+              newsArticleUrl:
+                scenario === "event-quick-detail-no-links"
+                  ? null
+                  : `https://fixture.invalid/news/${71 + index}`,
+              sourceName: `Fixture Source ${index + 1}`,
+              publishedAt: NOW,
+              evidenceRole: index === 0 ? "PRIMARY" : "SUPPORTING",
+              confidence: 0.92 - index * 0.05,
+              evidenceNote: `Synthetic complete evidence note ${index + 1} ${"retained inside the quick reader without truncation. ".repeat(5)}`,
+            }))
+          : id === 61 ||
+              id === 63 ||
+              (id === 62 && scenario.startsWith("event-partial"))
+            ? [
+                {
+                  newsArticleId: 71,
+                  newsArticleTitle: id === 62 ? null : "Fixture market update",
+                  newsArticleUrl:
+                    id === 62 && scenario === "event-partial-no-source"
+                      ? null
+                      : `https://fixture.invalid/news/${id}`,
+                  sourceName: "Fixture Wire",
+                  publishedAt: NOW,
+                  evidenceRole: "PRIMARY",
+                  confidence: id === 62 ? null : 0.92,
+                  evidenceNote:
+                    id === 62
+                      ? null
+                      : "Synthetic evidence for the browser quality gate.",
+                },
+              ]
+            : [],
+      marketReactions,
+    }
+
+    if (id === 62 && scenario.startsWith("event-partial")) {
+      response.title = null
+      response.description = null
+      response.confidence = null
+      response.occurredAt = null
+    }
+
+    if (scenario === "event-market-reactions-missing") {
+      delete response.marketReactions
+    }
+
+    return response
+  }
+
+  if (method === "GET" && pathname === "/me/notes") {
+    return slicePage(
+      state.notes.map((item) => ({ ...item, content: undefined })),
+      url
+    )
+  }
+
+  const noteMatch = pathname.match(/^\/me\/notes\/(\d+)$/)
+  if (noteMatch) {
+    const id = Number(noteMatch[1])
+    const existing = state.notes.find((item) => item.id === id)
+    if (!existing)
+      return {
+        __status: 404,
+        payload: errorPayload("Note not found", "NOT_FOUND"),
+      }
+
+    if (method === "PUT") {
+      existing.title = body?.title ?? null
+      existing.content = body?.content ?? existing.content
+      existing.lastModifiedDate = NOW
+    }
+    if (method === "DELETE") {
+      state.notes = state.notes.filter((item) => item.id !== id)
+      return { __status: 204 }
+    }
+    return existing
+  }
+
+  if (method === "POST" && pathname === "/me/notes") {
+    const created = note(
+      state.nextIds.note++,
+      body?.title ?? null,
+      extractText(body?.content)
+    )
+    created.content = body?.content ?? created.content
+    state.notes.unshift(created)
+    return created
+  }
+
+  if (method === "GET" && pathname === "/telegram/bot-connections")
+    return state.botConnections.filter(
+      (connection) => connection.status !== "REMOVED"
+    )
+
+  const botConnectionReconnectMatch = pathname.match(
+    /^\/telegram\/bot-connections\/(\d+)\/reconnect$/
+  )
+  if (method === "POST" && botConnectionReconnectMatch) {
+    const scenario = getScenario(state, method, pathname)
+    if (scenario === "reconnect-token-invalid") {
+      return {
+        __status: 400,
+        payload: errorPayload("Telegram bot token could not be verified."),
+      }
+    }
+    if (scenario === "reconnect-token-mismatch") {
+      return {
+        __status: 409,
+        payload: errorPayload(
+          "The token does not belong to the selected Telegram bot connection.",
+          "TELEGRAM_BOT_ID_MISMATCH"
+        ),
+      }
+    }
+    if (scenario === "reconnect-permission-denied") {
+      return {
+        __status: 403,
+        payload: errorPayload("Reconnect permission is required.", "FORBIDDEN"),
+      }
+    }
+    if (typeof body?.botToken !== "string" || !body.botToken.trim()) {
+      return {
+        __status: 400,
+        payload: errorPayload("A bot token is required."),
+      }
+    }
+
+    const connectionId = Number(botConnectionReconnectMatch[1])
+    const connection = state.botConnections.find(
+      (item) => item.id === connectionId
+    )
+    if (!connection) {
+      return {
+        __status: 404,
+        payload: errorPayload("Telegram bot connection not found.", "NOT_FOUND"),
+      }
+    }
+    if (connection.status !== "ACTIVE" && connection.status !== "INVALID") {
+      return {
+        __status: 409,
+        payload: errorPayload("Telegram bot connection cannot be reconnected."),
+      }
+    }
+
+    connection.lastValidatedAt = NOW
+    connection.lastModifiedDate = NOW
+    if (scenario === "reconnect-webhook-failed") {
+      connection.status = "INVALID"
+      connection.failureReason = "Webhook registration failed."
+    } else {
+      connection.status = "ACTIVE"
+      delete connection.failureReason
+      connection.lastWebhookRegisteredAt = NOW
+    }
+    return connection
+  }
+
+  if (method === "GET" && pathname === "/telegram/destinations") {
+    if (getScenario(state, method, pathname) === "telegram-verified-readback") {
+      return [
+        ...state.destinations,
+        {
+          id: 23,
+          botConnectionId: 11,
+          botUsername: "signapse_fixture_bot",
+          botDisplayLabel: "Signapse Fixture Bot",
+          chatId: "-100000000023",
+          chatType: "GROUP",
+          displayLabel: "Verified after link",
+          chatTitle: "Verified after link",
+          status: "ACTIVE",
+          createdDate: NOW,
+          lastModifiedDate: NOW,
+        },
+      ]
+    }
+    if (getScenario(state, method, pathname) === "telegram-removal-candidate") {
+      return [
+        ...state.destinations,
+        {
+          id: 23,
+          botConnectionId: 11,
+          botUsername: "signapse_fixture_bot",
+          botDisplayLabel: "Signapse Fixture Bot",
+          chatId: "-100000000023",
+          chatType: "GROUP",
+          displayLabel: "Unused destination",
+          chatTitle: "Unused destination",
+          status: "ACTIVE",
+          createdDate: NOW,
+          lastModifiedDate: NOW,
+        },
+      ]
+    }
+
+    return state.destinations
+  }
+  if (method === "GET" && pathname === "/telegram/feature-settings") {
+    const scenario = getScenario(state, method, pathname)
+    if (
+      scenario === "economic-calendar-off-unassigned" ||
+      scenario === "economic-calendar-off-assigned"
+    ) {
+      const setting = state.featureSettings.find(
+        (item) => item.featureKey === "ECONOMIC_CALENDAR_ALERT"
+      )
+      if (setting) {
+        setting.enabled = false
+        setting.destination =
+          scenario === "economic-calendar-off-assigned"
+            ? state.destinations[0]
+            : null
+        setting.outputLanguage =
+          scenario === "economic-calendar-off-assigned"
+            ? { id: 2, isoCode: "en", name: "English" }
+            : null
+      }
+      state.scenarios[`${method} ${pathname}`] = "success"
+    }
+    if (scenario === "economic-calendar-missing-setting") {
+      state.featureSettings = state.featureSettings.filter(
+        (setting) => setting.featureKey !== "ECONOMIC_CALENDAR_ALERT"
+      )
+      state.scenarios[`${method} ${pathname}`] = "success"
+    }
+    return state.featureSettings
+  }
+  if (method === "GET" && pathname === "/telegram/market-analysis-schedules")
+    return state.schedules
+  if (method === "GET" && pathname === "/languages") {
+    return {
+      currentLanguage: "vi",
+      languages: state.languages,
+      preferredLanguage: state.preferredLanguage?.isoCode ?? null,
+    }
+  }
+
+  if (method === "POST" && pathname === "/telegram/bot-connections") {
+    return {
+      id: 12,
+      botUsername: "new_fixture_bot",
+      displayLabel: "New fixture bot",
+      status: "ACTIVE",
+      createdDate: NOW,
+      lastModifiedDate: NOW,
+    }
+  }
+
+  const botConnectionMatch = pathname.match(
+    /^\/telegram\/bot-connections\/(\d+)$/
+  )
+  if (method === "DELETE" && botConnectionMatch) {
+    const scenario = getScenario(state, method, pathname)
+    if (scenario === "bot-removal-blocked") {
+      return {
+        __status: 409,
+        payload: errorPayload(
+          "Remove the Telegram destinations before removing this bot.",
+          "TELEGRAM_BOT_CONNECTION_HAS_UNREMOVED_DESTINATIONS"
+        ),
+      }
+    }
+    const id = Number(botConnectionMatch[1])
+    const item = state.botConnections.find((connection) => connection.id === id)
+    if (!item) {
+      return {
+        __status: 404,
+        payload: errorPayload("Telegram bot connection not found", "NOT_FOUND"),
+      }
+    }
+    item.status = "REMOVED"
+    item.lastModifiedDate = NOW
+    return { __status: 200, __empty: true }
+  }
+
+  if (method === "POST" && pathname === "/telegram/destinations/link-token") {
+    const token = "ExampleLinkToken0123456789ABCDEF"
+    return {
+      botConnectionId: body?.botConnectionId ?? 11,
+      token,
+      startCommand: `/start ${token}`,
+      expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+    }
+  }
+
+  if (
+    method === "POST" &&
+    /^\/telegram\/destinations\/\d+\/test-message$/.test(pathname)
+  ) {
+    return { __status: 204 }
+  }
+
+  if (method === "DELETE" && /^\/telegram\/destinations\/\d+$/.test(pathname)) {
+    const id = Number(pathname.split("/")[3])
+    state.destinations = state.destinations.filter(
+      (destination) => destination.id !== id
+    )
+    if (
+      id === 23 &&
+      getScenario(state, "GET", "/telegram/destinations") ===
+        "telegram-removal-candidate"
+    ) {
+      state.scenarios["GET /telegram/destinations"] = "success"
+    }
+    return { __status: 200, __empty: true }
+  }
+
+  if (method === "PUT" && pathname === "/telegram/feature-settings") {
+    const existing = state.featureSettings.find(
+      (item) =>
+        item.featureKey === body?.featureKey &&
+        item.workspaceId === Number(body?.workspaceId)
+    )
+    if (existing) {
+      const nextEnabled = body?.enabled ?? existing.enabled
+      const nextDestination = Object.hasOwn(body ?? {}, "destinationId")
+        ? body.destinationId === null
+          ? null
+          : (state.destinations.find(
+              (item) => item.id === Number(body.destinationId)
+            ) ?? null)
+        : existing.destination
+      const nextOutputLanguage = Object.hasOwn(
+        body ?? {},
+        "outputLanguageIsoCode"
+      )
+        ? typeof body.outputLanguageIsoCode === "string" &&
+          body.outputLanguageIsoCode.trim()
+          ? (state.languages.find(
+              (item) => item.isoCode === body.outputLanguageIsoCode.trim()
+            ) ?? null)
+          : null
+        : existing.outputLanguage
+      const destinationIsEligible =
+        nextDestination?.status === "ACTIVE" &&
+        state.botConnections.some(
+          (connection) =>
+            connection.id === nextDestination.botConnectionId &&
+            connection.status === "ACTIVE"
+        )
+
+      if (
+        (body?.destinationId === null && nextEnabled !== false) ||
+        (body?.enabled === true && !destinationIsEligible) ||
+        (Object.hasOwn(body ?? {}, "destinationId") &&
+          body.destinationId !== null &&
+          !destinationIsEligible)
+      ) {
+        return {
+          __status: 400,
+          payload: errorPayload(
+            "Choose an eligible destination",
+            "FIXTURE_VALIDATION"
+          ),
+        }
+      }
+
+      existing.enabled = nextEnabled
+      existing.destination = nextDestination
+      existing.outputLanguage = nextOutputLanguage
+      existing.lastModifiedDate = NOW
+      return existing
+    }
+    const nextEnabled = body?.enabled ?? true
+    const nextDestination = Object.hasOwn(body ?? {}, "destinationId")
+      ? body.destinationId === null
+        ? null
+        : (state.destinations.find(
+            (item) => item.id === Number(body.destinationId)
+          ) ?? null)
+      : null
+    const destinationIsEligible =
+      nextDestination?.status === "ACTIVE" &&
+      state.botConnections.some(
+        (connection) =>
+          connection.id === nextDestination.botConnectionId &&
+          connection.status === "ACTIVE"
+      )
+
+    if (
+      (nextEnabled && !destinationIsEligible) ||
+      (nextDestination && !destinationIsEligible)
+    ) {
+      return {
+        __status: 400,
+        payload: errorPayload(
+          "Choose an eligible destination",
+          "FIXTURE_VALIDATION"
+        ),
+      }
+    }
+
+    const created = {
+      id:
+        Math.max(0, ...state.featureSettings.map((setting) => setting.id)) + 1,
+      featureKey: body?.featureKey,
+      workspaceId: Number(body?.workspaceId),
+      workspaceName:
+        state.workspaces.find(
+          (workspace) => workspace.id === Number(body?.workspaceId)
+        )?.name ?? null,
+      enabled: nextEnabled,
+      destination: nextDestination,
+      outputLanguage:
+        typeof body?.outputLanguageIsoCode === "string"
+          ? (state.languages.find(
+              (language) => language.isoCode === body.outputLanguageIsoCode
+            ) ?? null)
+          : null,
+      createdDate: NOW,
+      lastModifiedDate: NOW,
+    }
+    state.featureSettings.push(created)
+    return created
+  }
+
+  if (method === "POST" && pathname === "/telegram/market-analysis-schedules") {
+    const currentWorkspace =
+      state.workspaces.find((item) => item.currentWorkspace) ??
+      state.workspaces[0]
+    const created = {
+      id: state.nextIds.schedule++,
+      name: body?.name ?? "Fixture schedule",
+      workspaceId: Number(body?.workspaceId ?? currentWorkspace.id),
+      workspaceName: currentWorkspace.name,
+      destination: state.destinations.find(
+        (item) => item.id === Number(body?.destinationId)
+      ),
+      timezone: body?.timezone ?? "Asia/Ho_Chi_Minh",
+      localTimes: body?.localTimes ?? ["08:30"],
+      asset: state.assets.find(
+        (item) => item.assetId === Number(body?.assetId)
+      ),
+      outputLanguage: state.languages.find(
+        (item) => item.isoCode === body?.outputLanguageIsoCode
+      ),
+      status: "ACTIVE",
+      createdDate: NOW,
+      lastModifiedDate: NOW,
+    }
+    state.schedules.push(created)
+    return created
+  }
+
+  const scheduleMatch = pathname.match(
+    /^\/telegram\/market-analysis-schedules\/(\d+)$/
+  )
+  if (scheduleMatch) {
+    const id = Number(scheduleMatch[1])
+    const existing = state.schedules.find((item) => item.id === id)
+    if (!existing)
+      return {
+        __status: 404,
+        payload: errorPayload("Schedule not found", "NOT_FOUND"),
+      }
+    if (method === "PUT") {
+      existing.name = body?.name ?? existing.name
+      existing.localTimes = body?.localTimes ?? existing.localTimes
+      existing.lastModifiedDate = NOW
+    }
+    if (method === "DELETE") {
+      existing.status = "REMOVED"
+      return { __status: 200 }
+    }
+    return existing
+  }
+
+  if (method === "GET" && pathname === "/market-charts/candles")
+    return candles(
+      url,
+      getScenario(state, method, pathname) === "daily-history-retry"
+    )
+  if (method === "GET" && pathname === "/market-charts/annotations") {
+    return marketChartAnnotations(url, getScenario(state, method, pathname))
+  }
+  if (
+    method === "GET" &&
+    pathname === "/market-charts/economic-calendar-events"
+  ) {
+    return marketChartEconomicCalendarEvents(
+      url,
+      getScenario(state, method, pathname)
+    )
+  }
+
+  return {
+    __status: 404,
+    payload: errorPayload(
+      `Unhandled fixture route: ${method} ${pathname}`,
+      "UNHANDLED_ROUTE"
+    ),
+  }
+}
+
+function extractText(value) {
+  if (!Array.isArray(value)) return ""
+  return value
+    .flatMap((node) => (Array.isArray(node?.children) ? node.children : []))
+    .map((child) => child?.text ?? "")
+    .join(" ")
+}
+
+async function appendLog(entry) {
+  const line = `${JSON.stringify(entry)}\n`
+  if (!logFile) return
+  await mkdir(dirname(logFile), { recursive: true })
+  await appendFile(logFile, line, "utf8")
+}
+
+async function handleControl(request, response, url, body) {
+  if (url.pathname === "/__test/health" && request.method === "GET") {
+    sendJson(response, 200, {
+      status: "ok",
+      mode: "fixture",
+      production: false,
+    })
+    return true
+  }
+
+  if (url.pathname === "/__test/reset" && request.method === "POST") {
+    const testRunId =
+      body?.testRunId ?? request.headers["x-signapse-test-run-id"]
+    if (!testRunId) {
+      sendJson(
+        response,
+        400,
+        errorPayload("testRunId is required", "TEST_RUN_ID_REQUIRED")
+      )
+      return true
+    }
+    const previous = testRuns.get(String(testRunId))
+    if (previous) closeResponses(previous)
+    testRuns.set(String(testRunId), createState())
+    sendJson(response, 200, { testRunId, reset: true })
+    return true
+  }
+
+  if (
+    url.pathname === "/__test/preferred-language" &&
+    request.method === "POST"
+  ) {
+    const testRunId =
+      body?.testRunId ?? request.headers["x-signapse-test-run-id"]
+    if (
+      !testRunId ||
+      !(body?.isoCode === null || typeof body?.isoCode === "string")
+    ) {
+      sendJson(
+        response,
+        400,
+        errorPayload(
+          "testRunId and isoCode are required",
+          "PREFERRED_LANGUAGE_REQUIRED"
+        )
+      )
+      return true
+    }
+    const state = getState(String(testRunId))
+    state.preferredLanguage =
+      body.isoCode === null
+        ? null
+        : (state.languages.find(
+            (language) => language.isoCode === body.isoCode
+          ) ?? null)
+    if (body.isoCode !== null && !state.preferredLanguage) {
+      sendJson(
+        response,
+        400,
+        errorPayload("Language is not in the catalog", "INVALID_LANGUAGE")
+      )
+      return true
+    }
+    sendJson(response, 200, {
+      testRunId,
+      preferredLanguage: state.preferredLanguage,
+    })
+    return true
+  }
+
+  if (url.pathname === "/__test/scenario" && request.method === "POST") {
+    const testRunId =
+      body?.testRunId ?? request.headers["x-signapse-test-run-id"]
+    if (!testRunId || typeof body?.scenario !== "string") {
+      sendJson(
+        response,
+        400,
+        errorPayload("testRunId and scenario are required", "SCENARIO_REQUIRED")
+      )
+      return true
+    }
+    const state = getState(String(testRunId))
+    const key = body.route ?? "*"
+    state.scenarios[body.method ? `${body.method} ${key}` : key] = body.scenario
+    if (key === "/me" && body.scenario === "workspace-not-selected") {
+      state.workspaces = state.workspaces.map((item) => ({
+        ...item,
+        currentWorkspace: false,
+      }))
+    }
+    releasePending(state)
+    sendJson(response, 200, { testRunId, route: key, scenario: body.scenario })
+    return true
+  }
+
+  if (
+    url.pathname === "/__test/feedback-scenario" &&
+    request.method === "POST"
+  ) {
+    const testRunId =
+      body?.testRunId ?? request.headers["x-signapse-test-run-id"]
+    if (!testRunId || typeof body?.scenario !== "string") {
+      sendJson(
+        response,
+        400,
+        errorPayload("testRunId and scenario are required", "SCENARIO_REQUIRED")
+      )
+      return true
+    }
+    const state = getState(String(testRunId))
+    state.feedbackScenarios[body.kind ?? "feedback"] = body.scenario
+    releasePending(state)
+    sendJson(response, 200, {
+      testRunId,
+      kind: body.kind ?? "feedback",
+      scenario: body.scenario,
+    })
+    return true
+  }
+
+  if (url.pathname === "/__test/permissions" && request.method === "POST") {
+    const testRunId =
+      body?.testRunId ?? request.headers["x-signapse-test-run-id"]
+    if (!testRunId || !Array.isArray(body?.permissions)) {
+      sendJson(
+        response,
+        400,
+        errorPayload(
+          "testRunId and permissions are required",
+          "PERMISSIONS_REQUIRED"
+        )
+      )
+      return true
+    }
+    const state = getState(String(testRunId))
+    state.permissions = body.permissions.map(String)
+    sendJson(response, 200, { testRunId, permissions: state.permissions })
+    return true
+  }
+
+  if (
+    url.pathname === "/__test/smtp-configuration" &&
+    request.method === "POST"
+  ) {
+    const testRunId =
+      body?.testRunId ?? request.headers["x-signapse-test-run-id"]
+    if (!testRunId || !body || !("configuration" in body)) {
+      sendJson(
+        response,
+        400,
+        errorPayload(
+          "testRunId and configuration are required",
+          "SMTP_CONFIGURATION_REQUIRED"
+        )
+      )
+      return true
+    }
+    const state = getState(String(testRunId))
+    state.smtpConfiguration = body.configuration
+    sendJson(response, 200, {
+      testRunId,
+      smtpConfiguration: smtpConfigurationResponse(state.smtpConfiguration),
+    })
+    return true
+  }
+
+  if (url.pathname === "/__test/state" && request.method === "GET") {
+    const testRunId =
+      request.headers["x-signapse-test-run-id"] ??
+      url.searchParams.get("testRunId")
+    const state = getState(String(testRunId ?? "anonymous"))
+    sendJson(response, 200, {
+      testRunId,
+      scenarios: state.scenarios,
+      feedbackScenarios: state.feedbackScenarios,
+      permissions: state.permissions,
+      aiTaskConfigurations: state.aiTaskConfigurations,
+      schedules: state.schedules,
+      newsOutlets: state.newsOutlets,
+      marketConversations: state.marketConversations,
+      marketConversationTurns: state.marketConversationTurns.map(
+        ({ conversationId, workspaceId, idempotencyKey, response }) => ({
+          conversationId,
+          workspaceId,
+          idempotencyKey,
+          response,
+        })
+      ),
+      marketConversationAttempts: state.marketConversationAttempts,
+      smtpConfiguration: smtpConfigurationResponse(state.smtpConfiguration),
+      streamConnections: state.streamConnections,
+      pendingRequests: state.pendingRequests.size,
+      requests: state.requests,
+      violations: state.violations,
+    })
+    return true
+  }
+
+  return false
+}
+
+const server = createServer(async (request, response) => {
+  const url = new URL(
+    request.url ?? "/",
+    `http://${request.headers.host ?? "127.0.0.1"}`
+  )
+  const method = request.method ?? "GET"
+  const body = await readBody(request)
+
+  if (method === "OPTIONS") {
+    response.writeHead(204, {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Headers": "content-type,x-signapse-test-run-id",
+    })
+    response.end()
+    return
+  }
+
+  if (await handleControl(request, response, url, body)) return
+
+  const rawTestRunId = request.headers["x-signapse-test-run-id"]
+  if (!rawTestRunId) {
+    const violation = {
+      method,
+      path: url.pathname,
+      query: url.search,
+      reason: "missing-test-run-id",
+    }
+    getState("anonymous").violations.push(violation)
+    sendJson(
+      response,
+      400,
+      errorPayload(
+        "P0 fixture requires x-signapse-test-run-id",
+        "MISSING_TEST_RUN_ID"
+      )
+    )
+    return
+  }
+
+  const testRunId = String(rawTestRunId)
+
+  const state = getState(testRunId)
+  const hasAuthHeader = Boolean(request.headers.authorization)
+  const logEntry = {
+    method,
+    path: url.pathname,
+    query: url.search,
+    testRunId,
+    locale: request.headers["accept-language"] ?? null,
+    hasAuthHeader,
+    ...(method === "PUT" && url.pathname.startsWith("/ai-task-configurations/")
+      ? { body }
+      : {}),
+    ...(method === "PATCH" &&
+    ["/me", "/me/preferred-language"].includes(url.pathname)
+      ? { body }
+      : {}),
+    ...(method === "PUT" && url.pathname.startsWith("/system-prompts/")
+      ? { bodyKeys: Object.keys(body ?? {}) }
+      : {}),
+  }
+  state.requests.push(logEntry)
+  await appendLog(logEntry)
+
+  if (hasAuthHeader) {
+    state.violations.push({ ...logEntry, reason: "unexpected-auth-header" })
+    sendJson(
+      response,
+      403,
+      errorPayload(
+        "P0 fixture rejects authenticated network calls",
+        "UNEXPECTED_AUTH"
+      )
+    )
+    return
+  }
+
+  const contract = fixtureContracts.find(
+    (item) =>
+      item.method === method && contractPathMatches(item.path, url.pathname)
+  )
+  if (!contract) {
+    state.violations.push({ ...logEntry, reason: "unregistered-route" })
+    sendJson(
+      response,
+      404,
+      errorPayload(
+        `Unregistered fixture route: ${method} ${url.pathname}`,
+        "UNREGISTERED_ROUTE"
+      )
+    )
+    return
+  }
+
+  const delayedGraphResult =
+    method === "GET" &&
+    url.pathname === "/graph-view" &&
+    getScenario(state, method, url.pathname) === "delayed-old-workspace"
+      ? responseForRoute(state, method, url.pathname, url, body)
+      : undefined
+  const delayedMarketConversationResult =
+    method === "POST" &&
+    /^\/market-conversations\/\d+\/messages$/.test(url.pathname) &&
+    getScenario(state, method, url.pathname) === "delayed-old-workspace"
+      ? responseForRoute(
+          state,
+          method,
+          url.pathname,
+          url,
+          body,
+          String(request.headers["accept-language"] ?? "en"),
+          request.headers
+        )
+      : undefined
+
+  if (isPending(state, method, url.pathname)) {
+    const released = await holdResponse(state, response, method, url.pathname)
+    if (!released || response.destroyed) return
+  }
+  const scenario = getScenario(state, method, url.pathname)
+  if (scenario === "timeout") {
+    await new Promise((resolve) => setTimeout(resolve, 250))
+    sendJson(
+      response,
+      504,
+      errorPayload("Fixture request timed out", "FIXTURE_TIMEOUT")
+    )
+    return
+  }
+  if (scenario === "delayed" || scenario === "delayed-outage") {
+    const delayMs =
+      url.pathname === "/market-charts/candles"
+        ? scenario === "delayed-outage"
+          ? 1_500
+          : 3_000
+        : 350
+    await new Promise((resolve) => setTimeout(resolve, delayMs))
+  }
+  if (
+    scenario === "preopen-unavailable" &&
+    method === "GET" &&
+    url.pathname === "/market-charts/live"
+  ) {
+    sendJson(
+      response,
+      503,
+      errorPayload(
+        "Fixture provider is unavailable",
+        "FIXTURE_PROVIDER_UNAVAILABLE"
+      )
+    )
+    return
+  }
+  if (
+    scenario === "provisioning-pending" &&
+    method === "GET" &&
+    url.pathname === "/market-charts/live" &&
+    state.requests.filter(
+      (request) =>
+        request.method === "GET" && request.path === "/market-charts/live"
+    ).length === 1
+  ) {
+    response.writeHead(503, { ...jsonHeaders(), "Retry-After": "2" })
+    response.end(
+      JSON.stringify(
+        errorPayload(
+          "Account provisioning is still in progress.",
+          "USER_PROVISIONING_PENDING"
+        )
+      )
+    )
+    return
+  }
+  if (
+    (scenario === "outage" || scenario === "delayed-outage") &&
+    !(method === "GET" && url.pathname === "/market-charts/live")
+  ) {
+    sendJson(
+      response,
+      503,
+      errorPayload("Fixture backend is unavailable", "FIXTURE_OUTAGE")
+    )
+    return
+  }
+  if (
+    scenario === "annotations-delayed-old-scope" &&
+    method === "GET" &&
+    url.pathname === "/market-charts/annotations" &&
+    Number(url.searchParams.get("assetId")) === 101
+  ) {
+    // Hold one old-scope response; chart history paging can request annotations repeatedly.
+    state.scenarios[`GET ${url.pathname}`] = "success"
+    await new Promise((resolve) => setTimeout(resolve, 5000))
+  }
+  if (scenario === "validation-error") {
+    sendJson(
+      response,
+      422,
+      errorPayload("Fixture validation failed", "FIXTURE_VALIDATION")
+    )
+    return
+  }
+  if (
+    scenario === "telegram-destination-in-use" &&
+    method === "DELETE" &&
+    /^\/telegram\/destinations\/\d+$/.test(url.pathname)
+  ) {
+    sendJson(
+      response,
+      409,
+      errorPayload(
+        "This Telegram destination is still assigned to a route or schedule.",
+        "TELEGRAM_DESTINATION_IN_USE"
+      )
+    )
+    return
+  }
+  if (scenario === "mutation-failure" && method !== "GET") {
+    sendJson(
+      response,
+      409,
+      errorPayload(
+        "Fixture mutation failed; retry is safe",
+        "FIXTURE_MUTATION_FAILURE"
+      )
+    )
+    return
+  }
+  if (scenario === "permission-denied") {
+    sendJson(
+      response,
+      403,
+      errorPayload("Fixture permission denied", "FORBIDDEN")
+    )
+    return
+  }
+  if (
+    scenario === "quota-exceeded" &&
+    method === "POST" &&
+    /^\/market-conversations\/\d+\/messages$/.test(url.pathname)
+  ) {
+    sendJson(
+      response,
+      409,
+      errorPayload(
+        "You have exceeded the monthly AI turn allowance.",
+        "AI_MONTHLY_TURN_QUOTA_EXCEEDED"
+      )
+    )
+    return
+  }
+
+  if (method === "GET" && url.pathname === "/market-charts/live") {
+    await streamLive(response, state, url, scenario)
+    return
+  }
+
+  const result =
+    delayedMarketConversationResult ??
+    delayedGraphResult ??
+    responseForRoute(
+      state,
+      method,
+      url.pathname,
+      url,
+      body,
+      String(request.headers["accept-language"] ?? "en"),
+      request.headers
+    )
+  const status = result?.__status ?? 200
+  if (
+    scenario === "drop-after-accepted" &&
+    method === "POST" &&
+    /^\/market-conversations\/\d+\/messages$/.test(url.pathname) &&
+    status < 400
+  ) {
+    state.scenarios[`POST ${url.pathname}`] = "success"
+    response.destroy()
+    return
+  }
+  if (status === 204) {
+    sendEmpty(response, 204)
+    return
+  }
+  if (result?.__empty) {
+    sendEmpty(response, status)
+    return
+  }
+  if (status >= 400) {
+    sendJson(
+      response,
+      status,
+      result.payload ?? errorPayload("Fixture route failed")
+    )
+    return
+  }
+  if (result?.__binary) {
+    response.writeHead(200, {
+      "Content-Type": result.mimeType,
+      "Content-Disposition": "inline",
+      "Cache-Control": "private, no-store",
+      "X-Content-Type-Options": "nosniff",
+      "Access-Control-Allow-Origin": "*",
+    })
+    response.end(result.__binary)
+    return
+  }
+  if (scenario === "daily-history-retry" && Array.isArray(result?.candles)) {
+    const requests = state.requests.filter(
+      (request) => request.path === "/market-charts/candles"
+    )
+    if (requests.length === 2 || requests.length === 3) {
+      if (requests.length === 3)
+        await new Promise((resolve) => setTimeout(resolve, 500))
+      sendJson(
+        response,
+        503,
+        errorPayload("Fixture backend is unavailable", "FIXTURE_OUTAGE")
+      )
+      return
+    }
+    if (requests.length >= 5) {
+      sendJson(response, 200, { ...result, from: result.to, candles: [] })
+      return
+    }
+  }
+
+  if (scenario === "empty" && method === "GET") {
+    if (Array.isArray(result)) {
+      sendJson(response, 200, [])
+    } else if (result && Array.isArray(result.content)) {
+      sendJson(response, 200, {
+        ...result,
+        content: [],
+        first: result.number === 0,
+        last: true,
+        totalElements: 0,
+        totalPages: 0,
+        numberOfElements: 0,
+        empty: true,
+      })
+    } else if (result && Array.isArray(result.candles)) {
+      const anchor = url.searchParams.get("to") ?? result.to
+      sendJson(response, 200, {
+        ...result,
+        from: anchor,
+        to: anchor,
+        candles: [],
+      })
+    } else {
+      sendJson(response, 200, result)
+    }
+    return
+  }
+
+  if (
+    scenario === "short" &&
+    method === "GET" &&
+    url.pathname === "/contact-requests"
+  ) {
+    sendJson(response, 200, slicePage(state.contactRequests.slice(0, 3), url))
+    return
+  }
+
+  if (
+    scenario === "short" &&
+    method === "GET" &&
+    result &&
+    Array.isArray(result.candles)
+  ) {
+    sendJson(response, 200, {
+      ...result,
+      candles: result.candles.slice(-1),
+    })
+    return
+  }
+
+  if (
+    scenario === "full-then-empty" &&
+    method === "GET" &&
+    result &&
+    Array.isArray(result.candles)
+  ) {
+    const candleRequestCount = state.requests.filter(
+      (request) => request.path === "/market-charts/candles"
+    ).length
+    if (candleRequestCount > 1) {
+      const anchor = url.searchParams.get("to") ?? result.to
+      sendJson(response, 200, {
+        ...result,
+        from: anchor,
+        to: anchor,
+        candles: [],
+      })
+    } else {
+      sendJson(response, 200, result)
+    }
+    return
+  }
+
+  if (
+    scenario === "short-then-empty" &&
+    method === "GET" &&
+    result &&
+    Array.isArray(result.candles)
+  ) {
+    const candleRequestCount = state.requests.filter(
+      (request) => request.path === "/market-charts/candles"
+    ).length
+
+    if (candleRequestCount > 1) {
+      const anchor = url.searchParams.get("to") ?? result.to
+      sendJson(response, 200, {
+        ...result,
+        from: anchor,
+        to: anchor,
+        candles: [],
+      })
+    } else {
+      sendJson(response, 200, {
+        ...result,
+        candles: result.candles.slice(-1),
+      })
+    }
+    return
+  }
+
+  sendJson(
+    response,
+    status,
+    result && typeof result === "object" && "__status" in result
+      ? (result.payload ?? result)
+      : result
+  )
+})
+
+server.listen(port, "127.0.0.1", () => {
+  console.log(`P0 fixture server listening on http://127.0.0.1:${port}`)
+})
+
+function shutdown() {
+  for (const state of testRuns.values()) closeResponses(state)
+  server.close(() => process.exit(0))
+  server.closeIdleConnections()
+}
+
+process.on("SIGINT", shutdown)
+process.on("SIGTERM", shutdown)

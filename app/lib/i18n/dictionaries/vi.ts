@@ -642,6 +642,7 @@ export const vi = {
     loadMore: "Xem thêm",
   },
   quickDetail: {
+    readerRegionLabel: "Nội dung chi tiết nhanh",
     notFoundTitle: "Không tìm thấy chi tiết",
     notFoundDescription:
       "Nội dung được chọn không còn tồn tại hoặc bạn không thể truy cập.",
@@ -998,6 +999,7 @@ export const vi = {
     confidenceHigh: "Độ tin cậy cao",
     createdDateSort: "Ngày tạo",
     eventColumn: "Sự kiện",
+    untitled: "Chưa có tiêu đề",
     statusColumn: "Trạng thái",
     timeColumn: "Thời gian",
     occurredAtColumn: "Xảy ra lúc",
@@ -1006,12 +1008,19 @@ export const vi = {
     searchLabel: "Tìm sự kiện",
     searchPending: "Đang tìm kiếm",
     searchPlaceholder: "Tìm theo tiêu đề, mô tả hoặc khóa chuẩn...",
+    loading: "Đang tải sự kiện.",
     noDescription: "Chưa có mô tả ngắn.",
     detailNoDescription: "Chưa có mô tả cho sự kiện này.",
+    eventUnavailableTitle: "Sự kiện không khả dụng",
+    eventUnavailableDescription:
+      "Sự kiện không tồn tại hoặc hiện không còn khả dụng.",
     canonicalKey: "Khóa chuẩn",
     viewDetail: "Xem chi tiết sự kiện",
     emptyTitle: "Chưa có sự kiện",
     emptyDescription: "Không có sự kiện nào khớp với bộ lọc hiện tại.",
+    searchEmptyTitle: "Không tìm thấy sự kiện",
+    searchEmptyDescription: "Thử một từ khóa tìm kiếm khác.",
+    resultsStatus: "Trang {page}: {count} sự kiện.",
     confidence: "Độ tin cậy",
     occurredAt: "Xảy ra lúc",
     evidence: "Bằng chứng",
@@ -1027,18 +1036,26 @@ export const vi = {
     confidencePrefix: "Độ tin cậy: {value}",
     trusted: "Tin cậy {value}",
     viewArticle: "Xem bài viết",
+    articleIdentityUnavailable: "Chưa có định danh bài viết.",
+    sourceUrlUnavailable: "Chưa có URL nguồn.",
     openOriginalLink: "Mở liên kết gốc",
     openOriginal: "Mở nguồn gốc",
-    marketReactions: "Tác động thị trường",
-    reactionCount: "{count} tác động",
+    marketReactions: "Phản ứng thị trường · Dự báo AI",
+    marketReactionsDisclosure:
+      "Đây là dự báo AI dựa trên ngữ cảnh sự kiện và bằng chứng hiện có, không phải phản ứng giá đã đo. Độ tin cậy thể hiện mức tự tin của AI, không phải tỷ lệ thắng giao dịch đã kiểm chứng.",
+    marketReactionsUnavailableTitle: "Dữ liệu dự báo không khả dụng",
+    marketReactionsUnavailableDescription:
+      "Dữ liệu dự báo hiện không khả dụng. Hãy tải lại sự kiện để thử lại.",
+    marketReactionReasoning: "Diễn giải của AI",
+    reactionCount: "Tổng {count}",
     reactionCountByDirection: "{count} {direction}",
-    noMarketReactionsTitle: "Chưa có tác động thị trường",
-    noMarketReactionsDescription:
-      "Sự kiện này chưa có kết quả suy luận hướng phản ứng theo từng tài sản.",
+    noMarketReactionsTitle: "Chưa có dự báo AI",
+    noMarketReactionsDescription: "Sự kiện này chưa có dự báo AI nào được lưu.",
     relatedAssets: "Tài sản liên quan",
     noAssetsTitle: "Chưa có tài sản liên quan",
     noAssetsDescription:
       "Sự kiện này chưa có liên kết tài sản trong dữ liệu hiện tại.",
+    assetIdFallback: "Mã tài sản {id}",
     relatedThemes: "Chủ đề liên quan",
     noThemesTitle: "Chưa có chủ đề liên quan",
     noThemesDescription:
@@ -1048,8 +1065,8 @@ export const vi = {
     noThemeName: "Chưa có tên chủ đề",
     noThemeSlug: "Chưa có slug",
     weight: "Trọng số: {value}",
-    noReasoning: "Chưa có diễn giải chi tiết cho tác động này.",
-    observedAt: "Quan sát lúc: {time}",
+    noReasoning:
+      "Chưa có phần diễn giải AI cho dự báo này trong ngôn ngữ đã chọn.",
     technicalInfo: "Thông tin kỹ thuật",
     createdAt: "Tạo lúc",
     updatedAt: "Cập nhật",
@@ -1085,6 +1102,8 @@ export const vi = {
     assetTypeLabels: {
       COMMODITY: "Hàng hóa",
       CRYPTO: "Tiền mã hóa",
+      EQUITY: "Cổ phiếu",
+      ETF: "ETF",
       FX: "Ngoại hối",
       INDEX: "Chỉ số",
     },
@@ -1137,11 +1156,20 @@ export const vi = {
   },
   economicCalendar: {
     readDenied: "Bạn không có quyền truy cập lịch kinh tế.",
+    loadingAnnouncement: "Đang tải lịch kinh tế.",
     detailDenied: "Bạn không có quyền xem chi tiết lịch kinh tế.",
     backToList: "Quay lại lịch kinh tế",
     sortLabel: "Sắp xếp lịch kinh tế",
     scheduledNewest: "Ngày công bố mới nhất",
     scheduledOldest: "Ngày công bố cũ nhất",
+    filtersLabel: "Bộ lọc ({count})",
+    filtersTitle: "Bộ lọc",
+    currencyFilterLabel: "Tiền tệ",
+    impactFilterLabel: "Mức độ tác động",
+    allCurrencies: "Tất cả tiền tệ",
+    allImpacts: "Mọi mức độ",
+    clearFilters: "Xóa bộ lọc",
+    closeFilters: "Đóng bộ lọc",
     syncedNewest: "Đồng bộ mới nhất",
     createdNewest: "Ngày tạo mới nhất",
     eventColumn: "Sự kiện",
@@ -1163,6 +1191,7 @@ export const vi = {
       UNKNOWN: "KHÔNG XÁC ĐỊNH",
     },
     noImpact: "CHƯA CÓ TÁC ĐỘNG",
+    timeZoneContext: "Múi giờ của bạn · {timeZone}",
     publishedAt: "Công bố {time}",
     syncedAt: "Đồng bộ {time}",
     actual: "Thực tế",
@@ -2217,6 +2246,7 @@ export const vi = {
     description:
       "Không gian này dùng để theo dõi cách sự kiện, tài sản, luận điểm, giai đoạn warm và bằng chứng kết nối với nhau trên cùng một mặt phẳng khám phá.",
     readDenied: "Bạn không có quyền truy cập biểu đồ tri thức.",
+    timeRangeInvalid: "Hãy chọn một trong các khoảng thời gian của biểu đồ.",
     responseInvalid:
       "Backend trả về dữ liệu biểu đồ tri thức không đúng định dạng mong đợi.",
     errorTitle: "Không thể tải biểu đồ tri thức",
@@ -2302,6 +2332,15 @@ export const vi = {
     demo: {
       liveDescription:
         "Khám phá tri thức liên quan đến watchlist của workspace hiện tại.",
+      timeRange: "Khoảng thời gian",
+      last7Days: "7 ngày qua",
+      last14Days: "14 ngày qua",
+      last30Days: "30 ngày qua",
+      loadingTimeRange: "Đang tải biểu đồ trong {days} ngày qua…",
+      loadedTimeRange: "Đã tải biểu đồ trong {days} ngày qua.",
+      noEvents: "Không có Event trong {days} ngày qua",
+      noEventsDescription:
+        "Hãy chọn khoảng thời gian khác để kiểm tra sự kiện.",
       relationMeaning: "Loại quan hệ",
       connectionGroup: "Nhóm kết nối",
       closeRelationship: "Đóng chi tiết quan hệ",
@@ -2311,6 +2350,10 @@ export const vi = {
         "Kéo để di chuyển · Chọn nút hoặc đường nối để xem chi tiết",
       liveInteractionHint:
         "Kéo để di chuyển biểu đồ · Chọn nút hoặc quan hệ để xem thông tin",
+      nodeKindFilters: "Bộ lọc loại nút",
+      newsArticleFilter: "Bài viết tin tức",
+      emptyFilteredNodes: "Không có nút nào khớp với các bộ lọc",
+      emptyFilteredNodesDescription: "Bật một loại nút ở trên để hiển thị lại.",
       relationshipInterpretation:
         "Kết nối thể hiện mối liên hệ được ghi nhận, không khẳng định quan hệ nhân quả.",
       sourceUnavailable: "Chưa có liên kết đến bài báo gốc.",
@@ -2430,13 +2473,17 @@ export const vi = {
       bot: "Bot Telegram",
       activeBots: "{count} bot đang hoạt động.",
       noBotPermission: "Bạn chưa có quyền xem bot.",
+      accessLimited: "Giới hạn quyền truy cập",
       ready: "Sẵn sàng",
+      unavailable: "Không thể tải",
       needsConfig: "Cần cấu hình",
       destinations: "Điểm nhận",
       activeDestinations: "{count} điểm nhận đang hoạt động.",
       noDestinationPermission: "Bạn chưa có quyền xem điểm nhận.",
       needsLink: "Cần liên kết",
       routing: "Định tuyến",
+      noRoutingPermission: "Bạn chưa có quyền xem định tuyến.",
+      routingLoadError: "Không thể tải cấu hình định tuyến đã lưu.",
       configuredRoutes: "{configured}/{total} luồng đã bật trong {workspace}.",
       noWorkspace: "Chưa có không gian làm việc hiện tại.",
       routesEnabled: "Có luồng bật",
@@ -2461,6 +2508,7 @@ export const vi = {
       paused: "Tạm dừng",
       currentWorkspace: "Không gian hiện tại",
       noData: "Chưa có dữ liệu",
+      readError: "Không thể tải dữ liệu của mục này.",
       accessLimitedDescription:
         "Tài khoản hiện tại không có quyền đọc khu vực này.",
       currentWorkspaceScope: "Theo không gian hiện tại",
@@ -2472,39 +2520,83 @@ export const vi = {
       accessLimited: "Không có quyền xem bot Telegram",
       noUsername: "Chưa có username",
       noBotName: "Chưa có tên bot",
+      statusUnverified: "Chưa xác minh trạng thái",
+      connectionDetailsUnverified:
+        "Một số dữ liệu kết nối chưa được trả về. Hãy tải lại để xác minh bản ghi đã lưu.",
+      unverifiedLabel: "Bot Telegram chưa xác minh",
       webhookRegistered: "Đã đăng ký {time}",
       webhookNotRegistered: "Chưa có thời điểm đăng ký",
       lastValidated: "Xác thực gần nhất {time}",
       readOnlyDescription:
-        "Bạn có thể xem các bot này, nhưng cần quyền quản lý bot để thay đổi.",
-      replacementGuidance:
-        "Để thay bot này, hãy kết nối token mới, liên kết lại các điểm nhận phụ thuộc và rà soát định tuyến cùng lịch gửi trước khi xóa bản ghi này.",
+        "Bạn có thể xem các bot hiện có. Cần quyền quản lý để cập nhật hoặc gỡ một kết nối.",
+      webhookRegistrationFailed: "Đăng ký webhook thất bại.",
+      setupIncomplete: "Thiết lập bot chưa hoàn tất.",
+      reconnectGuidance:
+        "Dùng Reconnect trên hàng của bot này để hoàn tất thiết lập.",
+      alreadyConnected:
+        "Bot này đã có trong danh sách kết nối. Trạng thái đã lưu: {status}.",
+      alreadyConnectedIncomplete:
+        "Bot này đã có trong danh sách kết nối với trạng thái {status}, nhưng thiết lập chưa hoàn tất.",
+      createStatusUnverified:
+        "Bot đã được thêm nhưng chưa xác minh được trạng thái hiện tại. Hãy kiểm tra danh sách kết nối trước khi thử lại.",
+      createOutcomeUnverified:
+        "Chưa xác nhận được kết quả kết nối. Hãy kiểm tra danh sách trước khi thử lại.",
+      createOutcomeUnverifiedWithoutRead:
+        "Chưa xác nhận được kết quả yêu cầu kết nối. Tài khoản này không có quyền xem danh sách kết nối; hãy nhờ quản trị viên kiểm tra trước khi thử lại.",
+      createStatusUnverifiedWithoutRead:
+        "Bot đã được tạo nhưng chưa xác minh được trạng thái đã lưu. Tài khoản này không có quyền xem danh sách kết nối; hãy nhờ quản trị viên kiểm tra trước khi thử lại.",
+      alreadyConnectedStatusUnverified:
+        "Bot đã được kết nối nhưng chưa xác minh được trạng thái đã lưu. Hãy kiểm tra danh sách trước khi thực hiện thao tác khác.",
+      alreadyConnectedStatusUnverifiedWithoutRead:
+        "Bot này đã được kết nối trong tài khoản này nhưng chưa xác minh được trạng thái đã lưu. Tài khoản này không có quyền xem danh sách kết nối; hãy nhờ quản trị viên kiểm tra trước khi thử lại.",
+      createNotActive:
+        "Bot đã được thêm với trạng thái {status}; chưa xác nhận bot đang hoạt động.",
       emptyTitle: "Chưa có bot Telegram",
       emptyDescription:
         "Kết nối bot do bạn tạo trong BotFather để bắt đầu gửi thông báo.",
-      actionMenu: "Thao tác bot Telegram",
-      disableTitle: "Vô hiệu hóa bot Telegram?",
-      disableDescription:
-        "Bot bị vô hiệu hóa sẽ không gửi thông báo qua các điểm nhận đang dùng bot này. Giao diện này không hỗ trợ bật lại.",
-      disableSuccess: "Đã vô hiệu hóa bot Telegram.",
-      deleteTitle: "Xóa bot Telegram?",
+      deleteTitle: "Gỡ kết nối bot “{botName}”?",
       deleteDescription:
-        "Hành động này hủy liên kết bot khỏi Signapse và có thể ảnh hưởng các điểm nhận liên quan.",
-      deleteAction: "Xóa bot",
-      deleteSuccess: "Đã xóa bot Telegram.",
-      connect: "Kết nối bot",
+        "Thao tác này kết thúc việc sử dụng bot trong Signapse. Hãy gỡ tất cả điểm nhận của bot trước; chúng sẽ không bị gỡ tự động. Lịch sử gửi được giữ lại. Muốn dùng lại bot, bạn cần tạo kết nối mới.",
+      deleteTrigger: "Gỡ bot {botName}",
+      deleteAction: "Gỡ bot",
+      deletePending: "Đang gỡ bot…",
+      deleteSuccess: "Đã gỡ kết nối bot Telegram.",
+      deleteBlockedByDestinations:
+        "Trước tiên hãy gỡ tất cả điểm nhận Telegram đang liên kết với bot này. Chưa có dữ liệu nào bị thay đổi.",
+      connect: "Kết nối bot mới",
       createTitle: "Kết nối bot Telegram",
       createDescription:
         "Dán token bot do BotFather cấp để Signapse xác thực và đăng ký webhook.",
       tokenLabel: "Token bot",
-      tokenPlaceholder: "123456:ABC...",
-      tokenDescription: "Token chỉ gửi một lần khi tạo kết nối.",
+      tokenPlaceholder: "Dán token BotFather",
+      tokenDescription: "Token này sẽ không hiển thị lại sau khi kết nối.",
       connectBot: "Kết nối bot",
       invalidData: "Dữ liệu bot không hợp lệ.",
       createSuccess: "Đã kết nối bot Telegram.",
+      createIncomplete:
+        "Bot đã được thêm với trạng thái {status}, nhưng đăng ký webhook thất bại. Thiết lập chưa hoàn tất.",
       createError: "Không thể kết nối bot Telegram.",
-      disableError: "Không thể vô hiệu hóa bot Telegram.",
-      deleteError: "Không thể xóa bot Telegram.",
+      createTokenVerificationError:
+        "Không thể xác minh token bot. Hãy kiểm tra token rồi thử lại.",
+      createPermissionDenied:
+        "Tài khoản của bạn cần quyền kết nối bot Telegram. Hãy liên hệ quản trị viên.",
+      createConnectionConflict: "Bot Telegram này đã được kết nối.",
+      reconnectTrigger: "Kết nối lại {botName}",
+      reconnectTitle: "Kết nối lại bot Telegram",
+      reconnectDescription:
+        "Nhập token BotFather cho {botName} ({botUsername}).",
+      reconnectAction: "Kết nối lại",
+      reconnectSuccess: "Đã kết nối lại bot Telegram.",
+      reconnectIncomplete:
+        "Đăng ký webhook thất bại. Bot vẫn ở trạng thái không hợp lệ; trạng thái hiện tại được hiển thị trên hàng.",
+      reconnectOutcomeUnverified:
+        "Chưa xác nhận được kết quả kết nối lại. Hãy kiểm tra trạng thái bot trước khi thử lại.",
+      reconnectTokenMismatch:
+        "Token này thuộc một bot Telegram khác với kết nối đã chọn.",
+      reconnectPermissionDenied:
+        "Tài khoản của bạn cần quyền kết nối lại bot này. Hãy liên hệ quản trị viên.",
+      reconnectError: "Không thể kết nối lại bot này.",
+      deleteError: "Không thể gỡ bot Telegram.",
       fallbackLabel: "Bot #{id}",
     },
     destination: {
@@ -2512,67 +2604,70 @@ export const vi = {
       sectionDescription:
         "Chat, group hoặc channel đã xác minh bằng lệnh /start qua bot được chọn.",
       accessLimited: "Không có quyền xem điểm nhận",
+      loadError: "Không thể tải danh sách điểm nhận để chọn.",
       readOnlyDescription:
         "Bạn có thể xem các điểm nhận này, nhưng cần quyền quản lý điểm nhận để thay đổi.",
       noChatMetadata: "Chưa có metadata chat",
       emptyTitle: "Chưa có điểm nhận",
       emptyDescription:
         "Tạo lệnh liên kết rồi gửi lệnh đó trong Telegram để xác minh chat, group hoặc channel.",
-      actionMenu: "Thao tác điểm nhận",
       linkedBot: "Bot liên kết",
       testMessage: "Gửi thử",
       testMessagePending: "Đang gửi thử…",
-      testMessageSuccess: "Đã gửi tin nhắn thử tới {destination}.",
+      testMessageAction: "Gửi tin nhắn thử tới {destination}",
+      testMessagePendingAction: "Đang gửi tin nhắn thử tới {destination}",
+      testMessageSuccess:
+        "Telegram đã chấp nhận tin nhắn thử cho {destination}.",
       testMessageError: "Không thể gửi tin nhắn thử.",
-      testMessageTimeout:
-        "Yêu cầu gửi đã hết thời gian chờ và kết quả chưa rõ; hãy kiểm tra Telegram trước khi thử lại.",
+      testMessageUnknownOutcome:
+        "Telegram chưa xác nhận có chấp nhận tin nhắn thử hay không. Hãy kiểm tra cuộc trò chuyện Telegram trước khi thử lại.",
       testMessagePermissionRequired:
         "Cần quyền quản lý điểm nhận để gửi tin nhắn thử.",
       testMessageInactive:
-        "Chỉ điểm nhận đang hoạt động mới có thể gửi tin nhắn thử.",
-      disableTitle: "Vô hiệu hóa điểm nhận Telegram?",
-      disableDescription:
-        "Điểm nhận bị vô hiệu hóa sẽ không còn nhận thông báo từ các luồng đang trỏ tới nó. Giao diện này không hỗ trợ bật lại.",
-      disableSuccess: "Đã vô hiệu hóa điểm nhận Telegram.",
-      deleteTitle: "Xóa điểm nhận Telegram?",
-      deleteDescription:
-        "Hành động này hủy điểm nhận đã xác minh và không thể hoàn tác từ giao diện.",
-      deleteAction: "Xóa điểm nhận",
-      deleteSuccess: "Đã xóa điểm nhận Telegram.",
+        "Chỉ điểm nhận đang hoạt động và liên kết với bot đang hoạt động mới có thể gửi tin nhắn thử.",
+      removeTitle: "Gỡ điểm nhận Telegram {destination}?",
+      removeDescription:
+        "Điểm nhận sẽ không còn trong các lựa chọn gửi. Thao tác bị chặn khi tuyến hoặc lịch vẫn tham chiếu điểm nhận này. Lịch sử gửi được giữ lại; bạn không thể hoàn tác từ giao diện.",
+      removeAction: "Gỡ điểm nhận",
+      removeTrigger: "Gỡ điểm nhận Telegram {destination}",
+      removeSuccess: "Đã gỡ điểm nhận Telegram.",
       link: "Liên kết điểm nhận",
       linkTitle: "Liên kết điểm nhận",
       linkDescription:
         "Tạo lệnh /start rồi gửi lệnh đó trong Telegram để xác minh chat, group hoặc channel.",
+      linkPendingDescription:
+        "Gửi lệnh này trong cuộc trò chuyện, nhóm hoặc kênh Telegram bạn muốn xác minh.",
       commandBot: "Bot nhận lệnh /start",
       botPlaceholder: "Chọn bot đang hoạt động",
-      botDescription: "Điểm nhận mới sẽ được gắn với bot đang chọn.",
+      botDescription: "Điểm nhận chỉ được tạo sau khi bot này nhận được lệnh.",
+      bot: "Bot",
       linkCommand: "Lệnh liên kết",
       expiresAt: "Hết hạn: {time}",
       copyCommand: "Sao chép lệnh",
-      refreshDestinations: "Làm mới điểm nhận",
       createCommand: "Tạo lệnh liên kết",
-      regenerateCommand: "Tạo lệnh liên kết mới",
       linkCreated: "Đã tạo lệnh liên kết Telegram.",
-      refreshed: "Đã làm mới danh sách điểm nhận.",
       copied: "Đã sao chép lệnh liên kết.",
       copyError: "Không thể sao chép lệnh liên kết.",
       linkExpired:
-        "Lệnh liên kết này đã hết hạn. Hãy tạo lệnh mới trước khi mở hoặc sao chép.",
-      linkCompletionHint:
-        "Sau khi hoàn tất trên Telegram, quay lại đây và làm mới danh sách điểm nhận để xác minh.",
+        "Lệnh liên kết này đã hết hạn. Hãy đóng hộp thoại và tạo lệnh mới trước khi gửi.",
+      linkExpiredStatus: "Đã hết hạn",
+      awaitingVerification: "Chờ xác minh",
       botReadPermissionRequired: "Cần quyền đọc bot để chọn bot Telegram.",
+      destinationReadPermissionRequired:
+        "Bạn cần quyền đọc điểm nhận để kiểm tra kết quả xác minh.",
       noActiveBotToLink:
         "Hãy kết nối một bot Telegram đang hoạt động trước khi liên kết điểm nhận.",
       botRequired: "Hãy chọn một bot Telegram đang hoạt động.",
-      openPrivate: "Mở chat riêng",
-      openGroup: "Mở group chat",
+      botUnavailable:
+        "Bot đã chọn không còn hoạt động. Hãy chọn bot đang hoạt động và tạo lệnh mới.",
       noActiveDestination: "Chưa có điểm nhận đang hoạt động.",
       placeholder: "Chọn điểm nhận",
       fallbackLabel: "Điểm nhận #{id}",
       invalidData: "Dữ liệu điểm nhận không hợp lệ.",
       createLinkError: "Không thể tạo lệnh liên kết Telegram.",
-      disableError: "Không thể vô hiệu hóa điểm nhận Telegram.",
-      deleteError: "Không thể xóa điểm nhận Telegram.",
+      removeError: "Không thể gỡ điểm nhận Telegram.",
+      removeInUseError:
+        "Điểm nhận vẫn được tham chiếu. Hãy đổi hoặc bỏ gán điểm nhận khỏi các tuyến, kể cả tuyến đang tắt. Với lịch đang hoạt động, hãy đổi đích hoặc gỡ lịch; gỡ lịch không hoạt động còn tham chiếu điểm nhận này. Nếu bạn thiếu quyền quản lý mục cần sửa, hãy nhờ người có quyền. Điểm nhận và cấu hình được giữ nguyên.",
     },
     routing: {
       sectionTitle: "Định tuyến tính năng",
@@ -2585,8 +2680,36 @@ export const vi = {
       enabledColumn: "Bật gửi",
       accessLimited: "Không có quyền xem định tuyến",
       noWorkspaceSelected: "Chưa chọn không gian",
+      settingsLoadError: "Không thể tải cấu hình định tuyến.",
+      settingsLoadErrorDescription:
+        "Không thể tải cấu hình định tuyến đã lưu. Hãy thử tải lại.",
+      retry: "Thử lại",
+      noDestination: "Chưa gán điểm nhận",
+      destinationReadOnly: "Cần quyền xem danh sách điểm nhận để thay đổi.",
+      unavailableDestination: "Không khả dụng",
+      clearDestination: "Xóa điểm nhận cho {route}",
+      destinationClearRequiresDisabled:
+        "Hãy tạm dừng định tuyến trước khi xóa điểm nhận.",
+      saving: "Đang lưu cấu hình định tuyến…",
+      noSavedWorkspaceSettings:
+        "Chưa có cấu hình định tuyến đã lưu trong các không gian của bạn.",
+      readbackUnverified:
+        "Chưa thể xác minh cấu hình tuyến tin thị trường đã lưu. Hãy tải lại trước khi thay đổi.",
+      economicCalendarReadbackUnverified:
+        "Chưa thể xác minh cấu hình cảnh báo lịch kinh tế đã lưu. Hãy tải lại trước khi thay đổi.",
+      readbackWorkspaceUnknown: "Chưa xác định được không gian làm việc",
+      workspaceIdFallback: "Không gian {id}",
       destinationUpdateError: "Không thể cập nhật điểm nhận cho định tuyến.",
       destinationUpdateSuccess: "Đã cập nhật điểm nhận định tuyến.",
+      destinationSelectorAria: "Điểm nhận cho {route}",
+      destinationClearAria: "Bỏ điểm nhận của {route}",
+      destinationClearSuccess: "Đã bỏ điểm nhận và tắt định tuyến.",
+      enableDestinationRequired:
+        "Hãy chọn một điểm nhận đang hoạt động trước khi bật định tuyến.",
+      destinationReadRequired:
+        "Cần quyền xem điểm nhận để chọn điểm nhận hợp lệ trước khi bật định tuyến.",
+      routeReadOnlyDescription:
+        "Bạn có thể xem cấu hình nhưng không có quyền thay đổi định tuyến này.",
       statusUpdateError: "Không thể cập nhật trạng thái định tuyến.",
       enabledSuccess: "Đã bật định tuyến Telegram.",
       disabledSuccess: "Đã tạm dừng định tuyến Telegram.",
@@ -2604,25 +2727,32 @@ export const vi = {
       languageNotApplicable: "Không áp dụng ở cấp luồng",
       languageUpdateSuccess: "Đã cập nhật ngôn ngữ đầu ra.",
       languageClearSuccess: "Đã xóa ghi đè ngôn ngữ đầu ra.",
+      updatePermissionDenied:
+        "Bạn không có quyền cập nhật định tuyến Telegram này.",
       updateError: "Không thể cập nhật định tuyến Telegram.",
     },
     schedule: {
+      sectionTitle: "Phân tích theo lịch",
       panelTitle: "Lịch gửi phân tích",
       panelDescription:
         "Gửi bản phân tích AI theo giờ địa phương cho một tài sản trong danh sách theo dõi.",
       scheduleColumn: "Lịch gửi",
+      deliveryColumn: "Nơi nhận",
       workspaceColumn: "Không gian",
       destinationColumn: "Điểm nhận",
       localTimesColumn: "Giờ gửi",
       assetColumn: "Tài sản",
       languageColumn: "Ngôn ngữ đầu ra",
       statusColumn: "Trạng thái",
+      inactiveStatus: "Không hoạt động",
       accessLimited: "Không có quyền xem lịch phân tích",
       readOnlyDescription: "Bạn có thể xem lịch nhưng không có quyền thay đổi.",
       loadError: "Không thể tải các lịch phân tích.",
       loadErrorDescription:
         "Hãy kiểm tra kết nối rồi thử tải lại danh sách lịch.",
       retry: "Thử lại",
+      optionsLoadError:
+        "Không thể tải một số dữ liệu cần cho thao tác lịch. Lịch đã lưu vẫn hiển thị; hãy thử lại trước khi tạo hoặc sửa.",
       currentWorkspaceFallback: "Không gian hiện tại",
       noDestination: "Chưa có điểm nhận",
       noAsset: "Tài sản không khả dụng",
@@ -2630,17 +2760,12 @@ export const vi = {
       emptyTitle: "Chưa có lịch phân tích",
       emptyDescription:
         "Tạo lịch gửi theo giờ địa phương cho không gian làm việc hiện tại.",
-      disableTitle: "Vô hiệu hóa lịch phân tích?",
-      disableDescription:
-        "Lịch sẽ dừng gửi bản phân tích thị trường. Giao diện này không hỗ trợ bật lại lịch đã vô hiệu hóa.",
-      disableTrigger: "Vô hiệu hóa lịch phân tích",
-      disableSuccess: "Đã vô hiệu hóa lịch phân tích.",
-      deleteTitle: "Xóa lịch phân tích?",
+      deleteTitle: "Gỡ lịch phân tích?",
       deleteDescription:
-        "Lịch gửi phân tích thị trường sẽ bị xóa vĩnh viễn và không thể hoàn tác.",
-      deleteAction: "Xóa lịch",
-      deleteTrigger: "Xóa lịch phân tích",
-      deleteSuccess: "Đã xóa lịch phân tích.",
+        "Thao tác này chuyển lịch sang trạng thái đã gỡ, dừng các lượt chạy mới và đưa lịch ra khỏi danh sách có thể quản lý. Lịch sử đã ghi được bảo toàn.",
+      deleteAction: "Gỡ lịch",
+      deleteTrigger: "Gỡ lịch phân tích",
+      deleteSuccess: "Đã gỡ lịch phân tích. Lịch sử đã ghi được bảo toàn.",
       editTrigger: "Sửa lịch phân tích",
       createSchedule: "Tạo lịch",
       dialogEditTitle: "Chỉnh sửa lịch phân tích",
@@ -2662,6 +2787,12 @@ export const vi = {
       assetPlaceholder: "Chọn tài sản",
       assetDescription:
         "Chỉ các tài sản trong danh sách theo dõi của không gian hiện tại mới được chọn.",
+      assetPreservedDescription:
+        "Lịch thuộc không gian khác nên tài sản đã lưu sẽ được giữ nguyên.",
+      assetPreservedWatchlistDescription:
+        "Danh sách tài sản theo dõi của workspace hiện tại không khả dụng nên tài sản đã lưu sẽ được giữ nguyên.",
+      assetPreservedWorkspaceDescription:
+        "Không có workspace hiện tại nên tài sản đã lưu sẽ được giữ nguyên.",
       assetUnavailable: "Tài sản của lịch không còn trong danh sách theo dõi.",
       scheduleLegend: "Lịch gửi",
       timezoneLabel: "Múi giờ",
@@ -2701,12 +2832,12 @@ export const vi = {
       createError: "Không thể tạo lịch phân tích Telegram.",
       updateError: "Không thể cập nhật lịch phân tích Telegram.",
       disableError: "Không thể vô hiệu hóa lịch phân tích Telegram.",
-      deleteError: "Không thể xóa lịch phân tích Telegram.",
+      deleteError: "Không thể gỡ lịch phân tích Telegram. Hãy thử lại.",
     },
     statuses: {
       ACTIVE: "Đang hoạt động",
       INVALID: "Không hợp lệ",
-      REMOVED: "Đã xóa",
+      REMOVED: "Đã gỡ",
       DISABLED: "Đã vô hiệu hóa",
     },
     chatTypes: {

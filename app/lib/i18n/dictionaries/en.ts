@@ -642,6 +642,7 @@ export const en: Dictionary = {
     loadMore: "Load more",
   },
   quickDetail: {
+    readerRegionLabel: "Quick detail content",
     notFoundTitle: "Detail not found",
     notFoundDescription:
       "The selected content no longer exists or you cannot access it.",
@@ -1004,6 +1005,7 @@ export const en: Dictionary = {
     confidenceHigh: "Highest confidence",
     createdDateSort: "Created date",
     eventColumn: "Event",
+    untitled: "Untitled event",
     statusColumn: "Status",
     timeColumn: "Time",
     occurredAtColumn: "Occurred at",
@@ -1012,12 +1014,19 @@ export const en: Dictionary = {
     searchLabel: "Search events",
     searchPending: "Searching",
     searchPlaceholder: "Search by title, description, or canonical key...",
+    loading: "Loading events.",
     noDescription: "No short description yet.",
     detailNoDescription: "No description for this event yet.",
+    eventUnavailableTitle: "Event unavailable",
+    eventUnavailableDescription:
+      "This event could not be found or is no longer available.",
     canonicalKey: "Canonical key",
     viewDetail: "View event details",
     emptyTitle: "No events yet",
     emptyDescription: "No events match the current filters.",
+    searchEmptyTitle: "No events found",
+    searchEmptyDescription: "Try another search term.",
+    resultsStatus: "Page {page}: {count} events.",
     confidence: "Confidence",
     occurredAt: "Occurred at",
     evidence: "Evidence",
@@ -1033,17 +1042,26 @@ export const en: Dictionary = {
     confidencePrefix: "Confidence: {value}",
     trusted: "Confidence {value}",
     viewArticle: "View article",
+    articleIdentityUnavailable: "Article identity not provided.",
+    sourceUrlUnavailable: "Original source URL not provided.",
     openOriginalLink: "Open original link",
     openOriginal: "Open original",
-    marketReactions: "Market reactions",
-    reactionCount: "{count} reactions",
+    marketReactions: "Market reactions · AI forecasts",
+    marketReactionsDisclosure:
+      "These AI forecasts reflect the available event context and evidence, not measured price reactions. Confidence reflects the AI’s certainty, not a verified trading win rate.",
+    marketReactionsUnavailableTitle: "Forecast data unavailable",
+    marketReactionsUnavailableDescription:
+      "Forecast data is unavailable. Reload this event to try again.",
+    marketReactionReasoning: "AI reasoning",
+    reactionCount: "{count} total",
     reactionCountByDirection: "{count} {direction}",
-    noMarketReactionsTitle: "No market reactions yet",
+    noMarketReactionsTitle: "No AI forecasts yet",
     noMarketReactionsDescription:
-      "This event has no inferred per-asset market reaction results yet.",
+      "No stored AI forecasts are available for this event yet.",
     relatedAssets: "Related assets",
     noAssetsTitle: "No related assets yet",
     noAssetsDescription: "This event has no asset links in the current data.",
+    assetIdFallback: "Asset ID {id}",
     relatedThemes: "Related themes",
     noThemesTitle: "No related themes yet",
     noThemesDescription: "This event has no theme links in the current data.",
@@ -1052,8 +1070,8 @@ export const en: Dictionary = {
     noThemeName: "No theme name",
     noThemeSlug: "No slug",
     weight: "Weight: {value}",
-    noReasoning: "No detailed reasoning for this reaction yet.",
-    observedAt: "Observed at: {time}",
+    noReasoning:
+      "No AI reasoning is available for this forecast in the selected language.",
     technicalInfo: "Technical information",
     createdAt: "Created",
     updatedAt: "Updated",
@@ -1089,6 +1107,8 @@ export const en: Dictionary = {
     assetTypeLabels: {
       COMMODITY: "Commodity",
       CRYPTO: "Crypto",
+      EQUITY: "Equity",
+      ETF: "ETF",
       FX: "FX",
       INDEX: "Index",
     },
@@ -1141,12 +1161,21 @@ export const en: Dictionary = {
   },
   economicCalendar: {
     readDenied: "You do not have permission to access the economic calendar.",
+    loadingAnnouncement: "Loading economic calendar.",
     detailDenied:
       "You do not have permission to view economic calendar details.",
     backToList: "Back to economic calendar",
     sortLabel: "Sort economic calendar",
     scheduledNewest: "Newest release date",
     scheduledOldest: "Oldest release date",
+    filtersLabel: "Filters ({count})",
+    filtersTitle: "Filters",
+    currencyFilterLabel: "Currency",
+    impactFilterLabel: "Impact",
+    allCurrencies: "All currencies",
+    allImpacts: "All impact levels",
+    clearFilters: "Clear filters",
+    closeFilters: "Close filters",
     syncedNewest: "Newest sync",
     createdNewest: "Newest created date",
     eventColumn: "Event",
@@ -1168,6 +1197,7 @@ export const en: Dictionary = {
       UNKNOWN: "UNKNOWN",
     },
     noImpact: "NO IMPACT",
+    timeZoneContext: "Your time zone · {timeZone}",
     unscheduledGroup: "Unscheduled",
     scheduledTimeUnavailable: "Time unavailable",
     currencyRegionUnavailable: "Currency unavailable",
@@ -2238,6 +2268,7 @@ export const en: Dictionary = {
     description:
       "Use this space to track how events, assets, narratives, and evidence connect on one exploration surface.",
     readDenied: "You do not have permission to access the knowledge graph.",
+    timeRangeInvalid: "Choose one of the available graph time ranges.",
     responseInvalid:
       "The backend returned knowledge graph data in an unexpected format.",
     errorTitle: "Could not load knowledge graph",
@@ -2324,6 +2355,14 @@ export const en: Dictionary = {
     demo: {
       liveDescription:
         "Explore the knowledge connected to your current workspace watchlist.",
+      timeRange: "Time range",
+      last7Days: "Last 7 days",
+      last14Days: "Last 14 days",
+      last30Days: "Last 30 days",
+      loadingTimeRange: "Loading graph for the last {days} days…",
+      loadedTimeRange: "Graph loaded for the last {days} days.",
+      noEvents: "No events in the last {days} days",
+      noEventsDescription: "Choose a different time range to check for events.",
       relationMeaning: "Relation type",
       connectionGroup: "Connection",
       closeRelationship: "Close relationship details",
@@ -2332,6 +2371,11 @@ export const en: Dictionary = {
       interactionHint: "Drag to pan · Select a node or connection to inspect",
       liveInteractionHint:
         "Drag to pan the graph · Select a node or relationship to inspect",
+      nodeKindFilters: "Node type filters",
+      newsArticleFilter: "News Article",
+      emptyFilteredNodes: "No nodes match these filters",
+      emptyFilteredNodesDescription:
+        "Turn on a node type above to show its nodes.",
       relationshipInterpretation:
         "A connection describes a recorded association. It does not establish causation.",
       sourceUnavailable: "No original source URL is available.",
@@ -2449,7 +2493,9 @@ export const en: Dictionary = {
       bot: "Telegram bot",
       activeBots: "{count} active bots.",
       noBotPermission: "You do not have permission to view bots.",
+      accessLimited: "Access limited",
       ready: "Ready",
+      unavailable: "Unavailable",
       needsConfig: "Needs setup",
       destinations: "Destinations",
       activeDestinations: "{count} active destinations.",
@@ -2457,6 +2503,8 @@ export const en: Dictionary = {
         "You do not have permission to view destinations.",
       needsLink: "Needs linking",
       routing: "Routing",
+      noRoutingPermission: "You do not have permission to view routing.",
+      routingLoadError: "Saved routing settings could not be loaded.",
       configuredRoutes: "{configured}/{total} routes enabled in {workspace}.",
       noWorkspace: "No current workspace.",
       routesEnabled: "Routes enabled",
@@ -2481,6 +2529,7 @@ export const en: Dictionary = {
       paused: "Paused",
       currentWorkspace: "Current workspace",
       noData: "No data",
+      readError: "Could not load this section's data.",
       accessLimitedDescription:
         "The current account does not have permission to read this section.",
       currentWorkspaceScope: "Current workspace",
@@ -2492,40 +2541,83 @@ export const en: Dictionary = {
       accessLimited: "No permission to view Telegram bots",
       noUsername: "No username yet",
       noBotName: "No bot name yet",
+      statusUnverified: "Status unverified",
+      connectionDetailsUnverified:
+        "Some connection details were not returned. Refresh to verify the saved record.",
+      unverifiedLabel: "Unverified Telegram bot",
       webhookRegistered: "Registered {time}",
       webhookNotRegistered: "No registration time yet",
       lastValidated: "Last validated {time}",
       readOnlyDescription:
-        "You can view these bots, but bot management permission is required for changes.",
-      replacementGuidance:
-        "To replace this bot, connect a new token, relink dependent destinations, and review routing and schedules before removing this record.",
+        "You can view existing bots. Permissions are required to update or remove a connection.",
+      webhookRegistrationFailed: "Webhook registration failed.",
+      setupIncomplete: "The bot setup is incomplete.",
+      reconnectGuidance:
+        "Use Reconnect on this bot's row to finish setting it up.",
+      alreadyConnected:
+        "This bot is already in your connections. Its saved status is {status}.",
+      alreadyConnectedIncomplete:
+        "This bot is already in your connections with status {status}, but its setup is incomplete.",
+      createStatusUnverified:
+        "The bot was added, but its current status could not be verified. Check the connections list before retrying.",
+      createOutcomeUnverified:
+        "The connection result could not be confirmed. Check the connections list before retrying.",
+      createOutcomeUnverifiedWithoutRead:
+        "The connection request's outcome couldn't be confirmed. This account can't view the connections list; ask an administrator to check before retrying.",
+      createStatusUnverifiedWithoutRead:
+        "The bot was created, but its saved status couldn't be verified. This account can't view the connections list; ask an administrator to check before retrying.",
+      alreadyConnectedStatusUnverified:
+        "This bot is already connected, but its saved status could not be verified. Check the connections list before taking further action.",
+      alreadyConnectedStatusUnverifiedWithoutRead:
+        "This bot is already connected to your account, but its saved status couldn't be verified. This account can't view the connections list; ask an administrator to check before retrying.",
+      createNotActive:
+        "The bot was added with status {status}; it has not been confirmed as active.",
       emptyTitle: "No Telegram bots yet",
       emptyDescription:
         "Connect a bot you created in BotFather to start sending notifications.",
-      actionMenu: "Telegram bot actions",
-      disableTitle: "Disable Telegram bot?",
-      disableDescription:
-        "A disabled bot cannot send notifications through destinations using this bot. This interface does not provide reactivation.",
-      disableSuccess: "Telegram bot disabled.",
-      deleteTitle: "Delete Telegram bot?",
+      deleteTitle: "Remove connection to “{botName}”?",
       deleteDescription:
-        "This action unlinks the bot from Signapse and may affect related destinations.",
-      deleteAction: "Delete bot",
-      deleteSuccess: "Telegram bot deleted.",
-      connect: "Connect bot",
+        "This ends future use of the bot in Signapse. Remove all its destinations first; they will not be removed automatically. Sending history is retained, and using this bot again requires a new connection.",
+      deleteTrigger: "Remove {botName}",
+      deleteAction: "Remove bot",
+      deletePending: "Removing bot…",
+      deleteSuccess: "Telegram bot removed.",
+      deleteBlockedByDestinations:
+        "Remove every Telegram destination linked to this bot first. Nothing was changed.",
+      connect: "Connect new bot",
       createTitle: "Connect Telegram bot",
       createDescription:
         "Paste the token issued by BotFather so Signapse can verify the bot and register a webhook.",
       tokenLabel: "Bot token",
-      tokenPlaceholder: "123456:ABC...",
-      tokenDescription:
-        "The token is only sent once when creating the connection.",
+      tokenPlaceholder: "Enter BotFather token",
+      tokenDescription: "This token won't be shown again after you connect.",
       connectBot: "Connect bot",
       invalidData: "Bot data is invalid.",
       createSuccess: "Telegram bot connected.",
+      createIncomplete:
+        "The bot was added with status {status}, but webhook registration failed. Setup is incomplete.",
       createError: "Could not connect the Telegram bot.",
-      disableError: "Could not disable the Telegram bot.",
-      deleteError: "Could not delete the Telegram bot.",
+      createTokenVerificationError:
+        "Could not verify the bot token. Check the token and try again.",
+      createPermissionDenied:
+        "Your account needs permission to connect a Telegram bot. Contact an administrator.",
+      createConnectionConflict: "This Telegram bot is already connected.",
+      reconnectTrigger: "Reconnect {botName}",
+      reconnectTitle: "Reconnect Telegram bot",
+      reconnectDescription:
+        "Enter a BotFather token for {botName} ({botUsername}).",
+      reconnectAction: "Reconnect",
+      reconnectSuccess: "Telegram bot reconnected.",
+      reconnectIncomplete:
+        "Webhook registration failed. The bot remains invalid; its current status is shown on the row.",
+      reconnectOutcomeUnverified:
+        "The reconnect result could not be confirmed. Check the bot's status before trying again.",
+      reconnectTokenMismatch:
+        "This token belongs to a different Telegram bot than the selected connection.",
+      reconnectPermissionDenied:
+        "Your account needs permission to reconnect this bot. Contact an administrator.",
+      reconnectError: "Could not reconnect this bot.",
+      deleteError: "Could not remove the Telegram bot.",
       fallbackLabel: "Bot #{id}",
     },
     destination: {
@@ -2533,69 +2625,72 @@ export const en: Dictionary = {
       sectionDescription:
         "Chats, groups, or channels verified by sending /start through the selected bot.",
       accessLimited: "No permission to view destinations",
+      loadError: "Could not load destination choices.",
       readOnlyDescription:
         "You can view these destinations, but destination management permission is required for changes.",
       noChatMetadata: "No chat metadata yet",
       emptyTitle: "No destinations yet",
       emptyDescription:
         "Create a link command, then send it in Telegram to verify a chat, group, or channel.",
-      actionMenu: "Destination actions",
       linkedBot: "Linked bot",
       testMessage: "Send test",
       testMessagePending: "Sending test…",
-      testMessageSuccess: "Test message sent to {destination}.",
+      testMessageAction: "Send a test message to {destination}",
+      testMessagePendingAction: "Sending a test message to {destination}",
+      testMessageSuccess:
+        "Telegram accepted the test message for {destination}.",
       testMessageError: "Could not send the test message.",
-      testMessageTimeout:
-        "The send request timed out and the result is uncertain; check Telegram before trying again.",
+      testMessageUnknownOutcome:
+        "Telegram did not confirm whether it accepted the test message. Check the Telegram conversation before trying again.",
       testMessagePermissionRequired:
         "Destination management permission is required to send a test message.",
       testMessageInactive:
-        "Only active destinations can receive a test message.",
-      disableTitle: "Disable Telegram destination?",
-      disableDescription:
-        "A disabled destination will no longer receive notifications from routes pointing to it. This interface does not provide reactivation.",
-      disableSuccess: "Telegram destination disabled.",
-      deleteTitle: "Delete Telegram destination?",
-      deleteDescription:
-        "This action removes the verified destination and cannot be undone from the interface.",
-      deleteAction: "Delete destination",
-      deleteSuccess: "Telegram destination deleted.",
+        "Only active destinations linked to active bots can receive a test message.",
+      removeTitle: "Remove Telegram destination {destination}?",
+      removeDescription:
+        "It will no longer be available in send choices. Removal is blocked while a route or schedule still references it. Send history is kept, and this cannot be undone from the interface.",
+      removeAction: "Remove destination",
+      removeTrigger: "Remove Telegram destination {destination}",
+      removeSuccess: "Telegram destination removed.",
       link: "Link destination",
       linkTitle: "Link destination",
       linkDescription:
         "Create a /start command, then send it in Telegram to verify a chat, group, or channel.",
+      linkPendingDescription:
+        "Send this command in the Telegram chat, group, or channel you want to verify.",
       commandBot: "Bot receiving /start",
       botPlaceholder: "Choose an active bot",
       botDescription:
-        "The new destination will be attached to the selected bot.",
+        "A destination is created only after this bot receives the command.",
+      bot: "Bot",
       linkCommand: "Link command",
       expiresAt: "Expires: {time}",
       copyCommand: "Copy command",
-      refreshDestinations: "Refresh destinations",
       createCommand: "Create link command",
-      regenerateCommand: "Generate a new link command",
       linkCreated: "Telegram link command created.",
-      refreshed: "Destination list refreshed.",
       copied: "Link command copied.",
       copyError: "Could not copy the link command.",
       linkExpired:
-        "This link command has expired. Generate a new command before opening or copying it.",
-      linkCompletionHint:
-        "After completing the Telegram handoff, return here and refresh the destination list to verify it.",
+        "This link command has expired. Close this dialog and create a new command before sending it.",
+      linkExpiredStatus: "Expired",
+      awaitingVerification: "Awaiting verification",
       botReadPermissionRequired:
         "Bot read permission is required to select a Telegram bot.",
+      destinationReadPermissionRequired:
+        "Destination read permission is required to check the verification result.",
       noActiveBotToLink:
         "Connect an active Telegram bot before linking a destination.",
       botRequired: "Choose an active Telegram bot.",
-      openPrivate: "Open private chat",
-      openGroup: "Open group chat",
+      botUnavailable:
+        "The selected bot is no longer active. Choose an active bot and create a new command.",
       noActiveDestination: "No active destinations yet.",
       placeholder: "Choose destination",
       fallbackLabel: "Destination #{id}",
       invalidData: "Destination data is invalid.",
       createLinkError: "Could not create the Telegram link command.",
-      disableError: "Could not disable the Telegram destination.",
-      deleteError: "Could not delete the Telegram destination.",
+      removeError: "Could not remove the Telegram destination.",
+      removeInUseError:
+        "This destination is still referenced. Change or unassign it from routes, including disabled routes. For active schedules, change the destination or remove the schedule; remove inactive schedules that still reference it. If you lack the required management permission, ask someone who has it. The destination and configuration were not changed.",
     },
     routing: {
       sectionTitle: "Feature routing",
@@ -2608,8 +2703,36 @@ export const en: Dictionary = {
       enabledColumn: "Sending enabled",
       accessLimited: "No permission to view routing",
       noWorkspaceSelected: "No workspace selected",
+      settingsLoadError: "Could not load route settings.",
+      settingsLoadErrorDescription:
+        "The saved routing settings are unavailable. Retry to load them again.",
+      retry: "Retry",
+      noDestination: "No destination assigned",
+      destinationReadOnly: "Destination list access is required to change it.",
+      unavailableDestination: "Unavailable",
+      clearDestination: "Clear destination for {route}",
+      destinationClearRequiresDisabled:
+        "Pause routing before clearing the destination.",
+      saving: "Saving route settings…",
+      noSavedWorkspaceSettings:
+        "No saved routing settings are available in your workspaces.",
+      readbackUnverified:
+        "Saved market-routing details could not be verified. Refresh before making changes.",
+      economicCalendarReadbackUnverified:
+        "Saved Economic calendar routing details could not be verified. Refresh before making changes.",
+      readbackWorkspaceUnknown: "Workspace not identified",
+      workspaceIdFallback: "Workspace {id}",
       destinationUpdateError: "Could not update the route destination.",
       destinationUpdateSuccess: "Route destination updated.",
+      destinationSelectorAria: "Destination for {route}",
+      destinationClearAria: "Remove the destination for {route}",
+      destinationClearSuccess: "Destination removed and routing paused.",
+      enableDestinationRequired:
+        "Choose an active destination before enabling this route.",
+      destinationReadRequired:
+        "Destination access is required to choose an eligible destination before enabling this route.",
+      routeReadOnlyDescription:
+        "You can view this setting but cannot update this route.",
       statusUpdateError: "Could not update route status.",
       enabledSuccess: "Telegram routing enabled.",
       disabledSuccess: "Telegram routing paused.",
@@ -2627,25 +2750,32 @@ export const en: Dictionary = {
       languageNotApplicable: "Not applicable at flow level",
       languageUpdateSuccess: "Output language updated.",
       languageClearSuccess: "Output-language override cleared.",
+      updatePermissionDenied:
+        "You do not have permission to update this Telegram route.",
       updateError: "Could not update Telegram routing.",
     },
     schedule: {
+      sectionTitle: "Scheduled analysis",
       panelTitle: "Analysis send schedule",
       panelDescription:
         "Send AI analysis at local times for one watchlist asset.",
       scheduleColumn: "Schedule",
+      deliveryColumn: "Delivery",
       workspaceColumn: "Workspace",
       destinationColumn: "Destination",
       localTimesColumn: "Send times",
       assetColumn: "Asset",
       languageColumn: "Output language",
       statusColumn: "Status",
+      inactiveStatus: "Inactive",
       accessLimited: "No permission to view analysis schedules",
       readOnlyDescription: "You can view schedules but cannot change them.",
       loadError: "Could not load analysis schedules.",
       loadErrorDescription:
         "Check your connection and try loading the schedule list again.",
       retry: "Retry",
+      optionsLoadError:
+        "Some schedule options could not be loaded. Saved schedules remain available; retry before creating or editing.",
       currentWorkspaceFallback: "Current workspace",
       noDestination: "No destination yet",
       noAsset: "Asset unavailable",
@@ -2653,17 +2783,13 @@ export const en: Dictionary = {
       emptyTitle: "No analysis schedules yet",
       emptyDescription:
         "Create a local-time send schedule for the current workspace.",
-      disableTitle: "Disable analysis schedule?",
-      disableDescription:
-        "The schedule will stop sending market analysis. This interface does not support reactivating a disabled schedule.",
-      disableTrigger: "Disable analysis schedule",
-      disableSuccess: "Analysis schedule disabled.",
-      deleteTitle: "Delete analysis schedule?",
+      deleteTitle: "Remove analysis schedule?",
       deleteDescription:
-        "This permanently deletes the market-analysis send schedule. The action cannot be undone.",
-      deleteAction: "Delete schedule",
-      deleteTrigger: "Delete analysis schedule",
-      deleteSuccess: "Analysis schedule deleted.",
+        "This marks the schedule as removed, stops future runs, and removes it from your manageable list. Recorded history is preserved.",
+      deleteAction: "Remove schedule",
+      deleteTrigger: "Remove analysis schedule",
+      deleteSuccess:
+        "Analysis schedule removed. Recorded history is preserved.",
       editTrigger: "Edit analysis schedule",
       createSchedule: "Create schedule",
       dialogEditTitle: "Edit analysis schedule",
@@ -2684,6 +2810,12 @@ export const en: Dictionary = {
       assetPlaceholder: "Choose an asset",
       assetDescription:
         "Only assets in the current workspace watchlist are available.",
+      assetPreservedDescription:
+        "This schedule belongs to another workspace, so its saved asset will be kept.",
+      assetPreservedWatchlistDescription:
+        "The current workspace watchlist isn't available, so the saved asset will stay unchanged.",
+      assetPreservedWorkspaceDescription:
+        "A current workspace isn't available, so the saved asset will stay unchanged.",
       assetUnavailable: "This scheduled asset is no longer in the watchlist.",
       scheduleLegend: "Send schedule",
       timezoneLabel: "Timezone",
@@ -2721,12 +2853,12 @@ export const en: Dictionary = {
       createError: "Could not create the Telegram analysis schedule.",
       updateError: "Could not update the Telegram analysis schedule.",
       disableError: "Could not disable the Telegram analysis schedule.",
-      deleteError: "Could not delete the Telegram analysis schedule.",
+      deleteError: "Could not remove the Telegram analysis schedule.",
     },
     statuses: {
       ACTIVE: "Active",
       INVALID: "Invalid",
-      REMOVED: "Deleted",
+      REMOVED: "Removed",
       DISABLED: "Disabled",
     },
     chatTypes: {

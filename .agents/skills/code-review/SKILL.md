@@ -5,7 +5,7 @@ description: Rà soát độc lập và bàn giao FE khi WORKFLOW.md gọi skill
 
 # Rà soát mã nguồn
 
-Chỉ bắt đầu khi prompt [workflow](../../../WORKFLOW.md) của Symphony gọi skill trong phiên In Review. Ngoài phiên được giao, áp dụng hướng dẫn repo cho tác vụ hiện tại. Dùng quyền của phiên In Review, đọc [chuẩn review](../../../CONTRIBUTING.md#review-standards) và áp dụng [quyền sở hữu kiểm chứng](../../../CONTRIBUTING.md#test-ownership-and-selection).
+Chỉ bắt đầu khi prompt [workflow](../../../WORKFLOW.md) của Symphony gọi skill trong phiên In Review. Ngoài phiên được giao, áp dụng hướng dẫn repo cho tác vụ hiện tại. Dùng quyền của phiên In Review, đọc [chuẩn review](../../../CONTRIBUTING.md#review-standards).
 
 ## Chốt đầu vào
 
@@ -30,7 +30,7 @@ Mỗi subagent phân loại phát hiện theo bước [đối chiếu và kết 
 
 ## Đối chiếu và kết luận
 
-Reviewer chính trong phiên Review đọc trực tiếp các nguồn cần thiết để xác nhận kết luận của cả hai trục, xử lý kết quả mâu thuẫn và bổ sung phép kiểm local phù hợp khi còn thiếu bằng chứng. Nêu rõ nếu điều kiện review độc lập chưa được đáp ứng.
+Reviewer chính trong phiên Review đọc trực tiếp các nguồn cần thiết để xác nhận kết luận của cả hai trục, xử lý kết quả mâu thuẫn và áp dụng [quy tắc chọn phép kiểm và dùng lại bằng chứng](../../../CONTRIBUTING.md#test-ownership-and-selection) khi còn thiếu bằng chứng hoặc khi đánh giá bản sửa. Nêu rõ nếu điều kiện review độc lập chưa được đáp ứng.
 
 Trước khi chấm `Không đạt`, đối chiếu hành vi ở base và `HEAD` đủ để xác định tác động của PR, kể cả qua caller. Ghi bằng chứng cho thấy PR tạo ra hoặc làm nặng thêm sai lệch, hoặc yêu cầu đã chốt giao xử lý sai lệch có sẵn. Nêu đầu ra bắt buộc của PR bị cản và lý do phải xử lý ở pha hiện tại. Ghi riêng sai lệch baseline ngoài phạm vi và việc cần làm ở pha sau, kèm owner. Reviewer chính kiểm lại căn cứ này cho từng phát hiện chặn bàn giao trước khi dùng verdict của subagent.
 

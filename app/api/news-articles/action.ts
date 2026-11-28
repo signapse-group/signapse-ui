@@ -71,6 +71,27 @@ export async function getNewsArticleById(
   return { ...parsed.data, id }
 }
 
+function getQuickDetailErrorStatus(error: unknown): number | null {
+  if (typeof error !== "object" || error === null || !("status" in error)) {
+    return null
+  }
+
+  return typeof error.status === "number" ? error.status : null
+}
+
+export async function getNewsArticleByIdForQuickDetail(
+  id: number
+): Promise<
+  | { success: true; data: NewsArticleResponse }
+  | { success: false; status: number | null }
+> {
+  try {
+    return { success: true, data: await getNewsArticleById(id) }
+  } catch (error: unknown) {
+    return { success: false, status: getQuickDetailErrorStatus(error) }
+  }
+}
+
 export async function getNewsArticlePublisherOptions(
   searchTerm = ""
 ): Promise<string[]> {

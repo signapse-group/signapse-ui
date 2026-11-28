@@ -83,13 +83,8 @@ Light mode và dark mode phải là hai biến thể của cùng một direction
 
 ## Theme And Component Chrome
 
-- Feature/shared code dùng default chrome của preset khai báo tại `style` trong [components.json](../../components.json) qua wrappers trong `@/components/ui/`.
-- `className` trên shadcn primitives chỉ dùng cho layout như width, max-width, flex/grid, gap, alignment, max-height, overflow, truncate hoặc responsive constraints.
-- Không thêm `h-*`, `min-h-*`, `rounded-*`, padding, foreground/background, border, ring, shadow hoặc typography classes chỉ để đổi height, radius, color, border hay density mặc định của primitive.
-- Khi cần control compact, ưu tiên variant/size sẵn có; chỉ hard-code height/radius khi không có option phù hợp và có product reason rõ.
-- Wrapper trong `components/ui` có thể được bảo trì theo shadcn workflow, nhưng không nhận feature-specific visual customization.
-- Wrapper shadcn mặc định phải giữ contract variant, size và chrome từ registry item của preset hiện tại.
-- Không thêm variant, size hoặc chrome vào wrapper chỉ để phục vụ một feature, prototype hoặc trạng thái cục bộ. Ngoại lệ phải là quyết định design-system có nhu cầu dùng chung rõ ràng và được ghi nhận trong tài liệu này trước khi triển khai.
+- Dùng component trong `@/components/ui/` theo preset ở [components.json](../../components.json). Feature chọn variant và size sẵn có, dùng `className` cho bố cục.
+- Thay đổi giao diện mặc định của wrapper dùng chung cần có quyết định design system ghi rõ phạm vi áp dụng tại đây trước khi triển khai.
 - Dùng Button variant positive cho affirmative action khi hướng thiết kế đã duyệt yêu cầu treatment xanh; variant dùng token shared positive-action và positive-action-foreground. Không đổi màu Button qua className. Start trên Cronjobs là reference đã duyệt tại SIGN-28, được áp dụng cho Start trong SIGN-579.
 
 ### Semantic Tokens
@@ -173,7 +168,6 @@ Translation:
 
 - Layout responsive dùng `flex-col sm:flex-row sm:justify-between`.
 - Leading area chứa primary action và search; trailing area chứa filter và sort.
-- Primary controls giữ default shadcn size/chrome; không thêm custom height/radius/padding hoặc `size="sm"` chỉ để đổi density.
 - Mỗi surface chỉ có một primary action. Secondary actions giảm emphasis; destructive actions tách khỏi primary flow hoặc nằm trong overflow menu khi toolbar dày.
 
 ### Forms
@@ -365,7 +359,7 @@ Effective 2026-10-30, this section owns FE execution of the accepted design gate
   2. Call `downloadJiraIssueAttachment` with that ID and a file path in a temporary directory unique to the run. If the connector returns `downloadCommand`, run it within that tool call sequence and keep the command and credentials out of the output. Open the downloaded file with `view_image` and inspect the visual result against the affected flow, fixed constraints and AC.
 - FE may complete spacing, responsive/reflow and loading/empty/error presentation using this design system and shared patterns without separate approval for each detail. Preserve accepted behavior, permissions, data, localization/copy, accessibility and explicitly fixed visual/interaction choices. An undrawn state still needs its required behavior.
 - For a missing or unreadable approved PNG, or a conflict with the AC, give the coordinator the Jira source issue, affected AC/check and the gap to resolve. Continue independent work and apply the [local blocker policy](../../CONTRIBUTING.md#blockers-and-resume). Resume the dependent comparison once the applicable Jira PNG opens and any conflict is settled.
-- Before In Review, merge or Done, assess the affected rendered UI against AC, accepted direction, usability, responsive and accessibility standards. In the existing handoff, pair the accepted source with the candidate render. For PNG-based checks, record the Jira source issue, attachment ID, filename and the visual detail compared. Identify the candidate, matching theme/state and applicable viewport/sidebar mode. Show enough context for the affected control's location, grouping and entry path. Record the actual result or evidence gap for each fixed constraint, including relevant reused UI outside the diff. Resolve fixed-constraint violations, behavioral/quality defects and missing necessary evidence before passing the gate. Assess delegated choices against usability, responsive and accessibility standards.
+- Before In Review, merge or Done, follow [FE test ownership](../../CONTRIBUTING.md#test-ownership-and-selection) for design comparison and handoff. Record the candidate, design reference, theme, state, viewport and sidebar mode for confirmed observations. Resolve observed defects in scope before handoff.
 - Changed accepted direction/constraints invalidate affected evidence and require reassessment. Do not change requirements or expected results to fit code; routine detail completion does not require a design revision first.
 - For direct UI work, use the supplied accepted scope and references for the same comparison before handoff. Direct work retains its existing authority and lifecycle.
 
@@ -397,13 +391,13 @@ This is the complete FE execution contract for dashboard layout and verification
 ### Design And Verification Coverage
 
 - Feature mới hoặc layout đổi đáng kể dùng nguồn đại diện hoặc pattern hiện có đủ định hướng theo UI Design Gate. FE tự hoàn thiện responsive theo shared rules; chỉ yêu cầu thêm reference khi còn quyết định quan trọng ngoài quyền FE. Không bắt có mockup Wide/Mobile/Compact riêng trước implementation.
-- Khi implement/review thay đổi layout, chọn viewport và state bị ảnh hưởng từ các frame đại diện, chiều rộng `360px` và browser zoom `200%`. Ghi phạm vi và lý do chọn. Thay đổi nhỏ trên component kiểm vùng liên quan. Thay đổi shell, content width hoặc responsive dùng chung phải bao phủ các nhóm bị ảnh hưởng, gồm desktop rộng hơn frame `1520px` và các chế độ sidebar liên quan. Kiểm điểm chuyển `767/768px` và `1439/1440px` khi hành vi tại mốc đó bị ảnh hưởng.
+- FE đối chiếu viewport, theme, trạng thái và các điểm chuyển `767/768px` hoặc `1439/1440px` bị ảnh hưởng theo UI Design Gate. QA kiểm trình duyệt ở chiều rộng `360px`, zoom thực `200%` và các điểm chuyển liên quan, gồm focus và overflow.
 - Bằng chứng bàn giao ghi viewport/zoom, state, sidebar mode đã kiểm, kết quả và giới hạn chưa kiểm. Không báo responsive đạt chỉ từ một screenshot desktop hoặc việc tồn tại responsive classes.
 - Handoff dùng rule execution tại đây và ngoại lệ feature đã được chấp nhận. Thiếu mobile reference không tự chặn implementation; nêu và giữ phần phụ thuộc khi có mâu thuẫn hoặc quyết định quan trọng ngoài quyền FE.
 
 ## Accessibility And Responsive Behavior
 
-- Mục tiêu là WCAG 2.2 AA. Normal text đạt contrast tối thiểu `4.5:1`; large text, component boundary, state indicator và focus indicator đạt tối thiểu `3:1` trong cả light và dark mode.
+- Mục tiêu là WCAG 2.2 AA trong cả light và dark mode. Chữ thường đạt tối thiểu `4.5:1`, chữ lớn đạt `3:1`. Dấu hiệu thị giác cần để nhận biết control đang hoạt động hoặc trạng thái của nó, kể cả focus, đạt `3:1` so với màu liền kề.
 - Ưu tiên native semantic elements. Mỗi page có một `<h1>`, heading hierarchy tuần tự và skip link đến main content khi có repeated navigation.
 - Mọi interaction dùng được bằng keyboard với tab order hợp lý; focus luôn nhìn thấy, không bị sticky surface che và được quản lý đúng sau route change.
 - Dialog/overlay restore focus an toàn; icon-only control có accessible name. Meaningful image có `alt`, decorative image dùng `alt=""`.
@@ -420,7 +414,7 @@ This is the complete FE execution contract for dashboard layout and verification
 
 Khi implement hoặc review UI, kiểm tra các state và breakpoint liên quan:
 
-- Khi thay đổi wrapper, token hoặc badge semantic, đối chiếu component thực tế, màu đã resolve và contrast ở theme áp dụng. Kiểm các nơi dùng bị ảnh hưởng theo [Theme And Component Chrome](#theme-and-component-chrome) và [Badge Semantics](#badge-semantics).
+- Khi thay đổi màu, nền hoặc cách hiển thị trạng thái, kiểm contrast ở light và dark mode tại các nơi dùng bị ảnh hưởng. Nếu vấn đề thuộc preset gốc, ghi nhận ở phạm vi design system theo [Theme And Component Chrome](#theme-and-component-chrome).
 - Light mode và dark mode.
 - Sidebar mở rộng và collapsed.
 - Content-width mode khớp primary task của route: `bounded` chỉ cho overview/decision surface, `fluid` cho list/table/data surface và `canvas` cho interactive workbench.
@@ -443,7 +437,7 @@ Khi implement hoặc review UI, kiểm tra các state và breakpoint liên quan:
 - Khi đổi cách hiển thị dữ liệu chart, đối chiếu axis, legend hoặc tooltip bị ảnh hưởng với fixture đại diện theo [Data Visualization And Financial Data](#data-visualization-and-financial-data).
 - Realtime current value, last-updated, stale state, pause/freeze và reduced motion.
 - Semantic heading, skip link, route-change focus, focus ring và keyboard navigation.
-- Contrast light/dark, non-color status cues, target size và zoom `200%`.
+- Non-color status cues, target size và zoom `200%`.
 - Form labels, placeholder khi field rỗng theo phần Forms (create và edit sau khi xóa giá trị), announced errors, recovery action, unsaved-change protection và data retention sau lỗi.
 - Bounded content giữ cap và căn giữa; fluid/canvas không bị page-level cap; loading, empty, error và permission-denied state mirror mode của content thật.
 - Horizontal overflow chỉ xuất hiện bên trong surface chủ đích.

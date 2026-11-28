@@ -3,13 +3,7 @@
 import type { Dispatch, FormEvent, SetStateAction } from "react"
 import { useMemo, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import {
-  CalendarClock,
-  GlobeIcon,
-  Pencil,
-  Plus,
-  X,
-} from "lucide-react"
+import { CalendarClock, GlobeIcon, Pencil, Plus, X } from "lucide-react"
 import { toast } from "sonner"
 
 import {
@@ -52,6 +46,7 @@ import {
 } from "@/components/ui/combobox"
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -104,6 +99,9 @@ type ScheduleFormValues = {
   outputLanguageIsoCode: string
 }
 
+type AssetPreservedReason =
+  "watchlistUnavailable" | "workspaceUnavailable" | "otherWorkspace"
+
 type ScheduleFormErrors = Partial<Record<keyof ScheduleFormValues, string>>
 
 type ScheduleFormFieldsProps = {
@@ -114,6 +112,8 @@ type ScheduleFormFieldsProps = {
   currentDestination?: TelegramDestinationResponse
   watchlistAssets: WorkspaceWatchlistAssetListItemResponse[]
   currentAsset?: ScheduledAssetResponse
+  assetEditable?: boolean
+  assetPreservedReason?: AssetPreservedReason
   languages: LanguageResponse[]
   currentOutputLanguage?: LanguageResponse
   languageCatalogError: boolean
@@ -156,15 +156,11 @@ function getScheduleFieldId(idPrefix: string, field: keyof ScheduleFormValues) {
 }
 
 function getInitialScheduleValues(
-  schedule: TelegramMarketAnalysisScheduleResponse | undefined,
-  activeDestinations: TelegramDestinationResponse[]
+  schedule: TelegramMarketAnalysisScheduleResponse | undefined
 ): ScheduleFormValues {
   return {
     name: schedule?.name ?? "",
-    destinationId:
-      schedule?.destination?.id.toString() ??
-      activeDestinations[0]?.id.toString() ??
-      "",
+    destinationId: schedule?.destination?.id.toString() ?? "",
     assetId: schedule?.asset?.assetId.toString() ?? "",
     timezone: schedule?.timezone ?? "Asia/Bangkok",
     localTimes: schedule?.localTimes.length ? [...schedule.localTimes] : [""],
@@ -227,8 +223,13 @@ function getTimezoneLocation(timeZone: string) {
   return (parts[parts.length - 1] ?? timeZone).replaceAll("_", " ")
 }
 
-function getTimezoneGroups(dictionary: Dictionary): TimezoneGroup[] {
+function getTimezoneGroups(
+  dictionary: Dictionary,
+  selectedTimezone?: string
+): TimezoneGroup[] {
   const zones = new Set<string>(["Asia/Bangkok", "UTC"])
+
+  if (selectedTimezone) zones.add(selectedTimezone)
 
   if (typeof Intl.supportedValuesOf === "function") {
     Intl.supportedValuesOf("timeZone").forEach((timeZone) =>
@@ -291,7 +292,10 @@ function getScheduleFormErrors(
   languages: LanguageResponse[],
   languageCatalogError: boolean,
   dictionary: Dictionary,
-  currentOutputLanguage?: LanguageResponse
+  currentOutputLanguage?: LanguageResponse,
+  currentDestination?: TelegramDestinationResponse,
+  currentAsset?: ScheduledAssetResponse,
+  allowUnlistedCurrentAsset = false
 ): ScheduleFormErrors {
   const errors: ScheduleFormErrors = {}
 
@@ -304,6 +308,10 @@ function getScheduleFormErrors(
   } else if (
     !activeDestinations.some(
       (destination) => destination.id.toString() === values.destinationId
+    ) &&
+    !(
+      currentDestination?.status === "ACTIVE" &&
+      currentDestination.id.toString() === values.destinationId
     )
   ) {
     errors.destinationId = dictionary.telegram.schedule.destinationUnavailable
@@ -314,6 +322,10 @@ function getScheduleFormErrors(
   } else if (
     !watchlistAssets.some(
       (asset) => asset.assetId.toString() === values.assetId
+    ) &&
+    !(
+      allowUnlistedCurrentAsset &&
+      currentAsset?.assetId.toString() === values.assetId
     )
   ) {
     errors.assetId = dictionary.telegram.schedule.assetUnavailable
@@ -383,8 +395,7 @@ function focusFirstScheduleError(idPrefix: string, errors: ScheduleFormErrors) {
     "localTimes",
     "outputLanguageIsoCode",
   ].find((field) => errors[field as keyof ScheduleFormValues]) as
-    | keyof ScheduleFormValues
-    | undefined
+    keyof ScheduleFormValues | undefined
 
   if (!firstField) return
 
@@ -425,6 +436,8 @@ function ScheduleFormFields({
   currentDestination,
   watchlistAssets,
   currentAsset,
+  assetEditable = true,
+  assetPreservedReason,
   languages,
   currentOutputLanguage,
   languageCatalogError,
@@ -434,8 +447,8 @@ function ScheduleFormFields({
 }: ScheduleFormFieldsProps) {
   const t = dictionary.telegram
   const timezoneGroups = useMemo(
-    () => getTimezoneGroups(dictionary),
-    [dictionary]
+    () => getTimezoneGroups(dictionary, values.timezone),
+    [dictionary, values.timezone]
   )
   const assetOptions = useMemo<AssetOption[]>(() => {
     const options: AssetOption[] = watchlistAssets.map((asset) => ({
@@ -452,12 +465,12 @@ function ScheduleFormFields({
         assetId: currentAsset.assetId,
         assetName: currentAsset.assetName,
         assetSymbol: currentAsset.assetSymbol,
-        unavailable: true,
+        unavailable: assetEditable,
       })
     }
 
     return options
-  }, [currentAsset, watchlistAssets])
+  }, [assetEditable, currentAsset, watchlistAssets])
   const destinationOptions = useMemo<DestinationOption[]>(() => {
     const options: DestinationOption[] = activeDestinations.map(
       (destination) => ({ destination })
@@ -469,7 +482,10 @@ function ScheduleFormFields({
         (destination) => destination.id === currentDestination.id
       )
     ) {
-      options.unshift({ destination: currentDestination, unavailable: true })
+      options.unshift({
+        destination: currentDestination,
+        unavailable: currentDestination.status !== "ACTIVE",
+      })
     }
 
     return options
@@ -528,6 +544,10 @@ function ScheduleFormFields({
           <Field data-invalid={Boolean(errors.destinationId)}>
             <FieldLabel htmlFor={getScheduleFieldId(idPrefix, "destinationId")}>
               {t.schedule.destinationLabel}
+              <span aria-hidden="true" className="text-destructive">
+                {" "}
+                *
+              </span>
             </FieldLabel>
             <Select
               items={destinationOptions.map(({ destination, unavailable }) => ({
@@ -543,6 +563,7 @@ function ScheduleFormFields({
               <SelectTrigger
                 id={getScheduleFieldId(idPrefix, "destinationId")}
                 className="w-full"
+                aria-required="true"
                 aria-invalid={Boolean(errors.destinationId)}
                 aria-describedby={describedBy("destinationId")}
               >
@@ -583,7 +604,7 @@ function ScheduleFormFields({
               }))}
               value={values.assetId || null}
               onValueChange={(value) => onChange("assetId", value ?? "")}
-              disabled={disabled}
+              disabled={disabled || !assetEditable}
             >
               <SelectTrigger
                 id={getScheduleFieldId(idPrefix, "assetId")}
@@ -607,7 +628,13 @@ function ScheduleFormFields({
               </SelectContent>
             </Select>
             <FieldDescription id={descriptionId("assetId")}>
-              {t.schedule.assetDescription}
+              {assetEditable
+                ? t.schedule.assetDescription
+                : assetPreservedReason === "watchlistUnavailable"
+                  ? t.schedule.assetPreservedWatchlistDescription
+                  : assetPreservedReason === "workspaceUnavailable"
+                    ? t.schedule.assetPreservedWorkspaceDescription
+                    : t.schedule.assetPreservedDescription}
             </FieldDescription>
             <FieldError id={errorId("assetId")}>{errors.assetId}</FieldError>
           </Field>
@@ -873,14 +900,14 @@ export function CreateTelegramScheduleDialog({
   watchlistAssets,
   languages,
   languageCatalogError,
-  canManage,
+  canCreate,
 }: {
   activeDestinations: TelegramDestinationResponse[]
   currentWorkspace: { id: number; name: string } | null
   watchlistAssets: WorkspaceWatchlistAssetListItemResponse[]
   languages: LanguageResponse[]
   languageCatalogError: boolean
-  canManage: boolean
+  canCreate: boolean
 }) {
   const router = useRouter()
   const { dictionary } = useLocalization()
@@ -890,10 +917,7 @@ export function CreateTelegramScheduleDialog({
   const [isPending, startTransition] = useTransition()
   const [backendError, setBackendError] = useState<string | null>(null)
   const [errors, setErrors] = useState<ScheduleFormErrors>({})
-  const initialValues = useMemo(
-    () => getInitialScheduleValues(undefined, activeDestinations),
-    [activeDestinations]
-  )
+  const initialValues = useMemo(() => getInitialScheduleValues(undefined), [])
   const [values, setValues] = useState(initialValues)
   const disabledReason = getCreateDisabledReason(
     currentWorkspace,
@@ -901,7 +925,7 @@ export function CreateTelegramScheduleDialog({
     watchlistAssets,
     dictionary
   )
-  const canOpen = canManage && !disabledReason
+  const canOpen = canCreate && !disabledReason
 
   function resetForm() {
     setValues(initialValues)
@@ -980,7 +1004,7 @@ export function CreateTelegramScheduleDialog({
     })
   }
 
-  if (!canManage) return null
+  if (!canCreate) return null
 
   return (
     <div className="flex min-w-0 flex-col items-start gap-1">
@@ -1017,43 +1041,61 @@ export function CreateTelegramScheduleDialog({
         </DialogTrigger>
         <DialogContent
           showCloseButton={false}
-          className="max-h-[min(90vh,48rem)] overflow-y-auto sm:max-w-2xl"
+          className="grid max-h-[min(90vh,58rem)] min-h-0 grid-rows-[auto_minmax(0,1fr)] overflow-hidden sm:max-w-2xl"
         >
-          <DialogHeader>
+          <DialogHeader className="shrink-0 pe-8">
             <DialogTitle>
               {dictionary.telegram.schedule.dialogCreateTitle}
             </DialogTitle>
             <DialogDescription>
               {dictionary.telegram.schedule.dialogDescription}
             </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-            <ScheduleFormFields
-              idPrefix="telegram-schedule-create"
-              values={values}
-              errors={errors}
-              activeDestinations={activeDestinations}
-              watchlistAssets={watchlistAssets}
-              languages={languages}
-              languageCatalogError={languageCatalogError}
-              disabled={isPending}
-              dictionary={dictionary}
-              onChange={(field, value) =>
-                updateScheduleField(
-                  setValues,
-                  setErrors,
-                  setIsDirty,
-                  field,
-                  value
-                )
+            <DialogClose
+              render={
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  className="absolute top-2 right-2"
+                  aria-label={dictionary.common.close}
+                />
               }
-            />
+            >
+              <X />
+            </DialogClose>
+          </DialogHeader>
+          <form
+            onSubmit={handleSubmit}
+            className="flex min-h-0 flex-col gap-3 overflow-hidden"
+          >
+            <div className="min-h-0 flex-1 overflow-y-auto py-1">
+              <ScheduleFormFields
+                idPrefix="telegram-schedule-create"
+                values={values}
+                errors={errors}
+                activeDestinations={activeDestinations}
+                watchlistAssets={watchlistAssets}
+                languages={languages}
+                languageCatalogError={languageCatalogError}
+                disabled={isPending}
+                dictionary={dictionary}
+                onChange={(field, value) =>
+                  updateScheduleField(
+                    setValues,
+                    setErrors,
+                    setIsDirty,
+                    field,
+                    value
+                  )
+                }
+              />
+            </div>
             {backendError ? (
               <p role="alert" className="text-sm text-destructive">
                 {backendError}
               </p>
             ) : null}
-            <DialogFooter>
+            <DialogFooter className="shrink-0 flex-col sm:flex-row">
               <Button
                 type="button"
                 variant="outline"
@@ -1095,26 +1137,28 @@ export function CreateTelegramScheduleDialog({
 export function UpdateTelegramScheduleDialog({
   schedule,
   activeDestinations,
-  currentWorkspace,
   watchlistAssets,
   languages,
   languageCatalogError,
-  canManage,
+  canUpdate,
+  assetEditable,
+  assetPreservedReason,
 }: {
   schedule: TelegramMarketAnalysisScheduleResponse
   activeDestinations: TelegramDestinationResponse[]
-  currentWorkspace: { id: number; name: string } | null
   watchlistAssets: WorkspaceWatchlistAssetListItemResponse[]
   languages: LanguageResponse[]
   languageCatalogError: boolean
-  canManage: boolean
+  canUpdate: boolean
+  assetEditable: boolean
+  assetPreservedReason: AssetPreservedReason
 }) {
   const router = useRouter()
   const { dictionary } = useLocalization()
   const idPrefix = `telegram-schedule-update-${schedule.id}`
   const initialValues = useMemo(
-    () => getInitialScheduleValues(schedule, activeDestinations),
-    [activeDestinations, schedule]
+    () => getInitialScheduleValues(schedule),
+    [schedule]
   )
   const [open, setOpen] = useState(false)
   const [discardOpen, setDiscardOpen] = useState(false)
@@ -1148,17 +1192,18 @@ export function UpdateTelegramScheduleDialog({
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (!currentWorkspace) return
-
     const nextErrors = getScheduleFormErrors(
       values,
-      currentWorkspace.id,
+      schedule.workspaceId,
       activeDestinations,
       watchlistAssets,
       languages,
       languageCatalogError,
       dictionary,
-      schedule.outputLanguage
+      schedule.outputLanguage ?? undefined,
+      schedule.destination ?? undefined,
+      schedule.asset,
+      !assetEditable
     )
 
     if (Object.keys(nextErrors).length > 0) {
@@ -1169,11 +1214,11 @@ export function UpdateTelegramScheduleDialog({
 
     const request = getValidatedRequest(
       values,
-      currentWorkspace.id,
+      schedule.workspaceId,
       languages,
       languageCatalogError,
       dictionary,
-      schedule.outputLanguage
+      schedule.outputLanguage ?? undefined
     )
 
     if (!request.success) {
@@ -1206,7 +1251,7 @@ export function UpdateTelegramScheduleDialog({
     })
   }
 
-  if (!canManage || schedule.status !== "ACTIVE") return null
+  if (!canUpdate || schedule.status !== "ACTIVE") return null
 
   return (
     <>
@@ -1251,55 +1296,82 @@ export function UpdateTelegramScheduleDialog({
         </DialogTrigger>
         <DialogContent
           showCloseButton={false}
-          className="max-h-[min(90vh,48rem)] overflow-y-auto sm:max-w-2xl"
+          finalFocus={() =>
+            Array.from(
+              document.querySelectorAll<HTMLButtonElement>(
+                `[id="${idPrefix}-trigger"]`
+              )
+            ).find((trigger) => trigger.getClientRects().length > 0) ?? null
+          }
+          className="grid max-h-[min(90vh,58rem)] min-h-0 grid-rows-[auto_minmax(0,1fr)] overflow-hidden sm:max-w-2xl"
         >
-          <DialogHeader>
+          <DialogHeader className="shrink-0 pe-8">
             <DialogTitle>
               {dictionary.telegram.schedule.dialogEditTitle}
             </DialogTitle>
             <DialogDescription>
               {dictionary.telegram.schedule.dialogDescription}
             </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-            <ScheduleFormFields
-              idPrefix={idPrefix}
-              values={values}
-              errors={errors}
-              activeDestinations={activeDestinations}
-              currentDestination={schedule.destination}
-              watchlistAssets={watchlistAssets}
-              currentAsset={schedule.asset}
-              languages={languages}
-              currentOutputLanguage={schedule.outputLanguage}
-              languageCatalogError={languageCatalogError}
-              disabled={isPending}
-              dictionary={dictionary}
-              onChange={(field, value) =>
-                updateScheduleField(
-                  setValues,
-                  setErrors,
-                  setIsDirty,
-                  field,
-                  value
-                )
+            <DialogClose
+              render={
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  className="absolute top-2 right-2"
+                  aria-label={dictionary.common.close}
+                />
               }
-            />
+            >
+              <X />
+            </DialogClose>
+          </DialogHeader>
+          <form
+            onSubmit={handleSubmit}
+            className="flex min-h-0 flex-col gap-3 overflow-hidden"
+          >
+            <div className="min-h-0 flex-1 overflow-y-auto py-1">
+              <ScheduleFormFields
+                idPrefix={idPrefix}
+                values={values}
+                errors={errors}
+                activeDestinations={activeDestinations}
+                currentDestination={schedule.destination ?? undefined}
+                watchlistAssets={watchlistAssets}
+                currentAsset={schedule.asset}
+                assetEditable={assetEditable}
+                assetPreservedReason={assetPreservedReason}
+                languages={languages}
+                currentOutputLanguage={schedule.outputLanguage ?? undefined}
+                languageCatalogError={languageCatalogError}
+                disabled={isPending}
+                dictionary={dictionary}
+                onChange={(field, value) =>
+                  updateScheduleField(
+                    setValues,
+                    setErrors,
+                    setIsDirty,
+                    field,
+                    value
+                  )
+                }
+              />
+            </div>
             {backendError ? (
               <p role="alert" className="text-sm text-destructive">
                 {backendError}
               </p>
             ) : null}
-            <DialogFooter>
+            <DialogFooter className="shrink-0 flex-col sm:flex-row">
               <Button
                 type="button"
-                variant="outline"
+                variant="ghost"
                 disabled={isPending}
                 onClick={() => handleOpenChange(false)}
               >
-                {dictionary.common.close}
+                {dictionary.common.cancel}
               </Button>
-              <Button type="submit" disabled={isPending || !currentWorkspace}>
+              <Button type="submit" disabled={isPending}>
                 {isPending ? (
                   <Spinner data-icon="inline-start" />
                 ) : (
