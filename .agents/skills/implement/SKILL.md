@@ -15,13 +15,13 @@ For Symphony, at start, resume and before mutations or handoff, read the live Su
 
 Inspect checkout, branch/target, existing output and dirty-file ownership. Reuse existing work on resume; isolate it when needed. Resolve the intended review base to a commit and preserve unrelated changes.
 
-In Progress, reconcile Survey, review feedback, branch/PR and previous evidence. Reinvestigate the affected changes and continue in Progress. An absent Survey comment is allowed. For a Bug fix, reconcile accepted expected behavior and basis with the latest relevant QA report, case/version, actual result, tested build/environment and assigned regression. Fix the assigned deviation. The coordinator owns Bug and QA lifecycle.
+On entry or resume in Progress, check the live Subtask for the Survey handoff and read it before editing. Reconcile it with the accepted contract, latest review feedback, existing branch/PR and prior evidence. For a Bug fix, reconcile accepted expected behavior and basis with the latest relevant QA report, case/version, actual result, tested build/environment and assigned regression. Fix the assigned deviation. The coordinator owns Bug and QA lifecycle.
 
 Trace affected callers, tests, fixtures, configuration and exports. State the smallest complete change, verification seams and material risks; no mandatory plan file, snapshot or report is needed.
 
 For API integration, apply [API consumer standards](../../../docs/api-consumer.md), inspecting current affected producer operations and consumer callers/types. Fixtures do not prove publication or live integration.
 
-For UI changes, apply the scoped instructions and [UI design gate](../../../docs/design/DESIGN.md#ui-design-gate). Reconcile changes since Survey or review when applicable. Before editing, identify observable behavior and any fixed constraints on reused components. Continue independent work while resolving producer or input gaps.
+For UI changes, apply the scoped instructions and [UI design gate](../../../docs/design/DESIGN.md#ui-design-gate). When Survey selects a pattern, open the source cited in `Hướng làm` before editing and use the selected FE wrapper and composition for the behavior it covers. If a task already in Progress needs a pattern and its handoff is missing or stale, [select a UI pattern](../survey-frontend/SKILL.md#select-a-ui-pattern) in Progress. Tasks that need no pattern choice can proceed from the accepted contract. Record any substitute and its reason in the PR. Refer changes to the accepted user experience to the coordinator. Continue independent work while resolving input gaps.
 
 ## Implement and Verify
 
