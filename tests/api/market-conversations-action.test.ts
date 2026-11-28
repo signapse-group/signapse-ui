@@ -31,7 +31,11 @@ import {
   createMarketConversation,
   submitMarketConversationMessage,
 } from "@/app/api/market-conversations/action"
-import { marketConversationSummaryResponseSchema } from "@/app/lib/market-query/definitions"
+import {
+  marketConversationSummaryResponseSchema,
+  marketConversationTurnAcceptedResponseSchema,
+  submitMarketConversationMessageResponseSchema,
+} from "@/app/lib/market-query/definitions"
 
 const response = {
   userMessage: {
@@ -52,13 +56,20 @@ const response = {
   },
 }
 
-describe("market conversation submit action", () => {
+const acceptedResponse = {
+  submissionId: 108,
+  userMessage: response.userMessage,
+  expiresAt: "2026-09-24T00:03:00Z",
+  eventsUrl: "/market-conversations/42/turns/108/events",
+}
+
+describe("market conversation async submit action", () => {
   beforeEach(() => {
     vi.mocked(fetchAuthenticated).mockReset()
   })
 
   it("sends the idempotency key as a header while preserving the request body", async () => {
-    vi.mocked(fetchAuthenticated).mockResolvedValue(response)
+    vi.mocked(fetchAuthenticated).mockResolvedValue(acceptedResponse)
 
     await expect(
       submitMarketConversationMessage(
@@ -66,15 +77,38 @@ describe("market conversation submit action", () => {
         { message: "What moved gold today?" },
         "retry-key"
       )
-    ).resolves.toEqual({ success: true, data: response })
+    ).resolves.toEqual({ success: true, data: acceptedResponse })
 
     expect(fetchAuthenticated).toHaveBeenCalledWith(
-      "/market-conversations/42/messages",
+      "/market-conversations/42/messages/async",
       {
         method: "POST",
         body: JSON.stringify({ message: "What moved gold today?" }),
         headers: { "Idempotency-Key": "retry-key" },
       }
+    )
+  })
+
+  it("preserves the optional API analysis instant", async () => {
+    vi.mocked(fetchAuthenticated).mockResolvedValue(acceptedResponse)
+
+    await submitMarketConversationMessage(
+      42,
+      {
+        message: "What moved gold today?",
+        asOfTime: "2026-11-27T12:00:00+02:00",
+      },
+      "retry-key"
+    )
+
+    expect(fetchAuthenticated).toHaveBeenCalledWith(
+      "/market-conversations/42/messages/async",
+      expect.objectContaining({
+        body: JSON.stringify({
+          message: "What moved gold today?",
+          asOfTime: "2026-11-27T12:00:00+02:00",
+        }),
+      })
     )
   })
 
@@ -123,85 +157,63 @@ describe("market conversation submit action", () => {
         failureReason: null,
       },
     }
-    vi.mocked(fetchAuthenticated).mockResolvedValue(responseWithoutTimestamps)
-
-    await expect(
-      submitMarketConversationMessage(
-        42,
-        { message: "What moved gold today?" },
-        "retry-key"
+    expect(
+      submitMarketConversationMessageResponseSchema.safeParse(
+        responseWithoutTimestamps
       )
-    ).resolves.toEqual({ success: true, data: responseWithoutTimestamps })
+    ).toEqual({ success: true, data: responseWithoutTimestamps })
   })
 
   it.each([null, ""])(
     "rejects a COMPLETED assistant response with %s content",
-    async (content) => {
-      vi.mocked(fetchAuthenticated).mockResolvedValue({
-        ...response,
-        assistantMessage: {
-          ...response.assistantMessage,
-          content,
-        },
-      })
-
-      await expect(
-        submitMarketConversationMessage(
-          42,
-          { message: "What moved gold today?" },
-          "retry-key"
-        )
-      ).resolves.toEqual({
-        success: false,
-        error: "Conversation response is invalid",
-      })
+    (content) => {
+      expect(
+        submitMarketConversationMessageResponseSchema.safeParse({
+          ...response,
+          assistantMessage: {
+            ...response.assistantMessage,
+            content,
+          },
+        })
+      ).toMatchObject({ success: false })
     }
   )
 
   it("rejects a FAILED assistant response that also contains content", async () => {
-    vi.mocked(fetchAuthenticated).mockResolvedValue({
-      ...response,
-      assistantMessage: {
-        ...response.assistantMessage,
-        status: "FAILED",
-        content: "This must not appear as a completed answer.",
-        failureReason: "Fixture assistant failure",
-      },
-    })
-
-    await expect(
-      submitMarketConversationMessage(
-        42,
-        { message: "What moved gold today?" },
-        "retry-key"
-      )
-    ).resolves.toEqual({
-      success: false,
-      error: "Conversation response is invalid",
-    })
+    expect(
+      submitMarketConversationMessageResponseSchema.safeParse({
+        ...response,
+        assistantMessage: {
+          ...response.assistantMessage,
+          status: "FAILED",
+          content: "This must not appear as a completed answer.",
+          failureReason: "Fixture assistant failure",
+        },
+      })
+    ).toMatchObject({ success: false })
   })
 
   it("rejects a FAILED assistant response without a failure reason", async () => {
-    vi.mocked(fetchAuthenticated).mockResolvedValue({
-      ...response,
-      assistantMessage: {
-        ...response.assistantMessage,
-        status: "FAILED",
-        content: null,
-        failureReason: null,
-      },
-    })
+    expect(
+      submitMarketConversationMessageResponseSchema.safeParse({
+        ...response,
+        assistantMessage: {
+          ...response.assistantMessage,
+          status: "FAILED",
+          content: null,
+          failureReason: null,
+        },
+      })
+    ).toMatchObject({ success: false })
+  })
 
-    await expect(
-      submitMarketConversationMessage(
-        42,
-        { message: "What moved gold today?" },
-        "retry-key"
-      )
-    ).resolves.toEqual({
-      success: false,
-      error: "Conversation response is invalid",
-    })
+  it("requires the persisted user message and stream receipt", async () => {
+    expect(
+      marketConversationTurnAcceptedResponseSchema.safeParse({
+        ...acceptedResponse,
+        eventsUrl: undefined,
+      })
+    ).toMatchObject({ success: false })
   })
 
   it("returns a backend quota error without creating a response", async () => {

@@ -99,6 +99,7 @@ export interface MarketConversationMessagePageResponse {
 
 export interface SubmitMarketConversationMessageRequest {
   message: string
+  asOfTime?: string | null
 }
 
 export interface SubmitMarketConversationMessageResponse {
@@ -106,10 +107,32 @@ export interface SubmitMarketConversationMessageResponse {
   assistantMessage: MarketChatMessageResponse
 }
 
+export interface MarketConversationTurnAcceptedResponse {
+  submissionId: number
+  userMessage: MarketChatMessageResponse
+  expiresAt: string
+  eventsUrl: string
+}
+
+export type MarketConversationTurnProgressStepType = "UNDERSTANDING" | "TOOL"
+
+export type MarketConversationTurnProgressStatus =
+  "IN_PROGRESS" | "COMPLETED" | "FAILED"
+
+export interface MarketConversationTurnProgressStepResponse {
+  stepId?: string
+  sequenceNumber?: number
+  stepType?: MarketConversationTurnProgressStepType
+  status?: MarketConversationTurnProgressStatus
+  publicMessage?: string
+  createdDate?: string
+  lastModifiedDate?: string
+}
+
 export function getMarketQueryRequestSchema(dictionary: Dictionary) {
   return z.object({
     question: z.string().trim().min(1, dictionary.marketQuery.questionRequired),
-    asOfTime: z.string().datetime().nullish(),
+    asOfTime: z.string().datetime({ offset: true }).nullish(),
   }) satisfies z.ZodType<MarketQueryRequest>
 }
 
@@ -181,6 +204,7 @@ export function getSubmitMarketConversationMessageSchema(
       .string()
       .trim()
       .min(1, dictionary.marketConversations.messageRequired),
+    asOfTime: z.string().datetime({ offset: true }).nullish(),
   }) satisfies z.ZodType<SubmitMarketConversationMessageRequest>
 }
 
@@ -285,6 +309,33 @@ export const submitMarketConversationMessageResponseSchema = z.object({
   userMessage: marketChatMessageResponseSchema,
   assistantMessage: marketChatMessageResponseSchema,
 }) satisfies z.ZodType<SubmitMarketConversationMessageResponse>
+
+export const marketConversationTurnAcceptedResponseSchema = z
+  .object({
+    submissionId: z.number().int().positive(),
+    userMessage: marketChatMessageResponseSchema,
+    expiresAt: z.string().datetime({ offset: true }),
+    eventsUrl: z.string().min(1),
+  })
+  .superRefine((turn, context) => {
+    if (turn.userMessage.role !== "USER") {
+      context.addIssue({
+        code: "custom",
+        path: ["userMessage", "role"],
+        message: "Accepted turns must include a user message.",
+      })
+    }
+  }) satisfies z.ZodType<MarketConversationTurnAcceptedResponse>
+
+export const marketConversationTurnProgressStepResponseSchema = z.object({
+  stepId: z.string().optional(),
+  sequenceNumber: z.number().int().optional(),
+  stepType: z.enum(["UNDERSTANDING", "TOOL"]).optional(),
+  status: z.enum(["IN_PROGRESS", "COMPLETED", "FAILED"]).optional(),
+  publicMessage: z.string().optional(),
+  createdDate: z.string().optional(),
+  lastModifiedDate: z.string().optional(),
+}) satisfies z.ZodType<MarketConversationTurnProgressStepResponse>
 
 export const pageMarketConversationSummaryResponseSchema = z.object({
   content: z.array(marketConversationSummaryResponseSchema),
