@@ -22,7 +22,7 @@ Before implementing or reviewing dashboard layout/responsive behavior, read and 
 - Only files under `components/ui/` may import `radix-ui`, `vaul`, or other original UI primitives directly.
 - Before adding, syncing, or modifying a shadcn wrapper, read the `shadcn` skill and inspect the corresponding shadcn documentation and CLI diff.
 - Use Lucide icons and `sonner`; do not introduce a second icon or toast system.
-- Wrapper chrome follows the selected preset. For component extensions apply [Theme And Component Chrome](../docs/design/DESIGN.md#theme-and-component-chrome). For category, lifecycle or status badges apply [Badge Semantics](../docs/design/DESIGN.md#badge-semantics).
+- For wrapper changes, follow [Theme And Component Chrome](../docs/design/DESIGN.md#theme-and-component-chrome). For category, lifecycle or status badges apply [Badge Semantics](../docs/design/DESIGN.md#badge-semantics).
 
 ## Quick Detail And Attribution
 
