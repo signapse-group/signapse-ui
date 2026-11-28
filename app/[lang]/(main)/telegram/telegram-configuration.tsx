@@ -75,6 +75,7 @@ import {
   CreateTelegramScheduleDialog,
   UpdateTelegramScheduleDialog,
 } from "./telegram-schedule-form"
+import { TelegramSignalEnginePreview } from "./telegram-signal-engine-preview"
 import {
   ActionConfirmDialog,
   AccessLimitedRow,
@@ -115,6 +116,11 @@ function getRouteDefinitions(dictionary: Dictionary): RouteDefinition[] {
       label: routes.MARKET_NEWS_ALERT.label,
       description: routes.MARKET_NEWS_ALERT.description,
     },
+    {
+      featureKey: "SIGNAL_ENGINE",
+      label: routes.SIGNAL_ENGINE.label,
+      description: routes.SIGNAL_ENGINE.description,
+    },
   ]
 }
 
@@ -132,6 +138,21 @@ function isCompleteEconomicCalendarSetting(
 ) {
   return (
     setting.featureKey === "ECONOMIC_CALENDAR_ALERT" &&
+    setting.workspaceId === workspaceId &&
+    typeof setting.id === "number" &&
+    typeof setting.enabled === "boolean" &&
+    (setting.outputLanguage === null ||
+      Boolean(setting.outputLanguage?.isoCode?.trim())) &&
+    !(setting.enabled && setting.destination === null)
+  )
+}
+
+function isCompleteSignalEngineSetting(
+  setting: TelegramFeatureSettingResponse,
+  workspaceId: number
+) {
+  return (
+    setting.featureKey === "SIGNAL_ENGINE" &&
     setting.workspaceId === workspaceId &&
     typeof setting.id === "number" &&
     typeof setting.enabled === "boolean" &&
@@ -161,6 +182,43 @@ export function TelegramConfigurationPage({
   const economicCalendarRoute = getRouteDefinitions(dictionary).find(
     (route) => route.featureKey === "ECONOMIC_CALENDAR_ALERT"
   )
+  const signalEngineRoute = getRouteDefinitions(dictionary).find(
+    (route) => route.featureKey === "SIGNAL_ENGINE"
+  )
+  const signalEngineSettings = data.signalEngineSettings.filter(
+    (setting) =>
+      setting.featureKey === "SIGNAL_ENGINE" &&
+      setting.workspaceId === data.signalEngineWorkspace?.id
+  )
+  const singleSignalEngineSetting =
+    signalEngineSettings.length === 1 ? signalEngineSettings[0] : undefined
+  const hasUnidentifiedSignalEngineSetting =
+    data.signalEngineSettings.some(
+      (setting) =>
+        setting.featureKey !== "SIGNAL_ENGINE" ||
+        setting.workspaceId !== data.signalEngineWorkspace?.id
+    ) || signalEngineSettings.length > 1
+  const signalEngineRouteView: FeatureRouteView | null =
+    data.sectionAccess.signalEngineRouting && signalEngineRoute
+      ? {
+          ...signalEngineRoute,
+          setting:
+            data.signalEngineWorkspace && !hasUnidentifiedSignalEngineSetting
+              ? singleSignalEngineSetting
+              : undefined,
+          loadError:
+            data.signalEngineLoadError || data.signalEngineWorkspace === null,
+          readbackUnverified:
+            !data.signalEngineLoadError &&
+            data.signalEngineWorkspace !== null &&
+            (hasUnidentifiedSignalEngineSetting ||
+              (singleSignalEngineSetting !== undefined &&
+                !isCompleteSignalEngineSetting(
+                  singleSignalEngineSetting,
+                  data.signalEngineWorkspace.id
+                ))),
+        }
+      : null
   const economicCalendarSettings = data.economicCalendarSettings.filter(
     (setting) =>
       setting.featureKey === "ECONOMIC_CALENDAR_ALERT" &&
@@ -260,6 +318,7 @@ export function TelegramConfigurationPage({
     })
   }
   const visibleRoutes: FeatureRouteView[] = [
+    ...(signalEngineRouteView ? [signalEngineRouteView] : []),
     ...marketNewsRoutes,
     ...(economicCalendarRouteView ? [economicCalendarRouteView] : []),
   ]
@@ -279,13 +338,16 @@ export function TelegramConfigurationPage({
           activeDestinations={activeDestinations}
           destinationsLoadError={data.destinationsLoadError}
           languages={data.languages}
+          defaultOutputLanguageIsoCode={data.defaultOutputLanguageIsoCode}
           languageCatalogError={data.languageCatalogError}
           canUpdateEconomicCalendarRouting={
             data.manageAccess.economicCalendarRouting
           }
           canUpdateMarketNewsRouting={data.manageAccess.marketNewsRouting}
+          canUpdateSignalEngineRouting={data.manageAccess.signalEngineRouting}
           canReadDestinations={data.sectionAccess.destinations}
           currentWorkspace={data.currentWorkspace}
+          signalEngineWorkspace={data.signalEngineWorkspace}
           economicCalendarWorkspace={data.economicCalendarWorkspace}
         />
         {canShowSchedulePanel ? (
@@ -364,15 +426,16 @@ export function TelegramConfigurationSkeleton({
   canCreateBotConnections?: boolean
   canManageDestinations?: boolean
 }) {
-  const economicCalendarOnly =
-    sectionAccess.economicCalendarRouting &&
+  const routingOnly =
+    (sectionAccess.economicCalendarRouting ||
+      sectionAccess.signalEngineRouting) &&
     !sectionAccess.botConnections &&
     !sectionAccess.destinations &&
     !sectionAccess.featureSettings &&
     !sectionAccess.marketNewsRouting &&
     !sectionAccess.schedules
 
-  if (economicCalendarOnly) {
+  if (routingOnly) {
     return (
       <div
         className={TELEGRAM_CONFIGURATION_LAYOUT_CLASS}
@@ -402,6 +465,9 @@ export function TelegramConfigurationSkeleton({
                   <Skeleton className="h-9 w-full" />
                   <Skeleton className="h-9 w-full" />
                 </div>
+                {sectionAccess.signalEngineRouting ? (
+                  <Skeleton className="col-span-2 h-8 w-36 justify-self-end" />
+                ) : null}
               </div>
             </AppListTable>
           </section>
@@ -741,22 +807,28 @@ function FeatureRoutingSection({
   activeDestinations,
   destinationsLoadError,
   currentWorkspace,
+  signalEngineWorkspace,
   economicCalendarWorkspace,
   languages,
+  defaultOutputLanguageIsoCode,
   languageCatalogError,
   canUpdateEconomicCalendarRouting,
   canUpdateMarketNewsRouting,
+  canUpdateSignalEngineRouting,
   canReadDestinations,
 }: {
   routes: FeatureRouteView[]
   activeDestinations: TelegramDestinationResponse[]
   destinationsLoadError: boolean
   currentWorkspace: TelegramConfigurationData["currentWorkspace"]
+  signalEngineWorkspace: TelegramConfigurationData["signalEngineWorkspace"]
   economicCalendarWorkspace: TelegramConfigurationData["economicCalendarWorkspace"]
   languages: TelegramConfigurationData["languages"]
+  defaultOutputLanguageIsoCode: string
   languageCatalogError: boolean
   canUpdateEconomicCalendarRouting: boolean
   canUpdateMarketNewsRouting: boolean
+  canUpdateSignalEngineRouting: boolean
   canReadDestinations: boolean
 }) {
   const { dictionary, formatMessage } = useLocalization()
@@ -780,9 +852,12 @@ function FeatureRoutingSection({
             const isEconomicCalendarRoute =
               route.featureKey === "ECONOMIC_CALENDAR_ALERT"
             const isMarketNewsRoute = route.featureKey === "MARKET_NEWS_ALERT"
+            const isSignalEngineRoute = route.featureKey === "SIGNAL_ENGINE"
             const routeWorkspace = isEconomicCalendarRoute
               ? economicCalendarWorkspace
-              : currentWorkspace
+              : isSignalEngineRoute
+                ? signalEngineWorkspace
+                : currentWorkspace
             const workspaceId = routeWorkspace?.id ?? route.setting?.workspaceId
             const workspaceLabel = route.readbackUnverified
               ? (route.setting?.workspaceName ??
@@ -792,9 +867,7 @@ function FeatureRoutingSection({
                     })
                   : t.routing.readbackWorkspaceUnknown))
               : (route.setting?.workspaceName ??
-                (isEconomicCalendarRoute
-                  ? undefined
-                  : currentWorkspace?.name) ??
+                (isEconomicCalendarRoute ? undefined : routeWorkspace?.name) ??
                 (route.setting?.workspaceId !== undefined
                   ? formatMessage(t.routing.workspaceIdFallback, {
                       id: route.setting.workspaceId,
@@ -820,7 +893,9 @@ function FeatureRoutingSection({
                     ? "economic-calendar-routing-card"
                     : isMarketNewsRoute
                       ? "market-news-routing-card"
-                      : undefined
+                      : isSignalEngineRoute
+                        ? "signal-engine-routing-card"
+                        : undefined
                 }
                 aria-labelledby={titleId}
               >
@@ -845,13 +920,23 @@ function FeatureRoutingSection({
                     currentWorkspaceId={workspaceId}
                     canReadDestinations={canReadDestinations}
                     canUpdate={
-                      isEconomicCalendarRoute
-                        ? canUpdateEconomicCalendarRouting
-                        : canUpdateMarketNewsRouting
+                      isSignalEngineRoute
+                        ? canUpdateSignalEngineRouting
+                        : isEconomicCalendarRoute
+                          ? canUpdateEconomicCalendarRouting
+                          : canUpdateMarketNewsRouting
                     }
                     languages={languages}
                     languageCatalogError={languageCatalogError}
                   />
+                  {isSignalEngineRoute ? (
+                    <TelegramSignalEnginePreview
+                      languageIsoCode={
+                        route.setting?.outputLanguage?.isoCode ??
+                        defaultOutputLanguageIsoCode
+                      }
+                    />
+                  ) : null}
                 </div>
               </div>
             )
@@ -1273,7 +1358,16 @@ function FeatureRouteControls({
   const t = dictionary.telegram
   const isMarketNewsRoute = route.featureKey === "MARKET_NEWS_ALERT"
   const isEconomicCalendarRoute = route.featureKey === "ECONOMIC_CALENDAR_ALERT"
-  const isPersistedRoute = isMarketNewsRoute || isEconomicCalendarRoute
+  const isSignalEngineRoute = route.featureKey === "SIGNAL_ENGINE"
+  const isPersistedRoute =
+    isMarketNewsRoute || isEconomicCalendarRoute || isSignalEngineRoute
+  const routeDestinations = isSignalEngineRoute
+    ? activeDestinations.filter(
+        (destination) =>
+          destination.chatType === "GROUP" ||
+          destination.chatType === "SUPERGROUP"
+      )
+    : activeDestinations
   const persistedDestinationId = route.setting?.destination?.id.toString() ?? ""
   const persistedLanguageIsoCode = route.setting?.outputLanguage?.isoCode ?? ""
   const [destinationId, setDestinationId] = useState(persistedDestinationId)
@@ -1364,9 +1458,17 @@ function FeatureRouteControls({
   }
   const routeSupportsLanguage = route.featureKey !== "SCHEDULED_MARKET_ANALYSIS"
   const savedDestination = route.setting?.destination ?? null
+  const savedSignalEngineDestinationIsGroup =
+    !isSignalEngineRoute ||
+    savedDestination?.chatType === "GROUP" ||
+    savedDestination?.chatType === "SUPERGROUP"
   const savedDestinationLabel = savedDestination
     ? `${getDestinationLabel(savedDestination, dictionary)}${
-        isEconomicCalendarRoute && savedDestination.status !== "ACTIVE"
+        (isEconomicCalendarRoute && savedDestination.status !== "ACTIVE") ||
+        (isSignalEngineRoute &&
+          !routeDestinations.some(
+            (destination) => destination.id === savedDestination.id
+          ))
           ? ` — ${t.routing.unavailableDestination}`
           : ""
       }`
@@ -1377,24 +1479,28 @@ function FeatureRouteControls({
   const hasSelectedActiveDestination = Boolean(
     selectedDestinationId &&
     (canReadDestinations
-      ? activeDestinations.some(
+      ? routeDestinations.some(
           (destination) => destination.id.toString() === selectedDestinationId
         )
-      : savedDestination?.status === "ACTIVE") &&
+      : savedDestination?.status === "ACTIVE" &&
+        savedSignalEngineDestinationIsGroup) &&
     (!isPersistedRoute || savedDestination?.status === "ACTIVE")
   )
   const canUpdateRoute = canUpdate && Boolean(currentWorkspaceId)
   const destinationControlDisabled =
     !canUpdateRoute ||
     !canReadDestinations ||
-    activeDestinations.length === 0 ||
+    routeDestinations.length === 0 ||
     isPending
+  const mayDisableUnavailableRoute =
+    (isMarketNewsRoute || isSignalEngineRoute) &&
+    Boolean(route.setting?.enabled)
   const switchDisabled =
     !canUpdateRoute ||
     isPending ||
     (!isEconomicCalendarRoute &&
       !hasSelectedActiveDestination &&
-      (!isMarketNewsRoute || !route.setting?.enabled))
+      !mayDisableUnavailableRoute)
   const languageControlDisabled =
     !canUpdateRoute ||
     (!isPersistedRoute && !hasSelectedActiveDestination) ||
@@ -1409,7 +1515,7 @@ function FeatureRouteControls({
     ? t.routing.enableDestinationRequired
     : t.routing.destinationReadRequired
   const switchDescription =
-    isEconomicCalendarRoute && !canUpdate
+    (isEconomicCalendarRoute || isSignalEngineRoute) && !canUpdate
       ? t.routing.routeReadOnlyDescription
       : isMarketNewsRoute && route.setting && !canUpdate
         ? t.routing.routeReadOnlyDescription
@@ -1427,13 +1533,13 @@ function FeatureRouteControls({
             disabled:
               savedDestination.status !== "ACTIVE" ||
               !canReadDestinations ||
-              !activeDestinations.some(
+              !routeDestinations.some(
                 (destination) => destination.id === savedDestination.id
               ),
           },
         ]
       : []),
-    ...activeDestinations
+    ...routeDestinations
       .filter(
         (destination) =>
           !isPersistedRoute ||
@@ -1597,7 +1703,7 @@ function FeatureRouteControls({
       : null
   const switchDescriptionId = `telegram-route-switch-description-${controlId}`
   const clearDestinationButton =
-    isPersistedRoute && savedDestination ? (
+    (isMarketNewsRoute || isEconomicCalendarRoute) && savedDestination ? (
       <Button
         type="button"
         variant="ghost"
@@ -1622,7 +1728,7 @@ function FeatureRouteControls({
       </Button>
     ) : null
   const destinationControl =
-    isEconomicCalendarRoute && !canReadDestinations ? (
+    (isEconomicCalendarRoute || isSignalEngineRoute) && !canReadDestinations ? (
       <div className="flex min-w-0 items-center justify-between gap-2">
         <div className="flex min-w-0 flex-col gap-1">
           <span className="truncate text-sm text-muted-foreground">
@@ -1634,7 +1740,8 @@ function FeatureRouteControls({
         </div>
         {clearDestinationButton}
       </div>
-    ) : isEconomicCalendarRoute && destinationsLoadError ? (
+    ) : (isEconomicCalendarRoute || isSignalEngineRoute) &&
+      destinationsLoadError ? (
       <div className="flex min-w-0 items-center justify-between gap-2">
         <div className="flex min-w-0 flex-col gap-1">
           <span className="truncate text-sm text-muted-foreground">
@@ -1655,14 +1762,16 @@ function FeatureRouteControls({
         </div>
         {clearDestinationButton}
       </div>
-    ) : !savedDestination && activeDestinations.length === 0 ? (
+    ) : !savedDestination && routeDestinations.length === 0 ? (
       <span
         ref={setDestinationFocusTarget}
         className="text-sm text-muted-foreground"
         role="status"
         tabIndex={-1}
       >
-        {t.destination.noActiveDestination}
+        {isSignalEngineRoute
+          ? t.routing.noEligibleSignalDestination
+          : t.destination.noActiveDestination}
       </span>
     ) : (
       <div className="relative">

@@ -127,6 +127,9 @@ const data: TelegramConfigurationData = {
   destinationsLoadError: false,
   featureSettings: [],
   featureSettingsLoadError: false,
+  signalEngineSettings: [],
+  signalEngineWorkspace: null,
+  signalEngineLoadError: false,
   economicCalendarSettings: [],
   economicCalendarWorkspace: { id: 7, name: "Workspace" },
   economicCalendarLoadError: false,
@@ -149,6 +152,7 @@ const data: TelegramConfigurationData = {
     },
   ],
   languages: [{ id: 1, isoCode: "en", name: "English" }],
+  defaultOutputLanguageIsoCode: "en",
   languageCatalogError: false,
   scheduleLoadError: false,
   botConnectionsLoadError: false,
@@ -160,6 +164,7 @@ const data: TelegramConfigurationData = {
     featureSettings: true,
     economicCalendarRouting: false,
     marketNewsRouting: true,
+    signalEngineRouting: false,
     schedules: true,
     watchlistAssets: true,
   },
@@ -171,6 +176,7 @@ const data: TelegramConfigurationData = {
     featureSettings: false,
     economicCalendarRouting: false,
     marketNewsRouting: false,
+    signalEngineRouting: false,
   },
   scheduleActions: { create: true, update: true, delete: true },
 }
@@ -207,6 +213,256 @@ function destinationSelectorName(route: string) {
     route
   )
 }
+
+const signalEngineGroup = {
+  id: 18,
+  botConnectionId: 4,
+  chatId: "group-18",
+  chatType: "SUPERGROUP" as const,
+  displayLabel: "Signals group",
+  status: "ACTIVE" as const,
+}
+
+const signalEngineSetting = {
+  id: 71,
+  featureKey: "SIGNAL_ENGINE" as const,
+  workspaceId: 7,
+  workspaceName: "Workspace",
+  enabled: true,
+  destination: signalEngineGroup,
+  outputLanguage: { id: 2, isoCode: "en", name: "English" },
+}
+
+function signalEngineData(
+  settings: TelegramConfigurationData["signalEngineSettings"] = [],
+  overrides: Partial<TelegramConfigurationData> = {}
+): TelegramConfigurationData {
+  return {
+    ...data,
+    destinations: [destination, signalEngineGroup],
+    currentWorkspace: null,
+    signalEngineSettings: settings,
+    signalEngineWorkspace: { id: 7, name: "Workspace" },
+    signalEngineLoadError: false,
+    sectionAccess: {
+      ...data.sectionAccess,
+      botConnections: false,
+      destinations: true,
+      featureSettings: false,
+      economicCalendarRouting: false,
+      marketNewsRouting: false,
+      signalEngineRouting: true,
+      schedules: false,
+      watchlistAssets: false,
+    },
+    manageAccess: {
+      ...data.manageAccess,
+      botConnections: false,
+      destinations: false,
+      featureSettings: false,
+      economicCalendarRouting: false,
+      marketNewsRouting: false,
+      signalEngineRouting: true,
+    },
+    scheduleActions: { create: false, update: false, delete: false },
+    ...overrides,
+  }
+}
+
+describe("Signal Engine routing", () => {
+  afterEach(() => cleanup())
+
+  beforeEach(() => {
+    if (!window.PointerEvent) {
+      Object.defineProperty(window, "PointerEvent", {
+        configurable: true,
+        value: MouseEvent,
+      })
+    }
+    vi.mocked(updateTelegramFeatureSetting).mockReset()
+    vi.mocked(toast.error).mockReset()
+    vi.mocked(toast.success).mockReset()
+    routerRefresh.mockReset()
+  })
+
+  it("hides the route without permission and scopes saved state to its workspace", () => {
+    renderConfiguration(
+      signalEngineData([signalEngineSetting], {
+        sectionAccess: {
+          ...signalEngineData().sectionAccess,
+          signalEngineRouting: false,
+        },
+      })
+    )
+    expect(screen.queryByTestId("signal-engine-routing-card")).toBeNull()
+
+    cleanup()
+    renderConfiguration(
+      signalEngineData([
+        { ...signalEngineSetting, workspaceId: 99, workspaceName: "Other" },
+      ])
+    )
+
+    const row = screen.getByTestId("signal-engine-routing-card")
+    expect(row).toHaveTextContent(
+      viDictionary.telegram.routing.readbackUnverified
+    )
+    expect(row).not.toHaveTextContent("Other")
+    expect(within(row).queryByRole("switch")).not.toBeInTheDocument()
+  })
+
+  it("keeps the permitted row visible when workspace lookup fails", () => {
+    renderConfiguration(
+      signalEngineData([], {
+        signalEngineWorkspace: null,
+        signalEngineLoadError: true,
+      })
+    )
+
+    const row = screen.getByTestId("signal-engine-routing-card")
+    expect(row).toHaveTextContent(
+      viDictionary.telegram.routing.settingsLoadError
+    )
+    expect(
+      within(row).getByRole("button", {
+        name: viDictionary.telegram.routing.retry,
+      })
+    ).toBeVisible()
+    expect(within(row).queryByRole("switch")).not.toBeInTheDocument()
+    expect(
+      within(row).getByRole("button", {
+        name: viDictionary.telegram.signalEnginePreview.button,
+      })
+    ).toBeVisible()
+  })
+
+  it("starts disabled and keeps the static preview available before route or scoring data exists", async () => {
+    const user = userEvent.setup()
+    renderConfiguration(signalEngineData())
+
+    const row = screen.getByTestId("signal-engine-routing-card")
+    expect(
+      within(row).getByRole("switch", {
+        name: viDictionary.telegram.routing.switchAria.replace(
+          "{route}",
+          "Signal Engine"
+        ),
+      })
+    ).not.toBeChecked()
+    expect(row).toHaveTextContent(viDictionary.telegram.destination.placeholder)
+
+    await user.click(
+      within(row).getByRole("button", {
+        name: viDictionary.telegram.signalEnginePreview.button,
+      })
+    )
+    const dialog = await screen.findByRole("dialog", {
+      name: viDictionary.telegram.signalEnginePreview.title,
+    })
+    expect(dialog).toHaveTextContent("BUY · XAUUSD · 15m · 86/100")
+  })
+
+  it("filters destinations to active groups and previews static samples in the selected language", async () => {
+    const user = userEvent.setup()
+    renderConfiguration(signalEngineData([signalEngineSetting]))
+
+    const row = screen.getByTestId("signal-engine-routing-card")
+    expect(
+      within(row).getByRole("combobox", {
+        name: destinationSelectorName("Signal Engine"),
+      })
+    ).toHaveTextContent("Signals group")
+
+    await user.click(
+      within(row).getByRole("combobox", {
+        name: destinationSelectorName("Signal Engine"),
+      })
+    )
+    expect(
+      await screen.findByRole("option", { name: "Signals group" })
+    ).toBeVisible()
+    expect(screen.queryByRole("option", { name: "Operations" })).toBeNull()
+    await user.keyboard("{Escape}")
+
+    const previewTrigger = within(row).getByRole("button", {
+      name: viDictionary.telegram.signalEnginePreview.button,
+    })
+    await user.click(previewTrigger)
+
+    const dialog = await screen.findByRole("dialog", {
+      name: viDictionary.telegram.signalEnginePreview.title,
+    })
+    expect(dialog).toHaveTextContent("BUY · XAUUSD · 15m · 86/100")
+    expect(dialog).toHaveTextContent("SELL · XAUUSD · 15m · 82/100")
+    expect(dialog).toHaveTextContent(
+      "Skip the setup if price moves above 2,680."
+    )
+    await user.click(
+      within(dialog).getByRole("button", { name: viDictionary.common.close })
+    )
+    await waitFor(() => expect(previewTrigger).toHaveFocus())
+  })
+
+  it("keeps an unavailable saved group and language when a disable is pending or rejected", async () => {
+    const user = userEvent.setup()
+    const unavailableSetting = {
+      ...signalEngineSetting,
+      destination: { ...signalEngineGroup, status: "DISABLED" as const },
+    }
+    let resolveUpdate:
+      ((result: { success: false; error: string }) => void) | undefined
+    vi.mocked(updateTelegramFeatureSetting).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveUpdate = resolve as typeof resolveUpdate
+        })
+    )
+    renderConfiguration(
+      signalEngineData([unavailableSetting], {
+        destinations: [{ ...signalEngineGroup, status: "DISABLED" as const }],
+      })
+    )
+
+    const row = screen.getByTestId("signal-engine-routing-card")
+    const routeSwitch = within(row).getByRole("switch", {
+      name: viDictionary.telegram.routing.switchAria.replace(
+        "{route}",
+        "Signal Engine"
+      ),
+    })
+    expect(routeSwitch).toBeChecked()
+    expect(row).toHaveTextContent("Signals group — Không khả dụng")
+    expect(
+      within(row).queryByRole("button", {
+        name: viDictionary.telegram.routing.destinationClearAria.replace(
+          "{route}",
+          "Signal Engine"
+        ),
+      })
+    ).not.toBeInTheDocument()
+
+    await user.click(routeSwitch)
+    expect(routeSwitch).toHaveAttribute("aria-disabled", "true")
+    expect(screen.getByRole("status")).toHaveTextContent(
+      viDictionary.telegram.routing.saving
+    )
+    await waitFor(() =>
+      expect(updateTelegramFeatureSetting).toHaveBeenCalledWith({
+        featureKey: "SIGNAL_ENGINE",
+        workspaceId: 7,
+        enabled: false,
+      })
+    )
+
+    resolveUpdate?.({ success: false, error: "Route permission denied" })
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith("Route permission denied")
+    )
+    expect(routeSwitch).toBeChecked()
+    expect(row).toHaveTextContent("Signals group — Không khả dụng")
+    expect(row).toHaveTextContent("English (en)")
+  })
+})
 
 describe("Telegram destination selector accessible names", () => {
   afterEach(() => cleanup())

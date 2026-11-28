@@ -2464,10 +2464,86 @@ export const vi = {
         description:
           "Gửi tóm tắt sự kiện thị trường khi tin tức đủ liên quan tới danh sách theo dõi.",
       },
+      SIGNAL_ENGINE: {
+        label: "Signal Engine",
+        description: "Định tuyến tín hiệu mua/bán đến nhóm Telegram đã chọn.",
+      },
       SCHEDULED_MARKET_ANALYSIS: {
         label: "Phân tích thị trường định kỳ",
         description:
           "Định tuyến bản phân tích AI theo lịch gửi cố định trong ngày.",
+      },
+    },
+    signalEnginePreview: {
+      button: "Xem trước tin nhắn",
+      title: "Mẫu tin nhắn Signal Engine",
+      description: "Hai mẫu Buy/Sell dùng ngôn ngữ đã chọn cho tuyến này.",
+      samples: {
+        vi: {
+          buy: {
+            header: "MUA · XAUUSD · 15m · 86/100",
+            fields: [
+              { label: "Vùng vào", value: "2.635–2.640" },
+              {
+                label: "Điều kiện",
+                value: "Chờ giá chạm vùng vào để xác nhận kịch bản mua.",
+              },
+              { label: "Dừng lỗ (SL)", value: "2.625" },
+              { label: "Chốt lời (TP)", value: "2.655 / 2.670" },
+            ],
+          },
+          sell: {
+            header: "BÁN · XAUUSD · 15m · 82/100",
+            fields: [
+              { label: "Vùng theo dõi", value: "2.675–2.680" },
+              {
+                label: "Xác nhận",
+                value:
+                  "Chờ nến 15 phút xác nhận tín hiệu suy yếu trong vùng theo dõi.",
+              },
+              { label: "Giới hạn vào", value: "2.670" },
+              {
+                label: "Bỏ qua kịch bản",
+                value: "Bỏ qua kịch bản nếu giá vượt 2.680.",
+              },
+              { label: "Dừng lỗ (SL)", value: "2.690" },
+              { label: "Chốt lời (TP)", value: "2.650 / 2.635" },
+            ],
+          },
+        },
+        en: {
+          buy: {
+            header: "BUY · XAUUSD · 15m · 86/100",
+            fields: [
+              { label: "Entry zone", value: "2,635–2,640" },
+              {
+                label: "Condition",
+                value:
+                  "Wait for price to touch the entry zone before confirming the buy setup.",
+              },
+              { label: "Stop loss (SL)", value: "2,625" },
+              { label: "Take profit (TP)", value: "2,655 / 2,670" },
+            ],
+          },
+          sell: {
+            header: "SELL · XAUUSD · 15m · 82/100",
+            fields: [
+              { label: "Watch zone", value: "2,675–2,680" },
+              {
+                label: "Confirmation",
+                value:
+                  "Wait for a 15-minute candle to confirm weakness inside the watch zone.",
+              },
+              { label: "Entry limit", value: "2,670" },
+              {
+                label: "Skip the setup",
+                value: "Skip the setup if price moves above 2,680.",
+              },
+              { label: "Stop loss (SL)", value: "2,690" },
+              { label: "Take profit (TP)", value: "2,650 / 2,635" },
+            ],
+          },
+        },
       },
     },
     readiness: {
@@ -2686,6 +2762,8 @@ export const vi = {
         "Không thể tải cấu hình định tuyến đã lưu. Hãy thử tải lại.",
       retry: "Thử lại",
       noDestination: "Chưa gán điểm nhận",
+      noEligibleSignalDestination:
+        "Chưa có nhóm Telegram đang hoạt động, đủ điều kiện cho Signal Engine.",
       destinationReadOnly: "Cần quyền xem danh sách điểm nhận để thay đổi.",
       unavailableDestination: "Không khả dụng",
       clearDestination: "Xóa điểm nhận cho {route}",

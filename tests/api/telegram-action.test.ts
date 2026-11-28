@@ -255,6 +255,57 @@ describe("Telegram scheduled asset analysis actions", () => {
     ).rejects.toThrow()
   })
 
+  it("reads and updates SIGNAL_ENGINE settings with the published sparse semantics", async () => {
+    const savedSetting = {
+      id: 44,
+      featureKey: "SIGNAL_ENGINE" as const,
+      workspaceId: 7,
+      enabled: false,
+      destination: {
+        id: 8,
+        botConnectionId: 1,
+        chatId: "chat-8",
+        chatType: "SUPERGROUP" as const,
+        displayLabel: "Research room",
+        status: "DISABLED" as const,
+      },
+      outputLanguage: { id: 2, isoCode: "en", name: "English" },
+    }
+
+    vi.mocked(fetchAuthenticated).mockResolvedValueOnce(savedSetting)
+    await expect(
+      updateTelegramFeatureSetting({
+        featureKey: "SIGNAL_ENGINE",
+        workspaceId: 7,
+        enabled: false,
+      })
+    ).resolves.toEqual({ success: true, data: savedSetting })
+    expect(fetchAuthenticated).toHaveBeenLastCalledWith(
+      "/telegram/feature-settings",
+      {
+        method: "PUT",
+        body: JSON.stringify({
+          featureKey: "SIGNAL_ENGINE",
+          workspaceId: 7,
+          enabled: false,
+        }),
+      }
+    )
+
+    vi.mocked(fetchAuthenticated).mockResolvedValueOnce([savedSetting])
+    await expect(
+      getTelegramFeatureSettings({
+        workspaceId: 7,
+        featureKey: "SIGNAL_ENGINE",
+      })
+    ).resolves.toEqual([savedSetting])
+    const requestPath = vi.mocked(fetchAuthenticated).mock.calls.at(-1)?.[0]
+    expect(typeof requestPath).toBe("string")
+    expect(new URLSearchParams(requestPath!.split("?")[1]).get("$filter")).toBe(
+      "workspace.id eq 7 and featureKey eq 'SIGNAL_ENGINE'"
+    )
+  })
+
   it("creates and updates schedules with normalized request bodies", async () => {
     vi.mocked(fetchAuthenticated).mockResolvedValue(scheduleResponse)
 
